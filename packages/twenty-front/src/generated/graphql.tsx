@@ -215,6 +215,15 @@ export type ExchangeAuthCode = {
   refreshToken: AuthToken;
 };
 
+export type ExecuteServerlessFunctionInput = {
+  /** Id of the serverless function to execute */
+  id: Scalars['UUID'];
+  /** Payload in JSON format */
+  payload?: InputMaybe<Scalars['JSON']>;
+  /** Version of the serverless function to execute */
+  version?: Scalars['String'];
+};
+
 export type FeatureFlag = {
   __typename?: 'FeatureFlag';
   id: Scalars['UUID'];
@@ -256,6 +265,7 @@ export enum FieldMetadataType {
   Date = 'DATE',
   DateTime = 'DATE_TIME',
   Email = 'EMAIL',
+  Emails = 'EMAILS',
   FullName = 'FULL_NAME',
   Link = 'LINK',
   Links = 'LINKS',
@@ -285,6 +295,13 @@ export type FullName = {
   __typename?: 'FullName';
   firstName: Scalars['String'];
   lastName: Scalars['String'];
+};
+
+export type GetServerlessFunctionSourceCodeInput = {
+  /** The id of the function. */
+  id: Scalars['ID'];
+  /** The version of the function */
+  version?: Scalars['String'];
 };
 
 export type InvalidatePassword = {
@@ -334,6 +351,7 @@ export type Mutation = {
   deleteOneServerlessFunction: ServerlessFunction;
   deleteUser: User;
   disablePostgresProxy: PostgresCredentials;
+  disableWorkflowTrigger: Scalars['Boolean'];
   emailPasswordResetLink: EmailPasswordResetLink;
   enablePostgresProxy: PostgresCredentials;
   enableWorkflowTrigger: Scalars['Boolean'];
@@ -343,8 +361,9 @@ export type Mutation = {
   generateJWT: AuthTokens;
   generateTransientToken: TransientToken;
   impersonate: Verify;
+  publishServerlessFunction: ServerlessFunction;
   renewToken: AuthTokens;
-  runWorkflowVersion: WorkflowTriggerResult;
+  runWorkflowVersion: WorkflowRun;
   sendInviteLink: SendInviteLink;
   signUp: LoginToken;
   skipSyncEmailOnboardingStep: OnboardingStepSuccess;
@@ -413,6 +432,11 @@ export type MutationDeleteOneServerlessFunctionArgs = {
 };
 
 
+export type MutationDisableWorkflowTriggerArgs = {
+  workflowVersionId: Scalars['String'];
+};
+
+
 export type MutationEmailPasswordResetLinkArgs = {
   email: Scalars['String'];
 };
@@ -431,8 +455,7 @@ export type MutationExchangeAuthorizationCodeArgs = {
 
 
 export type MutationExecuteOneServerlessFunctionArgs = {
-  id: Scalars['UUID'];
-  payload?: InputMaybe<Scalars['JSON']>;
+  input: ExecuteServerlessFunctionInput;
 };
 
 
@@ -449,6 +472,11 @@ export type MutationGenerateJwtArgs = {
 
 export type MutationImpersonateArgs = {
   userId: Scalars['String'];
+};
+
+
+export type MutationPublishServerlessFunctionArgs = {
+  input: PublishServerlessFunctionInput;
 };
 
 
@@ -594,6 +622,11 @@ export type ProductPricesEntity = {
   totalNumberOfPrices: Scalars['Int'];
 };
 
+export type PublishServerlessFunctionInput = {
+  /** The id of the function. */
+  id: Scalars['ID'];
+};
+
 export type Query = {
   __typename?: 'Query';
   billingPortalSession: SessionEntity;
@@ -606,6 +639,7 @@ export type Query = {
   getAISQLQuery: AisqlQueryResult;
   getPostgresCredentials?: Maybe<PostgresCredentials>;
   getProductPrices: ProductPricesEntity;
+  getServerlessFunctionSourceCode: Scalars['String'];
   getTimelineCalendarEventsFromCompanyId: TimelineCalendarEventsWithTotal;
   getTimelineCalendarEventsFromPersonId: TimelineCalendarEventsWithTotal;
   getTimelineThreadsFromCompanyId: TimelineThreadsWithTotal;
@@ -646,6 +680,11 @@ export type QueryGetAisqlQueryArgs = {
 
 export type QueryGetProductPricesArgs = {
   product: Scalars['String'];
+};
+
+
+export type QueryGetServerlessFunctionSourceCodeArgs = {
+  input: GetServerlessFunctionSourceCodeInput;
 };
 
 
@@ -768,9 +807,9 @@ export type ServerlessFunction = {
   createdAt: Scalars['DateTime'];
   description?: Maybe<Scalars['String']>;
   id: Scalars['UUID'];
+  latestVersion?: Maybe<Scalars['String']>;
   name: Scalars['String'];
   runtime: Scalars['String'];
-  sourceCodeFullPath: Scalars['String'];
   sourceCodeHash: Scalars['String'];
   syncStatus: ServerlessFunctionSyncStatus;
   updatedAt: Scalars['DateTime'];
@@ -1054,10 +1093,9 @@ export type Verify = {
   user: User;
 };
 
-export type WorkflowTriggerResult = {
-  __typename?: 'WorkflowTriggerResult';
-  /** Execution result in JSON format */
-  result?: Maybe<Scalars['JSON']>;
+export type WorkflowRun = {
+  __typename?: 'WorkflowRun';
+  workflowRunId: Scalars['UUID'];
 };
 
 export type Workspace = {
@@ -1154,6 +1192,7 @@ export type Field = {
   isSystem?: Maybe<Scalars['Boolean']>;
   label: Scalars['String'];
   name: Scalars['String'];
+  object?: Maybe<Object>;
   options?: Maybe<Scalars['JSON']>;
   relationDefinition?: Maybe<RelationDefinition>;
   settings?: Maybe<Scalars['JSON']>;
