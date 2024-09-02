@@ -19,6 +19,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined, // undefined = amount of projects * amount of tests
   timeout: 30 * 1000, // timeout can be changed
   use: {
+    colorScheme: 'dark',
     baseURL: process.env.CI
       ? process.env.CI_DEFAULT_BASE_URL
       : (process.env.FRONTEND_BASE_URL ?? 'http://localhost:3001'),
