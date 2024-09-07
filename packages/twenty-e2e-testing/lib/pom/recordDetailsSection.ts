@@ -30,5 +30,4 @@ export class RecordDetailsSection {
     this.moreOptionsButton = page.getByTestId('more-showpage-button');
     this.deleteObject = page.getByText('Delete');
   }
-
 }
