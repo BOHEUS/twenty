@@ -1,7 +1,7 @@
-import { request } from '@playwright/test';
+import { APIRequest, request } from '@playwright/test';
 
 export class RestAPI {
-  readonly request = request;
+  readonly request: APIRequest;
 
   constructor() {
     this.request = request;

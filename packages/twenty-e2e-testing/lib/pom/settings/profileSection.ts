@@ -1,4 +1,4 @@
-import { Locator, Page } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
 
 export class ProfileSection {
   readonly page: Page;
@@ -19,5 +19,35 @@ export class ProfileSection {
     this.emailField = page.getByRole('textbox').nth(2);
     this.changePasswordButton = page.getByRole('button', { name: 'Change Password' });
     this.deleteAccountButton = page.getByRole('button', { name: 'Delete account' });
+  }
+
+  async addProfileImage() {
+    // where test files should be placed?
+  }
+
+  async removeProfileImage() {
+    await this.removeImage.click();
+  }
+
+  async changeFirstName(firstName: string) {
+    await this.firstNameField.clear();
+    await this.firstNameField.fill(firstName);
+  }
+
+  async changeLastName(lastName: string) {
+    await this.lastNameField.clear();
+    await this.lastNameField.fill(lastName);
+  }
+
+  async checkEmailField(email: string) {
+    await expect(this.emailField).toHaveValue(email);
+  }
+
+  async sendChangePasswordEmail() {
+    await this.changePasswordButton.click();
+  }
+
+  async deleteAccount() {
+    await this.deleteAccountButton.click();
   }
 }

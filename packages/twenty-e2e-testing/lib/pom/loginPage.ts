@@ -31,31 +31,50 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.loginWithGoogleButton = page.getByRole('button', { name: 'Continue with Google' });
-    this.loginWithEmailButton;
-    this.termsOfServiceLink = page.getByRole('link', { name: 'Terms of Service' });
+    this.loginWithGoogleButton = page.getByRole('button', {
+      name: 'Continue with Google',
+    });
+    this.loginWithEmailButton = page.getByRole('button', {
+      name: 'Continue With Email',
+    });
+    this.termsOfServiceLink = page.getByRole('link', {
+      name: 'Terms of Service',
+    });
     this.privacyPolicyLink = page.getByRole('link', { name: 'Privacy Policy' });
     this.emailField = page.getByPlaceholder('Email');
-    this.continueButton = page.getByRole('button', { name: 'Continue', exact: true });
+    this.continueButton = page.getByRole('button', {
+      name: 'Continue',
+      exact: true,
+    });
     this.forgotPasswordButton = page.getByText('Forgot your password?');
     this.forgotPasswordSentStatus = page.getByRole('status');
     this.passwordField = page.getByPlaceholder('Password');
-    this.revealPasswordButton = page.getByTestId('reveal-password-button').getByRole('img');
+    this.revealPasswordButton = page
+      .getByTestId('reveal-password-button')
+      .getByRole('img');
     this.signInButton = page.getByRole('button', { name: 'Sign up' });
     this.uploadImageButton = page.getByRole('button', { name: 'Upload' });
     this.deleteImageButton = page.getByRole('button', { name: 'Remove' });
     this.workspaceNameField = page.getByPlaceholder('Apple');
     this.firstNameField = page.getByPlaceholder('Tim');
     this.lastNameField = page.getByPlaceholder('Cook');
-    this.syncEverythingWithGoogleRadio = page.getByTestId('input-radio').first();
-    this.syncSubjectAndMetadataWithGoogleRadio = page.getByTestId('input-radio').nth(1);
+    this.syncEverythingWithGoogleRadio = page
+      .getByTestId('input-radio')
+      .first();
+    this.syncSubjectAndMetadataWithGoogleRadio = page
+      .getByTestId('input-radio')
+      .nth(1);
     this.syncMetadataWithGoogleRadio = page.getByTestId('input-radio').nth(2);
-    this.syncWithGoogleButton = page.getByRole('button', { name: 'Sync with Google' });
+    this.syncWithGoogleButton = page.getByRole('button', {
+      name: 'Sync with Google',
+    });
     this.noSyncButton = page.getByText('Continue without sync');
     this.inviteLinkField1 = page.getByPlaceholder('tim@apple.dev');
     this.inviteLinkField2 = page.getByPlaceholder('craig@apple.dev');
     this.inviteLinkField3 = page.getByPlaceholder('mike@apple.dev');
-    this.copyInviteLink = page.getByRole('button', { name: 'Copy invitation link' });
+    this.copyInviteLink = page.getByRole('button', {
+      name: 'Copy invitation link',
+    });
     this.finishButton = page.getByRole('button', { name: 'Finish' });
   }
 }

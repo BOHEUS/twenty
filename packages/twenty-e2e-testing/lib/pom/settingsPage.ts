@@ -32,4 +32,56 @@ export class SettingsPage {
     this.releasesLink = page.getByRole('link', { name: 'Releases' });
     this.logoutLink = page.getByText('Logout');
   }
+
+  async goToProfileSection() {
+    await this.profileLink.click();
+  }
+
+  async goToAppearanceSection() {
+    await this.appearanceLink.click();
+  }
+
+  async goToAccountsSection() {
+    await this.accountsLink.click();
+  }
+
+  async goToEmailsSection() {
+    await this.emailsLink.click();
+  }
+
+  async goToCalendarsSection() {
+    await this.calendarsLink.click();
+  }
+
+  async goToGeneralSection() {
+    await this.generalLink.click();
+  }
+
+  async goToMembersSection() {
+    await this.membersLink.click();
+  }
+
+  async goToDataModelSection() {
+    await this.dataModelLink.click();
+  }
+
+  async goToDevelopersSection() {
+    await this.developersLink.click();
+  }
+
+  async goToFunctionsSection() {
+    await this.functionsLink.click();
+  }
+
+  async goToIntegrationsSection() {
+    await this.integrationsLink.click();
+  }
+
+  async goToReleasesIntegration() {
+    await this.releasesLink.click();
+  }
+
+  async logout() {
+    await this.logoutLink.click();
+  }
 }

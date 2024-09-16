@@ -8,8 +8,10 @@ export class CalendarSection {
 
   constructor(page: Page) {
     this.page = page;
-    this.eventVisibilityEverythingOption = page.getByTestId('input-radio').first();
+    this.eventVisibilityEverythingOption = page
+      .getByTestId('input-radio')
+      .first();
     this.eventVisibilityMetadataOption = page.getByTestId('input-radio').nth(1);
-    this.contactAutoCreation = page.locator('.css-xrqgly');
+    this.contactAutoCreation = page.locator('.css-xrqgly'); // to be fixed
   }
 }

@@ -1,4 +1,4 @@
-import { Locator, Page } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
 
 export class generalSection {
   readonly page: Page;
@@ -14,6 +14,22 @@ export class generalSection {
     this.removeImage = page.getByRole('button', { name: 'Remove' });
     this.workspaceNameField = page.getByPlaceholder('Apple');
     this.supportSwitch; // add
-    this.deleteWorkspaceButton = page.getByRole('button', { name: 'Delete workspace' });
+    this.deleteWorkspaceButton = page.getByRole('button', {
+      name: 'Delete workspace',
+    });
+  }
+
+  async changeWorkspaceName(workspaceName: string) {
+    await this.workspaceNameField.clear();
+    await this.workspaceNameField.fill(workspaceName);
+  }
+
+  async changeSupportSwitchState() {
+    await this.supportSwitch.click();
+  }
+
+  async deleteWorkSpace() {
+    await this.deleteWorkspaceButton.click();
+    await expect(this.deleteWorkspaceButton).not.toBeVisible();
   }
 }

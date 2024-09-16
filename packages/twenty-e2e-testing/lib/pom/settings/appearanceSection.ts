@@ -16,5 +16,8 @@ export class AppearanceSection {
     this.lightThemeButton = page.getByText('AaLight');
     this.darkThemeButton = page.getByText('AaDark');
     // add
+    this.timezoneDropdown;
+    this.dateFormatDropdown;
+    this.timeFormatDropdown;
   }
 }

@@ -20,7 +20,7 @@ export class LeftMenu {
 
   constructor(page: Page) {
     this.page = page;
-    //this.workspaceDropdown = page.locator('div').filter({ hasText: /^Apple$/ }).nth(3);
+    //this.workspaceDropdown = page.locator('div').filter({ hasText: /^Apple$/ }).nth(3); // change locator to data-testid
     //this.workspaceSelect = page.getByTestId('tooltip').filter({ hasText: /^Twenty$/ });
     this.leftMenu = page.getByRole('button').first();
     this.searchSubTab = page.getByText('Search');
