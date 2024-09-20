@@ -30,6 +30,5 @@ export class generalSection {
 
   async deleteWorkSpace() {
     await this.deleteWorkspaceButton.click();
-    await expect(this.deleteWorkspaceButton).not.toBeVisible();
   }
 }

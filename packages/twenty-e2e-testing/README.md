@@ -54,3 +54,7 @@ ensures that no matter which IDE or OS Shell is used, the result will be the sam
 It's very simple, by default app uses theme from System settings (aka user's preferences set in OS) so one person uses light mode and 
 the other uses dark mode, and we have no way of verifying who uses which mode (even though there's set dark mode in `playwright.config.ts`, 
 someone can overwrite it). Also, most of the `<div>` components use only 1 class which changes depending on theme.
+
+#### How can I check if my XPath is correct?
+Go to devtools > Console, type `$x(XPath)`, e.g. `$x(button[@id='this_button'])` and check what console returns, if it returns anything other than 0,
+that means your XPath is correct.

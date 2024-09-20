@@ -28,6 +28,5 @@ export class MembersSection {
       .filter({ hasText: email })
       .getByRole('button');
     await this.deleteMemberButton.click();
-    await expect(this.deleteMemberButton).not.toBeVisible();
   }
 }

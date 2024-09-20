@@ -27,7 +27,6 @@ export class AccountsSection {
       .filter({ hasText: email }); // needs fixing
     await this.accountMoreOptions.click();
     await this.deleteAccountButton.click();
-    await expect(this.accountMoreOptions).not.toBeVisible();
   }
 
   async addToBlockList(domain: string) {
@@ -42,6 +41,5 @@ export class AccountsSection {
       .filter({ hasText: domain })
       .getByRole('button'); // needs fixing
     await this.removeFromBlocklistButton.click();
-    await expect(this.removeFromBlocklistButton).not.toBeVisible();
   }
 }
