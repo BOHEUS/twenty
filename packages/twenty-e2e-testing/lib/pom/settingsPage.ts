@@ -2,8 +2,9 @@ import { Locator, Page } from '@playwright/test';
 
 export class SettingsPage {
   readonly page: Page;
+  readonly exitSettingsLink: Locator;
   readonly profileLink: Locator;
-  readonly appearanceLink: Locator;
+  readonly experienceLink: Locator;
   readonly accountsLink: Locator;
   readonly emailsLink: Locator;
   readonly calendarsLink: Locator;
@@ -18,8 +19,9 @@ export class SettingsPage {
 
   constructor(page: Page) {
     this.page = page;
+    this.exitSettingsLink = page.getByRole('button', { name: 'Exit Settings' });
     this.profileLink = page.getByRole('link', { name: 'Profile' });
-    this.appearanceLink = page.getByRole('link', { name: 'Appearance' });
+    this.experienceLink = page.getByRole('link', { name: 'Experience' });
     this.accountsLink = page.getByRole('link', { name: 'Accounts' });
     this.emailsLink = page.getByRole('link', { name: 'Emails', exact: true });
     this.calendarsLink = page.getByRole('link', { name: 'Calendars' });
@@ -33,12 +35,16 @@ export class SettingsPage {
     this.logoutLink = page.getByText('Logout');
   }
 
+  async leaveSettingsPage() {
+    await this.exitSettingsLink.click();
+  }
+
   async goToProfileSection() {
     await this.profileLink.click();
   }
 
-  async goToAppearanceSection() {
-    await this.appearanceLink.click();
+  async goToExperienceSection() {
+    await this.experienceLink.click();
   }
 
   async goToAccountsSection() {
