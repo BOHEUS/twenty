@@ -144,6 +144,7 @@ export const WorkspaceInviteTeam = () => {
           accent="blue"
           title="Invite"
           type="submit"
+          dataTestId="invite-button"
         />
       </StyledContainer>
     </form>

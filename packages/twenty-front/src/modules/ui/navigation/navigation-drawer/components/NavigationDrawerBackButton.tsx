@@ -44,7 +44,7 @@ export const NavigationDrawerBackButton = ({
   const navigationMemorizedUrl = useRecoilValue(navigationMemorizedUrlState);
 
   return (
-    <StyledContainer>
+    <StyledContainer data-testid="settings-return-button">
       <UndecoratedLink to={navigationMemorizedUrl} replace>
         <StyledIconAndButtonContainer>
           <IconX

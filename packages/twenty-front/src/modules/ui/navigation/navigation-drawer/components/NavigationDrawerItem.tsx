@@ -33,6 +33,7 @@ export type NavigationDrawerItemProps = {
   soon?: boolean;
   count?: number;
   keyboard?: string[];
+  dataTestId?: string;
 };
 
 type StyledItemProps = Pick<
@@ -148,6 +149,7 @@ export const NavigationDrawerItem = ({
   count,
   keyboard,
   subItemState,
+  dataTestId,
 }: NavigationDrawerItemProps) => {
   const theme = useTheme();
   const isMobile = useIsMobile();
@@ -174,7 +176,7 @@ export const NavigationDrawerItem = ({
   };
 
   return (
-    <StyledNavigationDrawerItemContainer>
+    <StyledNavigationDrawerItemContainer data-testid={dataTestId}>
       <StyledItem
         className={className}
         onClick={handleItemClick}

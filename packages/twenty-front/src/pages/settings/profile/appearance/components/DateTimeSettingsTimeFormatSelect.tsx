@@ -18,6 +18,7 @@ export const DateTimeSettingsTimeFormatSelect = ({
   const setTimeZone = timeZone === 'system' ? detectTimeZone() : timeZone;
   return (
     <Select
+      dataTestId="time-format-select"
       dropdownId="datetime-settings-time-format"
       dropdownWidth={218}
       label="Time format"

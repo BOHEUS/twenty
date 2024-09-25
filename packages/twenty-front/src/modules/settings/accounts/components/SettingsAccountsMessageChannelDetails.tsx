@@ -107,12 +107,14 @@ export const SettingsAccountsMessageChannelDetails = ({
                 'Don’t create contacts from/to Gmail, Outlook emails',
               value: !!messageChannel.excludeNonProfessionalEmails,
               onToggle: handleIsNonProfessionalEmailExcludedToggle,
+              dataTestId: 'exclude-non-professional-emails',
             },
             {
               title: 'Exclude group emails',
               description: 'Don’t sync emails from team@ support@ noreply@...',
               value: !!messageChannel.excludeGroupEmails,
               onToggle: handleIsGroupEmailExcludedToggle,
+              dataTestId: 'exclude-group-emails',
             },
           ]}
         />

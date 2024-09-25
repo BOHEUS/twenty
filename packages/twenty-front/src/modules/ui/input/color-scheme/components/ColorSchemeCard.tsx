@@ -176,7 +176,7 @@ export const ColorSchemeCard = ({
 
   if (variant === 'System') {
     return (
-      <StyledContainer>
+      <StyledContainer data-testid="system-theme">
         <StyledMixedColorSchemeSegment
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -212,7 +212,7 @@ export const ColorSchemeCard = ({
   }
 
   return (
-    <StyledContainer>
+    <StyledContainer data-testid={variant.toLowerCase() + '-theme'}>
       <ColorSchemeSegment
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}

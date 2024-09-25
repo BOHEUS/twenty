@@ -17,7 +17,7 @@ const StyledCardsContainer = styled.div`
 export const SettingsAccountsSettingsSection = () => {
   const theme = useTheme();
   return (
-    <Section>
+    <Section dataTestId="accounts-advanced-settings">
       <H2Title
         title="Settings"
         description="Configure your emails and calendar settings."

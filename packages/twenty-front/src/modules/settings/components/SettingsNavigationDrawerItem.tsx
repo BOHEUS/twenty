@@ -15,6 +15,7 @@ type SettingsNavigationDrawerItemProps = Pick<
   matchSubPages?: boolean;
   path: SettingsPath;
   subItemState?: NavigationDrawerSubItemState;
+  dataTestId?: string;
 };
 
 export const SettingsNavigationDrawerItem = ({
@@ -25,6 +26,7 @@ export const SettingsNavigationDrawerItem = ({
   path,
   soon,
   subItemState,
+  dataTestId,
 }: SettingsNavigationDrawerItemProps) => {
   const href = getSettingsPagePath(path);
   const pathName = useResolvedPath(href).pathname;
@@ -43,6 +45,7 @@ export const SettingsNavigationDrawerItem = ({
       Icon={Icon}
       active={isActive}
       soon={soon}
+      dataTestId={dataTestId}
     />
   );
 };

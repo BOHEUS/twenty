@@ -9,6 +9,7 @@ type Parameter = {
   title: string;
   description: string;
   onToggle: (value: boolean) => void;
+  dataTestId: string;
 };
 
 type SettingsAccountsToggleSettingCardProps = {
@@ -50,6 +51,7 @@ export const SettingsAccountsToggleSettingCard = ({
         key={index}
         divider={index < parameters.length - 1}
         onClick={() => parameter.onToggle(!parameter.value)}
+        data-testid={parameter.dataTestId}
       >
         <div>
           <StyledTitle>{parameter.title}</StyledTitle>

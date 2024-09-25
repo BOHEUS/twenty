@@ -199,6 +199,7 @@ export const SettingsWorkspaceMembers = () => {
                           variant="tertiary"
                           size="medium"
                           Icon={IconTrash}
+                          dataTestId="delete-user"
                         />
                       </StyledButtonContainer>
                     )}

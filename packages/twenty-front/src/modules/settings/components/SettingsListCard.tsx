@@ -67,7 +67,7 @@ export const SettingsListCard = <
   if (isLoading === true) return <SettingsListSkeletonCard />;
 
   return (
-    <Card>
+    <Card data-testid="google-accounts-card">
       {items.map((item, index) => (
         <SettingsListItemCardContent
           key={item.id}
@@ -80,7 +80,7 @@ export const SettingsListCard = <
       ))}
       {hasFooter && (
         <StyledFooter divider={!!items.length}>
-          <StyledButton onClick={onFooterButtonClick}>
+          <StyledButton onClick={onFooterButtonClick} data-testid="add-google-account-button">
             <IconPlus size={theme.icon.size.md} />
             {footerButtonLabel}
           </StyledButton>

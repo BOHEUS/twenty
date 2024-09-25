@@ -17,5 +17,5 @@ type PagePanelProps = {
 };
 
 export const PagePanel = ({ children }: PagePanelProps) => (
-  <StyledPanel>{children}</StyledPanel>
+  <StyledPanel data-testid="settings-details-page">{children}</StyledPanel>
 );

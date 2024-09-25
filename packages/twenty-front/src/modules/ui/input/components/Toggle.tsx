@@ -43,6 +43,7 @@ export type ToggleProps = {
   toggleSize?: ToggleSize;
   className?: string;
   disabled?: boolean;
+  dataTestId?: string;
 };
 
 export const Toggle = ({
@@ -52,6 +53,7 @@ export const Toggle = ({
   toggleSize = 'medium',
   className,
   disabled,
+  dataTestId,
 }: ToggleProps) => {
   const [isOn, setIsOn] = useState(value ?? false);
 
@@ -83,6 +85,7 @@ export const Toggle = ({
       toggleSize={toggleSize}
       className={className}
       disabled={disabled}
+      data-testid={dataTestId}
     >
       <StyledCircle
         animate={isOn ? 'on' : 'off'}

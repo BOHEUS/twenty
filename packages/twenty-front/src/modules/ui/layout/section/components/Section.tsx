@@ -7,6 +7,7 @@ type SectionProps = {
   alignment?: SectionAlignment;
   fullWidth?: boolean;
   fontColor?: SectionFontColor;
+  dataTestId?: string;
 };
 
 export enum SectionAlignment {
@@ -36,12 +37,14 @@ export const Section = ({
   alignment = SectionAlignment.Left,
   fullWidth = true,
   fontColor = SectionFontColor.Primary,
+  dataTestId,
 }: SectionProps) => (
   <StyledSection
     className={className}
     alignment={alignment}
     fullWidth={fullWidth}
     fontColor={fontColor}
+    data-testid={dataTestId}
   >
     {children}
   </StyledSection>

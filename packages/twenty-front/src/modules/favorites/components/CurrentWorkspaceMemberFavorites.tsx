@@ -63,6 +63,7 @@ export const CurrentWorkspaceMemberFavorites = () => {
       <NavigationDrawerSectionTitle
         label="Favorites"
         onClick={() => toggleNavigationSection()}
+        dataTestId="workspace-favorites-navigation-drawer"
       />
       {isNavigationSectionOpen && (
         <DraggableList

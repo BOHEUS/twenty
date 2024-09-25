@@ -99,7 +99,7 @@ export const DropdownMenuInput = forwardRef<
     });
 
     return (
-      <StyledInputContainer className={className}>
+      <StyledInputContainer className={className} data-testid="view-input-name">
         {renderInput ? (
           renderInput({
             value,

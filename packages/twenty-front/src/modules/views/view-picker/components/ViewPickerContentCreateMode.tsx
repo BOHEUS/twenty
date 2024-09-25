@@ -121,6 +121,7 @@ export const ViewPickerContentCreateMode = () => {
         </ViewPickerIconAndNameContainer>
         <ViewPickerSelectContainer>
           <Select
+            dataTestId="view-type-select"
             disableBlur
             label="View type"
             fullWidth
@@ -144,6 +145,7 @@ export const ViewPickerContentCreateMode = () => {
           <>
             <ViewPickerSelectContainer>
               <Select
+                dataTestId="view-type-select"
                 disableBlur
                 label="Stages"
                 fullWidth
@@ -173,7 +175,7 @@ export const ViewPickerContentCreateMode = () => {
       </DropdownMenuItemsContainer>
       <DropdownMenuSeparator />
       <DropdownMenuItemsContainer>
-        <ViewPickerSaveButtonContainer>
+        <ViewPickerSaveButtonContainer data-testid="view-create-button">
           <ViewPickerCreateButton />
         </ViewPickerSaveButtonContainer>
       </DropdownMenuItemsContainer>

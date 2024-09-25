@@ -32,6 +32,7 @@ export type SelectProps<Value extends string | number | null> = {
   options: SelectOption<Value>[];
   value?: Value;
   withSearchInput?: boolean;
+  dataTestId?: string;
 };
 
 const StyledContainer = styled.div<{ fullWidth?: boolean }>`
@@ -89,6 +90,7 @@ export const Select = <Value extends string | number | null>({
   options,
   value,
   withSearchInput,
+  dataTestId,
 }: SelectProps<Value>) => {
   const selectContainerRef = useRef<HTMLDivElement>(null);
 
@@ -144,6 +146,7 @@ export const Select = <Value extends string | number | null>({
         selectControl
       ) : (
         <Dropdown
+          dataTestId={dataTestId}
           dropdownId={dropdownId}
           dropdownMenuWidth={dropdownWidth}
           dropdownPlacement="bottom-start"

@@ -150,6 +150,7 @@ export const IconPicker = ({
   return (
     <div className={className}>
       <Dropdown
+        dataTestId="icon-picker-button"
         dropdownId={dropdownId}
         dropdownHotkeyScope={{ scope: IconPickerHotkeyScope.IconPicker }}
         clickableComponent={

@@ -32,6 +32,7 @@ export const MainNavigationDrawerItems = () => {
             Icon={IconSearch}
             onClick={toggleCommandMenu}
             keyboard={['⌘', 'K']}
+            dataTestId="search-navigation-drawer-item"
           />
           <NavigationDrawerItem
             label="Settings"
@@ -40,6 +41,7 @@ export const MainNavigationDrawerItems = () => {
               setNavigationMemorizedUrl(location.pathname + location.search);
             }}
             Icon={IconSettings}
+            dataTestId="settings-navigation-drawer-item"
           />
         </NavigationDrawerSection>
       )}

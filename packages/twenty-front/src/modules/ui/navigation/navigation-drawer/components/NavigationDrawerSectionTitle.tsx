@@ -10,6 +10,7 @@ import { isUndefinedOrNull } from '~/utils/isUndefinedOrNull';
 type NavigationDrawerSectionTitleProps = {
   onClick?: () => void;
   label: string;
+  dataTestId?: string;
 };
 
 const StyledTitle = styled.div<{ onClick?: () => void }>`
@@ -34,6 +35,7 @@ const StyledTitle = styled.div<{ onClick?: () => void }>`
 export const NavigationDrawerSectionTitle = ({
   onClick,
   label,
+  dataTestId,
 }: NavigationDrawerSectionTitleProps) => {
   const currentUser = useRecoilValue(currentUserState);
   const loading = useIsPrefetchLoading();
@@ -41,5 +43,9 @@ export const NavigationDrawerSectionTitle = ({
   if (loading && isDefined(currentUser)) {
     return <NavigationDrawerSectionTitleSkeletonLoader />;
   }
-  return <StyledTitle onClick={onClick}>{label}</StyledTitle>;
+  return (
+    <StyledTitle onClick={onClick} data-testid={dataTestId}>
+      {label}
+    </StyledTitle>
+  );
 };

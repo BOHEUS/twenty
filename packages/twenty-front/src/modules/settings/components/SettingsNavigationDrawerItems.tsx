@@ -39,6 +39,7 @@ type SettingsNavigationItem = {
   Icon: IconComponent;
   matchSubPages?: boolean;
   indentationLevel?: NavigationDrawerItemIndentationLevel;
+  dataTestId?: string;
 };
 
 export const SettingsNavigationDrawerItems = () => {
@@ -63,6 +64,7 @@ export const SettingsNavigationDrawerItems = () => {
       Icon: IconMail,
       matchSubPages: true,
       indentationLevel: 2,
+      dataTestId: 'accounts-emails-button',
     },
     {
       label: 'Calendars',
@@ -70,6 +72,7 @@ export const SettingsNavigationDrawerItems = () => {
       Icon: IconCalendarEvent,
       matchSubPages: true,
       indentationLevel: 2,
+      dataTestId: 'accounts-calendar-button',
     },
   ];
 
@@ -94,17 +97,20 @@ export const SettingsNavigationDrawerItems = () => {
           label="Profile"
           path={SettingsPath.ProfilePage}
           Icon={IconUserCircle}
+          dataTestId="profile-menu-item"
         />
         <SettingsNavigationDrawerItem
           label="Experience"
           path={SettingsPath.Appearance}
           Icon={IconColorSwatch}
+          dataTestId="experience-menu-item"
         />
         <NavigationDrawerItemGroup>
           <SettingsNavigationDrawerItem
             label="Accounts"
             path={SettingsPath.Accounts}
             Icon={IconAt}
+            dataTestId="account-menu-item"
           />
           {accountSubSettings.map((navigationItem, index) => (
             <SettingsNavigationDrawerItem
@@ -118,6 +124,7 @@ export const SettingsNavigationDrawerItems = () => {
                 index,
                 selectedIndex,
               })}
+              dataTestId={navigationItem.dataTestId}
             />
           ))}
         </NavigationDrawerItemGroup>
@@ -128,17 +135,20 @@ export const SettingsNavigationDrawerItems = () => {
           label="General"
           path={SettingsPath.Workspace}
           Icon={IconSettings}
+          dataTestId="general-menu-item"
         />
         <SettingsNavigationDrawerItem
           label="Members"
           path={SettingsPath.WorkspaceMembersPage}
           Icon={IconUsers}
+          dataTestId="members-menu-item"
         />
         {isBillingPageEnabled && (
           <SettingsNavigationDrawerItem
             label="Billing"
             path={SettingsPath.Billing}
             Icon={IconCurrencyDollar}
+            dataTestId="billing-menu-item"
           />
         )}
         <SettingsNavigationDrawerItem
@@ -146,29 +156,34 @@ export const SettingsNavigationDrawerItems = () => {
           path={SettingsPath.Objects}
           Icon={IconHierarchy2}
           matchSubPages
+          dataTestId="data-model-menu-item"
         />
         <SettingsNavigationDrawerItem
           label="Developers"
           path={SettingsPath.Developers}
           Icon={IconCode}
+          dataTestId="developers-menu-item"
         />
         {isFunctionSettingsEnabled && (
           <SettingsNavigationDrawerItem
             label="Functions"
             path={SettingsPath.ServerlessFunctions}
             Icon={IconFunction}
+            dataTestId="functions-menu-item"
           />
         )}
         <SettingsNavigationDrawerItem
           label="Integrations"
           path={SettingsPath.Integrations}
           Icon={IconApps}
+          dataTestId="integrations-menu-item"
         />
         {isCRMMigrationEnabled && (
           <SettingsNavigationDrawerItem
             label="CRM Migration"
             path={SettingsPath.CRMMigration}
             Icon={IconCode}
+            dataTestId="crm-migration-menu-item"
           />
         )}
       </NavigationDrawerSection>
@@ -178,11 +193,13 @@ export const SettingsNavigationDrawerItems = () => {
           label="Releases"
           path={SettingsPath.Releases}
           Icon={IconRocket}
+          dataTestId="releases-menu-item"
         />
         <NavigationDrawerItem
           label="Logout"
           onClick={signOut}
           Icon={IconDoorEnter}
+          dataTestId="logout-menu-item"
         />
       </NavigationDrawerSection>
     </>

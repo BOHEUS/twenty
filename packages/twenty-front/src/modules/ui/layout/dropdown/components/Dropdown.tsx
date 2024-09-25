@@ -43,6 +43,7 @@ type DropdownProps = {
   usePortal?: boolean;
   onClose?: () => void;
   onOpen?: () => void;
+  dataTestId?: string;
 };
 
 export const Dropdown = ({
@@ -61,6 +62,7 @@ export const Dropdown = ({
   onClickOutside,
   onClose,
   onOpen,
+  dataTestId,
 }: DropdownProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -123,7 +125,7 @@ export const Dropdown = ({
 
   return (
     <DropdownScope dropdownScopeId={getScopeIdFromComponentId(dropdownId)}>
-      <div ref={containerRef} className={className}>
+      <div ref={containerRef} className={className} data-testid={dataTestId}>
         {clickableComponent && (
           <div
             ref={refs.setReference}
