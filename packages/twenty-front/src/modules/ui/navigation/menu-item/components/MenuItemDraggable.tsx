@@ -20,6 +20,7 @@ export type MenuItemDraggableProps = {
   showGrip?: boolean;
   isDragDisabled?: boolean;
   isHoverDisabled?: boolean;
+  testId?: string;
 };
 
 export const MenuItemDraggable = ({
@@ -32,6 +33,7 @@ export const MenuItemDraggable = ({
   className,
   isIconDisplayedOnHoverOnly = true,
   showGrip = false,
+  testId,
 }: MenuItemDraggableProps) => {
   const showIconButtons = Array.isArray(iconButtons) && iconButtons.length > 0;
 
@@ -48,6 +50,7 @@ export const MenuItemDraggable = ({
       className={className}
       isIconDisplayedOnHoverOnly={isIconDisplayedOnHoverOnly}
       cursor={cursorType}
+      data-testid={testId}
     >
       <MenuItemLeftContent
         LeftIcon={LeftIcon}

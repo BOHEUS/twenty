@@ -38,6 +38,7 @@ export const ObjectFilterDropdownFilterSelectMenuItem = ({
       onClick={handleClick}
       LeftIcon={getIcon(filterDefinition.iconName)}
       text={filterDefinition.label}
+      dataTestId="object-filter-dropdown-item"
     />
   );
 };

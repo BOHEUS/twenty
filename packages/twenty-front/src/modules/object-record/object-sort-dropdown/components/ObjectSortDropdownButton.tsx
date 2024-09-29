@@ -97,6 +97,7 @@ export const ObjectSortDropdownButton = ({
   return (
     <ObjectSortDropdownScope sortScopeId={sortDropdownId}>
       <Dropdown
+        dataTestId="sort-button"
         dropdownId={OBJECT_SORT_DROPDOWN_ID}
         dropdownHotkeyScope={hotkeyScope}
         dropdownOffset={{ y: 8 }}
@@ -126,8 +127,9 @@ export const ObjectSortDropdownButton = ({
                 </DropdownMenuItemsContainer>
               </StyledSelectedSortDirectionContainer>
             )}
-            <StyledContainer>
+            <StyledContainer data-testid="sort-dropdown">
               <DropdownMenuHeader
+                data-testid="test"
                 EndIcon={IconChevronDown}
                 onClick={() => setIsSortDirectionMenuUnfolded(true)}
               >
@@ -153,7 +155,7 @@ export const ObjectSortDropdownButton = ({
                   )
                   .map((availableSortDefinition, index) => (
                     <MenuItem
-                      testId={`select-sort-${index}`}
+                      testId="select-sort"
                       key={index}
                       onClick={() => {
                         setObjectSortDropdownSearchInput('');

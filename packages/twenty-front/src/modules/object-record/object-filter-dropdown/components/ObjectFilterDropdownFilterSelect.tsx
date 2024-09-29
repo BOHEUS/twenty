@@ -84,6 +84,7 @@ export const ObjectFilterDropdownFilterSelect = () => {
         onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
           setSearchText(event.target.value)
         }
+        data-testid="object-filter-select"
       />
       <SelectableList
         hotkeyScope={FiltersHotkeyScope.ObjectFilterDropdownButton}

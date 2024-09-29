@@ -45,6 +45,7 @@ type MenuItemSelectProps = {
   onClick?: () => void;
   disabled?: boolean;
   hovered?: boolean;
+  dataTestId?: string;
 };
 
 export const MenuItemSelect = ({
@@ -55,6 +56,7 @@ export const MenuItemSelect = ({
   onClick,
   disabled,
   hovered,
+  dataTestId,
 }: MenuItemSelectProps) => {
   const theme = useTheme();
 
@@ -65,6 +67,7 @@ export const MenuItemSelect = ({
       selected={selected}
       disabled={disabled}
       hovered={hovered}
+      data-testid={dataTestId}
     >
       <MenuItemLeftContent LeftIcon={LeftIcon} text={text} />
       {selected && <IconCheck size={theme.icon.size.md} />}

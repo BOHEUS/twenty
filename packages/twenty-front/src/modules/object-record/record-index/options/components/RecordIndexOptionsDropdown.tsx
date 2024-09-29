@@ -18,6 +18,7 @@ export const RecordIndexOptionsDropdown = ({
 }: RecordIndexOptionsDropdownProps) => {
   return (
     <Dropdown
+      dataTestId="options-button"
       dropdownId={RECORD_INDEX_OPTIONS_DROPDOWN_ID}
       clickableComponent={<RecordIndexOptionsDropdownButton />}
       dropdownMenuWidth={'200px'}

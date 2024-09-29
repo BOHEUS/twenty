@@ -70,7 +70,7 @@ export const MultipleFiltersDropdownContent = ({
     ].includes(selectedOperandInDropdown);
 
   return (
-    <StyledContainer>
+    <StyledContainer data-testid="filter-options">
       {!filterDefinitionUsedInDropdown ? (
         <ObjectFilterDropdownFilterSelect />
       ) : (

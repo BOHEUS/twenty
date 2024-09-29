@@ -150,16 +150,19 @@ export const RecordIndexOptionsDropdownContent = ({
             LeftIcon={IconTag}
             text="Fields"
             hasSubMenu
+            testId="fields-more-options"
           />
           <MenuItem
             onClick={() => openObjectRecordsSpreasheetImportDialog()}
             LeftIcon={IconFileImport}
             text="Import"
+            testId="import-records"
           />
           <MenuItem
             onClick={download}
             LeftIcon={IconFileExport}
             text={displayedExportProgress(progress)}
+            testId="export-records"
           />
           <MenuItem
             onClick={() => {
@@ -169,6 +172,7 @@ export const RecordIndexOptionsDropdownContent = ({
             }}
             LeftIcon={IconRotate2}
             text={`Deleted ${objectNamePlural}`}
+            testId="deleted-records"
           />
         </DropdownMenuItemsContainer>
       )}
@@ -192,6 +196,7 @@ export const RecordIndexOptionsDropdownContent = ({
               onClick={() => handleSelectMenu('hiddenFields')}
               LeftIcon={IconEyeOff}
               text="Hidden Fields"
+              testId="hidden-fields-button"
             />
           </DropdownMenuItemsContainer>
         </>
@@ -226,7 +231,11 @@ export const RecordIndexOptionsDropdownContent = ({
             }}
           >
             <DropdownMenuItemsContainer>
-              <MenuItem LeftIcon={IconSettings} text="Edit Fields" />
+              <MenuItem
+                LeftIcon={IconSettings}
+                text="Edit Fields"
+                testId="edit-fields"
+              />
             </DropdownMenuItemsContainer>
           </UndecoratedLink>
         </>

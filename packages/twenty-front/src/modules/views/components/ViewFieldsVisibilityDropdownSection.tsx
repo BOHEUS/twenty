@@ -112,6 +112,7 @@ export const ViewFieldsVisibilityDropdownSection = ({
             accent={showDragGrip ? 'placeholder' : 'default'}
             showGrip={showDragGrip}
             isDragDisabled
+            testId={`${title.toLowerCase()}-options-fields`}
           />
         ))}
         {!!draggableItems.length && (

@@ -33,6 +33,7 @@ export const MenuItemToggle = ({
           value={toggled}
           onChange={onToggleChange}
           toggleSize={toggleSize}
+          dataTestId="kanban-compact-view-toggle"
         />
       </StyledMenuItemRightContent>
     </StyledMenuItemBase>

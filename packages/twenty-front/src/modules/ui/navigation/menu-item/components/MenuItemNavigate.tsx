@@ -12,6 +12,7 @@ export type MenuItemNavigateProps = {
   text: string;
   onClick?: () => void;
   className?: string;
+  testId?: string;
 };
 
 export const MenuItemNavigate = ({
@@ -19,11 +20,16 @@ export const MenuItemNavigate = ({
   text,
   className,
   onClick,
+  testId,
 }: MenuItemNavigateProps) => {
   const theme = useTheme();
 
   return (
-    <StyledMenuItemBase onClick={onClick} className={className}>
+    <StyledMenuItemBase
+      onClick={onClick}
+      className={className}
+      data-testid={testId}
+    >
       <StyledMenuItemLeftContent>
         <MenuItemLeftContent LeftIcon={LeftIcon} text={text} />
       </StyledMenuItemLeftContent>

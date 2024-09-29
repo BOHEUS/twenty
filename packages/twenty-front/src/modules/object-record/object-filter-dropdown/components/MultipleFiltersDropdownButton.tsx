@@ -30,6 +30,7 @@ export const MultipleFiltersDropdownButton = ({
       dropdownComponents={<MultipleFiltersDropdownContent />}
       dropdownHotkeyScope={hotkeyScope}
       dropdownOffset={{ y: 8 }}
+      dataTestId="filter-button"
     />
   );
 };
