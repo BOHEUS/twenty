@@ -179,6 +179,7 @@ export const SettingsObjectFieldTable = ({
         placeholder="Search a field..."
         value={searchTerm}
         onChange={setSearchTerm}
+        dataTestId="field-search-input"
       />
       <Table>
         <StyledObjectFieldTableRow>
@@ -194,21 +195,23 @@ export const SettingsObjectFieldTable = ({
           <TableHeader></TableHeader>
         </StyledObjectFieldTableRow>
         {isNonEmptyArray(filteredActiveItems) && (
-          <TableSection title="Active">
+          <TableSection title="Active" dataTestId="active-fields">
             {filteredActiveItems.map((objectSettingsDetailItem) => (
               <SettingsObjectFieldItemTableRow
                 key={objectSettingsDetailItem.fieldMetadataItem.id}
                 settingsObjectDetailTableItem={objectSettingsDetailItem}
                 status="active"
                 mode={mode}
+                dataTestId="active-field"
               />
             ))}
           </TableSection>
         )}
         {isNonEmptyArray(filteredDisabledItems) && (
           <TableSection
-            isInitiallyExpanded={mode === 'new-field' ? true : false}
+            isInitiallyExpanded={mode === 'new-field'}
             title="Inactive"
+            dataTestId="inactive-fields"
           >
             {filteredDisabledItems.map((objectSettingsDetailItem) => (
               <SettingsObjectFieldItemTableRow
@@ -216,6 +219,7 @@ export const SettingsObjectFieldTable = ({
                 settingsObjectDetailTableItem={objectSettingsDetailItem}
                 status="disabled"
                 mode={mode}
+                dataTestId="inactive-field"
               />
             ))}
           </TableSection>

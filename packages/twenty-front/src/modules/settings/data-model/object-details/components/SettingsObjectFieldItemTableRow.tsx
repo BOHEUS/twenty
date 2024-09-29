@@ -37,6 +37,7 @@ type SettingsObjectFieldItemTableRowProps = {
   settingsObjectDetailTableItem: SettingsObjectDetailTableItem;
   status: 'active' | 'disabled';
   mode: 'view' | 'new-field';
+  dataTestId?: string;
 };
 
 export const StyledObjectFieldTableRow = styled(TableRow)`
@@ -63,6 +64,7 @@ export const SettingsObjectFieldItemTableRow = ({
   settingsObjectDetailTableItem,
   mode,
   status,
+  dataTestId,
 }: SettingsObjectFieldItemTableRowProps) => {
   const { fieldMetadataItem, identifierType, objectMetadataItem } =
     settingsObjectDetailTableItem;
@@ -206,6 +208,7 @@ export const SettingsObjectFieldItemTableRow = ({
   return (
     <StyledObjectFieldTableRow
       to={mode === 'view' ? linkToNavigate : undefined}
+      dataTestId={dataTestId}
     >
       <StyledNameTableCell>
         {!!Icon && (
@@ -238,7 +241,7 @@ export const SettingsObjectFieldItemTableRow = ({
           value={fieldType}
         />
       </TableCell>
-      <StyledIconTableCell>
+      <StyledIconTableCell data-testid="more-options-button">
         {status === 'active' ? (
           mode === 'view' ? (
             <SettingsObjectFieldActiveActionDropdown

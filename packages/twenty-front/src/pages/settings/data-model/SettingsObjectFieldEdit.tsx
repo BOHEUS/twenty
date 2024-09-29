@@ -261,6 +261,7 @@ export const SettingsObjectFieldEdit = () => {
                       ? handleDeactivate
                       : handleActivate
                   }
+                  dataTestId="deactivate-field-button"
                 />
               </Section>
             )}

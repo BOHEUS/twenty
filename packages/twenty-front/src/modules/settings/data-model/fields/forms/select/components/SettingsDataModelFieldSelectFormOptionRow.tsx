@@ -89,13 +89,14 @@ export const SettingsDataModelFieldSelectFormOptionRow = ({
   };
 
   return (
-    <StyledRow className={className}>
+    <StyledRow className={className} data-testid="option-field-row">
       <IconGripVertical
         size={theme.icon.size.md}
         stroke={theme.icon.stroke.sm}
         color={theme.font.color.extraLight}
       />
       <Dropdown
+        dataTestId="field-option-color-select"
         dropdownId={dropdownIds.color}
         dropdownPlacement="bottom-start"
         dropdownHotkeyScope={{
@@ -133,8 +134,10 @@ export const SettingsDataModelFieldSelectFormOptionRow = ({
         RightIcon={isDefault ? IconCheck : undefined}
         maxLength={OPTION_VALUE_MAXIMUM_LENGTH}
         onInputEnter={handleInputEnter}
+        dataTestId="field-option-name-input"
       />
       <Dropdown
+        dataTestId="field-option-more-options"
         dropdownId={dropdownIds.actions}
         dropdownPlacement="right-start"
         dropdownHotkeyScope={{

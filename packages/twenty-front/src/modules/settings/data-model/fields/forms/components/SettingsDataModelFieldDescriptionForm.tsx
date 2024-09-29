@@ -40,6 +40,7 @@ export const SettingsDataModelFieldDescriptionForm = ({
           value={value ?? undefined}
           onChange={onChange}
           disabled={disabled}
+          dataTestId="field-description-input"
         />
       )}
     />

@@ -99,6 +99,7 @@ export const SettingsDataModelObjectAboutForm = ({
                 disabled={disabled || disableNameEdit}
                 fullWidth
                 maxLength={OBJECT_NAME_MAXIMUM_LENGTH}
+                dataTestId={label.toLowerCase().concat('-new-object-input')}
               />
             )}
           />
@@ -115,6 +116,7 @@ export const SettingsDataModelObjectAboutForm = ({
             value={value ?? undefined}
             onChange={(nextValue) => onChange(nextValue ?? null)}
             disabled={disabled}
+            dataTestId="new-object-description-input"
           />
         )}
       />

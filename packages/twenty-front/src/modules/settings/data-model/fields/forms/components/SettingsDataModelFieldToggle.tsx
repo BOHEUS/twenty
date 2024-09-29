@@ -84,6 +84,7 @@ export const SettingsDataModelFieldToggle = ({
           value={value}
           onChange={onChange}
           toggleSize="small"
+          dataTestId="relative-date-toggle"
         />
       </StyledGroup>
     </StyledContainer>

@@ -194,9 +194,7 @@ export const SettingsObjects = () => {
                   {filteredActiveObjectSettingsItems.map(
                     (objectSettingsItem) => (
                       <SettingsObjectMetadataItemTableRow
-                        dataTestId={
-                          objectSettingsItem.objectMetadataItem.namePlural
-                        }
+                        dataTestId="active-object"
                         key={objectSettingsItem.objectMetadataItem.namePlural}
                         objectMetadataItem={
                           objectSettingsItem.objectMetadataItem
@@ -224,6 +222,7 @@ export const SettingsObjects = () => {
                   {filteredInactiveObjectSettingsItems.map(
                     (objectSettingsItem) => (
                       <SettingsObjectMetadataItemTableRow
+                        dataTestId="inactive-object"
                         key={objectSettingsItem.objectMetadataItem.namePlural}
                         objectMetadataItem={
                           objectSettingsItem.objectMetadataItem

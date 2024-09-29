@@ -75,7 +75,9 @@ export const SettingsObjectMetadataItemTableRow = ({
         {objectMetadataItem.fields.filter((field) => !field.isSystem).length}
       </TableCell>
       <TableCell align="right">{totalObjectCount}</TableCell>
-      <StyledActionTableCell>{action}</StyledActionTableCell>
+      <StyledActionTableCell data-testid="more-options-button">
+        {action}
+      </StyledActionTableCell>
     </StyledObjectTableRow>
   );
 };

@@ -278,6 +278,7 @@ export const SettingsDataModelFieldSelectForm = ({
                 title="Add option"
                 Icon={IconPlus}
                 onClick={handleAddOption}
+                dataTestId="field-add-option-button"
               />
             </StyledFooter>
           </>

@@ -129,6 +129,7 @@ export const SettingsDataModelFieldTypeSelect = ({
               placeholder="Search a type"
               value={searchQuery}
               onChange={setSearchQuery}
+              dataTestId="type-search-input"
             />
           </Section>
           {SETTINGS_FIELD_TYPE_CATEGORIES.map((category) => (
@@ -143,7 +144,7 @@ export const SettingsDataModelFieldTypeSelect = ({
                 {fieldTypeConfigs
                   .filter(([, config]) => config.category === category)
                   .map(([key, config]) => (
-                    <StyledCardContainer>
+                    <StyledCardContainer data-testid="field-type-card">
                       <SettingsCard
                         key={key}
                         onClick={() => {
