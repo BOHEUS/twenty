@@ -115,6 +115,7 @@ export const ImageInput = ({
         withPicture={!!pictureURI}
         disabled={disabled}
         onClick={onUploadButtonClick}
+        data-testid="image-preview"
       >
         {pictureURI ? (
           <img
@@ -144,6 +145,7 @@ export const ImageInput = ({
               variant="secondary"
               title="Abort"
               disabled={!pictureURI || disabled}
+              dataTestId="abort-upload-image-button"
             />
           ) : (
             <Button
@@ -152,6 +154,7 @@ export const ImageInput = ({
               variant="secondary"
               title="Upload"
               disabled={disabled}
+              dataTestId="upload-image-button"
             />
           )}
           <Button
@@ -160,6 +163,7 @@ export const ImageInput = ({
             variant="secondary"
             title="Remove"
             disabled={!pictureURI || disabled}
+            dataTestId="remove-image-button"
           />
         </StyledButtonContainer>
         <StyledText>

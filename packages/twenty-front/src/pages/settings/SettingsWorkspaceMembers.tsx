@@ -162,7 +162,10 @@ export const SettingsWorkspaceMembers = () => {
               </TableRow>
             </StyledTableHeaderRow>
             {workspaceMembers?.map((workspaceMember) => (
-              <StyledTable key={workspaceMember.id}>
+              <StyledTable
+                key={workspaceMember.id}
+                data-testid="member-table-row"
+              >
                 <TableRow>
                   <TableCell>
                     <StyledText
@@ -199,7 +202,7 @@ export const SettingsWorkspaceMembers = () => {
                           variant="tertiary"
                           size="medium"
                           Icon={IconTrash}
-                          dataTestId="delete-user"
+                          dataTestId="delete-member"
                         />
                       </StyledButtonContainer>
                     )}

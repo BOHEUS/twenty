@@ -36,6 +36,7 @@ export const SettingsObjectCoverImage = () => {
           title="Visualize"
           size="small"
           to={'/settings/' + SettingsPath.ObjectOverview}
+          dataTestId="visualize-data-model-button"
         />
       </StyledButtonContainer>
     </StyledCoverImageContainer>

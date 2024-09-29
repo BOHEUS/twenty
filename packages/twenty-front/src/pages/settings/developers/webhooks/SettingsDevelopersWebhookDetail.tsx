@@ -140,6 +140,7 @@ export const SettingsDevelopersWebhooksDetail = () => {
                   setDescription(description);
                   setIsDirty(true);
                 }}
+                dataTestId="webhook-description-input"
               />
             </Section>
             <Section>
@@ -157,6 +158,7 @@ export const SettingsDevelopersWebhooksDetail = () => {
                     setOperationObjectSingularName(objectSingularName);
                   }}
                   options={fieldTypeOptions}
+                  dataTestId="webhook-object-select"
                 />
                 <Select
                   fullWidth
@@ -172,6 +174,7 @@ export const SettingsDevelopersWebhooksDetail = () => {
                     { value: 'update', label: 'Update' },
                     { value: 'delete', label: 'Delete' },
                   ]}
+                  dataTestId="webhook-action-select"
                 />
               </StyledFilterRow>
             </Section>
@@ -186,6 +189,7 @@ export const SettingsDevelopersWebhooksDetail = () => {
                 title="Delete"
                 Icon={IconTrash}
                 onClick={() => setIsDeleteWebhookModalOpen(true)}
+                dataTestId="delete-webhook-button"
               />
               <ConfirmationModal
                 confirmationPlaceholder="yes"

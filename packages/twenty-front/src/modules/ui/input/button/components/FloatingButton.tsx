@@ -18,6 +18,7 @@ export type FloatingButtonProps = {
   disabled?: boolean;
   focus?: boolean;
   to?: string;
+  dataTestId?: string;
 };
 
 const StyledButton = styled('button', {
@@ -113,6 +114,7 @@ export const FloatingButton = ({
   disabled = false,
   focus = false,
   to,
+  dataTestId
 }: FloatingButtonProps) => {
   const theme = useTheme();
   return (
@@ -126,6 +128,7 @@ export const FloatingButton = ({
       className={className}
       to={to}
       as={to ? Link : 'button'}
+      data-testid={dataTestId}
     >
       {Icon && <Icon size={theme.icon.size.sm} />}
       {title}

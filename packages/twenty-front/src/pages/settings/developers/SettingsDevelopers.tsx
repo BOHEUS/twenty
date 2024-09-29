@@ -45,6 +45,7 @@ export const SettingsDevelopers = () => {
               size="small"
               variant="secondary"
               to={'/settings/developers/api-keys/new'}
+              dataTestId="new-api-key-button"
             />
           </StyledButtonContainer>
         </Section>
@@ -61,6 +62,7 @@ export const SettingsDevelopers = () => {
               size="small"
               variant="secondary"
               to={'/settings/developers/webhooks/new'}
+              dataTestId="new-webhook-button"
             />
           </StyledButtonContainer>
         </Section>

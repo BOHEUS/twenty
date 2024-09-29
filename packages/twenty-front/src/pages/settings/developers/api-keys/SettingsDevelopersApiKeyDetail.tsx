@@ -180,6 +180,7 @@ export const SettingsDevelopersApiKeyDetail = () => {
                       title="Regenerate Key"
                       Icon={IconRepeat}
                       onClick={() => setIsRegenerateKeyModalOpen(true)}
+                      dataTestId="regenerate-key-button"
                     />
                     <StyledInfo>
                       {formatExpiration(
@@ -215,6 +216,7 @@ export const SettingsDevelopersApiKeyDetail = () => {
                 )}
                 disabled
                 fullWidth
+                dataTestId="api-key-expiration"
               />
             </Section>
             <Section>
@@ -228,6 +230,7 @@ export const SettingsDevelopersApiKeyDetail = () => {
                 title="Delete"
                 Icon={IconTrash}
                 onClick={() => setIsDeleteApiKeyModalOpen(true)}
+                dataTestId="delete-api-key-button"
               />
             </Section>
           </SettingsPageContainer>

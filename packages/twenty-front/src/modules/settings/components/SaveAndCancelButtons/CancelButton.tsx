@@ -15,6 +15,7 @@ export const CancelButton = ({
       accent="tertiary"
       onClick={onCancel}
       disabled={disabled}
+      dataTestId="cancel-button"
     />
   );
 };

@@ -10,6 +10,7 @@ const StyledTableRow = styled('div', {
   onClick?: () => void;
   to?: string;
   gridAutoColumns?: string;
+  dataTestId?: string;
 }>`
   background-color: ${({ isSelected, theme }) =>
     isSelected ? theme.accent.quaternary : 'transparent'};
@@ -35,6 +36,7 @@ type TableRowProps = {
   to?: string;
   className?: string;
   gridAutoColumns?: string;
+  dataTestId?: string;
 };
 
 export const TableRow = ({
@@ -44,6 +46,7 @@ export const TableRow = ({
   className,
   children,
   gridAutoColumns,
+  dataTestId,
 }: React.PropsWithChildren<TableRowProps>) => (
   <StyledTableRow
     isSelected={isSelected}
@@ -52,6 +55,7 @@ export const TableRow = ({
     className={className}
     to={to}
     as={to ? Link : 'div'}
+    data-testid={dataTestId}
   >
     {children}
   </StyledTableRow>

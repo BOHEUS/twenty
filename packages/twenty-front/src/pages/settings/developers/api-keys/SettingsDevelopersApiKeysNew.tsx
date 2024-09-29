@@ -92,6 +92,7 @@ export const SettingsDevelopersApiKeysNew = () => {
         <Section>
           <H2Title title="Name" description="Name of your API key" />
           <TextInput
+            dataTestId="new-api-key-name"
             placeholder="E.g. backoffice integration"
             value={formValues.name}
             onKeyDown={(e) => {
@@ -114,6 +115,7 @@ export const SettingsDevelopersApiKeysNew = () => {
             description="When the API key will expire."
           />
           <Select
+            dataTestId="expiration-date-select"
             dropdownId="object-field-type-select"
             options={EXPIRATION_DATES}
             value={formValues.expirationDate}

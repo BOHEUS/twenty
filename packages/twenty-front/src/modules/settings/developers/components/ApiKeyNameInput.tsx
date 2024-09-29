@@ -64,6 +64,7 @@ export const ApiKeyNameInput = ({
         fullWidth
         value={apiKeyName}
         disabled={disabled}
+        dataTestId="api-key-name-input"
       />
     </StyledComboInputContainer>
   );

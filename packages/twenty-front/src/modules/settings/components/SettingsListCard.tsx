@@ -80,7 +80,10 @@ export const SettingsListCard = <
       ))}
       {hasFooter && (
         <StyledFooter divider={!!items.length}>
-          <StyledButton onClick={onFooterButtonClick} data-testid="add-google-account-button">
+          <StyledButton
+            onClick={onFooterButtonClick}
+            data-testid="add-google-account-button"
+          >
             <IconPlus size={theme.icon.size.md} />
             {footerButtonLabel}
           </StyledButton>

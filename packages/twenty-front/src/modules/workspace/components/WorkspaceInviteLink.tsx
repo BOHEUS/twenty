@@ -39,6 +39,7 @@ export const WorkspaceInviteLink = ({
         variant="primary"
         accent="blue"
         title="Copy link"
+        dataTestId="copy-link-button"
         onClick={() => {
           enqueueSnackBar('Link copied to clipboard', {
             variant: SnackBarVariant.Success,
