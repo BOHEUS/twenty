@@ -42,7 +42,7 @@ export const SettingsObjectMetadataItemTableRow = ({
   objectMetadataItem,
   link,
   totalObjectCount,
-  dataTestId
+  dataTestId,
 }: SettingsObjectMetadataItemTableRowProps) => {
   const theme = useTheme();
 
@@ -51,7 +51,11 @@ export const SettingsObjectMetadataItemTableRow = ({
   const objectTypeLabel = getObjectTypeLabel(objectMetadataItem);
 
   return (
-    <StyledObjectTableRow key={objectMetadataItem.namePlural} to={link} dataTestId={dataTestId}>
+    <StyledObjectTableRow
+      key={objectMetadataItem.namePlural}
+      to={link}
+      dataTestId={dataTestId}
+    >
       <StyledNameTableCell>
         {!!Icon && (
           <Icon

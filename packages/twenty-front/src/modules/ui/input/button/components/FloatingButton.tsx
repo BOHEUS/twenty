@@ -114,7 +114,7 @@ export const FloatingButton = ({
   disabled = false,
   focus = false,
   to,
-  dataTestId
+  dataTestId,
 }: FloatingButtonProps) => {
   const theme = useTheme();
   return (
