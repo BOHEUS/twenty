@@ -12196,6 +12196,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@sentry/nestjs@npm:^8.30.0":
+  version: 8.30.0
+  resolution: "@sentry/nestjs@npm:8.30.0"
+  dependencies:
+    "@sentry/core": "npm:8.30.0"
+    "@sentry/node": "npm:8.30.0"
+    "@sentry/types": "npm:8.30.0"
+    "@sentry/utils": "npm:8.30.0"
+  peerDependencies:
+    "@nestjs/common": ^8.0.0 || ^9.0.0 || ^10.0.0
+    "@nestjs/core": ^8.0.0 || ^9.0.0 || ^10.0.0
+  checksum: 10c0/f0412787f5fac68743ed6e4f4b58fd06a198d3f0b5777dd072784d9c943fbb3725ee82b00838a7f274f4eb51d7776f5a72f80f8cba253f5c30a7649a292f20c0
+  languageName: node
+  linkType: hard
+
 "@sentry/node@npm:8.30.0, @sentry/node@npm:^8":
   version: 8.30.0
   resolution: "@sentry/node@npm:8.30.0"
@@ -17292,6 +17307,13 @@ __metadata:
     pg-protocol: "npm:*"
     pg-types: "npm:^2.2.0"
   checksum: 10c0/8d16660c9a4f050d6d5e391c59f9a62e9d377a2a6a7eb5865f8828082dbdfeab700fd707e585f42d67b29e796b32863aea5bd6d5cbb8ceda2d598da5d0c61693
+  languageName: node
+  linkType: hard
+
+"@types/pluralize@npm:^0.0.33":
+  version: 0.0.33
+  resolution: "@types/pluralize@npm:0.0.33"
+  checksum: 10c0/24899caf85b79dd291a6b6e9b9f3b67b452b18d578d0ac0d531a705bf5ee0361d9386ea1f8532c64de9e22c6e9606c5497787bb5e31bd299c487980436c59785
   languageName: node
   linkType: hard
 
@@ -47464,6 +47486,7 @@ __metadata:
     "@nx/js": "npm:18.3.3"
     "@ptc-org/nestjs-query-graphql": "patch:@ptc-org/nestjs-query-graphql@4.2.0#./patches/@ptc-org+nestjs-query-graphql+4.2.0.patch"
     "@revertdotdev/revert-react": "npm:^0.0.21"
+    "@sentry/nestjs": "npm:^8.30.0"
     "@types/lodash.differencewith": "npm:^4.5.9"
     "@types/lodash.isempty": "npm:^4.4.7"
     "@types/lodash.isequal": "npm:^4.5.8"
@@ -47677,6 +47700,7 @@ __metadata:
     "@types/passport-google-oauth20": "npm:^2.0.11"
     "@types/passport-jwt": "npm:^3.0.8"
     "@types/passport-microsoft": "npm:^1.0.3"
+    "@types/pluralize": "npm:^0.0.33"
     "@types/react": "npm:^18.2.39"
     "@types/react-datepicker": "npm:^6.2.0"
     "@types/react-dom": "npm:^18.2.15"
