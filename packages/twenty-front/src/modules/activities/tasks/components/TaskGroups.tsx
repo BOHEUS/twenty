@@ -86,6 +86,7 @@ export const TaskGroups = ({
               targetableObjects: targetableObjects ?? [],
             })
           }
+          dataTestId="add-task-button"
         />
       </AnimatedPlaceholderEmptyContainer>
     );

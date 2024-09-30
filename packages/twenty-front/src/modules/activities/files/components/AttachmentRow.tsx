@@ -97,7 +97,7 @@ export const AttachmentRow = ({ attachment }: { attachment: Attachment }) => {
 
   return (
     <FieldContext.Provider value={fieldContext as GenericFieldContextType}>
-      <StyledRow>
+      <StyledRow data-testid="file-attachment-row">
         <StyledLeftContent>
           <AttachmentIcon attachmentType={attachment.type} />
           {isEditing ? (

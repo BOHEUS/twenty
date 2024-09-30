@@ -36,6 +36,7 @@ export const InformationBanner = ({
           size="small"
           inverted
           onClick={buttonOnClick}
+          dataTestId="information-banner-button"
         />
       )}
     </StyledBanner>

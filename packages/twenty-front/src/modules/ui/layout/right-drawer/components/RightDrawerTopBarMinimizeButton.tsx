@@ -17,6 +17,7 @@ export const RightDrawerTopBarMinimizeButton = () => {
       onClick={handleButtonClick}
       size="medium"
       accent="tertiary"
+      testId="right-drawer-minimize-button"
     />
   );
 };

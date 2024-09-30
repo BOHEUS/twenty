@@ -109,6 +109,7 @@ export const TaskRow = ({ task }: { task: Task }) => {
       onClick={() => {
         openActivityRightDrawer(task.id);
       }}
+      data-testid="task-row"
     >
       <StyledLeftSideContainer>
         <StyledCheckboxContainer

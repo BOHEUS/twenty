@@ -149,6 +149,7 @@ export const EmailThreadPreview = ({
       onClick={(event) => handleThreadClick(event)}
       divider={divider}
       visibility={visibility}
+      data-testid="email-thread-preview"
     >
       <StyledHeading unread={!thread.read}>
         <StyledParticipantsContainer>

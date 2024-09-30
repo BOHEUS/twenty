@@ -30,6 +30,7 @@ export const AddTaskButton = ({
           targetableObjects: activityTargetableObjects,
         })
       }
+      dataTestId="add-task-button"
     ></Button>
   );
 };

@@ -17,6 +17,7 @@ export const RightDrawerTopBarCloseButton = () => {
       onClick={handleButtonClick}
       size="medium"
       accent="tertiary"
+      testId="right-drawer-close-button"
     />
   );
 };

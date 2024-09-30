@@ -18,7 +18,7 @@ export const RecordDetailRelationRecordsList = ({
     setExpandedItem(recordId === expandedItem ? '' : recordId);
 
   return (
-    <RecordDetailRecordsList>
+    <RecordDetailRecordsList data-testid="related-company">
       {relationRecords.slice(0, 5).map((relationRecord) => (
         <Fragment key={relationRecord.id}>
           <RecordDetailRelationRecordsListItemEffect

@@ -12,7 +12,7 @@ export const CalendarMonthCard = ({ dayTimes }: CalendarMonthCardProps) => {
   const { calendarEventsByDayTime } = useContext(CalendarContext);
 
   return (
-    <Card fullWidth>
+    <Card fullWidth data-testid="calendar-month-card">
       {dayTimes.map((dayTime, index) => {
         const dayCalendarEvents = calendarEventsByDayTime[dayTime] || [];
 

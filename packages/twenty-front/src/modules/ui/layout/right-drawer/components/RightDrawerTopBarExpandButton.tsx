@@ -13,6 +13,7 @@ export const RightDrawerTopBarExpandButton = ({ to }: { to: string }) => {
         accent="tertiary"
         Icon={IconExternalLink}
         onClick={closeRightDrawer}
+        testId="right-drawer-expand-button"
       />
     </UndecoratedLink>
   );

@@ -26,13 +26,11 @@ export const NavigationDrawerSectionForObjectMetadataItems = ({
   isRemote,
   views,
   objectMetadataItems,
-  dataTestId,
 }: {
   sectionTitle: string;
   isRemote: boolean;
   views: View[];
   objectMetadataItems: ObjectMetadataItem[];
-  dataTestId?: string;
 }) => {
   const { toggleNavigationSection, isNavigationSectionOpenState } =
     useNavigationSection('Objects' + (isRemote ? 'Remote' : 'Workspace'));
@@ -123,7 +121,7 @@ export const NavigationDrawerSectionForObjectMetadataItems = ({
                   active={
                     currentPath === `/objects/${objectMetadataItem.namePlural}`
                   }
-                  dataTestId={dataTestId}
+                  dataTestId="workspace-item"
                 />
                 {shouldSubItemsBeDisplayed &&
                   sortedObjectMetadataViews.map((view, index) => (
@@ -138,7 +136,7 @@ export const NavigationDrawerSectionForObjectMetadataItems = ({
                       })}
                       Icon={getIcon(view.icon)}
                       key={view.id}
-                      dataTestId={dataTestId}
+                      dataTestId="workspace-sub-item"
                     />
                   ))}
               </div>

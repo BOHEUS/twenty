@@ -52,6 +52,7 @@ export const NavigationDrawerCollapseButton = ({
         }
         variant="tertiary"
         size="small"
+        dataTestId="navigation-drawer-button"
       />
     </StyledCollapseButton>
   );

@@ -176,7 +176,7 @@ export const NavigationDrawerItem = ({
   };
 
   return (
-    <StyledNavigationDrawerItemContainer data-testid={dataTestId}>
+    <StyledNavigationDrawerItemContainer>
       <StyledItem
         className={className}
         onClick={handleItemClick}
@@ -187,6 +187,7 @@ export const NavigationDrawerItem = ({
         as={to ? Link : 'div'}
         to={to ? to : undefined}
         indentationLevel={indentationLevel}
+        data-testid={dataTestId}
       >
         {showBreadcrumb && (
           <NavigationDrawerItemBreadcrumb state={subItemState} />

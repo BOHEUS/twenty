@@ -12,10 +12,8 @@ import { View } from '@/views/types/View';
 
 export const NavigationDrawerSectionForObjectMetadataItemsWrapper = ({
   isRemote,
-  dataTestId,
 }: {
   isRemote: boolean;
-  dataTestId?: string;
 }) => {
   const currentUser = useRecoilValue(currentUserState);
 
@@ -37,7 +35,6 @@ export const NavigationDrawerSectionForObjectMetadataItemsWrapper = ({
       objectMetadataItems={filteredActiveObjectMetadataItems}
       views={views}
       isRemote={isRemote}
-      dataTestId={dataTestId}
     />
   );
 };
