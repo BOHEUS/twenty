@@ -95,18 +95,20 @@ export const TextArea = ({
       {label && <StyledLabel htmlFor={inputId}>{label}</StyledLabel>}
 
       <StyledTextArea
-        id={inputId}placeholder={placeholder}
-      maxRows={MAX_ROWS}
-      minRows={computedMinRows}
-      value={value}
-      onChange={(event) =>
-        onChange?.(turnIntoEmptyStringIfWhitespacesOnly(event.target.value))
-      }
-      onFocus={handleFocus}
-      onBlur={handleBlur}
-      disabled={disabled}
-      className={className}
-      data-testid={dataTestId}
-    /></StyledContainer>
+        id={inputId}
+        placeholder={placeholder}
+        maxRows={MAX_ROWS}
+        minRows={computedMinRows}
+        value={value}
+        onChange={(event) =>
+          onChange?.(turnIntoEmptyStringIfWhitespacesOnly(event.target.value))
+        }
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        disabled={disabled}
+        className={className}
+        data-testid={dataTestId}
+      />
+    </StyledContainer>
   );
 };
