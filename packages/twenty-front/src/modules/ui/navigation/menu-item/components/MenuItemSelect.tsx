@@ -1,6 +1,6 @@
 import { css, useTheme } from '@emotion/react';
 import styled from '@emotion/styled';
-import { IconCheck, IconComponent } from 'twenty-ui';
+import { IconCheck, IconChevronRight, IconComponent } from 'twenty-ui';
 
 import { MenuItemLeftContent } from '../internals/components/MenuItemLeftContent';
 import { StyledMenuItemBase } from '../internals/components/StyledMenuItemBase';
@@ -45,6 +45,7 @@ type MenuItemSelectProps = {
   onClick?: () => void;
   disabled?: boolean;
   hovered?: boolean;
+  hasSubMenu?: boolean;
   dataTestId?: string;
 };
 
@@ -56,6 +57,7 @@ export const MenuItemSelect = ({
   onClick,
   disabled,
   hovered,
+  hasSubMenu = false,
   dataTestId,
 }: MenuItemSelectProps) => {
   const theme = useTheme();
@@ -71,6 +73,12 @@ export const MenuItemSelect = ({
     >
       <MenuItemLeftContent LeftIcon={LeftIcon} text={text} />
       {selected && <IconCheck size={theme.icon.size.md} />}
+      {hasSubMenu && (
+        <IconChevronRight
+          size={theme.icon.size.sm}
+          color={theme.font.color.tertiary}
+        />
+      )}
     </StyledMenuItemSelect>
   );
 };

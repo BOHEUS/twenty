@@ -13,13 +13,16 @@ import {
   IconMail,
   IconRocket,
   IconSettings,
+  IconTool,
   IconUserCircle,
   IconUsers,
+  MAIN_COLORS,
 } from 'twenty-ui';
 
 import { useAuth } from '@/auth/hooks/useAuth';
 import { billingState } from '@/client-config/states/billingState';
 import { SettingsNavigationDrawerItem } from '@/settings/components/SettingsNavigationDrawerItem';
+import { useExpandedHeightAnimation } from '@/settings/hooks/useExpandedHeightAnimation';
 import { getSettingsPagePath } from '@/settings/utils/getSettingsPagePath';
 import { SettingsPath } from '@/types/SettingsPath';
 import {
@@ -29,9 +32,37 @@ import {
 import { NavigationDrawerItemGroup } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItemGroup';
 import { NavigationDrawerSection } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSection';
 import { NavigationDrawerSectionTitle } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerSectionTitle';
+import { isAdvancedModeEnabledState } from '@/ui/navigation/navigation-drawer/states/isAdvancedModeEnabledState';
 import { getNavigationSubItemState } from '@/ui/navigation/navigation-drawer/utils/getNavigationSubItemState';
 import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
+import styled from '@emotion/styled';
+import { AnimatePresence, motion } from 'framer-motion';
 import { matchPath, resolvePath, useLocation } from 'react-router-dom';
+
+const StyledNavigationDrawerSection = styled(NavigationDrawerSection)<{
+  withLeftMargin?: boolean;
+}>`
+  margin-left: ${({ withLeftMargin, theme }) =>
+    withLeftMargin && theme.spacing(5)};
+  margin-top: ${({ theme }) => theme.spacing(3)};
+`;
+
+const StyledIconContainer = styled.div`
+  border-right: 1px solid ${MAIN_COLORS.yellow};
+  display: flex;
+  margin-top: ${({ theme }) => theme.spacing(5)};
+  width: 16px;
+`;
+
+const StyledDeveloperSection = styled.div`
+  display: flex;
+  width: 100%;
+  gap: ${({ theme }) => theme.spacing(1)};
+`;
+
+const StyledIconTool = styled(IconTool)`
+  margin-right: ${({ theme }) => theme.spacing(0.5)};
+`;
 
 type SettingsNavigationItem = {
   label: string;
@@ -43,6 +74,10 @@ type SettingsNavigationItem = {
 };
 
 export const SettingsNavigationDrawerItems = () => {
+  const isAdvancedModeEnabled = useRecoilValue(isAdvancedModeEnabledState);
+  const { contentRef, motionAnimationVariants } = useExpandedHeightAnimation(
+    isAdvancedModeEnabled,
+  );
   const { signOut } = useAuth();
 
   const billing = useRecoilValue(billingState);
@@ -91,7 +126,7 @@ export const SettingsNavigationDrawerItems = () => {
 
   return (
     <>
-      <NavigationDrawerSection>
+      <StyledNavigationDrawerSection withLeftMargin>
         <NavigationDrawerSectionTitle label="User" />
         <SettingsNavigationDrawerItem
           label="Profile"
@@ -128,8 +163,8 @@ export const SettingsNavigationDrawerItems = () => {
             />
           ))}
         </NavigationDrawerItemGroup>
-      </NavigationDrawerSection>
-      <NavigationDrawerSection>
+      </StyledNavigationDrawerSection>
+      <StyledNavigationDrawerSection withLeftMargin>
         <NavigationDrawerSectionTitle label="Workspace" />
         <SettingsNavigationDrawerItem
           label="General"
@@ -186,8 +221,40 @@ export const SettingsNavigationDrawerItems = () => {
             dataTestId="crm-migration-menu-item"
           />
         )}
-      </NavigationDrawerSection>
-      <NavigationDrawerSection>
+      </StyledNavigationDrawerSection>
+      <AnimatePresence>
+        {isAdvancedModeEnabled && (
+          <motion.div
+            ref={contentRef}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            variants={motionAnimationVariants}
+          >
+            <StyledDeveloperSection>
+              <StyledIconContainer>
+                <StyledIconTool size={12} color={MAIN_COLORS.yellow} />
+              </StyledIconContainer>
+              <StyledNavigationDrawerSection>
+                <NavigationDrawerSectionTitle label="Developers" />
+                <SettingsNavigationDrawerItem
+                  label="API & Webhooks"
+                  path={SettingsPath.Developers}
+                  Icon={IconCode}
+                />
+                {isFunctionSettingsEnabled && (
+                  <SettingsNavigationDrawerItem
+                    label="Functions"
+                    path={SettingsPath.ServerlessFunctions}
+                    Icon={IconFunction}
+                  />
+                )}
+              </StyledNavigationDrawerSection>
+            </StyledDeveloperSection>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <StyledNavigationDrawerSection withLeftMargin>
         <NavigationDrawerSectionTitle label="Other" />
         <SettingsNavigationDrawerItem
           label="Releases"
@@ -201,7 +268,7 @@ export const SettingsNavigationDrawerItems = () => {
           Icon={IconDoorEnter}
           dataTestId="logout-menu-item"
         />
-      </NavigationDrawerSection>
+      </StyledNavigationDrawerSection>
     </>
   );
 };
