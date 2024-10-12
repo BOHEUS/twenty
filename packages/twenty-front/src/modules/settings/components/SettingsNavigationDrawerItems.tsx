@@ -39,31 +39,6 @@ import styled from '@emotion/styled';
 import { AnimatePresence, motion } from 'framer-motion';
 import { matchPath, resolvePath, useLocation } from 'react-router-dom';
 
-const StyledNavigationDrawerSection = styled(NavigationDrawerSection)<{
-  withLeftMargin?: boolean;
-}>`
-  margin-left: ${({ withLeftMargin, theme }) =>
-    withLeftMargin && theme.spacing(5)};
-  margin-top: ${({ theme }) => theme.spacing(3)};
-`;
-
-const StyledIconContainer = styled.div`
-  border-right: 1px solid ${MAIN_COLORS.yellow};
-  display: flex;
-  margin-top: ${({ theme }) => theme.spacing(5)};
-  width: 16px;
-`;
-
-const StyledDeveloperSection = styled.div`
-  display: flex;
-  width: 100%;
-  gap: ${({ theme }) => theme.spacing(1)};
-`;
-
-const StyledIconTool = styled(IconTool)`
-  margin-right: ${({ theme }) => theme.spacing(0.5)};
-`;
-
 type SettingsNavigationItem = {
   label: string;
   path: SettingsPath;
@@ -72,6 +47,25 @@ type SettingsNavigationItem = {
   indentationLevel?: NavigationDrawerItemIndentationLevel;
   dataTestId?: string;
 };
+
+const StyledIconContainer = styled.div`
+  border-right: 1px solid ${MAIN_COLORS.yellow};
+  position: absolute;
+  left: ${({ theme }) => theme.spacing(-5)};
+  margin-top: ${({ theme }) => theme.spacing(2)};
+  height: 75%;
+`;
+
+const StyledDeveloperSection = styled.div`
+  display: flex;
+  width: 100%;
+  gap: ${({ theme }) => theme.spacing(1)};
+  position: relative;
+`;
+
+const StyledIconTool = styled(IconTool)`
+  margin-right: ${({ theme }) => theme.spacing(0.5)};
+`;
 
 export const SettingsNavigationDrawerItems = () => {
   const isAdvancedModeEnabled = useRecoilValue(isAdvancedModeEnabledState);
@@ -126,7 +120,7 @@ export const SettingsNavigationDrawerItems = () => {
 
   return (
     <>
-      <StyledNavigationDrawerSection withLeftMargin>
+      <NavigationDrawerSection>
         <NavigationDrawerSectionTitle label="User" />
         <SettingsNavigationDrawerItem
           label="Profile"
@@ -163,8 +157,8 @@ export const SettingsNavigationDrawerItems = () => {
             />
           ))}
         </NavigationDrawerItemGroup>
-      </StyledNavigationDrawerSection>
-      <StyledNavigationDrawerSection withLeftMargin>
+      </NavigationDrawerSection>
+      <NavigationDrawerSection>
         <NavigationDrawerSectionTitle label="Workspace" />
         <SettingsNavigationDrawerItem
           label="General"
@@ -221,7 +215,7 @@ export const SettingsNavigationDrawerItems = () => {
             dataTestId="crm-migration-menu-item"
           />
         )}
-      </StyledNavigationDrawerSection>
+      </NavigationDrawerSection>
       <AnimatePresence>
         {isAdvancedModeEnabled && (
           <motion.div
@@ -235,7 +229,7 @@ export const SettingsNavigationDrawerItems = () => {
               <StyledIconContainer>
                 <StyledIconTool size={12} color={MAIN_COLORS.yellow} />
               </StyledIconContainer>
-              <StyledNavigationDrawerSection>
+              <NavigationDrawerSection>
                 <NavigationDrawerSectionTitle label="Developers" />
                 <SettingsNavigationDrawerItem
                   label="API & Webhooks"
@@ -249,12 +243,12 @@ export const SettingsNavigationDrawerItems = () => {
                     Icon={IconFunction}
                   />
                 )}
-              </StyledNavigationDrawerSection>
+              </NavigationDrawerSection>
             </StyledDeveloperSection>
           </motion.div>
         )}
       </AnimatePresence>
-      <StyledNavigationDrawerSection withLeftMargin>
+      <NavigationDrawerSection>
         <NavigationDrawerSectionTitle label="Other" />
         <SettingsNavigationDrawerItem
           label="Releases"
@@ -268,7 +262,7 @@ export const SettingsNavigationDrawerItems = () => {
           Icon={IconDoorEnter}
           dataTestId="logout-menu-item"
         />
-      </StyledNavigationDrawerSection>
+      </NavigationDrawerSection>
     </>
   );
 };

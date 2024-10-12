@@ -1,3 +1,6 @@
+import { Injectable } from '@nestjs/common';
+
+import { ResolverService } from 'src/engine/api/graphql/graphql-query-runner/interfaces/resolver-service.interface';
 import {
   Record as IRecord,
   OrderByDirection,
@@ -11,47 +14,25 @@ import {
   GraphqlQueryRunnerException,
   GraphqlQueryRunnerExceptionCode,
 } from 'src/engine/api/graphql/graphql-query-runner/errors/graphql-query-runner.exception';
-import { ObjectRecordsToGraphqlConnectionMapper } from 'src/engine/api/graphql/graphql-query-runner/orm-mappers/object-records-to-graphql-connection.mapper';
+import { ObjectRecordsToGraphqlConnectionHelper } from 'src/engine/api/graphql/graphql-query-runner/helpers/object-records-to-graphql-connection.helper';
 import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
 import { SEARCH_VECTOR_FIELD } from 'src/engine/metadata-modules/constants/search-vector-field.constants';
-import { generateObjectMetadataMap } from 'src/engine/metadata-modules/utils/generate-object-metadata-map.util';
 import { TwentyORMGlobalManager } from 'src/engine/twenty-orm/twenty-orm-global.manager';
 
-export class GraphqlQuerySearchResolverService {
-  private twentyORMGlobalManager: TwentyORMGlobalManager;
-  private featureFlagService: FeatureFlagService;
-
+@Injectable()
+export class GraphqlQuerySearchResolverService
+  implements ResolverService<SearchResolverArgs, IConnection<IRecord>>
+{
   constructor(
-    twentyORMGlobalManager: TwentyORMGlobalManager,
-    featureFlagService: FeatureFlagService,
-  ) {
-    this.twentyORMGlobalManager = twentyORMGlobalManager;
-    this.featureFlagService = featureFlagService;
-  }
+    private readonly twentyORMGlobalManager: TwentyORMGlobalManager,
+    private readonly featureFlagService: FeatureFlagService,
+  ) {}
 
-  async search<ObjectRecord extends IRecord = IRecord>(
+  async resolve<ObjectRecord extends IRecord = IRecord>(
     args: SearchResolverArgs,
     options: WorkspaceQueryRunnerOptions,
   ): Promise<IConnection<ObjectRecord>> {
-    const { authContext, objectMetadataItem, objectMetadataCollection } =
-      options;
-
-    const featureFlagsForWorkspace =
-      await this.featureFlagService.getWorkspaceFeatureFlags(
-        authContext.workspace.id,
-      );
-
-    const isQueryRunnerTwentyORMEnabled =
-      featureFlagsForWorkspace.IS_QUERY_RUNNER_TWENTY_ORM_ENABLED;
-
-    const isSearchEnabled = featureFlagsForWorkspace.IS_SEARCH_ENABLED;
-
-    if (!isQueryRunnerTwentyORMEnabled || !isSearchEnabled) {
-      throw new GraphqlQueryRunnerException(
-        'This endpoint is not available yet, please use findMany instead.',
-        GraphqlQueryRunnerExceptionCode.INVALID_QUERY_INPUT,
-      );
-    }
+    const { authContext, objectMetadataItem, objectMetadataMap } = options;
 
     const repository =
       await this.twentyORMGlobalManager.getRepositoryForWorkspace(
@@ -59,32 +40,19 @@ export class GraphqlQuerySearchResolverService {
         objectMetadataItem.nameSingular,
       );
 
-    const objectMetadataMap = generateObjectMetadataMap(
-      objectMetadataCollection,
-    );
-
-    const objectMetadata = objectMetadataMap[objectMetadataItem.nameSingular];
-
-    if (!objectMetadata) {
-      throw new GraphqlQueryRunnerException(
-        `Object metadata not found for ${objectMetadataItem.nameSingular}`,
-        GraphqlQueryRunnerExceptionCode.OBJECT_METADATA_NOT_FOUND,
-      );
-    }
-
     const typeORMObjectRecordsParser =
-      new ObjectRecordsToGraphqlConnectionMapper(objectMetadataMap);
+      new ObjectRecordsToGraphqlConnectionHelper(objectMetadataMap);
 
     if (!args.searchInput) {
-      return typeORMObjectRecordsParser.createConnection(
-        [],
-        objectMetadataItem.nameSingular,
-        0,
-        0,
-        [{ id: OrderByDirection.AscNullsFirst }],
-        false,
-        false,
-      );
+      return typeORMObjectRecordsParser.createConnection({
+        objectRecords: [],
+        objectName: objectMetadataItem.nameSingular,
+        take: 0,
+        totalCount: 0,
+        order: [{ id: OrderByDirection.AscNullsFirst }],
+        hasNextPage: false,
+        hasPreviousPage: false,
+      });
     }
     const searchTerms = this.formatSearchTerms(args.searchInput);
 
@@ -100,7 +68,7 @@ export class GraphqlQuerySearchResolverService {
         'DESC',
       )
       .setParameter('searchTerms', searchTerms)
-      .limit(limit)
+      .take(limit)
       .getMany()) as ObjectRecord[];
 
     const objectRecords = await repository.formatResult(resultsWithTsVector);
@@ -108,15 +76,15 @@ export class GraphqlQuerySearchResolverService {
     const totalCount = await repository.count();
     const order = undefined;
 
-    return typeORMObjectRecordsParser.createConnection(
-      objectRecords ?? [],
-      objectMetadataItem.nameSingular,
-      limit,
+    return typeORMObjectRecordsParser.createConnection({
+      objectRecords: objectRecords ?? [],
+      objectName: objectMetadataItem.nameSingular,
+      take: limit,
       totalCount,
       order,
-      false,
-      false,
-    );
+      hasNextPage: false,
+      hasPreviousPage: false,
+    });
   }
 
   private formatSearchTerms(searchTerm: string) {
@@ -128,5 +96,24 @@ export class GraphqlQuerySearchResolverService {
     });
 
     return formattedWords.join(' | ');
+  }
+
+  async validate(
+    _args: SearchResolverArgs,
+    options: WorkspaceQueryRunnerOptions,
+  ): Promise<void> {
+    const featureFlagsForWorkspace =
+      await this.featureFlagService.getWorkspaceFeatureFlags(
+        options.authContext.workspace.id,
+      );
+
+    const isSearchEnabled = featureFlagsForWorkspace.IS_SEARCH_ENABLED;
+
+    if (!isSearchEnabled) {
+      throw new GraphqlQueryRunnerException(
+        'This endpoint is not available yet, please use findMany instead.',
+        GraphqlQueryRunnerExceptionCode.INVALID_QUERY_INPUT,
+      );
+    }
   }
 }
