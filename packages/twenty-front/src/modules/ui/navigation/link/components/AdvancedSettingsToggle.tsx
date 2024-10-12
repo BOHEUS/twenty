@@ -57,6 +57,7 @@ export const AdvancedSettingsToggle = () => {
           onChange={onChange}
           color={MAIN_COLORS.yellow}
           value={isAdvancedModeEnabled}
+          dataTestId="advanced-settings-toggle"
         />
       </StyledToggleContainer>
     </StyledContainer>

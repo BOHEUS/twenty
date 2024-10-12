@@ -188,20 +188,6 @@ export const SettingsNavigationDrawerItems = () => {
           dataTestId="data-model-menu-item"
         />
         <SettingsNavigationDrawerItem
-          label="Developers"
-          path={SettingsPath.Developers}
-          Icon={IconCode}
-          dataTestId="developers-menu-item"
-        />
-        {isFunctionSettingsEnabled && (
-          <SettingsNavigationDrawerItem
-            label="Functions"
-            path={SettingsPath.ServerlessFunctions}
-            Icon={IconFunction}
-            dataTestId="functions-menu-item"
-          />
-        )}
-        <SettingsNavigationDrawerItem
           label="Integrations"
           path={SettingsPath.Integrations}
           Icon={IconApps}
