@@ -1,22 +1,28 @@
+import { contextStoreCurrentViewIdState } from '@/context-store/states/contextStoreCurrentViewIdState';
 import { useLastVisitedObjectMetadataItem } from '@/navigation/hooks/useLastVisitedObjectMetadataItem';
 import { useLastVisitedView } from '@/navigation/hooks/useLastVisitedView';
 import { useFilteredObjectMetadataItems } from '@/object-metadata/hooks/useFilteredObjectMetadataItems';
+import { useRecoilComponentStateV2 } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentStateV2';
 import { useViewFromQueryParams } from '@/views/hooks/internal/useViewFromQueryParams';
-import { useViewStates } from '@/views/hooks/internal/useViewStates';
 import { useGetCurrentView } from '@/views/hooks/useGetCurrentView';
-import { useResetCurrentView } from '@/views/hooks/useResetCurrentView';
+import { currentViewIdComponentState } from '@/views/states/currentViewIdComponentState';
 import { isUndefined } from '@sniptt/guards';
 import { useEffect } from 'react';
-import { useRecoilState } from 'recoil';
+import { useSetRecoilState } from 'recoil';
 import { isDeeplyEqual } from '~/utils/isDeeplyEqual';
 import { isDefined } from '~/utils/isDefined';
 
 export const QueryParamsViewIdEffect = () => {
   const { getFiltersFromQueryParams, viewIdQueryParam } =
     useViewFromQueryParams();
-  const { currentViewIdState, componentId: objectNamePlural } = useViewStates();
 
-  const [currentViewId, setCurrentViewId] = useRecoilState(currentViewIdState);
+  // TODO: fix this implicit hack
+  const { instanceId: objectNamePlural } = useGetCurrentView();
+
+  const [currentViewId, setCurrentViewId] = useRecoilComponentStateV2(
+    currentViewIdComponentState,
+  );
+
   const { viewsOnCurrentObject } = useGetCurrentView();
   const { findObjectMetadataItemByNamePlural } =
     useFilteredObjectMetadataItems();
@@ -33,14 +39,18 @@ export const QueryParamsViewIdEffect = () => {
     objectMetadataItemId?.id,
     lastVisitedObjectMetadataItemId,
   );
+  const setContextStoreCurrentViewId = useSetRecoilState(
+    contextStoreCurrentViewIdState,
+  );
 
-  const { resetCurrentView } = useResetCurrentView();
+  // // TODO: scope view bar per view id if possible
+  // const { resetCurrentView } = useResetCurrentView();
 
-  useEffect(() => {
-    if (isDefined(currentViewId)) {
-      resetCurrentView();
-    }
-  }, [resetCurrentView, currentViewId]);
+  // useEffect(() => {
+  //   if (isDefined(currentViewId)) {
+  //     resetCurrentView();
+  //   }
+  // }, [resetCurrentView, currentViewId]);
 
   useEffect(() => {
     const indexView = viewsOnCurrentObject.find((view) => view.key === 'INDEX');
@@ -54,6 +64,7 @@ export const QueryParamsViewIdEffect = () => {
         });
       }
       setCurrentViewId(lastVisitedViewId);
+      setContextStoreCurrentViewId(lastVisitedViewId);
       return;
     }
 
@@ -68,6 +79,7 @@ export const QueryParamsViewIdEffect = () => {
         });
       }
       setCurrentViewId(viewIdQueryParam);
+      setContextStoreCurrentViewId(viewIdQueryParam);
       return;
     }
 
@@ -82,8 +94,13 @@ export const QueryParamsViewIdEffect = () => {
         });
       }
       setCurrentViewId(indexView.id);
+      setContextStoreCurrentViewId(indexView.id);
       return;
     }
+
+    return () => {
+      setContextStoreCurrentViewId(null);
+    };
   }, [
     currentViewId,
     getFiltersFromQueryParams,
@@ -91,6 +108,7 @@ export const QueryParamsViewIdEffect = () => {
     lastVisitedViewId,
     objectMetadataItemId?.id,
     objectNamePlural,
+    setContextStoreCurrentViewId,
     setCurrentViewId,
     setLastVisitedObjectMetadataItem,
     setLastVisitedView,

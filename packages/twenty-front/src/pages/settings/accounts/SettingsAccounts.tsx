@@ -1,5 +1,5 @@
 import { useRecoilValue } from 'recoil';
-import { H2Title, IconAt } from 'twenty-ui';
+import { H2Title } from 'twenty-ui';
 
 import { ConnectedAccount } from '@/accounts/types/ConnectedAccount';
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
@@ -12,6 +12,8 @@ import { SettingsAccountsBlocklistSection } from '@/settings/accounts/components
 import { SettingsAccountsConnectedAccountsListCard } from '@/settings/accounts/components/SettingsAccountsConnectedAccountsListCard';
 import { SettingsAccountsSettingsSection } from '@/settings/accounts/components/SettingsAccountsSettingsSection';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
+import { getSettingsPagePath } from '@/settings/utils/getSettingsPagePath';
+import { SettingsPath } from '@/types/SettingsPath';
 import { SubMenuTopBarContainer } from '@/ui/layout/page/SubMenuTopBarContainer';
 import { Section } from '@/ui/layout/section/components/Section';
 
@@ -33,7 +35,16 @@ export const SettingsAccounts = () => {
   });
 
   return (
-    <SubMenuTopBarContainer Icon={IconAt} title="Account">
+    <SubMenuTopBarContainer
+      title="Account"
+      links={[
+        {
+          children: 'User',
+          href: getSettingsPagePath(SettingsPath.ProfilePage),
+        },
+        { children: 'Account' },
+      ]}
+    >
       <SettingsPageContainer>
         {loading ? (
           <SettingsAccountLoader />
