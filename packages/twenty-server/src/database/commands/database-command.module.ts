@@ -7,10 +7,11 @@ import { DataSeedDemoWorkspaceCommand } from 'src/database/commands/data-seed-de
 import { DataSeedDemoWorkspaceModule } from 'src/database/commands/data-seed-demo-workspace/data-seed-demo-workspace.module';
 import { DataSeedWorkspaceCommand } from 'src/database/commands/data-seed-dev-workspace.command';
 import { ConfirmationQuestion } from 'src/database/commands/questions/confirmation.question';
-import { UpgradeTo0_30CommandModule } from 'src/database/commands/upgrade-version/0-30/0-30-upgrade-version.module';
+import { UpgradeTo0_31CommandModule } from 'src/database/commands/upgrade-version/0-31/0-31-upgrade-version.module';
 import { TypeORMModule } from 'src/database/typeorm/typeorm.module';
 import { BillingSubscription } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { FeatureFlagEntity } from 'src/engine/core-modules/feature-flag/feature-flag.entity';
+import { FeatureFlagModule } from 'src/engine/core-modules/feature-flag/feature-flag.module';
 import { Workspace } from 'src/engine/core-modules/workspace/workspace.entity';
 import { WorkspaceModule } from 'src/engine/core-modules/workspace/workspace.module';
 import { DataSourceModule } from 'src/engine/metadata-modules/data-source/data-source.module';
@@ -45,7 +46,8 @@ import { WorkspaceSyncMetadataModule } from 'src/engine/workspace-manager/worksp
     DataSeedDemoWorkspaceModule,
     WorkspaceCacheStorageModule,
     WorkspaceMetadataVersionModule,
-    UpgradeTo0_30CommandModule,
+    UpgradeTo0_31CommandModule,
+    FeatureFlagModule,
   ],
   providers: [
     DataSeedWorkspaceCommand,

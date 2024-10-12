@@ -50,7 +50,7 @@ const StyledTableHead = styled.thead<{
         clip-path: inset(0px -4px 0px 0px);
       }
       @media (max-width: ${MOBILE_VIEWPORT}px) {
-        width: 35px;
+        width: 30px;
         max-width: 35px;
       }
     }
@@ -74,9 +74,9 @@ const StyledTableHead = styled.thead<{
 `;
 
 export const RecordTableHeader = ({
-  createRecord,
+  objectMetadataNameSingular,
 }: {
-  createRecord: () => void;
+  objectMetadataNameSingular: string;
 }) => {
   const { visibleTableColumnsSelector } = useRecordTableStates();
 
@@ -91,7 +91,7 @@ export const RecordTableHeader = ({
           <RecordTableHeaderCell
             key={column.fieldMetadataId}
             column={column}
-            createRecord={createRecord}
+            objectMetadataNameSingular={objectMetadataNameSingular}
           />
         ))}
         <RecordTableHeaderLastColumn />
