@@ -1,27 +1,23 @@
-# Twenty e2e Testing
+# Twenty E2E Testing
 
 ## Prerequisite
 
 Installing the browsers:
-
 ```
 yarn playwright install 
 ```
 
 ### Run end-to-end tests
-
 ```
 yarn run test:e2e
 ```
 
 ### Start the interactive UI mode
-
 ```
 yarn run test:e2e:ui
 ```
 
 ### Run test only on Desktop Chrome
-
 ```
 yarn run test:e2e:chrome
 ```
