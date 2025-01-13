@@ -27,6 +27,9 @@ export class LoginPage {
   private readonly inviteLinkField2: Locator;
   private readonly inviteLinkField3: Locator;
   private readonly copyInviteLink: Locator;
+  private readonly monthSubscription: Locator;
+  private readonly yearSubscription: Locator;
+  private readonly startButton: Locator;
   private readonly finishButton: Locator;
 
   constructor(public readonly page: Page) {
@@ -74,6 +77,9 @@ export class LoginPage {
     this.copyInviteLink = page.getByRole('button', {
       name: 'Copy invitation link',
     });
+    this.monthSubscription = page.getByTestId('input-radio').first();
+    this.yearSubscription = page.getByTestId('input-radio').nth(1);
+    this.startButton = page.getByRole('button', { name: 'Start' });
     this.finishButton = page.getByRole('button', { name: 'Finish' });
   }
 
@@ -179,6 +185,18 @@ export class LoginPage {
 
   async clickCopyInviteLink() {
     await this.copyInviteLink.click();
+  }
+
+  async selectMonthSubscription() {
+    await this.monthSubscription.click();
+  }
+
+  async selectYearSubscription() {
+    await this.yearSubscription.click();
+  }
+
+  async clickStartButton() {
+    await this.startButton.click();
   }
 
   async clickFinishButton() {

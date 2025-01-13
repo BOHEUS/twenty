@@ -9,6 +9,7 @@ export class SettingsPage {
   private readonly calendarsLink: Locator;
   private readonly generalLink: Locator;
   private readonly membersLink: Locator;
+  private readonly billingLink: Locator;
   private readonly dataModelLink: Locator;
   private readonly developersLink: Locator;
   private readonly functionsLink: Locator;
@@ -28,6 +29,7 @@ export class SettingsPage {
     this.calendarsLink = page.getByRole('link', { name: 'Calendars' });
     this.generalLink = page.getByRole('link', { name: 'General' });
     this.membersLink = page.getByRole('link', { name: 'Members' });
+    this.billingLink = page.getByRole('link', { name: 'Billing' });
     this.dataModelLink = page.getByRole('link', { name: 'Data model' });
     this.developersLink = page.getByRole('link', { name: 'Developers' });
     this.functionsLink = page.getByRole('link', { name: 'Functions' });
@@ -68,6 +70,10 @@ export class SettingsPage {
 
   async goToMembersSection() {
     await this.membersLink.click();
+  }
+
+  async goToBillingSection() {
+    await this.billingLink.click();
   }
 
   async goToDataModelSection() {
