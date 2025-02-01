@@ -29,7 +29,8 @@ import {
 import '@xyflow/react/dist/style.css';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
-import { THEME_COMMON, isDefined } from 'twenty-ui';
+import { isDefined } from 'twenty-shared';
+import { THEME_COMMON } from 'twenty-ui';
 
 const StyledResetReactflowStyles = styled.div`
   height: 100%;
@@ -60,6 +61,8 @@ const StyledResetReactflowStyles = styled.div`
   .react-flow__handle.connectionindicator {
     cursor: pointer;
   }
+
+  --xy-edge-stroke: ${({ theme }) => theme.border.color.strong};
 
   --xy-node-border-radius: none;
   --xy-node-border: none;
@@ -225,6 +228,10 @@ export const WorkflowDiagramCanvasBase = ({
         edges={edges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
+        onBeforeDelete={async () => {
+          // Abort all non-programmatic deletions
+          return false;
+        }}
         proOptions={{ hideAttribution: true }}
         multiSelectionKeyCode={null}
         nodesFocusable={false}

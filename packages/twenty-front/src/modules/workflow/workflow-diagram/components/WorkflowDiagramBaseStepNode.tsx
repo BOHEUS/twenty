@@ -7,8 +7,8 @@ import { WorkflowDiagramStepNodeData } from '@/workflow/workflow-diagram/types/W
 import styled from '@emotion/styled';
 import { Handle, Position } from '@xyflow/react';
 import React from 'react';
-import { capitalize } from 'twenty-shared';
-import { isDefined, Label, OverflowingTextWithTooltip } from 'twenty-ui';
+import { capitalize, isDefined } from 'twenty-shared';
+import { Label, OverflowingTextWithTooltip } from 'twenty-ui';
 
 type Variant = 'placeholder';
 
@@ -78,6 +78,7 @@ export const StyledHandle = styled(Handle)`
 `;
 
 const StyledSourceHandle = styled(StyledHandle)`
+  background-color: ${({ theme }) => theme.border.color.strong};
   left: ${NODE_ICON_WIDTH + NODE_ICON_LEFT_MARGIN + NODE_BORDER_WIDTH}px;
 `;
 

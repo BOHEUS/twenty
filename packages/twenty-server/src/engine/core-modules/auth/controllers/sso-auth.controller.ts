@@ -30,17 +30,19 @@ import {
   IdentityProviderType,
   WorkspaceSSOIdentityProvider,
 } from 'src/engine/core-modules/sso/workspace-sso-identity-provider.entity';
-import { DomainManagerService } from 'src/engine/core-modules/domain-manager/services/domain-manager.service';
 import { User } from 'src/engine/core-modules/user/user.entity';
 import { AuthOAuthExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-oauth-exception.filter';
 import { EnvironmentService } from 'src/engine/core-modules/environment/environment.service';
+import { GuardRedirectService } from 'src/engine/core-modules/guard-redirect/services/guard-redirect.service';
+import { SAMLRequest } from 'src/engine/core-modules/auth/strategies/saml.auth.strategy';
+import { OIDCRequest } from 'src/engine/core-modules/auth/strategies/oidc.auth.strategy';
 
 @Controller('auth')
 export class SSOAuthController {
   constructor(
     private readonly loginTokenService: LoginTokenService,
     private readonly authService: AuthService,
-    private readonly domainManagerService: DomainManagerService,
+    private readonly guardRedirectService: GuardRedirectService,
     private readonly environmentService: EnvironmentService,
     private readonly sSOService: SSOService,
     @InjectRepository(User, 'core')
@@ -85,14 +87,14 @@ export class SSOAuthController {
   @Get('oidc/callback')
   @UseGuards(EnterpriseFeaturesEnabledGuard, OIDCAuthGuard)
   @UseFilters(AuthOAuthExceptionFilter)
-  async oidcAuthCallback(@Req() req: any, @Res() res: Response) {
+  async oidcAuthCallback(@Req() req: OIDCRequest, @Res() res: Response) {
     return await this.authCallback(req, res);
   }
 
   @Post('saml/callback/:identityProviderId')
   @UseGuards(EnterpriseFeaturesEnabledGuard, SAMLAuthGuard)
   @UseFilters(AuthOAuthExceptionFilter)
-  async samlAuthCallback(@Req() req: any, @Res() res: Response) {
+  async samlAuthCallback(@Req() req: SAMLRequest, @Res() res: Response) {
     try {
       return await this.authCallback(req, res);
     } catch (err) {
@@ -103,10 +105,10 @@ export class SSOAuthController {
     }
   }
 
-  private async authCallback({ user }: any, res: Response) {
+  private async authCallback(req: OIDCRequest | SAMLRequest, res: Response) {
     const workspaceIdentityProvider =
       await this.findWorkspaceIdentityProviderByIdentityProviderId(
-        user.identityProviderId,
+        req.user.identityProviderId,
       );
 
     try {
@@ -117,7 +119,7 @@ export class SSOAuthController {
         );
       }
 
-      if (!user.user.email) {
+      if (!req.user.email) {
         throw new AuthException(
           'Email not found from identity provider.',
           AuthExceptionCode.OAUTH_ACCESS_DENIED,
@@ -125,7 +127,7 @@ export class SSOAuthController {
       }
 
       const { loginToken, identityProvider } = await this.generateLoginToken(
-        user.user,
+        req.user,
         workspaceIdentityProvider,
       );
 
@@ -137,10 +139,11 @@ export class SSOAuthController {
       );
     } catch (err) {
       return res.redirect(
-        this.domainManagerService.computeRedirectErrorUrl(
-          err.message,
-          workspaceIdentityProvider?.workspace.subdomain ??
-            this.environmentService.get('DEFAULT_SUBDOMAIN'),
+        this.guardRedirectService.getRedirectErrorUrlAndCaptureExceptions(
+          err,
+          workspaceIdentityProvider?.workspace ?? {
+            subdomain: this.environmentService.get('DEFAULT_SUBDOMAIN'),
+          },
         ),
       );
     }
@@ -156,7 +159,7 @@ export class SSOAuthController {
   }
 
   private async generateLoginToken(
-    payload: { email: string } & Record<string, string>,
+    payload: { email: string },
     identityProvider: WorkspaceSSOIdentityProvider,
   ) {
     if (!identityProvider) {

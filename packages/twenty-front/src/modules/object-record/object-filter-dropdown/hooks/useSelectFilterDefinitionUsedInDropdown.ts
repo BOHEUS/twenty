@@ -1,5 +1,6 @@
 import { advancedFilterViewFilterGroupIdComponentState } from '@/object-record/object-filter-dropdown/states/advancedFilterViewFilterGroupIdComponentState';
 import { advancedFilterViewFilterIdComponentState } from '@/object-record/object-filter-dropdown/states/advancedFilterViewFilterIdComponentState';
+import { fieldMetadataItemIdUsedInDropdownComponentState } from '@/object-record/object-filter-dropdown/states/fieldMetadataItemIdUsedInDropdownComponentState';
 import { filterDefinitionUsedInDropdownComponentState } from '@/object-record/object-filter-dropdown/states/filterDefinitionUsedInDropdownComponentState';
 import { objectFilterDropdownSearchInputComponentState } from '@/object-record/object-filter-dropdown/states/objectFilterDropdownSearchInputComponentState';
 import { selectedOperandInDropdownComponentState } from '@/object-record/object-filter-dropdown/states/selectedOperandInDropdownComponentState';
@@ -11,7 +12,7 @@ import { RelationPickerHotkeyScope } from '@/object-record/relation-picker/types
 import { useSetHotkeyScope } from '@/ui/utilities/hotkey/hooks/useSetHotkeyScope';
 import { useRecoilComponentValueV2 } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValueV2';
 import { useSetRecoilComponentStateV2 } from '@/ui/utilities/state/component-state/hooks/useSetRecoilComponentStateV2';
-import { isDefined } from 'twenty-ui';
+import { isDefined } from 'twenty-shared';
 import { v4 } from 'uuid';
 
 type SelectFilterParams = {
@@ -23,6 +24,11 @@ export const useSelectFilterDefinitionUsedInDropdown = (
 ) => {
   const setFilterDefinitionUsedInDropdown = useSetRecoilComponentStateV2(
     filterDefinitionUsedInDropdownComponentState,
+    componentInstanceId,
+  );
+
+  const setFieldMetadataItemIdUsedInDropdown = useSetRecoilComponentStateV2(
+    fieldMetadataItemIdUsedInDropdownComponentState,
     componentInstanceId,
   );
 
@@ -54,6 +60,7 @@ export const useSelectFilterDefinitionUsedInDropdown = (
     filterDefinition,
   }: SelectFilterParams) => {
     setFilterDefinitionUsedInDropdown(filterDefinition);
+    setFieldMetadataItemIdUsedInDropdown(filterDefinition.fieldMetadataId);
 
     if (
       filterDefinition.type === 'RELATION' ||

@@ -32,9 +32,7 @@ const StyledMenuItemCommandContainer = styled.div<{ isSelected?: boolean }>`
   --vertical-padding: ${({ theme }) => theme.spacing(2)};
   align-items: center;
   background: ${({ isSelected, theme }) =>
-    isSelected
-      ? theme.background.transparent.light
-      : theme.background.secondary};
+    isSelected ? theme.background.transparent.light : 'transparent'};
   border-radius: ${({ theme }) => theme.border.radius.sm};
   color: ${({ theme }) => theme.font.color.secondary};
   cursor: pointer;
@@ -65,11 +63,25 @@ const StyledMenuItemCommandContainer = styled.div<{ isSelected?: boolean }>`
   }
 `;
 
+const StyledDescription = styled.span`
+  color: ${({ theme }) => theme.font.color.light};
+
+  &::before {
+    content: '·';
+    margin: ${({ theme }) => theme.spacing(0, 1)};
+  }
+`;
+
+const StyledTextContainer = styled.div`
+  display: flex;
+  flex-direction: row;
+`;
+
 export type MenuItemCommandProps = {
   LeftIcon?: IconComponent;
   text: string;
-  firstHotKey?: string;
-  secondHotKey?: string;
+  description?: string;
+  hotKeys?: string[];
   className?: string;
   isSelected?: boolean;
   onClick?: () => void;
@@ -79,8 +91,8 @@ export type MenuItemCommandProps = {
 export const MenuItemCommand = ({
   LeftIcon,
   text,
-  firstHotKey,
-  secondHotKey,
+  description,
+  hotKeys,
   className,
   isSelected,
   onClick,
@@ -101,15 +113,13 @@ export const MenuItemCommand = ({
             <LeftIcon size={theme.icon.size.sm} />
           </StyledBigIconContainer>
         )}
-        <StyledMenuItemLabelText>{text}</StyledMenuItemLabelText>
+        <StyledTextContainer>
+          <StyledMenuItemLabelText>{text}</StyledMenuItemLabelText>
+          {description && <StyledDescription>{description}</StyledDescription>}
+        </StyledTextContainer>
         {RightComponent}
       </StyledMenuItemLeftContent>
-      {!isMobile && (
-        <MenuItemCommandHotKeys
-          firstHotKey={firstHotKey}
-          secondHotKey={secondHotKey}
-        />
-      )}
+      {!isMobile && <MenuItemCommandHotKeys hotKeys={hotKeys} />}
     </StyledMenuItemCommandContainer>
   );
 };

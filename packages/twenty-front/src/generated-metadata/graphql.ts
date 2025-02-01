@@ -109,6 +109,7 @@ export type AuthorizeApp = {
 export type AvailableWorkspaceOutput = {
   __typename?: 'AvailableWorkspaceOutput';
   displayName?: Maybe<Scalars['String']['output']>;
+  hostname?: Maybe<Scalars['String']['output']>;
   id: Scalars['String']['output'];
   logo?: Maybe<Scalars['String']['output']>;
   sso: Array<SsoConnection>;
@@ -223,6 +224,11 @@ export type BooleanFieldComparison = {
   isNot?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type BuildDraftServerlessFunctionInput = {
+  /** The id of the function. */
+  id: Scalars['ID']['input'];
+};
+
 export enum CalendarChannelVisibility {
   METADATA = 'METADATA',
   SHARE_EVERYTHING = 'SHARE_EVERYTHING'
@@ -323,9 +329,9 @@ export type CreateOneObjectInput = {
   object: CreateObjectInput;
 };
 
-export type CreateOneRelationInput = {
+export type CreateOneRelationMetadataInput = {
   /** The record to create */
-  relation: CreateRelationInput;
+  relationMetadata: CreateRelationInput;
 };
 
 export type CreateRelationInput = {
@@ -373,6 +379,28 @@ export type CursorPaging = {
   first?: InputMaybe<Scalars['Int']['input']>;
   /** Paginate last */
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type CustomHostnameDetails = {
+  __typename?: 'CustomHostnameDetails';
+  hostname: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  ownershipVerifications: Array<OwnershipVerification>;
+  status?: Maybe<Scalars['String']['output']>;
+};
+
+export type CustomHostnameOwnershipVerificationHttp = {
+  __typename?: 'CustomHostnameOwnershipVerificationHttp';
+  body: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+  url: Scalars['String']['output'];
+};
+
+export type CustomHostnameOwnershipVerificationTxt = {
+  __typename?: 'CustomHostnameOwnershipVerificationTxt';
+  name: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+  value: Scalars['String']['output'];
 };
 
 export type DeleteOneFieldInput = {
@@ -458,17 +486,44 @@ export enum FeatureFlagKey {
   IsBillingPlansEnabled = 'IsBillingPlansEnabled',
   IsCommandMenuV2Enabled = 'IsCommandMenuV2Enabled',
   IsCopilotEnabled = 'IsCopilotEnabled',
+  IsCustomDomainEnabled = 'IsCustomDomainEnabled',
   IsEventObjectEnabled = 'IsEventObjectEnabled',
-  IsFreeAccessEnabled = 'IsFreeAccessEnabled',
   IsJsonFilterEnabled = 'IsJsonFilterEnabled',
   IsLocalizationEnabled = 'IsLocalizationEnabled',
   IsMicrosoftSyncEnabled = 'IsMicrosoftSyncEnabled',
   IsNewRelationEnabled = 'IsNewRelationEnabled',
   IsPostgreSQLIntegrationEnabled = 'IsPostgreSQLIntegrationEnabled',
+  IsRichTextV2Enabled = 'IsRichTextV2Enabled',
   IsStripeIntegrationEnabled = 'IsStripeIntegrationEnabled',
   IsUniqueIndexesEnabled = 'IsUniqueIndexesEnabled',
   IsWorkflowEnabled = 'IsWorkflowEnabled'
 }
+
+export type Field = {
+  __typename?: 'Field';
+  createdAt: Scalars['DateTime']['output'];
+  defaultValue?: Maybe<Scalars['JSON']['output']>;
+  description?: Maybe<Scalars['String']['output']>;
+  fromRelationMetadata?: Maybe<RelationMetadata>;
+  icon?: Maybe<Scalars['String']['output']>;
+  id: Scalars['UUID']['output'];
+  isActive?: Maybe<Scalars['Boolean']['output']>;
+  isCustom?: Maybe<Scalars['Boolean']['output']>;
+  isLabelSyncedWithName?: Maybe<Scalars['Boolean']['output']>;
+  isNullable?: Maybe<Scalars['Boolean']['output']>;
+  isSystem?: Maybe<Scalars['Boolean']['output']>;
+  isUnique?: Maybe<Scalars['Boolean']['output']>;
+  label: Scalars['String']['output'];
+  name: Scalars['String']['output'];
+  object?: Maybe<Object>;
+  options?: Maybe<Scalars['JSON']['output']>;
+  relation?: Maybe<Relation>;
+  relationDefinition?: Maybe<RelationDefinition>;
+  settings?: Maybe<Scalars['JSON']['output']>;
+  toRelationMetadata?: Maybe<RelationMetadata>;
+  type: FieldMetadataType;
+  updatedAt: Scalars['DateTime']['output'];
+};
 
 export type FieldConnection = {
   __typename?: 'FieldConnection';
@@ -476,6 +531,23 @@ export type FieldConnection = {
   edges: Array<FieldEdge>;
   /** Paging information */
   pageInfo: PageInfo;
+};
+
+export type FieldEdge = {
+  __typename?: 'FieldEdge';
+  /** Cursor for this node. */
+  cursor: Scalars['ConnectionCursor']['output'];
+  /** The node containing the Field */
+  node: Field;
+};
+
+export type FieldFilter = {
+  and?: InputMaybe<Array<FieldFilter>>;
+  id?: InputMaybe<UuidFilterComparison>;
+  isActive?: InputMaybe<BooleanFieldComparison>;
+  isCustom?: InputMaybe<BooleanFieldComparison>;
+  isSystem?: InputMaybe<BooleanFieldComparison>;
+  or?: InputMaybe<Array<FieldFilter>>;
 };
 
 /** Type of the field */
@@ -499,6 +571,7 @@ export enum FieldMetadataType {
   RAW_JSON = 'RAW_JSON',
   RELATION = 'RELATION',
   RICH_TEXT = 'RICH_TEXT',
+  RICH_TEXT_V2 = 'RICH_TEXT_V2',
   SELECT = 'SELECT',
   TEXT = 'TEXT',
   TS_VECTOR = 'TS_VECTOR',
@@ -565,12 +638,77 @@ export type ImpersonateOutput = {
   workspace: WorkspaceSubdomainAndId;
 };
 
+export type Index = {
+  __typename?: 'Index';
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['UUID']['output'];
+  indexFieldMetadatas: IndexIndexFieldMetadatasConnection;
+  indexType: IndexType;
+  indexWhereClause?: Maybe<Scalars['String']['output']>;
+  isCustom?: Maybe<Scalars['Boolean']['output']>;
+  isUnique: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  objectMetadata: IndexObjectMetadataConnection;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+
+export type IndexIndexFieldMetadatasArgs = {
+  filter?: IndexFieldFilter;
+  paging?: CursorPaging;
+};
+
+
+export type IndexObjectMetadataArgs = {
+  filter?: ObjectFilter;
+  paging?: CursorPaging;
+};
+
 export type IndexConnection = {
   __typename?: 'IndexConnection';
   /** Array of edges. */
   edges: Array<IndexEdge>;
   /** Paging information */
   pageInfo: PageInfo;
+};
+
+export type IndexEdge = {
+  __typename?: 'IndexEdge';
+  /** Cursor for this node. */
+  cursor: Scalars['ConnectionCursor']['output'];
+  /** The node containing the Index */
+  node: Index;
+};
+
+export type IndexField = {
+  __typename?: 'IndexField';
+  createdAt: Scalars['DateTime']['output'];
+  fieldMetadataId: Scalars['UUID']['output'];
+  id: Scalars['UUID']['output'];
+  order: Scalars['Float']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type IndexFieldEdge = {
+  __typename?: 'IndexFieldEdge';
+  /** Cursor for this node. */
+  cursor: Scalars['ConnectionCursor']['output'];
+  /** The node containing the IndexField */
+  node: IndexField;
+};
+
+export type IndexFieldFilter = {
+  and?: InputMaybe<Array<IndexFieldFilter>>;
+  fieldMetadataId?: InputMaybe<UuidFilterComparison>;
+  id?: InputMaybe<UuidFilterComparison>;
+  or?: InputMaybe<Array<IndexFieldFilter>>;
+};
+
+export type IndexFilter = {
+  and?: InputMaybe<Array<IndexFilter>>;
+  id?: InputMaybe<UuidFilterComparison>;
+  isCustom?: InputMaybe<BooleanFieldComparison>;
+  or?: InputMaybe<Array<IndexFilter>>;
 };
 
 export type IndexIndexFieldMetadatasConnection = {
@@ -630,6 +768,7 @@ export type Mutation = {
   activateWorkflowVersion: Scalars['Boolean']['output'];
   activateWorkspace: Workspace;
   authorizeApp: AuthorizeApp;
+  buildDraftServerlessFunction: ServerlessFunction;
   checkoutSession: BillingSessionOutput;
   computeStepOutputSchema: Scalars['JSON']['output'];
   createDraftFromWorkflowVersion: WorkflowVersion;
@@ -637,7 +776,7 @@ export type Mutation = {
   createOneAppToken: AppToken;
   createOneField: Field;
   createOneObject: Object;
-  createOneRelation: Relation;
+  createOneRelationMetadata: RelationMetadata;
   createOneRemoteServer: RemoteServer;
   createOneServerlessFunction: ServerlessFunction;
   createSAMLIdentityProvider: SetupSsoOutput;
@@ -646,7 +785,7 @@ export type Mutation = {
   deleteCurrentWorkspace: Workspace;
   deleteOneField: Field;
   deleteOneObject: Object;
-  deleteOneRelation: Relation;
+  deleteOneRelation: RelationMetadata;
   deleteOneRemoteServer: RemoteServer;
   deleteOneServerlessFunction: ServerlessFunction;
   deleteSSOIdentityProvider: DeleteSsoOutput;
@@ -712,6 +851,11 @@ export type MutationAuthorizeAppArgs = {
 };
 
 
+export type MutationBuildDraftServerlessFunctionArgs = {
+  input: BuildDraftServerlessFunctionInput;
+};
+
+
 export type MutationCheckoutSessionArgs = {
   plan?: BillingPlanKey;
   recurringInterval: SubscriptionInterval;
@@ -750,8 +894,8 @@ export type MutationCreateOneObjectArgs = {
 };
 
 
-export type MutationCreateOneRelationArgs = {
-  input: CreateOneRelationInput;
+export type MutationCreateOneRelationMetadataArgs = {
+  input: CreateOneRelationMetadataInput;
 };
 
 
@@ -1005,6 +1149,42 @@ export type MutationUserLookupAdminPanelArgs = {
   userIdentifier: Scalars['String']['input'];
 };
 
+export type Object = {
+  __typename?: 'Object';
+  createdAt: Scalars['DateTime']['output'];
+  dataSourceId: Scalars['String']['output'];
+  description?: Maybe<Scalars['String']['output']>;
+  fields: ObjectFieldsConnection;
+  icon?: Maybe<Scalars['String']['output']>;
+  id: Scalars['UUID']['output'];
+  imageIdentifierFieldMetadataId?: Maybe<Scalars['String']['output']>;
+  indexMetadatas: ObjectIndexMetadatasConnection;
+  isActive: Scalars['Boolean']['output'];
+  isCustom: Scalars['Boolean']['output'];
+  isLabelSyncedWithName: Scalars['Boolean']['output'];
+  isRemote: Scalars['Boolean']['output'];
+  isSystem: Scalars['Boolean']['output'];
+  labelIdentifierFieldMetadataId?: Maybe<Scalars['String']['output']>;
+  labelPlural: Scalars['String']['output'];
+  labelSingular: Scalars['String']['output'];
+  namePlural: Scalars['String']['output'];
+  nameSingular: Scalars['String']['output'];
+  shortcut?: Maybe<Scalars['String']['output']>;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+
+export type ObjectFieldsArgs = {
+  filter?: FieldFilter;
+  paging?: CursorPaging;
+};
+
+
+export type ObjectIndexMetadatasArgs = {
+  filter?: IndexFilter;
+  paging?: CursorPaging;
+};
+
 export type ObjectConnection = {
   __typename?: 'ObjectConnection';
   /** Array of edges. */
@@ -1013,12 +1193,30 @@ export type ObjectConnection = {
   pageInfo: PageInfo;
 };
 
+export type ObjectEdge = {
+  __typename?: 'ObjectEdge';
+  /** Cursor for this node. */
+  cursor: Scalars['ConnectionCursor']['output'];
+  /** The node containing the Object */
+  node: Object;
+};
+
 export type ObjectFieldsConnection = {
   __typename?: 'ObjectFieldsConnection';
   /** Array of edges. */
   edges: Array<FieldEdge>;
   /** Paging information */
   pageInfo: PageInfo;
+};
+
+export type ObjectFilter = {
+  and?: InputMaybe<Array<ObjectFilter>>;
+  id?: InputMaybe<UuidFilterComparison>;
+  isActive?: InputMaybe<BooleanFieldComparison>;
+  isCustom?: InputMaybe<BooleanFieldComparison>;
+  isRemote?: InputMaybe<BooleanFieldComparison>;
+  isSystem?: InputMaybe<BooleanFieldComparison>;
+  or?: InputMaybe<Array<ObjectFilter>>;
 };
 
 export type ObjectIndexMetadatasConnection = {
@@ -1044,6 +1242,8 @@ export type OnboardingStepSuccess = {
   /** Boolean that confirms query was dispatched */
   success: Scalars['Boolean']['output'];
 };
+
+export type OwnershipVerification = CustomHostnameOwnershipVerificationHttp | CustomHostnameOwnershipVerificationTxt;
 
 export type PageInfo = {
   __typename?: 'PageInfo';
@@ -1082,6 +1282,7 @@ export type PublicWorkspaceDataOutput = {
   __typename?: 'PublicWorkspaceDataOutput';
   authProviders: AuthProviders;
   displayName?: Maybe<Scalars['String']['output']>;
+  hostname?: Maybe<Scalars['String']['output']>;
   id: Scalars['String']['output'];
   logo?: Maybe<Scalars['String']['output']>;
   subdomain: Scalars['String']['output'];
@@ -1111,6 +1312,7 @@ export type Query = {
   findWorkspaceFromInviteHash: Workspace;
   findWorkspaceInvitations: Array<WorkspaceInvitation>;
   getAvailablePackages: Scalars['JSON']['output'];
+  getHostnameDetails?: Maybe<CustomHostnameDetails>;
   getPostgresCredentials?: Maybe<PostgresCredentials>;
   getProductPrices: BillingProductPricesOutput;
   getPublicWorkspaceDataBySubdomain: PublicWorkspaceDataOutput;
@@ -1125,8 +1327,7 @@ export type Query = {
   object: Object;
   objects: ObjectConnection;
   plans: Array<BillingPlanOutput>;
-  relation: Relation;
-  relations: RelationConnection;
+  relationMetadata: RelationMetadataConnection;
   validatePasswordResetToken: ValidatePasswordResetToken;
 };
 
@@ -1253,12 +1454,7 @@ export type QueryObjectsArgs = {
 };
 
 
-export type QueryRelationArgs = {
-  id: Scalars['UUID']['input'];
-};
-
-
-export type QueryRelationsArgs = {
+export type QueryRelationMetadataArgs = {
   paging?: CursorPaging;
 };
 
@@ -1267,12 +1463,13 @@ export type QueryValidatePasswordResetTokenArgs = {
   passwordResetToken: Scalars['String']['input'];
 };
 
-export type RelationConnection = {
-  __typename?: 'RelationConnection';
-  /** Array of edges. */
-  edges: Array<RelationEdge>;
-  /** Paging information */
-  pageInfo: PageInfo;
+export type Relation = {
+  __typename?: 'Relation';
+  sourceFieldMetadata: Field;
+  sourceObjectMetadata: Object;
+  targetFieldMetadata: Field;
+  targetObjectMetadata: Object;
+  type: RelationType;
 };
 
 export type RelationDefinition = {
@@ -1292,6 +1489,36 @@ export enum RelationDefinitionType {
   ONE_TO_MANY = 'ONE_TO_MANY',
   ONE_TO_ONE = 'ONE_TO_ONE'
 }
+
+export type RelationMetadata = {
+  __typename?: 'RelationMetadata';
+  createdAt: Scalars['DateTime']['output'];
+  fromFieldMetadataId: Scalars['String']['output'];
+  fromObjectMetadata: Object;
+  fromObjectMetadataId: Scalars['String']['output'];
+  id: Scalars['UUID']['output'];
+  relationType: RelationMetadataType;
+  toFieldMetadataId: Scalars['String']['output'];
+  toObjectMetadata: Object;
+  toObjectMetadataId: Scalars['String']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type RelationMetadataConnection = {
+  __typename?: 'RelationMetadataConnection';
+  /** Array of edges. */
+  edges: Array<RelationMetadataEdge>;
+  /** Paging information */
+  pageInfo: PageInfo;
+};
+
+export type RelationMetadataEdge = {
+  __typename?: 'RelationMetadataEdge';
+  /** Cursor for this node. */
+  cursor: Scalars['ConnectionCursor']['output'];
+  /** The node containing the RelationMetadata */
+  node: RelationMetadata;
+};
 
 /** Type of the relation */
 export enum RelationMetadataType {
@@ -1431,6 +1658,7 @@ export type ServerlessFunctionExecutionResult = {
 /** Status of the serverless function execution */
 export enum ServerlessFunctionExecutionStatus {
   ERROR = 'ERROR',
+  IDLE = 'IDLE',
   SUCCESS = 'SUCCESS'
 }
 
@@ -1441,6 +1669,7 @@ export type ServerlessFunctionIdInput = {
 
 /** SyncStatus of the serverlessFunction */
 export enum ServerlessFunctionSyncStatus {
+  BUILDING = 'BUILDING',
   NOT_READY = 'NOT_READY',
   READY = 'READY'
 }
@@ -1661,7 +1890,7 @@ export type UpdateWorkflowVersionStepInput = {
 export type UpdateWorkspaceInput = {
   allowImpersonation?: InputMaybe<Scalars['Boolean']['input']>;
   displayName?: InputMaybe<Scalars['String']['input']>;
-  domainName?: InputMaybe<Scalars['String']['input']>;
+  hostname?: InputMaybe<Scalars['String']['input']>;
   inviteHash?: InputMaybe<Scalars['String']['input']>;
   isGoogleAuthEnabled?: InputMaybe<Scalars['Boolean']['input']>;
   isMicrosoftAuthEnabled?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1794,9 +2023,9 @@ export type Workspace = {
   databaseUrl: Scalars['String']['output'];
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   displayName?: Maybe<Scalars['String']['output']>;
-  domainName?: Maybe<Scalars['String']['output']>;
   featureFlags?: Maybe<Array<FeatureFlag>>;
-  hasValidEntrepriseKey: Scalars['Boolean']['output'];
+  hasValidEnterpriseKey: Scalars['Boolean']['output'];
+  hostname?: Maybe<Scalars['String']['output']>;
   id: Scalars['UUID']['output'];
   inviteHash?: Maybe<Scalars['String']['output']>;
   isGoogleAuthEnabled: Scalars['Boolean']['output'];
@@ -1888,190 +2117,6 @@ export type WorkspaceSubdomainAndId = {
   subdomain: Scalars['String']['output'];
 };
 
-export type Field = {
-  __typename?: 'field';
-  createdAt: Scalars['DateTime']['output'];
-  defaultValue?: Maybe<Scalars['JSON']['output']>;
-  description?: Maybe<Scalars['String']['output']>;
-  fromRelationMetadata?: Maybe<Relation>;
-  icon?: Maybe<Scalars['String']['output']>;
-  id: Scalars['UUID']['output'];
-  isActive?: Maybe<Scalars['Boolean']['output']>;
-  isCustom?: Maybe<Scalars['Boolean']['output']>;
-  isLabelSyncedWithName?: Maybe<Scalars['Boolean']['output']>;
-  isNullable?: Maybe<Scalars['Boolean']['output']>;
-  isSystem?: Maybe<Scalars['Boolean']['output']>;
-  isUnique?: Maybe<Scalars['Boolean']['output']>;
-  label: Scalars['String']['output'];
-  name: Scalars['String']['output'];
-  object?: Maybe<Object>;
-  options?: Maybe<Scalars['JSON']['output']>;
-  relation?: Maybe<Relation>;
-  relationDefinition?: Maybe<RelationDefinition>;
-  settings?: Maybe<Scalars['JSON']['output']>;
-  toRelationMetadata?: Maybe<Relation>;
-  type: FieldMetadataType;
-  updatedAt: Scalars['DateTime']['output'];
-};
-
-export type FieldEdge = {
-  __typename?: 'fieldEdge';
-  /** Cursor for this node. */
-  cursor: Scalars['ConnectionCursor']['output'];
-  /** The node containing the field */
-  node: Field;
-};
-
-export type FieldFilter = {
-  and?: InputMaybe<Array<FieldFilter>>;
-  id?: InputMaybe<UuidFilterComparison>;
-  isActive?: InputMaybe<BooleanFieldComparison>;
-  isCustom?: InputMaybe<BooleanFieldComparison>;
-  isSystem?: InputMaybe<BooleanFieldComparison>;
-  or?: InputMaybe<Array<FieldFilter>>;
-};
-
-export type Index = {
-  __typename?: 'index';
-  createdAt: Scalars['DateTime']['output'];
-  id: Scalars['UUID']['output'];
-  indexFieldMetadatas: IndexIndexFieldMetadatasConnection;
-  indexType: IndexType;
-  indexWhereClause?: Maybe<Scalars['String']['output']>;
-  isCustom?: Maybe<Scalars['Boolean']['output']>;
-  isUnique: Scalars['Boolean']['output'];
-  name: Scalars['String']['output'];
-  objectMetadata: IndexObjectMetadataConnection;
-  updatedAt: Scalars['DateTime']['output'];
-};
-
-
-export type IndexIndexFieldMetadatasArgs = {
-  filter?: IndexFieldFilter;
-  paging?: CursorPaging;
-};
-
-
-export type IndexObjectMetadataArgs = {
-  filter?: ObjectFilter;
-  paging?: CursorPaging;
-};
-
-export type IndexEdge = {
-  __typename?: 'indexEdge';
-  /** Cursor for this node. */
-  cursor: Scalars['ConnectionCursor']['output'];
-  /** The node containing the index */
-  node: Index;
-};
-
-export type IndexField = {
-  __typename?: 'indexField';
-  createdAt: Scalars['DateTime']['output'];
-  fieldMetadataId: Scalars['UUID']['output'];
-  id: Scalars['UUID']['output'];
-  order: Scalars['Float']['output'];
-  updatedAt: Scalars['DateTime']['output'];
-};
-
-export type IndexFieldEdge = {
-  __typename?: 'indexFieldEdge';
-  /** Cursor for this node. */
-  cursor: Scalars['ConnectionCursor']['output'];
-  /** The node containing the indexField */
-  node: IndexField;
-};
-
-export type IndexFieldFilter = {
-  and?: InputMaybe<Array<IndexFieldFilter>>;
-  fieldMetadataId?: InputMaybe<UuidFilterComparison>;
-  id?: InputMaybe<UuidFilterComparison>;
-  or?: InputMaybe<Array<IndexFieldFilter>>;
-};
-
-export type IndexFilter = {
-  and?: InputMaybe<Array<IndexFilter>>;
-  id?: InputMaybe<UuidFilterComparison>;
-  isCustom?: InputMaybe<BooleanFieldComparison>;
-  or?: InputMaybe<Array<IndexFilter>>;
-};
-
-export type Object = {
-  __typename?: 'object';
-  createdAt: Scalars['DateTime']['output'];
-  dataSourceId: Scalars['String']['output'];
-  description?: Maybe<Scalars['String']['output']>;
-  fields: ObjectFieldsConnection;
-  icon?: Maybe<Scalars['String']['output']>;
-  id: Scalars['UUID']['output'];
-  imageIdentifierFieldMetadataId?: Maybe<Scalars['String']['output']>;
-  indexMetadatas: ObjectIndexMetadatasConnection;
-  isActive: Scalars['Boolean']['output'];
-  isCustom: Scalars['Boolean']['output'];
-  isLabelSyncedWithName: Scalars['Boolean']['output'];
-  isRemote: Scalars['Boolean']['output'];
-  isSystem: Scalars['Boolean']['output'];
-  labelIdentifierFieldMetadataId?: Maybe<Scalars['String']['output']>;
-  labelPlural: Scalars['String']['output'];
-  labelSingular: Scalars['String']['output'];
-  namePlural: Scalars['String']['output'];
-  nameSingular: Scalars['String']['output'];
-  shortcut?: Maybe<Scalars['String']['output']>;
-  updatedAt: Scalars['DateTime']['output'];
-};
-
-
-export type ObjectFieldsArgs = {
-  filter?: FieldFilter;
-  paging?: CursorPaging;
-};
-
-
-export type ObjectIndexMetadatasArgs = {
-  filter?: IndexFilter;
-  paging?: CursorPaging;
-};
-
-export type ObjectEdge = {
-  __typename?: 'objectEdge';
-  /** Cursor for this node. */
-  cursor: Scalars['ConnectionCursor']['output'];
-  /** The node containing the object */
-  node: Object;
-};
-
-export type ObjectFilter = {
-  and?: InputMaybe<Array<ObjectFilter>>;
-  id?: InputMaybe<UuidFilterComparison>;
-  isActive?: InputMaybe<BooleanFieldComparison>;
-  isCustom?: InputMaybe<BooleanFieldComparison>;
-  isRemote?: InputMaybe<BooleanFieldComparison>;
-  isSystem?: InputMaybe<BooleanFieldComparison>;
-  or?: InputMaybe<Array<ObjectFilter>>;
-};
-
-export type Relation = {
-  __typename?: 'relation';
-  createdAt: Scalars['DateTime']['output'];
-  fromFieldMetadataId: Scalars['String']['output'];
-  fromObjectMetadata: Object;
-  fromObjectMetadataId: Scalars['String']['output'];
-  id: Scalars['UUID']['output'];
-  relationType: RelationMetadataType;
-  toFieldMetadataId: Scalars['String']['output'];
-  toObjectMetadata: Object;
-  toObjectMetadataId: Scalars['String']['output'];
-  updatedAt: Scalars['DateTime']['output'];
-};
-
-export type RelationEdge = {
-  __typename?: 'relationEdge';
-  /** Cursor for this node. */
-  cursor: Scalars['ConnectionCursor']['output'];
-  /** The node containing the relation */
-  node: Relation;
-};
-
 export type RemoteServerFieldsFragment = { __typename?: 'RemoteServer', id: string, createdAt: any, foreignDataWrapperId: string, foreignDataWrapperOptions?: any | null, foreignDataWrapperType: string, updatedAt: any, schema?: string | null, label: string, userMappingOptions?: { __typename?: 'UserMappingOptionsUser', user?: string | null } | null };
 
 export type RemoteTableFieldsFragment = { __typename?: 'RemoteTable', id?: any | null, name: string, schema?: string | null, status: RemoteTableStatus, schemaPendingUpdates?: Array<DistantTableUpdate> | null };
@@ -2144,21 +2189,21 @@ export type CreateOneObjectMetadataItemMutationVariables = Exact<{
 }>;
 
 
-export type CreateOneObjectMetadataItemMutation = { __typename?: 'Mutation', createOneObject: { __typename?: 'object', id: any, dataSourceId: string, nameSingular: string, namePlural: string, labelSingular: string, labelPlural: string, description?: string | null, icon?: string | null, isCustom: boolean, isActive: boolean, createdAt: any, updatedAt: any, labelIdentifierFieldMetadataId?: string | null, imageIdentifierFieldMetadataId?: string | null } };
+export type CreateOneObjectMetadataItemMutation = { __typename?: 'Mutation', createOneObject: { __typename?: 'Object', id: any, dataSourceId: string, nameSingular: string, namePlural: string, labelSingular: string, labelPlural: string, description?: string | null, icon?: string | null, isCustom: boolean, isActive: boolean, createdAt: any, updatedAt: any, labelIdentifierFieldMetadataId?: string | null, imageIdentifierFieldMetadataId?: string | null } };
 
 export type CreateOneFieldMetadataItemMutationVariables = Exact<{
   input: CreateOneFieldMetadataInput;
 }>;
 
 
-export type CreateOneFieldMetadataItemMutation = { __typename?: 'Mutation', createOneField: { __typename?: 'field', id: any, type: FieldMetadataType, name: string, label: string, description?: string | null, icon?: string | null, isCustom?: boolean | null, isActive?: boolean | null, isNullable?: boolean | null, createdAt: any, updatedAt: any, settings?: any | null, defaultValue?: any | null, options?: any | null } };
+export type CreateOneFieldMetadataItemMutation = { __typename?: 'Mutation', createOneField: { __typename?: 'Field', id: any, type: FieldMetadataType, name: string, label: string, description?: string | null, icon?: string | null, isCustom?: boolean | null, isActive?: boolean | null, isNullable?: boolean | null, createdAt: any, updatedAt: any, settings?: any | null, defaultValue?: any | null, options?: any | null } };
 
-export type CreateOneRelationMetadataMutationVariables = Exact<{
-  input: CreateOneRelationInput;
+export type CreateOneRelationMetadataItemMutationVariables = Exact<{
+  input: CreateOneRelationMetadataInput;
 }>;
 
 
-export type CreateOneRelationMetadataMutation = { __typename?: 'Mutation', createOneRelation: { __typename?: 'relation', id: any, relationType: RelationMetadataType, fromObjectMetadataId: string, toObjectMetadataId: string, fromFieldMetadataId: string, toFieldMetadataId: string, createdAt: any, updatedAt: any } };
+export type CreateOneRelationMetadataItemMutation = { __typename?: 'Mutation', createOneRelationMetadata: { __typename?: 'RelationMetadata', id: any, relationType: RelationMetadataType, fromObjectMetadataId: string, toObjectMetadataId: string, fromFieldMetadataId: string, toFieldMetadataId: string, createdAt: any, updatedAt: any } };
 
 export type UpdateOneFieldMetadataItemMutationVariables = Exact<{
   idToUpdate: Scalars['UUID']['input'];
@@ -2166,7 +2211,7 @@ export type UpdateOneFieldMetadataItemMutationVariables = Exact<{
 }>;
 
 
-export type UpdateOneFieldMetadataItemMutation = { __typename?: 'Mutation', updateOneField: { __typename?: 'field', id: any, type: FieldMetadataType, name: string, label: string, description?: string | null, icon?: string | null, isCustom?: boolean | null, isActive?: boolean | null, isNullable?: boolean | null, createdAt: any, updatedAt: any, settings?: any | null, isLabelSyncedWithName?: boolean | null } };
+export type UpdateOneFieldMetadataItemMutation = { __typename?: 'Mutation', updateOneField: { __typename?: 'Field', id: any, type: FieldMetadataType, name: string, label: string, description?: string | null, icon?: string | null, isCustom?: boolean | null, isActive?: boolean | null, isNullable?: boolean | null, createdAt: any, updatedAt: any, settings?: any | null, isLabelSyncedWithName?: boolean | null } };
 
 export type UpdateOneObjectMetadataItemMutationVariables = Exact<{
   idToUpdate: Scalars['UUID']['input'];
@@ -2174,28 +2219,28 @@ export type UpdateOneObjectMetadataItemMutationVariables = Exact<{
 }>;
 
 
-export type UpdateOneObjectMetadataItemMutation = { __typename?: 'Mutation', updateOneObject: { __typename?: 'object', id: any, dataSourceId: string, nameSingular: string, namePlural: string, labelSingular: string, labelPlural: string, description?: string | null, icon?: string | null, isCustom: boolean, isActive: boolean, createdAt: any, updatedAt: any, labelIdentifierFieldMetadataId?: string | null, imageIdentifierFieldMetadataId?: string | null } };
+export type UpdateOneObjectMetadataItemMutation = { __typename?: 'Mutation', updateOneObject: { __typename?: 'Object', id: any, dataSourceId: string, nameSingular: string, namePlural: string, labelSingular: string, labelPlural: string, description?: string | null, icon?: string | null, isCustom: boolean, isActive: boolean, createdAt: any, updatedAt: any, labelIdentifierFieldMetadataId?: string | null, imageIdentifierFieldMetadataId?: string | null } };
 
 export type DeleteOneObjectMetadataItemMutationVariables = Exact<{
   idToDelete: Scalars['UUID']['input'];
 }>;
 
 
-export type DeleteOneObjectMetadataItemMutation = { __typename?: 'Mutation', deleteOneObject: { __typename?: 'object', id: any, dataSourceId: string, nameSingular: string, namePlural: string, labelSingular: string, labelPlural: string, description?: string | null, icon?: string | null, isCustom: boolean, isActive: boolean, createdAt: any, updatedAt: any, labelIdentifierFieldMetadataId?: string | null, imageIdentifierFieldMetadataId?: string | null } };
+export type DeleteOneObjectMetadataItemMutation = { __typename?: 'Mutation', deleteOneObject: { __typename?: 'Object', id: any, dataSourceId: string, nameSingular: string, namePlural: string, labelSingular: string, labelPlural: string, description?: string | null, icon?: string | null, isCustom: boolean, isActive: boolean, createdAt: any, updatedAt: any, labelIdentifierFieldMetadataId?: string | null, imageIdentifierFieldMetadataId?: string | null } };
 
 export type DeleteOneFieldMetadataItemMutationVariables = Exact<{
   idToDelete: Scalars['UUID']['input'];
 }>;
 
 
-export type DeleteOneFieldMetadataItemMutation = { __typename?: 'Mutation', deleteOneField: { __typename?: 'field', id: any, type: FieldMetadataType, name: string, label: string, description?: string | null, icon?: string | null, isCustom?: boolean | null, isActive?: boolean | null, isNullable?: boolean | null, createdAt: any, updatedAt: any, settings?: any | null } };
+export type DeleteOneFieldMetadataItemMutation = { __typename?: 'Mutation', deleteOneField: { __typename?: 'Field', id: any, type: FieldMetadataType, name: string, label: string, description?: string | null, icon?: string | null, isCustom?: boolean | null, isActive?: boolean | null, isNullable?: boolean | null, createdAt: any, updatedAt: any, settings?: any | null } };
 
 export type DeleteOneRelationMetadataItemMutationVariables = Exact<{
   idToDelete: Scalars['UUID']['input'];
 }>;
 
 
-export type DeleteOneRelationMetadataItemMutation = { __typename?: 'Mutation', deleteOneRelation: { __typename?: 'relation', id: any } };
+export type DeleteOneRelationMetadataItemMutation = { __typename?: 'Mutation', deleteOneRelation: { __typename?: 'RelationMetadata', id: any } };
 
 export type ObjectMetadataItemsQueryVariables = Exact<{
   objectFilter?: InputMaybe<ObjectFilter>;
@@ -2203,9 +2248,16 @@ export type ObjectMetadataItemsQueryVariables = Exact<{
 }>;
 
 
-export type ObjectMetadataItemsQuery = { __typename?: 'Query', objects: { __typename?: 'ObjectConnection', edges: Array<{ __typename?: 'objectEdge', node: { __typename?: 'object', id: any, dataSourceId: string, nameSingular: string, namePlural: string, labelSingular: string, labelPlural: string, description?: string | null, icon?: string | null, isCustom: boolean, isRemote: boolean, isActive: boolean, isSystem: boolean, createdAt: any, updatedAt: any, labelIdentifierFieldMetadataId?: string | null, imageIdentifierFieldMetadataId?: string | null, shortcut?: string | null, isLabelSyncedWithName: boolean, indexMetadatas: { __typename?: 'ObjectIndexMetadatasConnection', edges: Array<{ __typename?: 'indexEdge', node: { __typename?: 'index', id: any, createdAt: any, updatedAt: any, name: string, indexWhereClause?: string | null, indexType: IndexType, isUnique: boolean, indexFieldMetadatas: { __typename?: 'IndexIndexFieldMetadatasConnection', edges: Array<{ __typename?: 'indexFieldEdge', node: { __typename?: 'indexField', id: any, createdAt: any, updatedAt: any, order: number, fieldMetadataId: any } }> } } }> }, fields: { __typename?: 'ObjectFieldsConnection', edges: Array<{ __typename?: 'fieldEdge', node: { __typename?: 'field', id: any, type: FieldMetadataType, name: string, label: string, description?: string | null, icon?: string | null, isCustom?: boolean | null, isActive?: boolean | null, isSystem?: boolean | null, isNullable?: boolean | null, isUnique?: boolean | null, createdAt: any, updatedAt: any, defaultValue?: any | null, options?: any | null, settings?: any | null, isLabelSyncedWithName?: boolean | null, relationDefinition?: { __typename?: 'RelationDefinition', relationId: any, direction: RelationDefinitionType, sourceObjectMetadata: { __typename?: 'object', id: any, nameSingular: string, namePlural: string }, sourceFieldMetadata: { __typename?: 'field', id: any, name: string }, targetObjectMetadata: { __typename?: 'object', id: any, nameSingular: string, namePlural: string }, targetFieldMetadata: { __typename?: 'field', id: any, name: string } } | null } }>, pageInfo: { __typename?: 'PageInfo', hasNextPage?: boolean | null, hasPreviousPage?: boolean | null, startCursor?: any | null, endCursor?: any | null } } } }>, pageInfo: { __typename?: 'PageInfo', hasNextPage?: boolean | null, hasPreviousPage?: boolean | null, startCursor?: any | null, endCursor?: any | null } } };
+export type ObjectMetadataItemsQuery = { __typename?: 'Query', objects: { __typename?: 'ObjectConnection', edges: Array<{ __typename?: 'ObjectEdge', node: { __typename?: 'Object', id: any, dataSourceId: string, nameSingular: string, namePlural: string, labelSingular: string, labelPlural: string, description?: string | null, icon?: string | null, isCustom: boolean, isRemote: boolean, isActive: boolean, isSystem: boolean, createdAt: any, updatedAt: any, labelIdentifierFieldMetadataId?: string | null, imageIdentifierFieldMetadataId?: string | null, shortcut?: string | null, isLabelSyncedWithName: boolean, indexMetadatas: { __typename?: 'ObjectIndexMetadatasConnection', edges: Array<{ __typename?: 'IndexEdge', node: { __typename?: 'Index', id: any, createdAt: any, updatedAt: any, name: string, indexWhereClause?: string | null, indexType: IndexType, isUnique: boolean, indexFieldMetadatas: { __typename?: 'IndexIndexFieldMetadatasConnection', edges: Array<{ __typename?: 'IndexFieldEdge', node: { __typename?: 'IndexField', id: any, createdAt: any, updatedAt: any, order: number, fieldMetadataId: any } }> } } }> }, fields: { __typename?: 'ObjectFieldsConnection', edges: Array<{ __typename?: 'FieldEdge', node: { __typename?: 'Field', id: any, type: FieldMetadataType, name: string, label: string, description?: string | null, icon?: string | null, isCustom?: boolean | null, isActive?: boolean | null, isSystem?: boolean | null, isNullable?: boolean | null, isUnique?: boolean | null, createdAt: any, updatedAt: any, defaultValue?: any | null, options?: any | null, settings?: any | null, isLabelSyncedWithName?: boolean | null, relationDefinition?: { __typename?: 'RelationDefinition', relationId: any, direction: RelationDefinitionType, sourceObjectMetadata: { __typename?: 'Object', id: any, nameSingular: string, namePlural: string }, sourceFieldMetadata: { __typename?: 'Field', id: any, name: string }, targetObjectMetadata: { __typename?: 'Object', id: any, nameSingular: string, namePlural: string }, targetFieldMetadata: { __typename?: 'Field', id: any, name: string } } | null } }>, pageInfo: { __typename?: 'PageInfo', hasNextPage?: boolean | null, hasPreviousPage?: boolean | null, startCursor?: any | null, endCursor?: any | null } } } }>, pageInfo: { __typename?: 'PageInfo', hasNextPage?: boolean | null, hasPreviousPage?: boolean | null, startCursor?: any | null, endCursor?: any | null } } };
 
 export type ServerlessFunctionFieldsFragment = { __typename?: 'ServerlessFunction', id: any, name: string, description?: string | null, runtime: string, timeoutSeconds: number, syncStatus: ServerlessFunctionSyncStatus, latestVersion?: string | null, latestVersionInputSchema?: any | null, publishedVersions: Array<string>, createdAt: any, updatedAt: any };
+
+export type BuildDraftServerlessFunctionMutationVariables = Exact<{
+  input: BuildDraftServerlessFunctionInput;
+}>;
+
+
+export type BuildDraftServerlessFunctionMutation = { __typename?: 'Mutation', buildDraftServerlessFunction: { __typename?: 'ServerlessFunction', id: any, name: string, description?: string | null, runtime: string, timeoutSeconds: number, syncStatus: ServerlessFunctionSyncStatus, latestVersion?: string | null, latestVersionInputSchema?: any | null, publishedVersions: Array<string>, createdAt: any, updatedAt: any } };
 
 export type CreateOneServerlessFunctionItemMutationVariables = Exact<{
   input: CreateServerlessFunctionInput;
@@ -2282,13 +2334,14 @@ export const GetManyRemoteTablesDocument = {"kind":"Document","definitions":[{"k
 export const GetOneDatabaseConnectionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GetOneDatabaseConnection"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"RemoteServerIdInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"findOneRemoteServerById"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"RemoteServerFields"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"RemoteServerFields"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"RemoteServer"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"foreignDataWrapperId"}},{"kind":"Field","name":{"kind":"Name","value":"foreignDataWrapperOptions"}},{"kind":"Field","name":{"kind":"Name","value":"foreignDataWrapperType"}},{"kind":"Field","name":{"kind":"Name","value":"userMappingOptions"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"user"}}]}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"schema"}},{"kind":"Field","name":{"kind":"Name","value":"label"}}]}}]} as unknown as DocumentNode<GetOneDatabaseConnectionQuery, GetOneDatabaseConnectionQueryVariables>;
 export const CreateOneObjectMetadataItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateOneObjectMetadataItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateOneObjectInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createOneObject"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"dataSourceId"}},{"kind":"Field","name":{"kind":"Name","value":"nameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"namePlural"}},{"kind":"Field","name":{"kind":"Name","value":"labelSingular"}},{"kind":"Field","name":{"kind":"Name","value":"labelPlural"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"labelIdentifierFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"imageIdentifierFieldMetadataId"}}]}}]}}]} as unknown as DocumentNode<CreateOneObjectMetadataItemMutation, CreateOneObjectMetadataItemMutationVariables>;
 export const CreateOneFieldMetadataItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateOneFieldMetadataItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateOneFieldMetadataInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createOneField"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isNullable"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"settings"}},{"kind":"Field","name":{"kind":"Name","value":"defaultValue"}},{"kind":"Field","name":{"kind":"Name","value":"options"}}]}}]}}]} as unknown as DocumentNode<CreateOneFieldMetadataItemMutation, CreateOneFieldMetadataItemMutationVariables>;
-export const CreateOneRelationMetadataDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateOneRelationMetadata"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateOneRelationInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createOneRelation"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"relationType"}},{"kind":"Field","name":{"kind":"Name","value":"fromObjectMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"toObjectMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"fromFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"toFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<CreateOneRelationMetadataMutation, CreateOneRelationMetadataMutationVariables>;
+export const CreateOneRelationMetadataItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateOneRelationMetadataItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateOneRelationMetadataInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createOneRelationMetadata"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"relationType"}},{"kind":"Field","name":{"kind":"Name","value":"fromObjectMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"toObjectMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"fromFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"toFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]}}]} as unknown as DocumentNode<CreateOneRelationMetadataItemMutation, CreateOneRelationMetadataItemMutationVariables>;
 export const UpdateOneFieldMetadataItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateOneFieldMetadataItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"idToUpdate"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UUID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"updatePayload"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateFieldInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateOneField"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"idToUpdate"}}},{"kind":"ObjectField","name":{"kind":"Name","value":"update"},"value":{"kind":"Variable","name":{"kind":"Name","value":"updatePayload"}}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isNullable"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"settings"}},{"kind":"Field","name":{"kind":"Name","value":"isLabelSyncedWithName"}}]}}]}}]} as unknown as DocumentNode<UpdateOneFieldMetadataItemMutation, UpdateOneFieldMetadataItemMutationVariables>;
 export const UpdateOneObjectMetadataItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateOneObjectMetadataItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"idToUpdate"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UUID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"updatePayload"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateObjectPayload"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateOneObject"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"idToUpdate"}}},{"kind":"ObjectField","name":{"kind":"Name","value":"update"},"value":{"kind":"Variable","name":{"kind":"Name","value":"updatePayload"}}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"dataSourceId"}},{"kind":"Field","name":{"kind":"Name","value":"nameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"namePlural"}},{"kind":"Field","name":{"kind":"Name","value":"labelSingular"}},{"kind":"Field","name":{"kind":"Name","value":"labelPlural"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"labelIdentifierFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"imageIdentifierFieldMetadataId"}}]}}]}}]} as unknown as DocumentNode<UpdateOneObjectMetadataItemMutation, UpdateOneObjectMetadataItemMutationVariables>;
 export const DeleteOneObjectMetadataItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteOneObjectMetadataItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"idToDelete"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UUID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteOneObject"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"idToDelete"}}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"dataSourceId"}},{"kind":"Field","name":{"kind":"Name","value":"nameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"namePlural"}},{"kind":"Field","name":{"kind":"Name","value":"labelSingular"}},{"kind":"Field","name":{"kind":"Name","value":"labelPlural"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"labelIdentifierFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"imageIdentifierFieldMetadataId"}}]}}]}}]} as unknown as DocumentNode<DeleteOneObjectMetadataItemMutation, DeleteOneObjectMetadataItemMutationVariables>;
 export const DeleteOneFieldMetadataItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteOneFieldMetadataItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"idToDelete"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UUID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteOneField"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"idToDelete"}}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isNullable"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"settings"}}]}}]}}]} as unknown as DocumentNode<DeleteOneFieldMetadataItemMutation, DeleteOneFieldMetadataItemMutationVariables>;
 export const DeleteOneRelationMetadataItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteOneRelationMetadataItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"idToDelete"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UUID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteOneRelation"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"idToDelete"}}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<DeleteOneRelationMetadataItemMutation, DeleteOneRelationMetadataItemMutationVariables>;
-export const ObjectMetadataItemsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ObjectMetadataItems"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"objectFilter"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"objectFilter"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"fieldFilter"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"fieldFilter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"objects"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"paging"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"1000"}}]}},{"kind":"Argument","name":{"kind":"Name","value":"filter"},"value":{"kind":"Variable","name":{"kind":"Name","value":"objectFilter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"dataSourceId"}},{"kind":"Field","name":{"kind":"Name","value":"nameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"namePlural"}},{"kind":"Field","name":{"kind":"Name","value":"labelSingular"}},{"kind":"Field","name":{"kind":"Name","value":"labelPlural"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isRemote"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isSystem"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"labelIdentifierFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"imageIdentifierFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"shortcut"}},{"kind":"Field","name":{"kind":"Name","value":"isLabelSyncedWithName"}},{"kind":"Field","name":{"kind":"Name","value":"indexMetadatas"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"paging"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"indexWhereClause"}},{"kind":"Field","name":{"kind":"Name","value":"indexType"}},{"kind":"Field","name":{"kind":"Name","value":"isUnique"}},{"kind":"Field","name":{"kind":"Name","value":"indexFieldMetadatas"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"paging"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"order"}},{"kind":"Field","name":{"kind":"Name","value":"fieldMetadataId"}}]}}]}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"fields"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"paging"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"1000"}}]}},{"kind":"Argument","name":{"kind":"Name","value":"filter"},"value":{"kind":"Variable","name":{"kind":"Name","value":"fieldFilter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isSystem"}},{"kind":"Field","name":{"kind":"Name","value":"isNullable"}},{"kind":"Field","name":{"kind":"Name","value":"isUnique"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"defaultValue"}},{"kind":"Field","name":{"kind":"Name","value":"options"}},{"kind":"Field","name":{"kind":"Name","value":"settings"}},{"kind":"Field","name":{"kind":"Name","value":"isLabelSyncedWithName"}},{"kind":"Field","name":{"kind":"Name","value":"relationDefinition"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"relationId"}},{"kind":"Field","name":{"kind":"Name","value":"direction"}},{"kind":"Field","name":{"kind":"Name","value":"sourceObjectMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"nameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"namePlural"}}]}},{"kind":"Field","name":{"kind":"Name","value":"sourceFieldMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"targetObjectMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"nameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"namePlural"}}]}},{"kind":"Field","name":{"kind":"Name","value":"targetFieldMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"hasPreviousPage"}},{"kind":"Field","name":{"kind":"Name","value":"startCursor"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"hasPreviousPage"}},{"kind":"Field","name":{"kind":"Name","value":"startCursor"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}}]}}]}}]} as unknown as DocumentNode<ObjectMetadataItemsQuery, ObjectMetadataItemsQueryVariables>;
+export const ObjectMetadataItemsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ObjectMetadataItems"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"objectFilter"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"ObjectFilter"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"fieldFilter"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"FieldFilter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"objects"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"paging"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"1000"}}]}},{"kind":"Argument","name":{"kind":"Name","value":"filter"},"value":{"kind":"Variable","name":{"kind":"Name","value":"objectFilter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"dataSourceId"}},{"kind":"Field","name":{"kind":"Name","value":"nameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"namePlural"}},{"kind":"Field","name":{"kind":"Name","value":"labelSingular"}},{"kind":"Field","name":{"kind":"Name","value":"labelPlural"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isRemote"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isSystem"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"labelIdentifierFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"imageIdentifierFieldMetadataId"}},{"kind":"Field","name":{"kind":"Name","value":"shortcut"}},{"kind":"Field","name":{"kind":"Name","value":"isLabelSyncedWithName"}},{"kind":"Field","name":{"kind":"Name","value":"indexMetadatas"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"paging"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"indexWhereClause"}},{"kind":"Field","name":{"kind":"Name","value":"indexType"}},{"kind":"Field","name":{"kind":"Name","value":"isUnique"}},{"kind":"Field","name":{"kind":"Name","value":"indexFieldMetadatas"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"paging"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"100"}}]}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"order"}},{"kind":"Field","name":{"kind":"Name","value":"fieldMetadataId"}}]}}]}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"fields"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"paging"},"value":{"kind":"ObjectValue","fields":[{"kind":"ObjectField","name":{"kind":"Name","value":"first"},"value":{"kind":"IntValue","value":"1000"}}]}},{"kind":"Argument","name":{"kind":"Name","value":"filter"},"value":{"kind":"Variable","name":{"kind":"Name","value":"fieldFilter"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"edges"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"node"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"type"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"label"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"icon"}},{"kind":"Field","name":{"kind":"Name","value":"isCustom"}},{"kind":"Field","name":{"kind":"Name","value":"isActive"}},{"kind":"Field","name":{"kind":"Name","value":"isSystem"}},{"kind":"Field","name":{"kind":"Name","value":"isNullable"}},{"kind":"Field","name":{"kind":"Name","value":"isUnique"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}},{"kind":"Field","name":{"kind":"Name","value":"defaultValue"}},{"kind":"Field","name":{"kind":"Name","value":"options"}},{"kind":"Field","name":{"kind":"Name","value":"settings"}},{"kind":"Field","name":{"kind":"Name","value":"isLabelSyncedWithName"}},{"kind":"Field","name":{"kind":"Name","value":"relationDefinition"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"relationId"}},{"kind":"Field","name":{"kind":"Name","value":"direction"}},{"kind":"Field","name":{"kind":"Name","value":"sourceObjectMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"nameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"namePlural"}}]}},{"kind":"Field","name":{"kind":"Name","value":"sourceFieldMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}},{"kind":"Field","name":{"kind":"Name","value":"targetObjectMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"nameSingular"}},{"kind":"Field","name":{"kind":"Name","value":"namePlural"}}]}},{"kind":"Field","name":{"kind":"Name","value":"targetFieldMetadata"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"hasPreviousPage"}},{"kind":"Field","name":{"kind":"Name","value":"startCursor"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}}]}}]}}]}},{"kind":"Field","name":{"kind":"Name","value":"pageInfo"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"hasNextPage"}},{"kind":"Field","name":{"kind":"Name","value":"hasPreviousPage"}},{"kind":"Field","name":{"kind":"Name","value":"startCursor"}},{"kind":"Field","name":{"kind":"Name","value":"endCursor"}}]}}]}}]}}]} as unknown as DocumentNode<ObjectMetadataItemsQuery, ObjectMetadataItemsQueryVariables>;
+export const BuildDraftServerlessFunctionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"BuildDraftServerlessFunction"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"BuildDraftServerlessFunctionInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"buildDraftServerlessFunction"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ServerlessFunctionFields"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ServerlessFunctionFields"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ServerlessFunction"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"runtime"}},{"kind":"Field","name":{"kind":"Name","value":"timeoutSeconds"}},{"kind":"Field","name":{"kind":"Name","value":"syncStatus"}},{"kind":"Field","name":{"kind":"Name","value":"latestVersion"}},{"kind":"Field","name":{"kind":"Name","value":"latestVersionInputSchema"}},{"kind":"Field","name":{"kind":"Name","value":"publishedVersions"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]} as unknown as DocumentNode<BuildDraftServerlessFunctionMutation, BuildDraftServerlessFunctionMutationVariables>;
 export const CreateOneServerlessFunctionItemDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateOneServerlessFunctionItem"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"CreateServerlessFunctionInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createOneServerlessFunction"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ServerlessFunctionFields"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ServerlessFunctionFields"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ServerlessFunction"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"runtime"}},{"kind":"Field","name":{"kind":"Name","value":"timeoutSeconds"}},{"kind":"Field","name":{"kind":"Name","value":"syncStatus"}},{"kind":"Field","name":{"kind":"Name","value":"latestVersion"}},{"kind":"Field","name":{"kind":"Name","value":"latestVersionInputSchema"}},{"kind":"Field","name":{"kind":"Name","value":"publishedVersions"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]} as unknown as DocumentNode<CreateOneServerlessFunctionItemMutation, CreateOneServerlessFunctionItemMutationVariables>;
 export const DeleteOneServerlessFunctionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DeleteOneServerlessFunction"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ServerlessFunctionIdInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteOneServerlessFunction"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ServerlessFunctionFields"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ServerlessFunctionFields"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ServerlessFunction"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"description"}},{"kind":"Field","name":{"kind":"Name","value":"runtime"}},{"kind":"Field","name":{"kind":"Name","value":"timeoutSeconds"}},{"kind":"Field","name":{"kind":"Name","value":"syncStatus"}},{"kind":"Field","name":{"kind":"Name","value":"latestVersion"}},{"kind":"Field","name":{"kind":"Name","value":"latestVersionInputSchema"}},{"kind":"Field","name":{"kind":"Name","value":"publishedVersions"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]} as unknown as DocumentNode<DeleteOneServerlessFunctionMutation, DeleteOneServerlessFunctionMutationVariables>;
 export const ExecuteOneServerlessFunctionDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ExecuteOneServerlessFunction"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ExecuteServerlessFunctionInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"executeOneServerlessFunction"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"data"}},{"kind":"Field","name":{"kind":"Name","value":"duration"}},{"kind":"Field","name":{"kind":"Name","value":"status"}},{"kind":"Field","name":{"kind":"Name","value":"error"}}]}}]}}]} as unknown as DocumentNode<ExecuteOneServerlessFunctionMutation, ExecuteOneServerlessFunctionMutationVariables>;

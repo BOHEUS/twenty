@@ -6,6 +6,7 @@ import {
 import { workspaceAuthProvidersState } from '@/workspace/states/workspaceAuthProvidersState';
 import { useTheme } from '@emotion/react';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
+import { isDefined } from 'twenty-shared';
 import { HorizontalSeparator, IconLock, MainButton } from 'twenty-ui';
 
 export const SignInUpWithSSO = () => {
@@ -18,7 +19,10 @@ export const SignInUpWithSSO = () => {
   const { redirectToSSOLoginPage } = useSSO();
 
   const signInWithSSO = () => {
-    if (workspaceAuthProviders.sso.length === 1) {
+    if (
+      isDefined(workspaceAuthProviders) &&
+      workspaceAuthProviders.sso.length === 1
+    ) {
       return redirectToSSOLoginPage(workspaceAuthProviders.sso[0].id);
     }
 
