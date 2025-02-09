@@ -31,6 +31,7 @@ export class LoginPage {
   private readonly yearSubscription: Locator;
   private readonly startButton: Locator;
   private readonly finishButton: Locator;
+  private readonly skipButton: Locator;
 
   constructor(public readonly page: Page) {
     this.page = page;
@@ -81,6 +82,7 @@ export class LoginPage {
     this.yearSubscription = page.getByTestId('input-radio').nth(1);
     this.startButton = page.getByRole('button', { name: 'Start' });
     this.finishButton = page.getByRole('button', { name: 'Finish' });
+    this.skipButton = page.getByText('Skip');
   }
 
   async loginWithGoogle() {
@@ -203,5 +205,9 @@ export class LoginPage {
 
   async clickFinishButton() {
     await this.finishButton.click();
+  }
+
+  async clickSkipButton() {
+    await this.skipButton.click();
   }
 }

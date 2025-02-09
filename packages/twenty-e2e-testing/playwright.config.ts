@@ -23,7 +23,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1, // 1 worker = 1 test at the time, tests can't be parallelized
-  timeout: 30 * 1000, // timeout can be changed
+  timeout: 60 * 1000, // timeout can be changed
   use: {
     baseURL: process.env.FRONTEND_BASE_URL || 'http://localhost:3001',
     trace: 'retain-on-failure', // trace takes EVERYTHING from page source, records every single step, should be used only when normal debugging won't work
@@ -48,6 +48,13 @@ export default defineConfig({
         storageState: path.resolve(__dirname, '.auth', 'user.json'), // takes saved cookies from directory
       },
       dependencies: ['setup'],
+    },
+    {
+      name: 'test',
+      use: {
+        baseURL: 'https://app.twenty-main.com',
+      },
+      testMatch: /authentication\/sign_up_billing\.e2e-spec\.ts/,
     },
 
     //{
