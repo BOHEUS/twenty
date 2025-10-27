@@ -12,6 +12,10 @@ import { RestApiFindDuplicatesHandler } from 'src/engine/api/rest/core/handlers/
 import { RestApiFindManyHandler } from 'src/engine/api/rest/core/handlers/rest-api-find-many.handler';
 import { RestApiFindOneHandler } from 'src/engine/api/rest/core/handlers/rest-api-find-one.handler';
 import { RestApiGroupByHandler } from 'src/engine/api/rest/core/handlers/rest-api-group-by.handler';
+import { RestApiMergeManyHandler } from 'src/engine/api/rest/core/handlers/rest-api-merge-many.handler';
+import { RestApiRestoreManyHandler } from 'src/engine/api/rest/core/handlers/rest-api-restore-many.handler';
+import { RestApiRestoreOneHandler } from 'src/engine/api/rest/core/handlers/rest-api-restore-one.handler';
+import { RestApiUpdateManyHandler } from 'src/engine/api/rest/core/handlers/rest-api-update-many.handler';
 import { RestApiUpdateOneHandler } from 'src/engine/api/rest/core/handlers/rest-api-update-one.handler';
 import { parseCorePath } from 'src/engine/api/rest/core/query-builder/utils/path-parsers/parse-core-path.utils';
 import { parseSoftDeleteRestRequest } from 'src/engine/api/rest/input-request-parsers/soft-delete-parser-utils/parse-soft-delete-rest-request.util';
@@ -24,15 +28,19 @@ export class RestApiCoreService {
   constructor(
     private readonly restApiCreateOneHandler: RestApiCreateOneHandler,
     private readonly restApiCreateManyHandler: RestApiCreateManyHandler,
+    private readonly restApiUpdateOneHandler: RestApiUpdateOneHandler,
+    private readonly restApiUpdateManyHandler: RestApiUpdateManyHandler,
     private readonly restApiFindOneHandler: RestApiFindOneHandler,
     private readonly restApiFindManyHandler: RestApiFindManyHandler,
     private readonly restApiFindDuplicatesHandler: RestApiFindDuplicatesHandler,
     private readonly restApiGroupByHandler: RestApiGroupByHandler,
-    private readonly restApiUpdateOneHandler: RestApiUpdateOneHandler,
     private readonly restApiDestroyOneHandler: RestApiDestroyOneHandler,
     private readonly restApiDestroyManyHandler: RestApiDestroyManyHandler,
     private readonly restApiDeleteOneHandler: RestApiDeleteOneHandler,
     private readonly restApiDeleteManyHandler: RestApiDeleteManyHandler,
+    private readonly restApiRestoreOneHandler: RestApiRestoreOneHandler,
+    private readonly restApiRestoreManyHandler: RestApiRestoreManyHandler,
+    private readonly restApiMergeManyHandler: RestApiMergeManyHandler,
     private readonly featureFlagService: FeatureFlagService,
   ) {}
 
@@ -63,6 +71,37 @@ export class RestApiCoreService {
     }
   }
 
+  async findDuplicates(request: AuthenticatedRequest) {
+    const isCommonApiEnabled = await this.isCommonApiEnabled(request);
+
+    if (isCommonApiEnabled) {
+      return await this.restApiFindDuplicatesHandler.commonHandle(request);
+    } else {
+      return await this.restApiFindDuplicatesHandler.handle(request);
+    }
+  }
+
+  async update(request: AuthenticatedRequest) {
+    const { id: recordId } = parseCorePath(request);
+    const isCommonApiEnabled = await this.isCommonApiEnabled(request);
+
+    if (isCommonApiEnabled) {
+      if (isDefined(recordId)) {
+        return await this.restApiUpdateOneHandler.commonHandle(request);
+      } else {
+        return await this.restApiUpdateManyHandler.handle(request);
+      }
+    } else {
+      if (isDefined(recordId)) {
+        return await this.restApiUpdateOneHandler.handle(request);
+      } else {
+        throw new BadRequestException(
+          'Activate feature flag to use UpdateMany in the REST API',
+        );
+      }
+    }
+  }
+
   async get(request: AuthenticatedRequest) {
     const { id: recordId } = parseCorePath(request);
     const isCommonApiEnabled = await this.isCommonApiEnabled(request);
@@ -83,23 +122,7 @@ export class RestApiCoreService {
   }
 
   async groupBy(request: AuthenticatedRequest) {
-    const isCommonApiEnabled = await this.isCommonApiEnabled(request);
-
-    if (isCommonApiEnabled) {
-      return await this.restApiGroupByHandler.handle(request);
-    } else {
-      throw new BadRequestException(
-        'Activate feature flag to use GroupBy in the REST API',
-      );
-    }
-  }
-
-  async findDuplicates(request: AuthenticatedRequest) {
-    return await this.restApiFindDuplicatesHandler.handle(request);
-  }
-
-  async update(request: AuthenticatedRequest) {
-    return await this.restApiUpdateOneHandler.handle(request);
+    return await this.restApiGroupByHandler.handle(request);
   }
 
   async delete(request: AuthenticatedRequest) {
@@ -124,5 +147,35 @@ export class RestApiCoreService {
     throw new BadRequestException(
       'Activate feature flag IS_COMMON_API_ENABLED to use Delete in the REST API',
     );
+  }
+
+  async restore(request: AuthenticatedRequest) {
+    const { id: recordId } = parseCorePath(request);
+
+    const isCommonApiEnabled = await this.isCommonApiEnabled(request);
+
+    if (isCommonApiEnabled) {
+      if (isDefined(recordId)) {
+        return await this.restApiRestoreOneHandler.handle(request);
+      } else {
+        return await this.restApiRestoreManyHandler.handle(request);
+      }
+    } else {
+      throw new BadRequestException(
+        'Activate feature flag to use Restore in the REST API',
+      );
+    }
+  }
+
+  async mergeMany(request: AuthenticatedRequest) {
+    const isCommonApiEnabled = await this.isCommonApiEnabled(request);
+
+    if (isCommonApiEnabled) {
+      return await this.restApiMergeManyHandler.handle(request);
+    } else {
+      throw new BadRequestException(
+        'Activate feature flag to use Merge in the REST API',
+      );
+    }
   }
 }
