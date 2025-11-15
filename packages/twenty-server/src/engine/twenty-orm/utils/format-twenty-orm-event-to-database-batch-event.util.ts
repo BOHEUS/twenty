@@ -3,17 +3,17 @@ import { isDefined } from 'twenty-shared/utils';
 import type { ObjectLiteral } from 'typeorm';
 
 import { DatabaseEventAction } from 'src/engine/api/graphql/graphql-query-runner/enums/database-event-action';
-import type { ObjectMetadataItemWithFieldMaps } from 'src/engine/metadata-modules/types/object-metadata-item-with-field-maps';
 import type { AuthContext } from 'src/engine/core-modules/auth/types/auth-context.type';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 import { ObjectRecordCreateEvent } from 'src/engine/core-modules/event-emitter/types/object-record-create.event';
-import { ObjectRecordUpdateEvent } from 'src/engine/core-modules/event-emitter/types/object-record-update.event';
 import { ObjectRecordDeleteEvent } from 'src/engine/core-modules/event-emitter/types/object-record-delete.event';
+import { ObjectRecordDestroyEvent } from 'src/engine/core-modules/event-emitter/types/object-record-destroy.event';
+import type { ObjectRecordDiff } from 'src/engine/core-modules/event-emitter/types/object-record-diff';
+import { ObjectRecordUpdateEvent } from 'src/engine/core-modules/event-emitter/types/object-record-update.event';
 import { ObjectRecordUpsertEvent } from 'src/engine/core-modules/event-emitter/types/object-record-upsert.event';
 import { objectRecordChangedValues } from 'src/engine/core-modules/event-emitter/utils/object-record-changed-values';
-import type { ObjectRecordDiff } from 'src/engine/core-modules/event-emitter/types/object-record-diff';
-import { ObjectRecordDestroyEvent } from 'src/engine/core-modules/event-emitter/types/object-record-destroy.event';
+import type { ObjectMetadataItemWithFieldMaps } from 'src/engine/metadata-modules/types/object-metadata-item-with-field-maps';
 import { type DatabaseBatchEventInput } from 'src/engine/workspace-event-emitter/workspace-event-emitter';
+import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 
 export const formatTwentyOrmEventToDatabaseBatchEvent = <
   T extends ObjectLiteral,
@@ -56,6 +56,7 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
         const event = new ObjectRecordCreateEvent<T>();
 
         event.userId = authContext?.user?.id;
+        event.workspaceMemberId = authContext?.workspaceMemberId;
         event.recordId = after.id;
         event.properties = { after };
 
@@ -88,6 +89,7 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
           const event = new ObjectRecordUpdateEvent<T>();
 
           event.userId = authContext?.user?.id;
+          event.workspaceMemberId = authContext?.workspaceMemberId;
           event.recordId = after.id;
           event.properties = {
             before,
@@ -105,6 +107,7 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
         const event = new ObjectRecordDeleteEvent<T>();
 
         event.userId = authContext?.user?.id;
+        event.workspaceMemberId = authContext?.workspaceMemberId;
         event.recordId = before.id;
         event.properties = { before };
 
@@ -116,6 +119,7 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
         const event = new ObjectRecordDestroyEvent<T>();
 
         event.userId = authContext?.user?.id;
+        event.workspaceMemberId = authContext?.workspaceMemberId;
         event.recordId = before.id;
         event.properties = { before };
 
@@ -127,6 +131,7 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
         const event = new ObjectRecordUpsertEvent<T>();
 
         event.userId = authContext?.user?.id;
+        event.workspaceMemberId = authContext?.workspaceMemberId;
         event.recordId = after.id;
 
         const before = beforeEntities
@@ -143,7 +148,6 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
           after,
           objectMetadataItem,
         ) as Partial<ObjectRecordDiff<T>>;
-
         updatedFields = Object.keys(diff);
 
         event.properties = {
