@@ -1,21 +1,15 @@
 import { useObjectMetadataItemById } from '@/object-metadata/hooks/useObjectMetadataItemById';
-import { getDefaultWidgetData } from '@/page-layout/utils/getDefaultWidgetData';
 import { PageLayoutWidgetNoDataDisplay } from '@/page-layout/widgets/components/PageLayoutWidgetNoDataDisplay';
 import { ChartSkeletonLoader } from '@/page-layout/widgets/graph/components/ChartSkeletonLoader';
 import { GraphWidgetAggregateChartRenderer } from '@/page-layout/widgets/graph/graphWidgetAggregateChart/components/GraphWidgetAggregateChartRenderer';
 import { GraphWidgetBarChartRenderer } from '@/page-layout/widgets/graph/graphWidgetBarChart/components/GraphWidgetBarChartRenderer';
 import { GraphWidgetLineChartRenderer } from '@/page-layout/widgets/graph/graphWidgetLineChart/components/GraphWidgetLineChartRenderer';
+import { GraphWidgetPieChartRenderer } from '@/page-layout/widgets/graph/graphWidgetPieChart/components/GraphWidgetPieChartRenderer';
 import { areChartConfigurationFieldsValidForQuery } from '@/page-layout/widgets/graph/utils/areChartConfigurationFieldsValidForQuery';
+import { useCurrentWidget } from '@/page-layout/widgets/hooks/useCurrentWidget';
 import { lazy, Suspense } from 'react';
-import { GraphType, type PageLayoutWidget } from '~/generated/graphql';
-
-const GraphWidgetPieChart = lazy(() =>
-  import(
-    '@/page-layout/widgets/graph/graphWidgetPieChart/components/GraphWidgetPieChart'
-  ).then((module) => ({
-    default: module.GraphWidgetPieChart,
-  })),
-);
+import { isDefined } from 'twenty-shared/utils';
+import { WidgetConfigurationType } from '~/generated/graphql';
 
 const GraphWidgetGaugeChart = lazy(() =>
   import(
@@ -26,16 +20,12 @@ const GraphWidgetGaugeChart = lazy(() =>
 );
 
 export type GraphWidgetProps = {
-  widget: PageLayoutWidget;
   objectMetadataId: string;
-  graphType: GraphType;
 };
 
-export const GraphWidget = ({
-  widget,
-  objectMetadataId,
-  graphType,
-}: GraphWidgetProps) => {
+export const GraphWidget = ({ objectMetadataId }: GraphWidgetProps) => {
+  const widget = useCurrentWidget();
+
   const { objectMetadataItem } = useObjectMetadataItemById({
     objectId: objectMetadataId,
   });
@@ -45,29 +35,32 @@ export const GraphWidget = ({
     objectMetadataItem,
   );
 
-  if (!hasValidConfiguration) {
-    return <PageLayoutWidgetNoDataDisplay widgetId={widget.id} />;
+  if (!isDefined(widget.configuration) || !hasValidConfiguration) {
+    return <PageLayoutWidgetNoDataDisplay />;
   }
 
-  const data: any = getDefaultWidgetData(graphType);
+  const configurationType = widget.configuration?.configurationType;
 
-  if (!data) {
-    return null;
-  }
+  switch (configurationType) {
+    case WidgetConfigurationType.AGGREGATE_CHART:
+      return <GraphWidgetAggregateChartRenderer />;
 
-  switch (graphType) {
-    case GraphType.AGGREGATE:
-      return <GraphWidgetAggregateChartRenderer widget={widget} />;
+    case WidgetConfigurationType.GAUGE_CHART: {
+      const gaugeData = {
+        value: 0.7,
+        min: 0,
+        max: 1,
+        label: 'Progress',
+      };
 
-    case GraphType.GAUGE:
       return (
         <Suspense fallback={<ChartSkeletonLoader />}>
           <GraphWidgetGaugeChart
             data={{
-              value: data.value,
-              min: data.min,
-              max: data.max,
-              label: data.label,
+              value: gaugeData.value,
+              min: gaugeData.min,
+              max: gaugeData.max,
+              label: gaugeData.label,
             }}
             displayType="percentage"
             showValue
@@ -75,25 +68,16 @@ export const GraphWidget = ({
           />
         </Suspense>
       );
+    }
 
-    case GraphType.PIE:
-      return (
-        <Suspense fallback={<ChartSkeletonLoader />}>
-          <GraphWidgetPieChart
-            data={data.items}
-            showLegend
-            displayType="percentage"
-            id={`pie-chart-${widget.id}`}
-          />
-        </Suspense>
-      );
+    case WidgetConfigurationType.PIE_CHART:
+      return <GraphWidgetPieChartRenderer />;
 
-    case GraphType.VERTICAL_BAR:
-    case GraphType.HORIZONTAL_BAR:
-      return <GraphWidgetBarChartRenderer widget={widget} />;
+    case WidgetConfigurationType.BAR_CHART:
+      return <GraphWidgetBarChartRenderer />;
 
-    case GraphType.LINE:
-      return <GraphWidgetLineChartRenderer widget={widget} />;
+    case WidgetConfigurationType.LINE_CHART:
+      return <GraphWidgetLineChartRenderer />;
 
     default:
       return null;

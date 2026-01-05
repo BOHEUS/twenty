@@ -1,28 +1,16 @@
-import { type FlatEntityPropertiesUpdates } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-properties-updates.type';
-import { type FlatServerlessFunction } from 'src/engine/metadata-modules/serverless-function/types/flat-serverless-function.type';
-import { type Sources } from 'src/engine/core-modules/file-storage/types/source.type';
+import { type Sources } from 'twenty-shared/types';
 
-export type CreateServerlessFunctionAction = {
-  type: 'create_serverless_function';
-  serverlessFunction: FlatServerlessFunction;
-};
+import { type BaseCreateWorkspaceMigrationAction } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-builder-v2/types/base-create-workspace-migration-action.type';
+import { type BaseDeleteWorkspaceMigrationAction } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-builder-v2/types/base-delete-workspace-migration-action.type';
+import { type BaseUpdateWorkspaceMigrationAction } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-builder-v2/types/base-update-workspace-migration-action.type';
 
-export type UpdateServerlessFunctionAction = {
-  type: 'update_serverless_function';
-  serverlessFunctionId: string;
-  code?: Sources;
-  updates: FlatEntityPropertiesUpdates<'serverlessFunction'>;
-};
+export type CreateServerlessFunctionAction =
+  BaseCreateWorkspaceMigrationAction<'serverlessFunction'>;
 
-export type DeleteServerlessFunctionAction = {
-  type: 'delete_serverless_function';
-  serverlessFunctionId: string;
-};
+export type UpdateServerlessFunctionAction =
+  BaseUpdateWorkspaceMigrationAction<'serverlessFunction'> & {
+    code?: Sources;
+  };
 
-export type WorkspaceMigrationServerlessFunctionActionV2 =
-  | CreateServerlessFunctionAction
-  | UpdateServerlessFunctionAction
-  | DeleteServerlessFunctionAction;
-
-export type WorkspaceMigrationServerlessFunctionActionTypeV2 =
-  WorkspaceMigrationServerlessFunctionActionV2['type'];
+export type DeleteServerlessFunctionAction =
+  BaseDeleteWorkspaceMigrationAction<'serverlessFunction'>;

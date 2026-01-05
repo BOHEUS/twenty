@@ -19,16 +19,14 @@ export class WorkspaceMigrationV2RouteTriggerActionsBuilderService extends Works
     super(ALL_METADATA_NAME.routeTrigger);
   }
 
-  protected async validateFlatEntityCreation(
+  protected validateFlatEntityCreation(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.routeTrigger>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.routeTrigger,
-      'created'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.routeTrigger,
+    'create'
   > {
     const validationResult =
-      await this.flatRouteTriggerValidatorService.validateFlatRouteTriggerCreation(
+      this.flatRouteTriggerValidatorService.validateFlatRouteTriggerCreation(
         args,
       );
 
@@ -44,19 +42,18 @@ export class WorkspaceMigrationV2RouteTriggerActionsBuilderService extends Works
     return {
       status: 'success',
       action: {
-        type: 'create_route_trigger',
-        routeTrigger: flatRouteTriggerToValidate,
+        type: 'create',
+        metadataName: 'routeTrigger',
+        flatEntity: flatRouteTriggerToValidate,
       },
     };
   }
 
-  protected async validateFlatEntityDeletion(
+  protected validateFlatEntityDeletion(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.routeTrigger>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.routeTrigger,
-      'deleted'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.routeTrigger,
+    'delete'
   > {
     const validationResult =
       this.flatRouteTriggerValidatorService.validateFlatRouteTriggerDeletion(
@@ -75,19 +72,18 @@ export class WorkspaceMigrationV2RouteTriggerActionsBuilderService extends Works
     return {
       status: 'success',
       action: {
-        type: 'delete_route_trigger',
-        routeTriggerId: flatRouteTriggerToValidate.id,
+        type: 'delete',
+        metadataName: 'routeTrigger',
+        entityId: flatRouteTriggerToValidate.id,
       },
     };
   }
 
-  protected async validateFlatEntityUpdate(
+  protected validateFlatEntityUpdate(
     args: FlatEntityUpdateValidationArgs<typeof ALL_METADATA_NAME.routeTrigger>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.routeTrigger,
-      'updated'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.routeTrigger,
+    'update'
   > {
     const validationResult =
       this.flatRouteTriggerValidatorService.validateFlatRouteTriggerUpdate(
@@ -104,8 +100,9 @@ export class WorkspaceMigrationV2RouteTriggerActionsBuilderService extends Works
     const { flatEntityId, flatEntityUpdates } = args;
 
     const updateRouteTriggerAction: UpdateRouteTriggerAction = {
-      type: 'update_route_trigger',
-      routeTriggerId: flatEntityId,
+      type: 'update',
+      metadataName: 'routeTrigger',
+      entityId: flatEntityId,
       updates: flatEntityUpdates,
     };
 

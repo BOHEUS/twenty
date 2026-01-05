@@ -26,9 +26,7 @@ export class WorkspaceMigrationV2ServerlessFunctionActionsBuilderService extends
 
   public async validateAndBuild(
     args: ValidateAndBuildArgs<typeof ALL_METADATA_NAME.serverlessFunction>,
-  ): Promise<
-    ValidateAndBuildReturnType<typeof ALL_METADATA_NAME.serverlessFunction>
-  > {
+  ): ValidateAndBuildReturnType<typeof ALL_METADATA_NAME.serverlessFunction> {
     const { to: toFlatEntityMaps } = args;
     const baseResult = await super.validateAndBuild(args);
 
@@ -36,13 +34,13 @@ export class WorkspaceMigrationV2ServerlessFunctionActionsBuilderService extends
       return baseResult;
     }
 
-    const updatedActions = baseResult.actions.updated.map((action) => {
-      if (action.type !== 'update_serverless_function') {
+    const updatedActions = baseResult.actions.update.map((action) => {
+      if (action.type !== 'update') {
         return action;
       }
 
       const toServerlessFunction = findFlatEntityByIdInFlatEntityMaps({
-        flatEntityId: action.serverlessFunctionId,
+        flatEntityId: action.entityId,
         flatEntityMaps: toFlatEntityMaps,
       });
 
@@ -56,21 +54,19 @@ export class WorkspaceMigrationV2ServerlessFunctionActionsBuilderService extends
       ...baseResult,
       actions: {
         ...baseResult.actions,
-        updated: updatedActions,
+        update: updatedActions,
       },
     };
   }
 
-  protected async validateFlatEntityCreation(
+  protected validateFlatEntityCreation(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.serverlessFunction>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.serverlessFunction,
-      'created'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.serverlessFunction,
+    'create'
   > {
     const validationResult =
-      await this.flatServerlessFunctionValidatorService.validateFlatServerlessFunctionCreation(
+      this.flatServerlessFunctionValidatorService.validateFlatServerlessFunctionCreation(
         args,
       );
 
@@ -86,19 +82,18 @@ export class WorkspaceMigrationV2ServerlessFunctionActionsBuilderService extends
     return {
       status: 'success',
       action: {
-        type: 'create_serverless_function',
-        serverlessFunction: flatServerlessFunctionToValidate,
+        type: 'create',
+        metadataName: 'serverlessFunction',
+        flatEntity: flatServerlessFunctionToValidate,
       },
     };
   }
 
-  protected async validateFlatEntityDeletion(
+  protected validateFlatEntityDeletion(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.serverlessFunction>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.serverlessFunction,
-      'deleted'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.serverlessFunction,
+    'delete'
   > {
     const validationResult =
       this.flatServerlessFunctionValidatorService.validateFlatServerlessFunctionDeletion(
@@ -117,21 +112,20 @@ export class WorkspaceMigrationV2ServerlessFunctionActionsBuilderService extends
     return {
       status: 'success',
       action: {
-        type: 'delete_serverless_function',
-        serverlessFunctionId: flatServerlessFunctionToValidate.id,
+        type: 'delete',
+        metadataName: 'serverlessFunction',
+        entityId: flatServerlessFunctionToValidate.id,
       },
     };
   }
 
-  protected async validateFlatEntityUpdate(
+  protected validateFlatEntityUpdate(
     args: FlatEntityUpdateValidationArgs<
       typeof ALL_METADATA_NAME.serverlessFunction
     >,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.serverlessFunction,
-      'updated'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.serverlessFunction,
+    'update'
   > {
     const validationResult =
       this.flatServerlessFunctionValidatorService.validateFlatServerlessFunctionUpdate(
@@ -148,8 +142,9 @@ export class WorkspaceMigrationV2ServerlessFunctionActionsBuilderService extends
     const { flatEntityId, flatEntityUpdates } = args;
 
     const updateServerlessFunctionAction: UpdateServerlessFunctionAction = {
-      type: 'update_serverless_function',
-      serverlessFunctionId: flatEntityId,
+      type: 'update',
+      metadataName: 'serverlessFunction',
+      entityId: flatEntityId,
       updates: flatEntityUpdates,
     };
 

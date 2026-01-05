@@ -1,5 +1,7 @@
 import { v4 } from 'uuid';
+import { isDefined } from 'twenty-shared/utils';
 
+import { DEFAULT_TOOL_INPUT_SCHEMA } from 'src/engine/metadata-modules/serverless-function/constants/default-tool-input-schema.constant';
 import { type CreateServerlessFunctionInput } from 'src/engine/metadata-modules/serverless-function/dtos/create-serverless-function.input';
 import {
   DEFAULT_HANDLER_NAME,
@@ -14,11 +16,13 @@ export type FromCreateServerlessFunctionInputToFlatServerlessFunctionArgs = {
     serverlessFunctionLayerId: string;
   };
   workspaceId: string;
+  workspaceCustomApplicationId: string;
 };
 
 export const fromCreateServerlessFunctionInputToFlatServerlessFunction = ({
   createServerlessFunctionInput: rawCreateServerlessFunctionInput,
   workspaceId,
+  workspaceCustomApplicationId,
 }: FromCreateServerlessFunctionInputToFlatServerlessFunctionArgs): FlatServerlessFunction => {
   const id = v4();
   const currentDate = new Date();
@@ -35,13 +39,13 @@ export const fromCreateServerlessFunctionInputToFlatServerlessFunction = ({
     handlerName:
       rawCreateServerlessFunctionInput.handlerName ?? DEFAULT_HANDLER_NAME,
     universalIdentifier:
-      rawCreateServerlessFunctionInput.universalIdentifier ?? v4(),
-    createdAt: currentDate,
-    updatedAt: currentDate,
+      rawCreateServerlessFunctionInput.universalIdentifier ?? id,
+    createdAt: currentDate.toISOString(),
+    updatedAt: currentDate.toISOString(),
     deletedAt: null,
     latestVersion: null,
     publishedVersions: [],
-    applicationId: rawCreateServerlessFunctionInput.applicationId ?? null,
+    applicationId: workspaceCustomApplicationId,
     runtime: ServerlessFunctionRuntime.NODE22,
     timeoutSeconds: rawCreateServerlessFunctionInput.timeoutSeconds ?? 300,
     serverlessFunctionLayerId:
@@ -53,5 +57,15 @@ export const fromCreateServerlessFunctionInputToFlatServerlessFunction = ({
           JSON.stringify(rawCreateServerlessFunctionInput.code),
         )
       : null,
+    // If no schema provided and no code provided, use default schema
+    // (because the default template will be used)
+    toolInputSchema: isDefined(
+      rawCreateServerlessFunctionInput?.toolInputSchema,
+    )
+      ? rawCreateServerlessFunctionInput.toolInputSchema
+      : !isDefined(rawCreateServerlessFunctionInput?.code)
+        ? DEFAULT_TOOL_INPUT_SCHEMA
+        : null,
+    isTool: rawCreateServerlessFunctionInput?.isTool ?? false,
   };
 };

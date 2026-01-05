@@ -1,14 +1,22 @@
+import { isPageLayoutInEditModeComponentState } from '@/page-layout/states/isPageLayoutInEditModeComponentState';
 import { ChartSkeletonLoader } from '@/page-layout/widgets/graph/components/ChartSkeletonLoader';
 import { GraphWidgetChartHasTooManyGroupsEffect } from '@/page-layout/widgets/graph/components/GraphWidgetChartHasTooManyGroupsEffect';
 import { useGraphBarChartWidgetData } from '@/page-layout/widgets/graph/graphWidgetBarChart/hooks/useGraphBarChartWidgetData';
 import { getEffectiveGroupMode } from '@/page-layout/widgets/graph/graphWidgetBarChart/utils/getEffectiveGroupMode';
+import { assertBarChartWidgetOrThrow } from '@/page-layout/widgets/graph/utils/assertBarChartWidget';
+import { buildChartDrilldownQueryParams } from '@/page-layout/widgets/graph/utils/buildChartDrilldownQueryParams';
 import { generateChartAggregateFilterKey } from '@/page-layout/widgets/graph/utils/generateChartAggregateFilterKey';
+import { useCurrentWidget } from '@/page-layout/widgets/hooks/useCurrentWidget';
+import { useUserFirstDayOfTheWeek } from '@/ui/input/components/internal/date/hooks/useUserFirstDayOfTheWeek';
+import { useUserTimezone } from '@/ui/input/components/internal/date/hooks/useUserTimezone';
+import { useRecoilComponentValue } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValue';
+import { coreIndexViewIdFromObjectMetadataItemFamilySelector } from '@/views/states/selectors/coreIndexViewIdFromObjectMetadataItemFamilySelector';
+import { type BarDatum, type ComputedDatum } from '@nivo/bar';
 import { lazy, Suspense } from 'react';
-import { isDefined } from 'twenty-shared/utils';
-import {
-  type BarChartConfiguration,
-  type PageLayoutWidget,
-} from '~/generated/graphql';
+import { useNavigate } from 'react-router-dom';
+import { useRecoilValue } from 'recoil';
+import { AppPath } from 'twenty-shared/types';
+import { getAppPath, isDefined } from 'twenty-shared/utils';
 
 const GraphWidgetBarChart = lazy(() =>
   import(
@@ -18,11 +26,14 @@ const GraphWidgetBarChart = lazy(() =>
   })),
 );
 
-export const GraphWidgetBarChartRenderer = ({
-  widget,
-}: {
-  widget: PageLayoutWidget;
-}) => {
+export const GraphWidgetBarChartRenderer = () => {
+  const widget = useCurrentWidget();
+
+  assertBarChartWidgetOrThrow(widget);
+
+  const { userTimezone } = useUserTimezone();
+  const { userFirstDayOfTheWeek } = useUserFirstDayOfTheWeek();
+
   const {
     data,
     indexBy,
@@ -31,15 +42,22 @@ export const GraphWidgetBarChartRenderer = ({
     xAxisLabel,
     yAxisLabel,
     showDataLabels,
+    showLegend,
     layout,
     loading,
     hasTooManyGroups,
+    formattedToRawLookup,
+    objectMetadataItem,
   } = useGraphBarChartWidgetData({
     objectMetadataItemId: widget.objectMetadataId,
-    configuration: widget.configuration as BarChartConfiguration,
+    configuration: widget.configuration,
   });
 
-  const configuration = widget.configuration as BarChartConfiguration;
+  const navigate = useNavigate();
+  const configuration = widget.configuration;
+  const isPageLayoutInEditMode = useRecoilComponentValue(
+    isPageLayoutInEditModeComponentState,
+  );
 
   const hasGroupByOnSecondaryAxis = isDefined(
     configuration.secondaryAxisGroupByFieldMetadataId,
@@ -48,41 +66,70 @@ export const GraphWidgetBarChartRenderer = ({
     configuration.groupMode,
     hasGroupByOnSecondaryAxis,
   );
-
   const chartFilterKey = generateChartAggregateFilterKey(
     configuration.rangeMin,
     configuration.rangeMax,
     configuration.omitNullValues,
   );
 
+  const indexViewId = useRecoilValue(
+    coreIndexViewIdFromObjectMetadataItemFamilySelector({
+      objectMetadataItemId: objectMetadataItem.id,
+    }),
+  );
+
+  const handleBarClick = (datum: ComputedDatum<BarDatum>) => {
+    const displayValue = datum.data[indexBy];
+    const rawValue = formattedToRawLookup.get(displayValue as string) ?? null;
+
+    const queryParams = buildChartDrilldownQueryParams({
+      objectMetadataItem,
+      configuration,
+      clickedData: {
+        primaryBucketRawValue: rawValue,
+      },
+      viewId: indexViewId,
+      timezone: userTimezone,
+      firstDayOfTheWeek: userFirstDayOfTheWeek,
+    });
+
+    const url = getAppPath(
+      AppPath.RecordIndexPage,
+      { objectNamePlural: objectMetadataItem.namePlural },
+      Object.fromEntries(queryParams),
+    );
+
+    navigate(url);
+  };
+
   if (loading) {
     return <ChartSkeletonLoader />;
   }
 
   return (
-    <>
+    <Suspense fallback={<ChartSkeletonLoader />}>
       <GraphWidgetChartHasTooManyGroupsEffect
         hasTooManyGroups={hasTooManyGroups}
       />
-      <Suspense fallback={<ChartSkeletonLoader />}>
-        <GraphWidgetBarChart
-          key={chartFilterKey}
-          data={data}
-          series={series}
-          indexBy={indexBy}
-          keys={keys}
-          xAxisLabel={xAxisLabel}
-          yAxisLabel={yAxisLabel}
-          showValues={showDataLabels}
-          layout={layout}
-          groupMode={groupMode}
-          id={widget.id}
-          displayType="shortNumber"
-          rangeMin={configuration.rangeMin ?? undefined}
-          rangeMax={configuration.rangeMax ?? undefined}
-          omitNullValues={configuration.omitNullValues ?? false}
-        />
-      </Suspense>
-    </>
+      <GraphWidgetBarChart
+        key={chartFilterKey}
+        data={data}
+        series={series}
+        indexBy={indexBy}
+        keys={keys}
+        xAxisLabel={xAxisLabel}
+        yAxisLabel={yAxisLabel}
+        showValues={showDataLabels}
+        showLegend={showLegend}
+        layout={layout}
+        groupMode={groupMode}
+        id={widget.id}
+        displayType="shortNumber"
+        rangeMin={configuration.rangeMin ?? undefined}
+        rangeMax={configuration.rangeMax ?? undefined}
+        omitNullValues={configuration.omitNullValues ?? false}
+        onBarClick={isPageLayoutInEditMode ? undefined : handleBarClick}
+      />
+    </Suspense>
   );
 };

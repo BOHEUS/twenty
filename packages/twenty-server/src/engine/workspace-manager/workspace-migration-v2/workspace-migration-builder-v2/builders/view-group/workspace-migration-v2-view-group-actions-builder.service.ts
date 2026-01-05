@@ -19,13 +19,11 @@ export class WorkspaceMigrationV2ViewGroupActionsBuilderService extends Workspac
     super(ALL_METADATA_NAME.viewGroup);
   }
 
-  protected async validateFlatEntityCreation(
+  protected validateFlatEntityCreation(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.viewGroup>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.viewGroup,
-      'created'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.viewGroup,
+    'create'
   > {
     const validationResult =
       this.flatViewGroupValidatorService.validateFlatViewGroupCreation(args);
@@ -42,19 +40,18 @@ export class WorkspaceMigrationV2ViewGroupActionsBuilderService extends Workspac
     return {
       status: 'success',
       action: {
-        type: 'create_view_group',
-        viewGroup: flatViewGroupToValidate,
+        type: 'create',
+        metadataName: 'viewGroup',
+        flatEntity: flatViewGroupToValidate,
       },
     };
   }
 
-  protected async validateFlatEntityDeletion(
+  protected validateFlatEntityDeletion(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.viewGroup>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.viewGroup,
-      'deleted'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.viewGroup,
+    'delete'
   > {
     const validationResult =
       this.flatViewGroupValidatorService.validateFlatViewGroupDeletion(args);
@@ -71,19 +68,18 @@ export class WorkspaceMigrationV2ViewGroupActionsBuilderService extends Workspac
     return {
       status: 'success',
       action: {
-        type: 'delete_view_group',
-        viewGroupId: flatViewGroupToValidate.id,
+        type: 'delete',
+        metadataName: 'viewGroup',
+        entityId: flatViewGroupToValidate.id,
       },
     };
   }
 
-  protected async validateFlatEntityUpdate(
+  protected validateFlatEntityUpdate(
     args: FlatEntityUpdateValidationArgs<typeof ALL_METADATA_NAME.viewGroup>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.viewGroup,
-      'updated'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.viewGroup,
+    'update'
   > {
     const validationResult =
       this.flatViewGroupValidatorService.validateFlatViewGroupUpdate(args);
@@ -98,8 +94,9 @@ export class WorkspaceMigrationV2ViewGroupActionsBuilderService extends Workspac
     const { flatEntityId, flatEntityUpdates } = args;
 
     const updateViewGroupAction: UpdateViewGroupAction = {
-      type: 'update_view_group',
-      viewGroupId: flatEntityId,
+      type: 'update',
+      metadataName: 'viewGroup',
+      entityId: flatEntityId,
       updates: flatEntityUpdates,
     };
 

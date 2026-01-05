@@ -10,9 +10,13 @@ import {
   ViewFilterOperand,
   type ViewFilterOperandDeprecated,
 } from 'twenty-shared/types';
-import { convertViewFilterOperandToCoreOperand as convertViewFilterOperandDeprecated } from 'twenty-shared/utils';
+import {
+  convertViewFilterOperandToCoreOperand as convertViewFilterOperandDeprecated,
+  isDefined,
+} from 'twenty-shared/utils';
 import { parseBooleanFromStringValue } from 'twenty-shared/workflow';
 
+import { findDefaultNullEquivalentValue } from 'src/modules/workflow/workflow-executor/workflow-actions/filter/utils/find-default-null-equivalent-value.util';
 import { parseAndEvaluateRelativeDateFilter } from 'src/modules/workflow/workflow-executor/workflow-actions/filter/utils/parse-and-evaluate-relative-date-filter.util';
 
 type ResolvedFilterWithPotentiallyDeprecatedOperand = Omit<
@@ -59,7 +63,11 @@ function evaluateFilter(
     case 'ARRAY':
     case 'array':
     case 'RAW_JSON':
-      return evaluateTextAndArrayFilter(filterWithConvertedOperand);
+      return evaluateTextAndArrayFilter(
+        filterWithConvertedOperand,
+        filter.type,
+        filter.compositeFieldSubFieldName,
+      );
     case 'SELECT':
       return evaluateSelectFilter(filterWithConvertedOperand);
     case 'BOOLEAN':
@@ -71,6 +79,8 @@ function evaluateFilter(
       return evaluateRelationFilter(filterWithConvertedOperand);
     case 'CURRENCY':
       return evaluateCurrencyFilter(filterWithConvertedOperand);
+    case 'ACTOR':
+      return evaluateActorFilter(filterWithConvertedOperand);
     default:
       return evaluateDefaultFilter(filterWithConvertedOperand);
   }
@@ -146,12 +156,31 @@ function contains(leftValue: unknown, rightValue: unknown): boolean {
   return String(leftValue).includes(String(rightValue));
 }
 
-function evaluateTextAndArrayFilter(filter: ResolvedFilter): boolean {
+function evaluateTextAndArrayFilter(
+  filter: ResolvedFilter,
+  filterType: string,
+  compositeFieldSubFieldName: string | undefined,
+): boolean {
+  //TODO : nullEquivalentRightValue to remove once feature flag removed + workflow action based on common api
+  const nullEquivalentRightValue = findDefaultNullEquivalentValue({
+    value: filter.rightOperand,
+    fieldMetadataType: filterType,
+    key: compositeFieldSubFieldName,
+  });
+
   switch (filter.operand) {
     case ViewFilterOperand.CONTAINS:
-      return contains(filter.leftOperand, filter.rightOperand);
+      return (
+        contains(filter.leftOperand, filter.rightOperand) ||
+        (isDefined(nullEquivalentRightValue) &&
+          !isNotEmptyTextOrArray(filter.leftOperand))
+      );
     case ViewFilterOperand.DOES_NOT_CONTAIN:
-      return !contains(filter.leftOperand, filter.rightOperand);
+      return (
+        !contains(filter.leftOperand, filter.rightOperand) ||
+        (isDefined(nullEquivalentRightValue) &&
+          isNotEmptyTextOrArray(filter.leftOperand))
+      );
     case ViewFilterOperand.IS_EMPTY:
       return !isNotEmptyTextOrArray(filter.leftOperand);
 
@@ -184,6 +213,7 @@ function evaluateBooleanFilter(filter: ResolvedFilter): boolean {
 }
 
 function evaluateDateFilter(filter: ResolvedFilter): boolean {
+  // TODO: refactor this with Temporal
   const dateLeftValue = new Date(String(filter.leftOperand));
 
   switch (filter.operand) {
@@ -214,18 +244,10 @@ function evaluateDateFilter(filter: ResolvedFilter): boolean {
       );
 
     case ViewFilterOperand.IS_EMPTY:
-      return (
-        filter.leftOperand === null ||
-        filter.leftOperand === undefined ||
-        filter.leftOperand === ''
-      );
+      return !isDefined(filter.leftOperand) || filter.leftOperand === '';
 
     case ViewFilterOperand.IS_NOT_EMPTY:
-      return (
-        filter.leftOperand !== null &&
-        filter.leftOperand !== undefined &&
-        filter.leftOperand !== ''
-      );
+      return isDefined(filter.leftOperand) && filter.leftOperand !== '';
 
     case ViewFilterOperand.IS_RELATIVE:
       return parseAndEvaluateRelativeDateFilter({
@@ -314,10 +336,16 @@ function evaluateNumberFilter(filter: ResolvedFilter): boolean {
       return Number(leftValue) <= Number(rightValue);
 
     case ViewFilterOperand.IS_EMPTY:
-      return !isNonEmptyString(leftValue);
+      return !isDefined(filter.leftOperand) || filter.leftOperand === '';
 
     case ViewFilterOperand.IS_NOT_EMPTY:
-      return isNonEmptyString(leftValue);
+      return isDefined(filter.leftOperand) && filter.leftOperand !== '';
+
+    case ViewFilterOperand.IS:
+      return Number(leftValue) === Number(rightValue);
+
+    case ViewFilterOperand.IS_NOT:
+      return Number(leftValue) !== Number(rightValue);
 
     default:
       throw new Error(
@@ -370,6 +398,20 @@ function evaluateSelectFilter(filter: ResolvedFilter): boolean {
         `Operand ${filter.operand} not supported for select filter`,
       );
   }
+}
+
+function evaluateActorFilter(filter: ResolvedFilter): boolean {
+  const { compositeFieldSubFieldName } = filter;
+
+  if (compositeFieldSubFieldName === 'source') {
+    return evaluateSelectFilter(filter);
+  }
+
+  if (compositeFieldSubFieldName === 'workspaceMemberId') {
+    return evaluateRelationFilter(filter);
+  }
+
+  return evaluateTextAndArrayFilter(filter, 'TEXT', compositeFieldSubFieldName);
 }
 
 export function evaluateFilterConditions({

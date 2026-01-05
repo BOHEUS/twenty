@@ -31,12 +31,13 @@ import { shouldExecuteStep } from 'src/modules/workflow/workflow-executor/utils/
 import { shouldSkipStepExecution } from 'src/modules/workflow/workflow-executor/utils/should-skip-step-execution.util';
 import { workflowShouldFail } from 'src/modules/workflow/workflow-executor/utils/workflow-should-fail.util';
 import { workflowShouldKeepRunning } from 'src/modules/workflow/workflow-executor/utils/workflow-should-keep-running.util';
+import { isWorkflowIfElseAction } from 'src/modules/workflow/workflow-executor/workflow-actions/if-else/guards/is-workflow-if-else-action.guard';
+import { type WorkflowIfElseResult } from 'src/modules/workflow/workflow-executor/workflow-actions/if-else/types/workflow-if-else-result.type';
 import { isWorkflowIteratorAction } from 'src/modules/workflow/workflow-executor/workflow-actions/iterator/guards/is-workflow-iterator-action.guard';
 import { WorkflowIteratorResult } from 'src/modules/workflow/workflow-executor/workflow-actions/iterator/types/workflow-iterator-result.type';
 import { WorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
 import { RUN_WORKFLOW_JOB_NAME } from 'src/modules/workflow/workflow-runner/constants/run-workflow-job-name';
 import { type RunWorkflowJobData } from 'src/modules/workflow/workflow-runner/types/run-workflow-job-data.type';
-import { WorkflowRunQueueWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run-queue/workspace-services/workflow-run-queue.workspace-service';
 import { WorkflowRunWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run/workflow-run.workspace-service';
 
 const MAX_EXECUTED_STEPS_COUNT = 20;
@@ -50,7 +51,6 @@ export class WorkflowExecutorWorkspaceService {
     private readonly billingService: BillingService,
     @InjectMessageQueue(MessageQueue.workflowQueue)
     private readonly messageQueueService: MessageQueueService,
-    private readonly workflowRunQueueWorkspaceService: WorkflowRunQueueWorkspaceService,
   ) {}
 
   async executeFromSteps({
@@ -142,7 +142,7 @@ export class WorkflowExecutorWorkspaceService {
     const isError = isDefined(actionOutput.error);
 
     if (!isError) {
-      this.sendWorkflowNodeRunEvent(workspaceId);
+      this.sendWorkflowNodeRunEvent(workspaceId, workflowRun.workflowId);
     }
 
     const { shouldProcessNextSteps } = await this.processStepExecutionResult({
@@ -206,6 +206,20 @@ export class WorkflowExecutorWorkspaceService {
       }
     }
 
+    if (isWorkflowIfElseAction(executedStep)) {
+      const ifElseResult = executedStepResult.result as
+        | WorkflowIfElseResult
+        | undefined;
+
+      if (ifElseResult?.matchingBranchId) {
+        const matchingBranch = executedStep.settings.input.branches.find(
+          (branch) => branch.id === ifElseResult.matchingBranchId,
+        );
+
+        return matchingBranch?.nextStepIds;
+      }
+    }
+
     return executedStep.nextStepIds;
   }
 
@@ -260,13 +274,18 @@ export class WorkflowExecutorWorkspaceService {
     });
   }
 
-  private sendWorkflowNodeRunEvent(workspaceId: string) {
+  private sendWorkflowNodeRunEvent(workspaceId: string, workflowId: string) {
     this.workspaceEventEmitter.emitCustomBatchEvent<BillingUsageEvent>(
       BILLING_FEATURE_USED,
       [
         {
           eventName: BillingMeterEventName.WORKFLOW_NODE_RUN,
           value: 1,
+          dimensions: {
+            execution_type: 'workflow_execution',
+            resource_id: workflowId,
+            execution_context_1: null,
+          },
         },
       ],
       workspaceId,
@@ -412,9 +431,6 @@ export class WorkflowExecutorWorkspaceService {
         workflowRunId,
         lastExecutedStepId,
       },
-    );
-    await this.workflowRunQueueWorkspaceService.increaseWorkflowRunQueuedCount(
-      workspaceId,
     );
   }
 }

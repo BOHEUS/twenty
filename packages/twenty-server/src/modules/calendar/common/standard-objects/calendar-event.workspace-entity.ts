@@ -1,8 +1,9 @@
 import { msg } from '@lingui/core/macro';
+import { STANDARD_OBJECT_IDS } from 'twenty-shared/metadata';
 import {
   FieldMetadataType,
-  RelationOnDeleteAction,
   LinksMetadata,
+  RelationOnDeleteAction,
 } from 'twenty-shared/types';
 
 import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
@@ -11,14 +12,13 @@ import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/i
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
 import { WorkspaceField } from 'src/engine/twenty-orm/decorators/workspace-field.decorator';
+import { WorkspaceIsFieldUIReadOnly } from 'src/engine/twenty-orm/decorators/workspace-is-field-ui-readonly.decorator';
 import { WorkspaceIsNotAuditLogged } from 'src/engine/twenty-orm/decorators/workspace-is-not-audit-logged.decorator';
 import { WorkspaceIsNullable } from 'src/engine/twenty-orm/decorators/workspace-is-nullable.decorator';
-import { WorkspaceIsObjectUIReadOnly } from 'src/engine/twenty-orm/decorators/workspace-is-object-ui-readonly.decorator';
 import { WorkspaceIsSystem } from 'src/engine/twenty-orm/decorators/workspace-is-system.decorator';
 import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
 import { CALENDAR_EVENT_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
 import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 import { CalendarChannelEventAssociationWorkspaceEntity } from 'src/modules/calendar/common/standard-objects/calendar-channel-event-association.workspace-entity';
 import { CalendarEventParticipantWorkspaceEntity } from 'src/modules/calendar/common/standard-objects/calendar-event-participant.workspace-entity';
 
@@ -34,7 +34,6 @@ import { CalendarEventParticipantWorkspaceEntity } from 'src/modules/calendar/co
 })
 @WorkspaceIsSystem()
 @WorkspaceIsNotAuditLogged()
-@WorkspaceIsObjectUIReadOnly()
 export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
   @WorkspaceField({
     standardId: CALENDAR_EVENT_STANDARD_FIELD_IDS.title,
@@ -43,7 +42,9 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Title`,
     icon: 'IconH1',
   })
-  title: string;
+  @WorkspaceIsFieldUIReadOnly()
+  @WorkspaceIsNullable()
+  title: string | null;
 
   @WorkspaceField({
     standardId: CALENDAR_EVENT_STANDARD_FIELD_IDS.isCanceled,
@@ -53,6 +54,7 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconCalendarCancel',
     defaultValue: false,
   })
+  @WorkspaceIsFieldUIReadOnly()
   isCanceled: boolean;
 
   @WorkspaceField({
@@ -63,6 +65,7 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconHours24',
     defaultValue: false,
   })
+  @WorkspaceIsFieldUIReadOnly()
   isFullDay: boolean;
 
   @WorkspaceField({
@@ -72,6 +75,7 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Start Date`,
     icon: 'IconCalendarClock',
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   startsAt: string | null;
 
@@ -82,6 +86,7 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`End Date`,
     icon: 'IconCalendarClock',
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   endsAt: string | null;
 
@@ -92,6 +97,7 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Creation DateTime`,
     icon: 'IconCalendarPlus',
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   externalCreatedAt: string | null;
 
@@ -102,6 +108,7 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Update DateTime`,
     icon: 'IconCalendarCog',
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   externalUpdatedAt: string | null;
 
@@ -112,7 +119,9 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Description`,
     icon: 'IconFileDescription',
   })
-  description: string;
+  @WorkspaceIsFieldUIReadOnly()
+  @WorkspaceIsNullable()
+  description: string | null;
 
   @WorkspaceField({
     standardId: CALENDAR_EVENT_STANDARD_FIELD_IDS.location,
@@ -121,16 +130,20 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Location`,
     icon: 'IconMapPin',
   })
-  location: string;
+  @WorkspaceIsFieldUIReadOnly()
+  @WorkspaceIsNullable()
+  location: string | null;
 
   @WorkspaceField({
-    standardId: CALENDAR_EVENT_STANDARD_FIELD_IDS.iCalUID,
+    standardId: CALENDAR_EVENT_STANDARD_FIELD_IDS.iCalUid,
     type: FieldMetadataType.TEXT,
     label: msg`iCal UID`,
     description: msg`iCal UID`,
     icon: 'IconKey',
   })
-  iCalUID: string;
+  @WorkspaceIsFieldUIReadOnly()
+  @WorkspaceIsNullable()
+  iCalUid: string | null;
 
   @WorkspaceField({
     standardId: CALENDAR_EVENT_STANDARD_FIELD_IDS.conferenceSolution,
@@ -139,7 +152,9 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Conference Solution`,
     icon: 'IconScreenShare',
   })
-  conferenceSolution: string;
+  @WorkspaceIsFieldUIReadOnly()
+  @WorkspaceIsNullable()
+  conferenceSolution: string | null;
 
   @WorkspaceField({
     standardId: CALENDAR_EVENT_STANDARD_FIELD_IDS.conferenceLink,
@@ -148,6 +163,7 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Meet Link`,
     icon: 'IconLink',
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   conferenceLink: LinksMetadata;
 
@@ -161,6 +177,7 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideTarget: () => CalendarChannelEventAssociationWorkspaceEntity,
     onDelete: RelationOnDeleteAction.CASCADE,
   })
+  @WorkspaceIsFieldUIReadOnly()
   calendarChannelEventAssociations: Relation<
     CalendarChannelEventAssociationWorkspaceEntity[]
   >;
@@ -174,6 +191,7 @@ export class CalendarEventWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideTarget: () => CalendarEventParticipantWorkspaceEntity,
     onDelete: RelationOnDeleteAction.CASCADE,
   })
+  @WorkspaceIsFieldUIReadOnly()
   calendarEventParticipants: Relation<
     CalendarEventParticipantWorkspaceEntity[]
   >;

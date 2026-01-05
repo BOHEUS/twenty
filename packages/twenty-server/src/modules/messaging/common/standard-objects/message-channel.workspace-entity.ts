@@ -1,6 +1,7 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 import { msg } from '@lingui/core/macro';
+import { STANDARD_OBJECT_IDS } from 'twenty-shared/metadata';
 import { FieldMetadataType, RelationOnDeleteAction } from 'twenty-shared/types';
 
 import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
@@ -9,6 +10,7 @@ import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/i
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
 import { WorkspaceField } from 'src/engine/twenty-orm/decorators/workspace-field.decorator';
+import { WorkspaceIsFieldUIReadOnly } from 'src/engine/twenty-orm/decorators/workspace-is-field-ui-readonly.decorator';
 import { WorkspaceIsNotAuditLogged } from 'src/engine/twenty-orm/decorators/workspace-is-not-audit-logged.decorator';
 import { WorkspaceIsNullable } from 'src/engine/twenty-orm/decorators/workspace-is-nullable.decorator';
 import { WorkspaceIsSystem } from 'src/engine/twenty-orm/decorators/workspace-is-system.decorator';
@@ -16,7 +18,6 @@ import { WorkspaceJoinColumn } from 'src/engine/twenty-orm/decorators/workspace-
 import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
 import { MESSAGE_CHANNEL_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
 import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 import { ConnectedAccountWorkspaceEntity } from 'src/modules/connected-account/standard-objects/connected-account.workspace-entity';
 import { MessageChannelMessageAssociationWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-channel-message-association.workspace-entity';
 import { MessageFolderWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-folder.workspace-entity';
@@ -47,8 +48,8 @@ export enum MessageChannelVisibility {
 }
 
 export enum MessageChannelType {
-  EMAIL = 'email',
-  SMS = 'sms',
+  EMAIL = 'EMAIL',
+  SMS = 'SMS',
 }
 
 export enum MessageChannelContactAutoCreationPolicy {
@@ -137,6 +138,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     ],
     defaultValue: `'${MessageChannelVisibility.SHARE_EVERYTHING}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   visibility: string;
 
   @WorkspaceField({
@@ -146,7 +148,9 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Handle`,
     icon: 'IconAt',
   })
-  handle: string;
+  @WorkspaceIsFieldUIReadOnly()
+  @WorkspaceIsNullable()
+  handle: string | null;
 
   @WorkspaceField({
     standardId: MESSAGE_CHANNEL_STANDARD_FIELD_IDS.type,
@@ -170,6 +174,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     ],
     defaultValue: `'${MessageChannelType.EMAIL}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   type: string;
 
   // TODO: Deprecate this field and migrate data to contactAutoCreationFor
@@ -181,6 +186,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconUserCircle',
     defaultValue: true,
   })
+  @WorkspaceIsFieldUIReadOnly()
   isContactAutoCreationEnabled: boolean;
 
   @WorkspaceField({
@@ -211,6 +217,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     ],
     defaultValue: `'${MessageChannelContactAutoCreationPolicy.SENT}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   contactAutoCreationPolicy: MessageChannelContactAutoCreationPolicy;
 
   @WorkspaceField({
@@ -233,8 +240,9 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
         color: 'blue',
       },
     ],
-    defaultValue: `'${MessageFolderImportPolicy.SELECTED_FOLDERS}'`,
+    defaultValue: `'${MessageFolderImportPolicy.ALL_FOLDERS}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   messageFolderImportPolicy: MessageFolderImportPolicy;
 
   @WorkspaceField({
@@ -245,6 +253,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconBriefcase',
     defaultValue: true,
   })
+  @WorkspaceIsFieldUIReadOnly()
   excludeNonProfessionalEmails: boolean;
 
   @WorkspaceField({
@@ -255,6 +264,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconUsersGroup',
     defaultValue: true,
   })
+  @WorkspaceIsFieldUIReadOnly()
   excludeGroupEmails: boolean;
 
   @WorkspaceField({
@@ -285,6 +295,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     ],
     defaultValue: `'${MessageChannelPendingGroupEmailsAction.NONE}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   pendingGroupEmailsAction: MessageChannelPendingGroupEmailsAction;
 
   @WorkspaceField({
@@ -295,6 +306,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconRefresh',
     defaultValue: true,
   })
+  @WorkspaceIsFieldUIReadOnly()
   isSyncEnabled: boolean;
 
   @WorkspaceField({
@@ -304,7 +316,9 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Last sync cursor`,
     icon: 'IconHistory',
   })
-  syncCursor: string;
+  @WorkspaceIsFieldUIReadOnly()
+  @WorkspaceIsNullable()
+  syncCursor: string | null;
 
   @WorkspaceField({
     standardId: MESSAGE_CHANNEL_STANDARD_FIELD_IDS.syncedAt,
@@ -313,6 +327,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Last sync date`,
     icon: 'IconHistory',
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   syncedAt: string | null;
 
@@ -355,6 +370,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
       },
     ],
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   syncStatus: MessageChannelSyncStatus | null;
 
@@ -416,6 +432,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     ],
     defaultValue: `'${MessageChannelSyncStage.PENDING_CONFIGURATION}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   syncStage: MessageChannelSyncStage;
 
   @WorkspaceField({
@@ -425,6 +442,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Sync stage started at`,
     icon: 'IconHistory',
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   syncStageStartedAt: string | null;
 
@@ -436,6 +454,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconX',
     defaultValue: 0,
   })
+  @WorkspaceIsFieldUIReadOnly()
   throttleFailureCount: number;
 
   @WorkspaceRelation({
@@ -448,6 +467,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideFieldKey: 'messageChannels',
     onDelete: RelationOnDeleteAction.CASCADE,
   })
+  @WorkspaceIsFieldUIReadOnly()
   connectedAccount: Relation<ConnectedAccountWorkspaceEntity>;
 
   @WorkspaceJoinColumn('connectedAccount')
@@ -463,6 +483,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideTarget: () => MessageChannelMessageAssociationWorkspaceEntity,
     onDelete: RelationOnDeleteAction.CASCADE,
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   messageChannelMessageAssociations: Relation<
     MessageChannelMessageAssociationWorkspaceEntity[]
@@ -477,6 +498,7 @@ export class MessageChannelWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideTarget: () => MessageFolderWorkspaceEntity,
     onDelete: RelationOnDeleteAction.CASCADE,
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   messageFolders: Relation<MessageFolderWorkspaceEntity[]>;
 }

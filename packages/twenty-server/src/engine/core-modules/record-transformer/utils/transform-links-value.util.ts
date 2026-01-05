@@ -1,11 +1,11 @@
 import { isNonEmptyString } from '@sniptt/guards';
 import isEmpty from 'lodash.isempty';
+import { type LinkMetadataNullable } from 'twenty-shared/types';
 import {
   isDefined,
   lowercaseUrlOriginAndRemoveTrailingSlash,
   parseJson,
 } from 'twenty-shared/utils';
-import { type LinkMetadataNullable } from 'twenty-shared/types';
 
 import { removeEmptyLinks } from 'src/engine/core-modules/record-transformer/utils/remove-empty-links';
 
@@ -32,7 +32,7 @@ export const transformLinksValue = (
 
   const secondaryLinksArray = isNonEmptyString(secondaryLinksRaw)
     ? parseJson<LinkMetadataNullable[]>(secondaryLinksRaw)
-    : null;
+    : secondaryLinksRaw;
 
   const { primaryLinkLabel, primaryLinkUrl, secondaryLinks } = removeEmptyLinks(
     {

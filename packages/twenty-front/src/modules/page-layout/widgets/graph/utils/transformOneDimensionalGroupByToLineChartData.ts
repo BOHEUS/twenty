@@ -2,15 +2,18 @@ import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataIte
 import { type ObjectMetadataItem } from '@/object-metadata/types/ObjectMetadataItem';
 import { type ExtendedAggregateOperations } from '@/object-record/record-table/types/ExtendedAggregateOperations';
 import { GRAPH_DEFAULT_COLOR } from '@/page-layout/widgets/graph/constants/GraphDefaultColor.constant';
-import { LINE_CHART_MAXIMUM_NUMBER_OF_DATA_POINTS } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartMaximumNumberOfDataPoints.constant';
+import { LINE_CHART_CONSTANTS } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartConstants';
 import { type LineChartDataPoint } from '@/page-layout/widgets/graph/graphWidgetLineChart/types/LineChartDataPoint';
 import { type LineChartSeries } from '@/page-layout/widgets/graph/graphWidgetLineChart/types/LineChartSeries';
 import { type GraphColor } from '@/page-layout/widgets/graph/types/GraphColor';
 import { type GroupByRawResult } from '@/page-layout/widgets/graph/types/GroupByRawResult';
+import { type RawDimensionValue } from '@/page-layout/widgets/graph/types/RawDimensionValue';
+import { applyCumulativeTransformToLineChartData } from '@/page-layout/widgets/graph/utils/applyCumulativeTransformToLineChartData';
+import { buildFormattedToRawLookup } from '@/page-layout/widgets/graph/utils/buildFormattedToRawLookup';
 import { computeAggregateValueFromGroupByResult } from '@/page-layout/widgets/graph/utils/computeAggregateValueFromGroupByResult';
 import { formatDimensionValue } from '@/page-layout/widgets/graph/utils/formatDimensionValue';
-import { sortLineChartDataPoints } from '@/page-layout/widgets/graph/utils/sortLineChartDataPoints';
-import { isDefined } from 'twenty-shared/utils';
+import { formatPrimaryDimensionValues } from '@/page-layout/widgets/graph/utils/formatPrimaryDimensionValues';
+import { type FirstDayOfTheWeek, isDefined } from 'twenty-shared/utils';
 import { type LineChartConfiguration } from '~/generated/graphql';
 
 type TransformOneDimensionalGroupByToLineChartDataParams = {
@@ -21,11 +24,14 @@ type TransformOneDimensionalGroupByToLineChartDataParams = {
   aggregateOperation: string;
   objectMetadataItem: ObjectMetadataItem;
   primaryAxisSubFieldName?: string | null;
+  userTimezone: string;
+  firstDayOfTheWeek: FirstDayOfTheWeek;
 };
 
 type TransformOneDimensionalGroupByToLineChartDataResult = {
   series: LineChartSeries[];
   hasTooManyGroups: boolean;
+  formattedToRawLookup: Map<string, RawDimensionValue>;
 };
 
 export const transformOneDimensionalGroupByToLineChartData = ({
@@ -36,14 +42,28 @@ export const transformOneDimensionalGroupByToLineChartData = ({
   aggregateOperation,
   objectMetadataItem,
   primaryAxisSubFieldName,
+  userTimezone,
+  firstDayOfTheWeek,
 }: TransformOneDimensionalGroupByToLineChartDataParams): TransformOneDimensionalGroupByToLineChartDataResult => {
   // TODO: Add a limit to the query instead of slicing here (issue: twentyhq/core-team-issues#1600)
   const limitedResults = rawResults.slice(
     0,
-    LINE_CHART_MAXIMUM_NUMBER_OF_DATA_POINTS,
+    LINE_CHART_CONSTANTS.MAXIMUM_NUMBER_OF_DATA_POINTS,
   );
 
-  const unsortedData: LineChartDataPoint[] = limitedResults
+  const formattedValues = formatPrimaryDimensionValues({
+    groupByRawResults: limitedResults,
+    primaryAxisGroupByField: groupByFieldX,
+    primaryAxisDateGranularity:
+      configuration.primaryAxisDateGranularity ?? undefined,
+    primaryAxisGroupBySubFieldName: primaryAxisSubFieldName ?? undefined,
+    userTimezone,
+    firstDayOfTheWeek,
+  });
+
+  const formattedToRawLookup = buildFormattedToRawLookup(formattedValues);
+
+  const data: LineChartDataPoint[] = limitedResults
     .map((result) => {
       const dimensionValues = result.groupByDimensionValues;
 
@@ -59,6 +79,8 @@ export const transformOneDimensionalGroupByToLineChartData = ({
             dateGranularity:
               configuration.primaryAxisDateGranularity ?? undefined,
             subFieldName: primaryAxisSubFieldName ?? undefined,
+            userTimezone,
+            firstDayOfTheWeek,
           })
         : '';
 
@@ -78,23 +100,27 @@ export const transformOneDimensionalGroupByToLineChartData = ({
     })
     .filter((point) => isDefined(point));
 
-  const data = sortLineChartDataPoints({
-    dataPoints: unsortedData,
-    orderBy: configuration.primaryAxisOrderBy,
-  });
+  const transformedData = configuration.isCumulative
+    ? applyCumulativeTransformToLineChartData({
+        data,
+        rangeMin: configuration.rangeMin ?? undefined,
+        rangeMax: configuration.rangeMax ?? undefined,
+      })
+    : data;
 
   const series: LineChartSeries[] = [
     {
       id: aggregateField.name,
       label: aggregateField.label,
       color: (configuration.color ?? GRAPH_DEFAULT_COLOR) as GraphColor,
-      data,
+      data: transformedData,
     },
   ];
 
   return {
     series,
     hasTooManyGroups:
-      rawResults.length > LINE_CHART_MAXIMUM_NUMBER_OF_DATA_POINTS,
+      rawResults.length > LINE_CHART_CONSTANTS.MAXIMUM_NUMBER_OF_DATA_POINTS,
+    formattedToRawLookup,
   };
 };

@@ -15,12 +15,14 @@ export const DEFAULT_WORKFLOW_VERSION_PAGE_LAYOUT: PageLayout = {
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   deletedAt: null,
+  defaultTabIdToFocusOnMobileAndSidePanel: 'workflow-version-tab-flow',
   tabs: [
     // Fields tab (position 100)
     {
       __typename: 'PageLayoutTab',
       id: 'workflow-version-tab-fields',
       title: 'Fields',
+      icon: 'IconList',
       position: 100,
       layoutMode: 'vertical-list',
       pageLayoutId: DEFAULT_WORKFLOW_VERSION_PAGE_LAYOUT_ID,
@@ -42,7 +44,11 @@ export const DEFAULT_WORKFLOW_VERSION_PAGE_LAYOUT: PageLayout = {
             rowSpan: 12,
             columnSpan: 12,
           },
-          configuration: null,
+          configuration: {
+            __typename: 'FieldsConfiguration',
+            configurationType: 'FIELDS',
+            sections: [],
+          },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           deletedAt: null,
@@ -54,6 +60,7 @@ export const DEFAULT_WORKFLOW_VERSION_PAGE_LAYOUT: PageLayout = {
       __typename: 'PageLayoutTab',
       id: 'workflow-version-tab-flow',
       title: 'Flow',
+      icon: 'IconSettings',
       position: 200,
       layoutMode: 'canvas',
       pageLayoutId: DEFAULT_WORKFLOW_VERSION_PAGE_LAYOUT_ID,
@@ -75,7 +82,11 @@ export const DEFAULT_WORKFLOW_VERSION_PAGE_LAYOUT: PageLayout = {
             rowSpan: 12,
             columnSpan: 12,
           },
-          configuration: null,
+          configuration: {
+            __typename: 'FieldsConfiguration',
+            configurationType: 'FIELDS',
+            sections: [],
+          },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           deletedAt: null,

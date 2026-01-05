@@ -1,16 +1,19 @@
 import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
 import { type ObjectMetadataItem } from '@/object-metadata/types/ObjectMetadataItem';
 import { type ExtendedAggregateOperations } from '@/object-record/record-table/types/ExtendedAggregateOperations';
-import { LINE_CHART_MAXIMUM_NUMBER_OF_DATA_POINTS } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartMaximumNumberOfDataPoints.constant';
+import { LINE_CHART_CONSTANTS } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartConstants';
 import { type LineChartDataPoint } from '@/page-layout/widgets/graph/graphWidgetLineChart/types/LineChartDataPoint';
 import { type LineChartSeries } from '@/page-layout/widgets/graph/graphWidgetLineChart/types/LineChartSeries';
 import { type GraphColor } from '@/page-layout/widgets/graph/types/GraphColor';
 import { type GroupByRawResult } from '@/page-layout/widgets/graph/types/GroupByRawResult';
+import { type RawDimensionValue } from '@/page-layout/widgets/graph/types/RawDimensionValue';
+import { applyCumulativeTransformToLineChartData } from '@/page-layout/widgets/graph/utils/applyCumulativeTransformToLineChartData';
+import { buildFormattedToRawLookup } from '@/page-layout/widgets/graph/utils/buildFormattedToRawLookup';
 import { computeAggregateValueFromGroupByResult } from '@/page-layout/widgets/graph/utils/computeAggregateValueFromGroupByResult';
 import { formatDimensionValue } from '@/page-layout/widgets/graph/utils/formatDimensionValue';
-import { sortLineChartDataPoints } from '@/page-layout/widgets/graph/utils/sortLineChartDataPoints';
+import { formatPrimaryDimensionValues } from '@/page-layout/widgets/graph/utils/formatPrimaryDimensionValues';
 import { sortLineChartSeries } from '@/page-layout/widgets/graph/utils/sortLineChartSeries';
-import { isDefined } from 'twenty-shared/utils';
+import { type FirstDayOfTheWeek, isDefined } from 'twenty-shared/utils';
 import { type LineChartConfiguration } from '~/generated/graphql';
 
 type TransformTwoDimensionalGroupByToLineChartDataParams = {
@@ -22,11 +25,14 @@ type TransformTwoDimensionalGroupByToLineChartDataParams = {
   aggregateOperation: string;
   objectMetadataItem: ObjectMetadataItem;
   primaryAxisSubFieldName?: string | null;
+  userTimezone: string;
+  firstDayOfTheWeek: FirstDayOfTheWeek;
 };
 
 type TransformTwoDimensionalGroupByToLineChartDataResult = {
   series: LineChartSeries[];
   hasTooManyGroups: boolean;
+  formattedToRawLookup: Map<string, RawDimensionValue>;
 };
 
 export const transformTwoDimensionalGroupByToLineChartData = ({
@@ -38,10 +44,24 @@ export const transformTwoDimensionalGroupByToLineChartData = ({
   aggregateOperation,
   objectMetadataItem,
   primaryAxisSubFieldName,
+  userTimezone,
+  firstDayOfTheWeek,
 }: TransformTwoDimensionalGroupByToLineChartDataParams): TransformTwoDimensionalGroupByToLineChartDataResult => {
   const seriesMap = new Map<string, Map<string, number>>();
   const allXValues: string[] = [];
   const xValueSet = new Set<string>();
+
+  const formattedValues = formatPrimaryDimensionValues({
+    groupByRawResults: rawResults,
+    primaryAxisGroupByField: groupByFieldX,
+    primaryAxisDateGranularity:
+      configuration.primaryAxisDateGranularity ?? undefined,
+    primaryAxisGroupBySubFieldName: primaryAxisSubFieldName ?? undefined,
+    userTimezone,
+    firstDayOfTheWeek,
+  });
+
+  const formattedToRawLookup = buildFormattedToRawLookup(formattedValues);
   let hasTooManyGroups = false;
 
   rawResults.forEach((result) => {
@@ -56,12 +76,17 @@ export const transformTwoDimensionalGroupByToLineChartData = ({
       fieldMetadata: groupByFieldX,
       dateGranularity: configuration.primaryAxisDateGranularity ?? undefined,
       subFieldName: primaryAxisSubFieldName ?? undefined,
+      userTimezone,
+      firstDayOfTheWeek,
     });
 
     // TODO: Add a limit to the query instead of checking here (issue: twentyhq/core-team-issues#1600)
     const isNewX = !xValueSet.has(xValue);
 
-    if (isNewX && xValueSet.size >= LINE_CHART_MAXIMUM_NUMBER_OF_DATA_POINTS) {
+    if (
+      isNewX &&
+      xValueSet.size >= LINE_CHART_CONSTANTS.MAXIMUM_NUMBER_OF_DATA_POINTS
+    ) {
       hasTooManyGroups = true;
       return;
     }
@@ -71,12 +96,16 @@ export const transformTwoDimensionalGroupByToLineChartData = ({
       allXValues.push(xValue);
     }
 
+    const seriesRawValue = dimensionValues[1];
+
     const seriesKey = formatDimensionValue({
-      value: dimensionValues[1],
+      value: seriesRawValue,
       fieldMetadata: groupByFieldY,
       dateGranularity:
         configuration.secondaryAxisGroupByDateGranularity ?? undefined,
       subFieldName: configuration.secondaryAxisGroupBySubFieldName ?? undefined,
+      userTimezone,
+      firstDayOfTheWeek,
     });
 
     const aggregateValue = computeAggregateValueFromGroupByResult({
@@ -99,21 +128,24 @@ export const transformTwoDimensionalGroupByToLineChartData = ({
 
   const unsortedSeries: LineChartSeries[] = Array.from(seriesMap.entries()).map(
     ([seriesKey, xToYMap]) => {
-      const unsortedData: LineChartDataPoint[] = allXValues.map((xValue) => ({
+      const data: LineChartDataPoint[] = allXValues.map((xValue) => ({
         x: xValue,
         y: xToYMap.get(xValue) ?? 0,
       }));
 
-      const data = sortLineChartDataPoints({
-        dataPoints: unsortedData,
-        orderBy: configuration.primaryAxisOrderBy,
-      });
+      const transformedData = configuration.isCumulative
+        ? applyCumulativeTransformToLineChartData({
+            data,
+            rangeMin: configuration.rangeMin ?? undefined,
+            rangeMax: configuration.rangeMax ?? undefined,
+          })
+        : data;
 
       return {
         id: seriesKey,
         label: seriesKey,
         color: configuration.color as GraphColor,
-        data,
+        data: transformedData,
       };
     },
   );
@@ -126,5 +158,6 @@ export const transformTwoDimensionalGroupByToLineChartData = ({
   return {
     series,
     hasTooManyGroups,
+    formattedToRawLookup,
   };
 };

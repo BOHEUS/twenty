@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
 import isEmpty from 'lodash.isempty';
-import { QUERY_MAX_RECORDS } from 'twenty-shared/constants';
+import {
+  QUERY_MAX_RECORDS,
+  QUERY_MAX_RECORDS_FROM_RELATION,
+} from 'twenty-shared/constants';
 import { ObjectRecord, OrderByDirection } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { FindOptionsRelations, In, ObjectLiteral } from 'typeorm';
@@ -13,6 +16,7 @@ import {
   CommonQueryRunnerException,
   CommonQueryRunnerExceptionCode,
 } from 'src/engine/api/common/common-query-runners/errors/common-query-runner.exception';
+import { STANDARD_ERROR_MESSAGE } from 'src/engine/api/common/common-query-runners/errors/standard-error-message.constant';
 import { CommonBaseQueryRunnerContext } from 'src/engine/api/common/types/common-base-query-runner-context.type';
 import { CommonExtendedQueryRunnerContext } from 'src/engine/api/common/types/common-extended-query-runner-context.type';
 import { CommonFindDuplicatesOutputItem } from 'src/engine/api/common/types/common-find-duplicates-output-item.type';
@@ -25,7 +29,10 @@ import {
 import { getPageInfo } from 'src/engine/api/common/utils/get-page-info.util';
 import { buildColumnsToSelect } from 'src/engine/api/graphql/graphql-query-runner/utils/build-columns-to-select';
 import { buildDuplicateConditions } from 'src/engine/api/utils/build-duplicate-conditions.utils';
-import { ObjectMetadataMaps } from 'src/engine/metadata-modules/types/object-metadata-maps';
+import { FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
+import { FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
+import { buildFieldMapsFromFlatObjectMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/build-field-maps-from-flat-object-metadata.util';
+import { FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 
 @Injectable()
 export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunnerService<
@@ -40,8 +47,9 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
   ): Promise<CommonFindDuplicatesOutputItem[]> {
     const {
       repository,
-      objectMetadataItemWithFieldMaps,
-      objectMetadataMaps,
+      flatObjectMetadata,
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
       commonQueryParser,
       authContext,
       workspaceDataSource,
@@ -49,7 +57,7 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
     } = queryRunnerContext;
 
     const existingRecordsQueryBuilder = repository.createQueryBuilder(
-      objectMetadataItemWithFieldMaps.nameSingular,
+      flatObjectMetadata.nameSingular,
     );
 
     let objectRecords: Partial<ObjectRecord>[] = [];
@@ -57,8 +65,9 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
     const columnsToSelect = buildColumnsToSelect({
       select: args.selectedFieldsResult.select,
       relations: args.selectedFieldsResult.relations,
-      objectMetadataItemWithFieldMaps,
-      objectMetadataMaps,
+      flatObjectMetadata,
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
     });
 
     if (isDefined(args.ids) && args.ids.length > 0) {
@@ -76,7 +85,9 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
       await Promise.all(
         objectRecords.map(async (record) => {
           const duplicateConditions = buildDuplicateConditions(
-            objectMetadataItemWithFieldMaps,
+            flatObjectMetadata,
+            flatObjectMetadataMaps,
+            flatFieldMetadataMaps,
             [record],
             record.id,
           );
@@ -93,12 +104,12 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
           }
 
           const duplicateRecordsQueryBuilder = repository.createQueryBuilder(
-            objectMetadataItemWithFieldMaps.nameSingular,
+            flatObjectMetadata.nameSingular,
           );
 
           commonQueryParser.applyFilterToBuilder(
             duplicateRecordsQueryBuilder,
-            objectMetadataItemWithFieldMaps.nameSingular,
+            flatObjectMetadata.nameSingular,
             duplicateConditions,
           );
 
@@ -132,8 +143,9 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
 
     if (isDefined(args.selectedFieldsResult.relations)) {
       await this.processNestedRelationsHelper.processNestedRelations({
-        objectMetadataMaps,
-        parentObjectMetadataItem: objectMetadataItemWithFieldMaps,
+        flatObjectMetadataMaps,
+        flatFieldMetadataMaps,
+        parentObjectMetadataItem: flatObjectMetadata,
         parentObjectRecords: findDuplicatesOutput.flatMap(
           (item) => item.records,
         ),
@@ -142,7 +154,7 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
           string,
           FindOptionsRelations<ObjectLiteral>
         >,
-        limit: QUERY_MAX_RECORDS,
+        limit: QUERY_MAX_RECORDS_FROM_RELATION,
         authContext,
         workspaceDataSource,
         rolePermissionConfig,
@@ -157,7 +169,13 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
     args: CommonInput<FindDuplicatesQueryArgs>,
     queryRunnerContext: CommonBaseQueryRunnerContext,
   ): Promise<CommonInput<FindDuplicatesQueryArgs>> {
-    const { authContext, objectMetadataItemWithFieldMaps } = queryRunnerContext;
+    const { authContext, flatObjectMetadata, flatFieldMetadataMaps } =
+      queryRunnerContext;
+
+    const { fieldIdByName } = buildFieldMapsFromFlatObjectMetadata(
+      flatFieldMetadataMaps,
+      flatObjectMetadata,
+    );
 
     return {
       ...args,
@@ -166,15 +184,17 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
           this.queryRunnerArgsFactory.overrideValueByFieldMetadata(
             'id',
             id,
-            objectMetadataItemWithFieldMaps.fieldsById,
-            objectMetadataItemWithFieldMaps,
+            fieldIdByName,
+            flatObjectMetadata,
+            flatFieldMetadataMaps,
           ),
         ) ?? [],
       ),
-      data: await this.queryRunnerArgsFactory.overrideDataByFieldMetadata({
+      data: await this.dataArgProcessor.process({
         partialRecordInputs: args.data,
         authContext,
-        objectMetadataItemWithFieldMaps,
+        flatObjectMetadata,
+        flatFieldMetadataMaps,
         shouldBackfillPositionIfUndefined: false,
       }),
     };
@@ -182,8 +202,9 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
 
   async processQueryResult(
     queryResult: CommonFindDuplicatesOutputItem[],
-    objectMetadataItemId: string,
-    objectMetadataMaps: ObjectMetadataMaps,
+    flatObjectMetadata: FlatObjectMetadata,
+    flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>,
+    flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>,
     authContext: WorkspaceAuthContext,
   ): Promise<CommonFindDuplicatesOutputItem[]> {
     const processedResults = await Promise.all(
@@ -192,8 +213,9 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
           ...result,
           records: await this.commonResultGettersService.processRecordArray(
             result.records,
-            objectMetadataItemId,
-            objectMetadataMaps,
+            flatObjectMetadata,
+            flatObjectMetadataMaps,
+            flatFieldMetadataMaps,
             authContext.workspace.id,
           ),
         };
@@ -211,6 +233,7 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
       throw new CommonQueryRunnerException(
         'You have to provide either "data" or "ids" argument',
         CommonQueryRunnerExceptionCode.INVALID_QUERY_INPUT,
+        { userFriendlyMessage: STANDARD_ERROR_MESSAGE },
       );
     }
 
@@ -218,6 +241,7 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
       throw new CommonQueryRunnerException(
         'You cannot provide both "data" and "ids" arguments',
         CommonQueryRunnerExceptionCode.INVALID_QUERY_INPUT,
+        { userFriendlyMessage: STANDARD_ERROR_MESSAGE },
       );
     }
 
@@ -225,6 +249,7 @@ export class CommonFindDuplicatesQueryRunnerService extends CommonBaseQueryRunne
       throw new CommonQueryRunnerException(
         'The "data" condition can not be empty when "ids" input not provided',
         CommonQueryRunnerExceptionCode.INVALID_QUERY_INPUT,
+        { userFriendlyMessage: STANDARD_ERROR_MESSAGE },
       );
     }
   }

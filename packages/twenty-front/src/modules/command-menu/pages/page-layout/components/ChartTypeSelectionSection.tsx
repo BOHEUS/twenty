@@ -1,17 +1,18 @@
 import { GRAPH_TYPE_INFORMATION } from '@/command-menu/pages/page-layout/constants/GraphTypeInformation';
 import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import styled from '@emotion/styled';
-import { FeatureFlagKey, GraphType } from '~/generated-metadata/graphql';
+import { FeatureFlagKey } from '~/generated-metadata/graphql';
 
+import { GraphType } from '@/command-menu/pages/page-layout/types/GraphType';
 import { t } from '@lingui/core/macro';
 import { MenuPicker } from 'twenty-ui/navigation';
 
 const graphTypeOptions = [
   GraphType.VERTICAL_BAR,
   GraphType.HORIZONTAL_BAR,
-  GraphType.AGGREGATE,
-  GraphType.PIE,
   GraphType.LINE,
+  GraphType.PIE,
+  GraphType.AGGREGATE,
   GraphType.GAUGE,
 ];
 
@@ -36,31 +37,25 @@ export const ChartTypeSelectionSection = ({
 
   return (
     <StyledChartTypeSelectionContainer>
-      {graphTypeOptions.map((graphType) => {
-        const isChartV2Type = [
-          GraphType.PIE,
-          GraphType.LINE,
-          GraphType.GAUGE,
-        ].includes(graphType);
-
-        const isDisabled = isChartV2Type && !isDashboardV2Enabled;
-
-        return (
-          <MenuPicker
-            selected={currentGraphType === graphType}
-            key={graphType}
-            icon={GRAPH_TYPE_INFORMATION[graphType].icon}
-            onClick={() => {
-              setCurrentGraphType(graphType);
-            }}
-            label={
-              isDisabled ? t`Soon` : t(GRAPH_TYPE_INFORMATION[graphType].label)
-            }
-            showLabel
-            disabled={isDisabled}
-          />
-        );
-      })}
+      {graphTypeOptions
+        .filter(
+          (graphType) => isDashboardV2Enabled || graphType !== GraphType.GAUGE,
+        )
+        .map((graphType) => {
+          return (
+            <MenuPicker
+              id={graphType}
+              selected={currentGraphType === graphType}
+              key={graphType}
+              icon={GRAPH_TYPE_INFORMATION[graphType].icon}
+              onClick={() => {
+                setCurrentGraphType(graphType);
+              }}
+              showLabel
+              tooltipContent={t(GRAPH_TYPE_INFORMATION[graphType].label)}
+            />
+          );
+        })}
     </StyledChartTypeSelectionContainer>
   );
 };

@@ -1,7 +1,7 @@
 import { type Meta, type StoryObj } from '@storybook/react';
 
 import { ComponentDecorator } from 'twenty-ui/testing';
-import { GraphWidgetTooltip } from '../GraphWidgetTooltip';
+import { GraphWidgetTooltip } from '@/page-layout/widgets/graph/components/GraphWidgetTooltip';
 
 const meta: Meta<typeof GraphWidgetTooltip> = {
   title: 'Modules/PageLayout/Widgets/GraphWidgetTooltip',
@@ -41,7 +41,7 @@ export const WithClickHint: Story = {
         dotColor: 'green',
       },
     ],
-    linkTo: '/sales/details',
+    onGraphWidgetTooltipClick: () => {},
   },
 };
 
@@ -63,7 +63,6 @@ export const MultipleItems: Story = {
         dotColor: 'purple',
       },
     ],
-    linkTo: '/comparison/details',
     indexLabel: 'February 2',
   },
 };
@@ -87,7 +86,6 @@ export const SuperLongText: Story = {
         dotColor: 'purple',
       },
     ],
-    linkTo: '/financials/q4-2024',
     indexLabel:
       'Q4 2024 Financial Year End (October - December) - North America Regional Performance Summary',
   },
@@ -217,7 +215,7 @@ export const ManyItemsWithScroll: Story = {
         dotColor: 'lime',
       },
     ],
-    linkTo: '/annual-report/2024',
+    onGraphWidgetTooltipClick: () => {},
     indexLabel: 'Annual Report 2024',
   },
 };

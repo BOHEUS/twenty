@@ -1,4 +1,4 @@
-import { GraphWidgetComponentInstanceContext } from '@/page-layout/widgets/graph/states/contexts/GraphWidgetComponentInstanceContext';
+import { WidgetComponentInstanceContext } from '@/page-layout/widgets/states/contexts/WidgetComponentInstanceContext';
 import { createComponentState } from '@/ui/utilities/state/component-state/utils/createComponentState';
 import { type LineSeries, type SliceTooltipProps } from '@nivo/line';
 
@@ -7,9 +7,8 @@ export const graphWidgetLineTooltipComponentState = createComponentState<{
   offsetLeft: number;
   offsetTop: number;
   highlightedSeriesId: string;
-  linkTo: string | undefined;
 } | null>({
   key: 'graphWidgetLineTooltipComponentState',
   defaultValue: null,
-  componentInstanceContext: GraphWidgetComponentInstanceContext,
+  componentInstanceContext: WidgetComponentInstanceContext,
 });

@@ -91,7 +91,7 @@ msgstr "Принять приглашение"
 #. js-lingui-explicit-id
 #: src/emails/send-email-verification-link.email.tsx
 msgid "Confirm your new email address"
-msgstr ""
+msgstr "Подтвердите ваш новый адрес электронной почты"
 
 #. js-lingui-explicit-id
 #: src/emails/send-email-verification-link.email.tsx
@@ -101,7 +101,7 @@ msgstr "Подтвердите ваш адрес электронной почт
 #. js-lingui-explicit-id
 #: src/emails/send-email-verification-link.email.tsx
 msgid "Confirm new email"
-msgstr ""
+msgstr "Подтвердить новый адрес эл. почты"
 
 #. js-lingui-explicit-id
 #: src/emails/send-email-verification-link.email.tsx
@@ -146,7 +146,7 @@ msgstr "Сбросить"
 #. js-lingui-explicit-id
 #: src/emails/password-reset-link.email.tsx
 msgid "Set"
-msgstr ""
+msgstr "Установить"
 
 #. js-lingui-explicit-id
 #: src/emails/password-reset-link.email.tsx

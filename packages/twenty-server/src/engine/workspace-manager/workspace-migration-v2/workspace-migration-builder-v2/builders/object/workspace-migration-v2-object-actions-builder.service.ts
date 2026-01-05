@@ -19,18 +19,14 @@ export class WorkspaceMigrationV2ObjectActionsBuilderService extends WorkspaceEn
     super(ALL_METADATA_NAME.objectMetadata);
   }
 
-  protected async validateFlatEntityCreation(
+  protected validateFlatEntityCreation(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.objectMetadata>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.objectMetadata,
-      'created'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.objectMetadata,
+    'create'
   > {
     const validationResult =
-      await this.flatObjectValidatorService.validateFlatObjectMetadataCreation(
-        args,
-      );
+      this.flatObjectValidatorService.validateFlatObjectMetadataCreation(args);
 
     if (validationResult.errors.length > 0) {
       return {
@@ -44,20 +40,19 @@ export class WorkspaceMigrationV2ObjectActionsBuilderService extends WorkspaceEn
     return {
       status: 'success',
       action: {
-        type: 'create_object',
+        type: 'create',
+        metadataName: 'objectMetadata',
         flatFieldMetadatas: [],
-        flatObjectMetadata: flatObjectMetadataToValidate,
+        flatEntity: flatObjectMetadataToValidate,
       },
     };
   }
 
-  protected async validateFlatEntityDeletion(
+  protected validateFlatEntityDeletion(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.objectMetadata>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.objectMetadata,
-      'deleted'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.objectMetadata,
+    'delete'
   > {
     const validationResult =
       this.flatObjectValidatorService.validateFlatObjectMetadataDeletion(args);
@@ -74,21 +69,20 @@ export class WorkspaceMigrationV2ObjectActionsBuilderService extends WorkspaceEn
     return {
       status: 'success',
       action: {
-        type: 'delete_object',
-        objectMetadataId: flatObjectMetadataToValidate.id,
+        type: 'delete',
+        metadataName: 'objectMetadata',
+        entityId: flatObjectMetadataToValidate.id,
       },
     };
   }
 
-  protected async validateFlatEntityUpdate(
+  protected validateFlatEntityUpdate(
     args: FlatEntityUpdateValidationArgs<
       typeof ALL_METADATA_NAME.objectMetadata
     >,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.objectMetadata,
-      'updated'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.objectMetadata,
+    'update'
   > {
     const validationResult =
       this.flatObjectValidatorService.validateFlatObjectMetadataUpdate(args);
@@ -103,8 +97,9 @@ export class WorkspaceMigrationV2ObjectActionsBuilderService extends WorkspaceEn
     const { flatEntityId, flatEntityUpdates } = args;
 
     const updateObjectAction: UpdateObjectAction = {
-      type: 'update_object',
-      objectMetadataId: flatEntityId,
+      type: 'update',
+      metadataName: 'objectMetadata',
+      entityId: flatEntityId,
       updates: flatEntityUpdates,
     };
 

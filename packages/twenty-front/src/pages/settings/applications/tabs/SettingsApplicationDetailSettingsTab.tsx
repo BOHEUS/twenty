@@ -6,7 +6,7 @@ import { SettingsApplicationDetailEnvironmentVariablesTable } from '~/pages/sett
 export const SettingsApplicationDetailSettingsTab = ({
   application,
 }: {
-  application?: Omit<Application, 'objects' | 'universalIdentifier'> & {
+  application?: Omit<Application, 'objects'> & {
     objects: { id: string }[];
   };
 }) => {
@@ -21,15 +21,17 @@ export const SettingsApplicationDetailSettingsTab = ({
   );
 
   return (
-    <SettingsApplicationDetailEnvironmentVariablesTable
-      envVariables={envVariables}
-      onUpdate={({ key, value }) =>
-        updateOneApplicationVariable({
-          key,
-          value,
-          applicationId: application.id,
-        })
-      }
-    />
+    <>
+      <SettingsApplicationDetailEnvironmentVariablesTable
+        envVariables={envVariables}
+        onUpdate={({ key, value }) =>
+          updateOneApplicationVariable({
+            key,
+            value,
+            applicationId: application.id,
+          })
+        }
+      />
+    </>
   );
 };

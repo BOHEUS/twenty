@@ -19,16 +19,14 @@ export class WorkspaceMigrationV2CronTriggerActionsBuilderService extends Worksp
     super(ALL_METADATA_NAME.cronTrigger);
   }
 
-  protected async validateFlatEntityCreation(
+  protected validateFlatEntityCreation(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.cronTrigger>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.cronTrigger,
-      'created'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.cronTrigger,
+    'create'
   > {
     const validationResult =
-      await this.flatCronTriggerValidatorService.validateFlatCronTriggerCreation(
+      this.flatCronTriggerValidatorService.validateFlatCronTriggerCreation(
         args,
       );
 
@@ -44,19 +42,18 @@ export class WorkspaceMigrationV2CronTriggerActionsBuilderService extends Worksp
     return {
       status: 'success',
       action: {
-        type: 'create_cron_trigger',
-        cronTrigger: flatCronTriggerToValidate,
+        type: 'create',
+        metadataName: 'cronTrigger',
+        flatEntity: flatCronTriggerToValidate,
       },
     };
   }
 
-  protected async validateFlatEntityDeletion(
+  protected validateFlatEntityDeletion(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.cronTrigger>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.cronTrigger,
-      'deleted'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.cronTrigger,
+    'delete'
   > {
     const validationResult =
       this.flatCronTriggerValidatorService.validateFlatCronTriggerDeletion(
@@ -75,19 +72,18 @@ export class WorkspaceMigrationV2CronTriggerActionsBuilderService extends Worksp
     return {
       status: 'success',
       action: {
-        type: 'delete_cron_trigger',
-        cronTriggerId: flatCronTriggerToValidate.id,
+        type: 'delete',
+        metadataName: 'cronTrigger',
+        entityId: flatCronTriggerToValidate.id,
       },
     };
   }
 
-  protected async validateFlatEntityUpdate(
+  protected validateFlatEntityUpdate(
     args: FlatEntityUpdateValidationArgs<typeof ALL_METADATA_NAME.cronTrigger>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.cronTrigger,
-      'updated'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.cronTrigger,
+    'update'
   > {
     const validationResult =
       this.flatCronTriggerValidatorService.validateFlatCronTriggerUpdate(args);
@@ -101,8 +97,9 @@ export class WorkspaceMigrationV2CronTriggerActionsBuilderService extends Worksp
     const { flatEntityId, flatEntityUpdates } = args;
 
     const updateCronTriggerAction: UpdateCronTriggerAction = {
-      type: 'update_cron_trigger',
-      cronTriggerId: flatEntityId,
+      type: 'update',
+      metadataName: 'cronTrigger',
+      entityId: flatEntityId,
       updates: flatEntityUpdates,
     };
 

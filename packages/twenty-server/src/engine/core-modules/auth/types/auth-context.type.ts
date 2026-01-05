@@ -1,14 +1,18 @@
 import { type ApiKeyEntity } from 'src/engine/core-modules/api-key/api-key.entity';
+import { type ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { type UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { type UserEntity } from 'src/engine/core-modules/user/user.entity';
 import { type AuthProviderEnum } from 'src/engine/core-modules/workspace/types/workspace.type';
 import { type WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { type WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
 
 export type AuthContext = {
   user?: UserEntity | null | undefined;
   apiKey?: ApiKeyEntity | null | undefined;
   workspaceMemberId?: string;
+  workspaceMember?: WorkspaceMemberWorkspaceEntity;
   workspace?: WorkspaceEntity;
+  application?: ApplicationEntity | null | undefined;
   userWorkspaceId?: string;
   userWorkspace?: UserWorkspaceEntity;
   authProvider?: AuthProviderEnum;
@@ -28,6 +32,7 @@ export enum JwtTokenTypeEnum {
   POSTGRES_PROXY = 'POSTGRES_PROXY',
   REMOTE_SERVER = 'REMOTE_SERVER',
   KEY_ENCRYPTION_KEY = 'KEY_ENCRYPTION_KEY',
+  APPLICATION = 'APPLICATION',
 }
 
 type CommonPropertiesJwtPayload = {
@@ -83,6 +88,12 @@ export type ApiKeyTokenJwtPayload = CommonPropertiesJwtPayload & {
   jti?: string;
 };
 
+export type ApplicationTokenJwtPayload = CommonPropertiesJwtPayload & {
+  type: JwtTokenTypeEnum.APPLICATION;
+  workspaceId: string;
+  applicationId: string;
+};
+
 export type AccessTokenJwtPayload = CommonPropertiesJwtPayload & {
   type: JwtTokenTypeEnum.ACCESS;
   workspaceId: string;
@@ -106,6 +117,7 @@ export type RemoteServerTokenJwtPayload = CommonPropertiesJwtPayload & {
 export type JwtPayload =
   | AccessTokenJwtPayload
   | ApiKeyTokenJwtPayload
+  | ApplicationTokenJwtPayload
   | WorkspaceAgnosticTokenJwtPayload
   | LoginTokenJwtPayload
   | TransientTokenJwtPayload

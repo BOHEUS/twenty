@@ -20,10 +20,12 @@ import {
   TwentyORMExceptionCode,
 } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
 import { validateQueryIsPermittedOrThrow } from 'src/engine/twenty-orm/repository/permissions.utils';
-import { WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-select-query-builder';
+import { type WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-select-query-builder';
 import { type WorkspaceSoftDeleteQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-soft-delete-query-builder';
 import { type WorkspaceUpdateQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-update-query-builder';
+import { applyRowLevelPermissionPredicates } from 'src/engine/twenty-orm/utils/apply-row-level-permission-predicates.util';
 import { applyTableAliasOnWhereCondition } from 'src/engine/twenty-orm/utils/apply-table-alias-on-where-condition';
+import { computeEventSelectQueryBuilder } from 'src/engine/twenty-orm/utils/compute-event-select-query-builder.util';
 import { formatResult } from 'src/engine/twenty-orm/utils/format-result.util';
 import { formatTwentyOrmEventToDatabaseBatchEvent } from 'src/engine/twenty-orm/utils/format-twenty-orm-event-to-database-batch-event.util';
 import { getObjectMetadataFromEntityTarget } from 'src/engine/twenty-orm/utils/get-object-metadata-from-entity-target.util';
@@ -35,15 +37,15 @@ export class WorkspaceDeleteQueryBuilder<
   private objectRecordsPermissions: ObjectsPermissions;
   private shouldBypassPermissionChecks: boolean;
   private internalContext: WorkspaceInternalContext;
-  private authContext?: AuthContext;
-  private featureFlagMap?: FeatureFlagMap;
+  private authContext: AuthContext;
+  private featureFlagMap: FeatureFlagMap;
   constructor(
     queryBuilder: DeleteQueryBuilder<T>,
     objectRecordsPermissions: ObjectsPermissions,
     internalContext: WorkspaceInternalContext,
     shouldBypassPermissionChecks: boolean,
-    authContext?: AuthContext,
-    featureFlagMap?: FeatureFlagMap,
+    authContext: AuthContext,
+    featureFlagMap: FeatureFlagMap,
   ) {
     super(queryBuilder);
     this.objectRecordsPermissions = objectRecordsPermissions;
@@ -56,21 +58,27 @@ export class WorkspaceDeleteQueryBuilder<
   override clone(): this {
     const clonedQueryBuilder = super.clone();
 
-    return new WorkspaceDeleteQueryBuilder(
+    const workspaceDeleteQueryBuilder = new WorkspaceDeleteQueryBuilder(
       clonedQueryBuilder,
       this.objectRecordsPermissions,
       this.internalContext,
       this.shouldBypassPermissionChecks,
       this.authContext,
+      this.featureFlagMap,
     ) as this;
+
+    return workspaceDeleteQueryBuilder;
   }
 
   override async execute(): Promise<DeleteResult & { generatedMaps: T[] }> {
     try {
+      this.applyRowLevelPermissionPredicates();
       validateQueryIsPermittedOrThrow({
         expressionMap: this.expressionMap,
         objectsPermissions: this.objectRecordsPermissions,
-        objectMetadataMaps: this.internalContext.objectMetadataMaps,
+        flatObjectMetadataMaps: this.internalContext.flatObjectMetadataMaps,
+        flatFieldMetadataMaps: this.internalContext.flatFieldMetadataMaps,
+        objectIdByNameSingular: this.internalContext.objectIdByNameSingular,
         shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
       });
 
@@ -81,25 +89,19 @@ export class WorkspaceDeleteQueryBuilder<
         this.internalContext,
       );
 
-      const eventSelectQueryBuilder = new WorkspaceSelectQueryBuilder(
-        this as unknown as WorkspaceSelectQueryBuilder<T>,
-        this.objectRecordsPermissions,
-        this.internalContext,
-        true,
-        this.authContext,
-        this.featureFlagMap,
-      );
+      const eventSelectQueryBuilder = computeEventSelectQueryBuilder<T>({
+        queryBuilder: this,
+        authContext: this.authContext,
+        internalContext: this.internalContext,
+        featureFlagMap: this.featureFlagMap,
+        expressionMap: this.expressionMap,
+        objectRecordsPermissions: this.objectRecordsPermissions,
+      });
 
       const tableName = computeTableName(
         objectMetadata.nameSingular,
         objectMetadata.isCustom,
       );
-
-      eventSelectQueryBuilder.expressionMap.wheres = this.expressionMap.wheres;
-
-      eventSelectQueryBuilder.expressionMap.aliases =
-        this.expressionMap.aliases;
-      eventSelectQueryBuilder.setParameters(this.getParameters());
 
       const before = await eventSelectQueryBuilder.getOne();
 
@@ -114,19 +116,22 @@ export class WorkspaceDeleteQueryBuilder<
       const formattedResult = formatResult<T[]>(
         result.raw,
         objectMetadata,
-        this.internalContext.objectMetadataMaps,
+        this.internalContext.flatObjectMetadataMaps,
+        this.internalContext.flatFieldMetadataMaps,
       );
 
       const formattedBefore = formatResult<T[]>(
         before,
         objectMetadata,
-        this.internalContext.objectMetadataMaps,
+        this.internalContext.flatObjectMetadataMaps,
+        this.internalContext.flatFieldMetadataMaps,
       );
 
       this.internalContext.eventEmitterService.emitDatabaseBatchEvent(
         formatTwentyOrmEventToDatabaseBatchEvent({
           action: DatabaseEventAction.DESTROYED,
           objectMetadataItem: objectMetadata,
+          flatFieldMetadataMaps: this.internalContext.flatFieldMetadataMaps,
           workspaceId: this.internalContext.workspaceId,
           entities: formattedBefore,
           authContext: this.authContext,
@@ -139,7 +144,7 @@ export class WorkspaceDeleteQueryBuilder<
         affected: result.affected,
       };
     } catch (error) {
-      throw computeTwentyORMException(error);
+      throw await computeTwentyORMException(error);
     }
   }
 
@@ -154,6 +159,27 @@ export class WorkspaceDeleteQueryBuilder<
     }
 
     return mainAliasTarget;
+  }
+
+  private applyRowLevelPermissionPredicates(): void {
+    if (this.shouldBypassPermissionChecks) {
+      return;
+    }
+
+    const mainAliasTarget = this.getMainAliasTarget();
+
+    const objectMetadata = getObjectMetadataFromEntityTarget(
+      mainAliasTarget,
+      this.internalContext,
+    );
+
+    applyRowLevelPermissionPredicates({
+      queryBuilder: this as unknown as WorkspaceSelectQueryBuilder<T>,
+      objectMetadata,
+      internalContext: this.internalContext,
+      authContext: this.authContext,
+      featureFlagMap: this.featureFlagMap,
+    });
   }
 
   override select(): WorkspaceSelectQueryBuilder<T> {

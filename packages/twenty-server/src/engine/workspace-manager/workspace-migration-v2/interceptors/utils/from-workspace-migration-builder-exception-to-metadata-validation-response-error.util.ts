@@ -15,21 +15,33 @@ export const fromWorkspaceMigrationBuilderExceptionToMetadataValidationResponseE
       i18n,
     );
 
-    return {
+    const initialAccumulator: MetadataValidationErrorResponse = {
+      errors: {},
       summary: {
-        invalidViewFilter: 0,
-        invalidObjectMetadata: 0,
-        invalidView: 0,
-        invalidViewField: 0,
-        invalidIndex: 0,
-        invalidServerlessFunction: 0,
-        invalidDatabaseEventTrigger: 0,
-        invalidCronTrigger: 0,
-        invalidRouteTrigger: 0,
-        invalidFieldMetadata: 0,
-        invalidViewGroup: 0,
         totalErrors: 0,
       },
-      errors: translatedReport,
     };
+
+    return (
+      Object.keys(translatedReport) as (keyof typeof translatedReport)[]
+    ).reduce((acc, metadataName) => {
+      const failedMetadataValidation = translatedReport[metadataName];
+
+      if (failedMetadataValidation.length === 0) {
+        return acc;
+      }
+
+      return {
+        errors: {
+          ...acc.errors,
+          [metadataName]: failedMetadataValidation,
+        },
+        summary: {
+          ...acc.summary,
+          totalErrors:
+            acc.summary.totalErrors + failedMetadataValidation.length,
+          [metadataName]: failedMetadataValidation.length,
+        },
+      } satisfies MetadataValidationErrorResponse;
+    }, initialAccumulator);
   };

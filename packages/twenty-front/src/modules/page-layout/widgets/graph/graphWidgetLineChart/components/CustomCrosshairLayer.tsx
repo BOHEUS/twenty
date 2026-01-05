@@ -1,10 +1,4 @@
-import { LINE_CHART_CROSSHAIR_DASH_ARRAY } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartCrosshairDashArray';
-import { LINE_CHART_CROSSHAIR_STROKE_OPACITY } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartCrosshairStrokeOpacity';
-import { LINE_CHART_CROSSHAIR_STROKE_WIDTH } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartCrosshairStrokeWidth';
-import { LINE_CHART_CROSSHAIR_TRANSITION_DAMPING } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartCrosshairTransitionDamping';
-import { LINE_CHART_CROSSHAIR_TRANSITION_STIFFNESS } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartCrosshairTransitionStiffness';
-import { LINE_CHART_MARGIN_LEFT } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartMarginLeft';
-import { LINE_CHART_MARGIN_TOP } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartMarginTop';
+import { LINE_CHART_CONSTANTS } from '@/page-layout/widgets/graph/graphWidgetLineChart/constants/LineChartConstants';
 import { graphWidgetLineCrosshairXComponentState } from '@/page-layout/widgets/graph/graphWidgetLineChart/states/graphWidgetLineCrosshairXComponentState';
 import { useRecoilComponentValue } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValue';
 import { useTheme } from '@emotion/react';
@@ -29,7 +23,10 @@ type CustomCrosshairLayerProps = {
   points: readonly Point<LineSeries>[];
   innerHeight: number;
   innerWidth: number;
+  marginLeft: number;
+  marginTop: number;
   onSliceHover: (data: SliceHoverData) => void;
+  onSliceClick?: (data: SliceHoverData) => void;
   onRectLeave: (relatedTarget: EventTarget | null) => void;
 };
 
@@ -37,7 +34,10 @@ export const CustomCrosshairLayer = ({
   points,
   innerHeight,
   innerWidth,
+  marginLeft,
+  marginTop,
   onSliceHover,
+  onSliceClick,
   onRectLeave,
 }: CustomCrosshairLayerProps) => {
   const theme = useTheme();
@@ -65,26 +65,22 @@ export const CustomCrosshairLayer = ({
       .sort((sliceA, sliceB) => sliceA.x - sliceB.x);
   }, [points]);
 
-  const handleMouseMove = useCallback(
+  const buildSliceData = useCallback(
     (event: MouseEvent<SVGRectElement>) => {
       const svgRect =
         event.currentTarget.ownerSVGElement?.getBoundingClientRect();
       if (!isDefined(svgRect)) {
-        return;
+        return null;
       }
 
-      const mouseX = event.clientX - svgRect.left - LINE_CHART_MARGIN_LEFT;
-      const mouseY = event.clientY - svgRect.top - LINE_CHART_MARGIN_TOP;
+      const mouseX = event.clientX - svgRect.left - marginLeft;
+      const mouseY = event.clientY - svgRect.top - marginTop;
 
       const nearestSlice = slices.reduce((nearest, slice) => {
         const currentDistance = Math.abs(slice.x - mouseX);
         const nearestDistance = Math.abs(nearest.x - mouseX);
         return currentDistance < nearestDistance ? slice : nearest;
       });
-
-      if (nearestSlice.x === crosshairX) {
-        return;
-      }
 
       const closestPoint = nearestSlice.points.reduce(
         (closestPointCandidate, pointCandidate) => {
@@ -96,21 +92,50 @@ export const CustomCrosshairLayer = ({
         },
       );
 
-      onSliceHover({
+      return {
         sliceX: nearestSlice.x,
         mouseY,
         nearestSlice,
         closestPoint,
         svgRect,
-      });
+      };
     },
-    [slices, crosshairX, onSliceHover],
+    [marginLeft, marginTop, slices],
+  );
+
+  const handleMouseMove = (event: MouseEvent<SVGRectElement>) => {
+    const sliceData = buildSliceData(event);
+    if (!isDefined(sliceData)) {
+      return;
+    }
+
+    if (sliceData.sliceX === crosshairX) {
+      return;
+    }
+
+    onSliceHover(sliceData);
+  };
+
+  const handleClick = useCallback(
+    (event: MouseEvent<SVGRectElement>) => {
+      if (!isDefined(onSliceClick)) {
+        return;
+      }
+
+      const sliceData = buildSliceData(event);
+      if (!isDefined(sliceData)) {
+        return;
+      }
+
+      onSliceClick(sliceData);
+    },
+    [buildSliceData, onSliceClick],
   );
 
   const transition = {
     type: 'spring',
-    stiffness: LINE_CHART_CROSSHAIR_TRANSITION_STIFFNESS,
-    damping: LINE_CHART_CROSSHAIR_TRANSITION_DAMPING,
+    stiffness: LINE_CHART_CONSTANTS.CROSSHAIR_TRANSITION_STIFFNESS,
+    damping: LINE_CHART_CONSTANTS.CROSSHAIR_TRANSITION_DAMPING,
   } as const;
 
   return (
@@ -122,9 +147,9 @@ export const CustomCrosshairLayer = ({
           y1={0}
           y2={innerHeight}
           stroke={theme.font.color.primary}
-          strokeWidth={LINE_CHART_CROSSHAIR_STROKE_WIDTH}
-          strokeOpacity={LINE_CHART_CROSSHAIR_STROKE_OPACITY}
-          strokeDasharray={LINE_CHART_CROSSHAIR_DASH_ARRAY}
+          strokeWidth={LINE_CHART_CONSTANTS.CROSSHAIR_STROKE_WIDTH}
+          strokeOpacity={LINE_CHART_CONSTANTS.CROSSHAIR_STROKE_OPACITY}
+          strokeDasharray={LINE_CHART_CONSTANTS.CROSSHAIR_DASH_ARRAY}
           initial={{ x1: crosshairX, x2: crosshairX, opacity: 0 }}
           animate={{ x1: crosshairX, x2: crosshairX, opacity: 0.5 }}
           exit={{ opacity: 0 }}
@@ -143,6 +168,7 @@ export const CustomCrosshairLayer = ({
         onMouseEnter={handleMouseMove}
         onMouseMove={handleMouseMove}
         onMouseLeave={(event) => onRectLeave(event.relatedTarget)}
+        onClick={handleClick}
       />
     </g>
   );

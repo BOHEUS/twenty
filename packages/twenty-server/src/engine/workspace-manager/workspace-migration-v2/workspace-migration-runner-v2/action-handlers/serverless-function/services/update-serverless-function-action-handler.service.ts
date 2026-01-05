@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 
 import { isDefined } from 'twenty-shared/utils';
+import { type Sources } from 'twenty-shared/types';
 
 import { WorkspaceMigrationRunnerActionHandler } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-runner-v2/interfaces/workspace-migration-runner-action-handler-service.interface';
 
 import { FileStorageService } from 'src/engine/core-modules/file-storage/file-storage.service';
-import { type Sources } from 'src/engine/core-modules/file-storage/types/source.type';
 import { ServerlessService } from 'src/engine/core-modules/serverless/serverless.service';
 import { getServerlessFolder } from 'src/engine/core-modules/serverless/utils/serverless-get-folder.utils';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
@@ -17,7 +17,8 @@ import { fromFlatEntityPropertiesUpdatesToPartialFlatEntity } from 'src/engine/w
 
 @Injectable()
 export class UpdateServerlessFunctionActionHandlerService extends WorkspaceMigrationRunnerActionHandler(
-  'update_serverless_function',
+  'update',
+  'serverlessFunction',
 ) {
   constructor(
     private readonly fileStorageService: FileStorageService,
@@ -30,7 +31,7 @@ export class UpdateServerlessFunctionActionHandlerService extends WorkspaceMigra
     context: WorkspaceMigrationActionRunnerArgs<UpdateServerlessFunctionAction>,
   ): Promise<void> {
     const { action, queryRunner } = context;
-    const { serverlessFunctionId, code } = action;
+    const { entityId, code } = action;
 
     const serverlessFunctionRepository =
       queryRunner.manager.getRepository<ServerlessFunctionEntity>(
@@ -38,12 +39,12 @@ export class UpdateServerlessFunctionActionHandlerService extends WorkspaceMigra
       );
 
     await serverlessFunctionRepository.update(
-      serverlessFunctionId,
+      entityId,
       fromFlatEntityPropertiesUpdatesToPartialFlatEntity(action),
     );
 
     const serverlessFunction = findFlatEntityByIdInFlatEntityMapsOrThrow({
-      flatEntityId: serverlessFunctionId,
+      flatEntityId: entityId,
       flatEntityMaps: context.allFlatEntityMaps.flatServerlessFunctionMaps,
     });
 

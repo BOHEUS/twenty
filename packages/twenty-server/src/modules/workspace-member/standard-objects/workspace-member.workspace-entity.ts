@@ -1,23 +1,25 @@
 import { registerEnumType } from '@nestjs/graphql';
 
 import { msg } from '@lingui/core/macro';
+import { STANDARD_OBJECT_IDS } from 'twenty-shared/metadata';
 import { type APP_LOCALES, SOURCE_LOCALE } from 'twenty-shared/translations';
 import {
   FieldMetadataType,
+  FullNameMetadata,
   NumberDataType,
   RelationOnDeleteAction,
-  FullNameMetadata,
 } from 'twenty-shared/types';
 
 import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
 import { Relation } from 'src/engine/workspace-manager/workspace-sync-metadata/interfaces/relation.interface';
 
-import { SEARCH_VECTOR_FIELD } from 'src/engine/metadata-modules/constants/search-vector-field.constants';
 import { IndexType } from 'src/engine/metadata-modules/index-metadata/types/indexType.types';
+import { SEARCH_VECTOR_FIELD } from 'src/engine/metadata-modules/search-field-metadata/constants/search-vector-field.constants';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { WorkspaceEntity } from 'src/engine/twenty-orm/decorators/workspace-entity.decorator';
 import { WorkspaceFieldIndex } from 'src/engine/twenty-orm/decorators/workspace-field-index.decorator';
 import { WorkspaceField } from 'src/engine/twenty-orm/decorators/workspace-field.decorator';
+import { WorkspaceIsFieldUIReadOnly } from 'src/engine/twenty-orm/decorators/workspace-is-field-ui-readonly.decorator';
 import { WorkspaceIsNullable } from 'src/engine/twenty-orm/decorators/workspace-is-nullable.decorator';
 import { WorkspaceIsSearchable } from 'src/engine/twenty-orm/decorators/workspace-is-searchable.decorator';
 import { WorkspaceIsSystem } from 'src/engine/twenty-orm/decorators/workspace-is-system.decorator';
@@ -25,7 +27,6 @@ import { WorkspaceIsUnique } from 'src/engine/twenty-orm/decorators/workspace-is
 import { WorkspaceRelation } from 'src/engine/twenty-orm/decorators/workspace-relation.decorator';
 import { WORKSPACE_MEMBER_STANDARD_FIELD_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-field-ids';
 import { STANDARD_OBJECT_ICONS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-icons';
-import { STANDARD_OBJECT_IDS } from 'src/engine/workspace-manager/workspace-sync-metadata/constants/standard-object-ids';
 import {
   type FieldTypeAndNameMetadata,
   getTsVectorColumnExpressionFromFields,
@@ -107,6 +108,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconHierarchy2',
     defaultValue: 0,
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   position: number;
 
@@ -117,6 +119,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Workspace member name`,
     icon: 'IconCircleUser',
   })
+  @WorkspaceIsFieldUIReadOnly()
   name: FullNameMetadata;
 
   @WorkspaceField({
@@ -127,6 +130,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconColorSwatch',
     defaultValue: "'System'",
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   colorScheme: string;
 
@@ -138,6 +142,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     icon: 'IconLanguage',
     defaultValue: `'${SOURCE_LOCALE}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   locale: keyof typeof APP_LOCALES;
 
@@ -148,8 +153,10 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Workspace member avatar`,
     icon: 'IconFileUpload',
   })
+  @WorkspaceIsFieldUIReadOnly()
+  @WorkspaceIsNullable()
   @WorkspaceIsSystem()
-  avatarUrl: string;
+  avatarUrl: string | null;
 
   @WorkspaceIsUnique()
   @WorkspaceField({
@@ -159,8 +166,10 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Related user email address`,
     icon: 'IconMail',
   })
+  @WorkspaceIsFieldUIReadOnly()
+  @WorkspaceIsNullable()
   @WorkspaceIsSystem()
-  userEmail: string;
+  userEmail: string | null;
 
   @WorkspaceField({
     standardId: WORKSPACE_MEMBER_STANDARD_FIELD_IDS.calendarStartDay,
@@ -172,6 +181,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
       dataType: NumberDataType.INT,
     },
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   calendarStartDay: number;
 
@@ -182,6 +192,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`Associated User Id`,
     icon: 'IconCircleUsers',
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   userId: string;
 
@@ -193,6 +204,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     description: msg`User time zone`,
     icon: 'IconTimezone',
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   timeZone: string;
 
@@ -230,6 +242,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     ],
     defaultValue: `'${WorkspaceMemberDateFormatEnum.SYSTEM}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   dateFormat: string;
 
@@ -261,6 +274,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     ],
     defaultValue: `'${WorkspaceMemberTimeFormatEnum.SYSTEM}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   timeFormat: string;
 
@@ -275,6 +289,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideFieldKey: 'assignee',
     onDelete: RelationOnDeleteAction.SET_NULL,
   })
+  @WorkspaceIsFieldUIReadOnly()
   assignedTasks: Relation<TaskWorkspaceEntity[]>;
 
   @WorkspaceRelation({
@@ -287,6 +302,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideFieldKey: 'forWorkspaceMember',
     onDelete: RelationOnDeleteAction.CASCADE,
   })
+  @WorkspaceIsFieldUIReadOnly()
   favorites: Relation<FavoriteWorkspaceEntity[]>;
 
   @WorkspaceRelation({
@@ -299,6 +315,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideFieldKey: 'accountOwner',
     onDelete: RelationOnDeleteAction.SET_NULL,
   })
+  @WorkspaceIsFieldUIReadOnly()
   accountOwnerForCompanies: Relation<CompanyWorkspaceEntity[]>;
 
   @WorkspaceRelation({
@@ -311,6 +328,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideFieldKey: 'author',
     onDelete: RelationOnDeleteAction.SET_NULL,
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   authoredAttachments: Relation<AttachmentWorkspaceEntity[]>;
 
@@ -324,6 +342,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideFieldKey: 'accountOwner',
     onDelete: RelationOnDeleteAction.CASCADE,
   })
+  @WorkspaceIsFieldUIReadOnly()
   connectedAccounts: Relation<ConnectedAccountWorkspaceEntity[]>;
 
   @WorkspaceRelation({
@@ -336,6 +355,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideFieldKey: 'workspaceMember',
     onDelete: RelationOnDeleteAction.SET_NULL,
   })
+  @WorkspaceIsFieldUIReadOnly()
   messageParticipants: Relation<MessageParticipantWorkspaceEntity[]>;
 
   @WorkspaceRelation({
@@ -348,6 +368,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideFieldKey: 'workspaceMember',
     onDelete: RelationOnDeleteAction.SET_NULL,
   })
+  @WorkspaceIsFieldUIReadOnly()
   blocklist: Relation<BlocklistWorkspaceEntity[]>;
 
   @WorkspaceRelation({
@@ -360,6 +381,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideFieldKey: 'workspaceMember',
     onDelete: RelationOnDeleteAction.SET_NULL,
   })
+  @WorkspaceIsFieldUIReadOnly()
   calendarEventParticipants: Relation<
     CalendarEventParticipantWorkspaceEntity[]
   >;
@@ -373,6 +395,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
     inverseSideTarget: () => TimelineActivityWorkspaceEntity,
     onDelete: RelationOnDeleteAction.CASCADE,
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   @WorkspaceIsSystem()
   timelineActivities: Relation<TimelineActivityWorkspaceEntity[]>;
@@ -388,6 +411,7 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
       SEARCH_FIELDS_FOR_WORKSPACE_MEMBER,
     ),
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsNullable()
   @WorkspaceIsSystem()
   @WorkspaceFieldIndex({ indexType: IndexType.GIN })
@@ -408,31 +432,32 @@ export class WorkspaceMemberWorkspaceEntity extends BaseWorkspaceEntity {
       },
       {
         value: WorkspaceMemberNumberFormatEnum.COMMAS_AND_DOT,
-        label: 'Commas and dot (1,234.56)',
+        label: 'Commas and dot',
         position: 1,
         color: 'blue',
       },
       {
         value: WorkspaceMemberNumberFormatEnum.SPACES_AND_COMMA,
-        label: 'Spaces and comma (1 234,56)',
+        label: 'Spaces and comma',
         position: 2,
         color: 'green',
       },
       {
         value: WorkspaceMemberNumberFormatEnum.DOTS_AND_COMMA,
-        label: 'Dots and comma (1.234,56)',
+        label: 'Dots and comma',
         position: 3,
         color: 'orange',
       },
       {
         value: WorkspaceMemberNumberFormatEnum.APOSTROPHE_AND_DOT,
-        label: "Apostrophe and dot (1'234.56)",
+        label: 'Apostrophe and dot',
         position: 4,
         color: 'purple',
       },
     ],
     defaultValue: `'${WorkspaceMemberNumberFormatEnum.SYSTEM}'`,
   })
+  @WorkspaceIsFieldUIReadOnly()
   @WorkspaceIsSystem()
   numberFormat: string;
 }

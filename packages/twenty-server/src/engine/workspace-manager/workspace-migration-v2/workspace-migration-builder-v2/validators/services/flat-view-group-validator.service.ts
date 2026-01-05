@@ -5,9 +5,9 @@ import { ALL_METADATA_NAME } from 'twenty-shared/metadata';
 import { isDefined } from 'twenty-shared/utils';
 
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
-import { FlatViewGroup } from 'src/engine/metadata-modules/flat-view-group/types/flat-view-group.type';
 import { ViewExceptionCode } from 'src/engine/metadata-modules/view/exceptions/view.exception';
 import { FailedFlatEntityValidation } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-builder-v2/builders/types/failed-flat-entity-validation.type';
+import { getEmptyFlatEntityValidationError } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-builder-v2/builders/utils/get-flat-entity-validation-error.util';
 import { FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-builder-v2/types/flat-entity-update-validation-args.type';
 import { FlatEntityValidationArgs } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-builder-v2/types/flat-entity-validation-args.type';
 import { fromFlatEntityPropertiesUpdatesToPartialFlatEntity } from 'src/engine/workspace-manager/workspace-migration-v2/workspace-migration-runner-v2/utils/from-flat-entity-properties-updates-to-partial-flat-entity';
@@ -20,21 +20,21 @@ export class FlatViewGroupValidatorService {
     optimisticFlatEntityMapsAndRelatedFlatEntityMaps: {
       flatViewGroupMaps: optimisticFlatViewGroupMaps,
       flatViewMaps,
-      flatFieldMetadataMaps,
     },
   }: FlatEntityUpdateValidationArgs<
     typeof ALL_METADATA_NAME.viewGroup
-  >): FailedFlatEntityValidation<FlatViewGroup> {
-    const validationResult: FailedFlatEntityValidation<FlatViewGroup> = {
-      type: 'update_view_group',
-      errors: [],
-      flatEntityMinimalInformation: {
-        id: flatEntityId,
-      },
-    };
-
+  >): FailedFlatEntityValidation<'viewGroup', 'update'> {
     const existingFlatViewGroup =
       optimisticFlatViewGroupMaps.byId[flatEntityId];
+
+    const validationResult = getEmptyFlatEntityValidationError({
+      flatEntityMinimalInformation: {
+        id: flatEntityId,
+        universalIdentifier: existingFlatViewGroup?.universalIdentifier,
+      },
+      metadataName: 'viewGroup',
+      type: 'update',
+    });
 
     if (!isDefined(existingFlatViewGroup)) {
       validationResult.errors.push({
@@ -53,10 +53,18 @@ export class FlatViewGroupValidatorService {
       }),
     };
 
+    if (!isDefined(updatedFlatViewGroup.fieldValue)) {
+      validationResult.errors.push({
+        code: ViewExceptionCode.INVALID_VIEW_DATA,
+        message: t`Field value is required`,
+        userFriendlyMessage: msg`Field value is required`,
+      });
+    }
+
     validationResult.flatEntityMinimalInformation = {
+      ...validationResult.flatEntityMinimalInformation,
       id: updatedFlatViewGroup.id,
       viewId: updatedFlatViewGroup.viewId,
-      fieldMetadataId: updatedFlatViewGroup.fieldMetadataId,
     };
 
     const flatView = findFlatEntityByIdInFlatEntityMaps({
@@ -72,37 +80,25 @@ export class FlatViewGroupValidatorService {
       });
     }
 
-    const flatFieldMetadata = findFlatEntityByIdInFlatEntityMaps({
-      flatEntityId: updatedFlatViewGroup.fieldMetadataId,
-      flatEntityMaps: flatFieldMetadataMaps,
-    });
-
-    if (!isDefined(flatFieldMetadata)) {
-      validationResult.errors.push({
-        code: ViewExceptionCode.INVALID_VIEW_DATA,
-        message: t`View group to update parent field not found`,
-        userFriendlyMessage: msg`View group to update parent field not found`,
-      });
-    }
-
     return validationResult;
   }
 
   public validateFlatViewGroupDeletion({
-    flatEntityToValidate: { id: viewGroupIdToDelete },
+    flatEntityToValidate: { id: viewGroupIdToDelete, universalIdentifier },
     optimisticFlatEntityMapsAndRelatedFlatEntityMaps: {
       flatViewGroupMaps: optimisticFlatViewGroupMaps,
     },
   }: FlatEntityValidationArgs<
     typeof ALL_METADATA_NAME.viewGroup
-  >): FailedFlatEntityValidation<FlatViewGroup> {
-    const validationResult: FailedFlatEntityValidation<FlatViewGroup> = {
-      type: 'delete_view_group',
-      errors: [],
+  >): FailedFlatEntityValidation<'viewGroup', 'delete'> {
+    const validationResult = getEmptyFlatEntityValidationError({
       flatEntityMinimalInformation: {
         id: viewGroupIdToDelete,
+        universalIdentifier,
       },
-    };
+      metadataName: 'viewGroup',
+      type: 'delete',
+    });
 
     const existingFlatViewGroup =
       optimisticFlatViewGroupMaps.byId[viewGroupIdToDelete];
@@ -122,21 +118,20 @@ export class FlatViewGroupValidatorService {
     flatEntityToValidate: flatViewGroupToValidate,
     optimisticFlatEntityMapsAndRelatedFlatEntityMaps: {
       flatViewGroupMaps: optimisticFlatViewGroupMaps,
-      flatFieldMetadataMaps,
       flatViewMaps,
     },
   }: FlatEntityValidationArgs<
     typeof ALL_METADATA_NAME.viewGroup
-  >): FailedFlatEntityValidation<FlatViewGroup> {
-    const validationResult: FailedFlatEntityValidation<FlatViewGroup> = {
-      type: 'create_view_group',
-      errors: [],
+  >): FailedFlatEntityValidation<'viewGroup', 'create'> {
+    const validationResult = getEmptyFlatEntityValidationError({
       flatEntityMinimalInformation: {
         id: flatViewGroupToValidate.id,
+        universalIdentifier: flatViewGroupToValidate.universalIdentifier,
         viewId: flatViewGroupToValidate.viewId,
-        fieldMetadataId: flatViewGroupToValidate.fieldMetadataId,
       },
-    };
+      metadataName: 'viewGroup',
+      type: 'create',
+    });
 
     const existingFlatViewGroup =
       optimisticFlatViewGroupMaps.byId[flatViewGroupToValidate.id];
@@ -151,19 +146,6 @@ export class FlatViewGroupValidatorService {
       });
     }
 
-    const flatFieldMetadata = findFlatEntityByIdInFlatEntityMaps({
-      flatEntityId: flatViewGroupToValidate.fieldMetadataId,
-      flatEntityMaps: flatFieldMetadataMaps,
-    });
-
-    if (!isDefined(flatFieldMetadata)) {
-      validationResult.errors.push({
-        code: ViewExceptionCode.INVALID_VIEW_DATA,
-        message: t`Field metadata not found`,
-        userFriendlyMessage: msg`Field metadata not found`,
-      });
-    }
-
     const flatView = flatViewMaps.byId[flatViewGroupToValidate.viewId];
 
     if (!isDefined(flatView)) {
@@ -174,6 +156,14 @@ export class FlatViewGroupValidatorService {
       });
 
       return validationResult;
+    }
+
+    if (!isDefined(flatViewGroupToValidate.fieldValue)) {
+      validationResult.errors.push({
+        code: ViewExceptionCode.INVALID_VIEW_DATA,
+        message: t`Field value is required`,
+        userFriendlyMessage: msg`Field value is required`,
+      });
     }
 
     return validationResult;

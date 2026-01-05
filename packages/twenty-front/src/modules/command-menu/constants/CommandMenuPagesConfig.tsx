@@ -3,13 +3,14 @@ import { CommandMenuAIChatThreadsPage } from '@/command-menu/pages/AIChatThreads
 import { CommandMenuAskAIPage } from '@/command-menu/pages/ask-ai/components/CommandMenuAskAIPage';
 import { CommandMenuCalendarEventPage } from '@/command-menu/pages/calendar-event/components/CommandMenuCalendarEventPage';
 import { CommandMenuMessageThreadPage } from '@/command-menu/pages/message-thread/components/CommandMenuMessageThreadPage';
+import { CommandMenuPageLayoutChartSettings } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutChartSettings';
 import { CommandMenuPageLayoutGraphFilter } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutGraphFilter';
-import { CommandMenuPageLayoutGraphTypeSelect } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutGraphTypeSelect';
 import { CommandMenuPageLayoutIframeSettings } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutIframeSettings';
-import { CommandMenuPageLayoutWidgetTypeSelect } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutWidgetTypeSelect';
 import { CommandMenuPageLayoutTabSettings } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutTabSettings';
+import { CommandMenuPageLayoutWidgetTypeSelect } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutWidgetTypeSelect';
 import { CommandMenuMergeRecordPage } from '@/command-menu/pages/record-page/components/CommandMenuMergeRecordPage';
 import { CommandMenuRecordPage } from '@/command-menu/pages/record-page/components/CommandMenuRecordPage';
+import { CommandMenuUpdateMultipleRecords } from '@/command-menu/pages/record-page/components/CommandMenuUpdateMultipleRecords';
 import { CommandMenuEditRichTextPage } from '@/command-menu/pages/rich-text-page/components/CommandMenuEditRichTextPage';
 import { CommandMenuSearchRecordsPage } from '@/command-menu/pages/search/components/CommandMenuSearchRecordsPage';
 import { CommandMenuWorkflowCreateStep } from '@/command-menu/pages/workflow/step/create/components/CommandMenuWorkflowCreateStep';
@@ -27,6 +28,7 @@ export const COMMAND_MENU_PAGES_CONFIG = new Map<
   [CommandMenuPages.Root, <CommandMenu />],
   [CommandMenuPages.ViewRecord, <CommandMenuRecordPage />],
   [CommandMenuPages.MergeRecords, <CommandMenuMergeRecordPage />],
+  [CommandMenuPages.UpdateRecords, <CommandMenuUpdateMultipleRecords />],
   [CommandMenuPages.ViewEmailThread, <CommandMenuMessageThreadPage />],
   [CommandMenuPages.ViewCalendarEvent, <CommandMenuCalendarEventPage />],
   [CommandMenuPages.EditRichText, <CommandMenuEditRichTextPage />],
@@ -48,7 +50,7 @@ export const COMMAND_MENU_PAGES_CONFIG = new Map<
   ],
   [
     CommandMenuPages.PageLayoutGraphTypeSelect,
-    <CommandMenuPageLayoutGraphTypeSelect />,
+    <CommandMenuPageLayoutChartSettings />,
   ],
   [
     CommandMenuPages.PageLayoutGraphFilter,

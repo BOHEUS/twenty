@@ -19,13 +19,11 @@ export class WorkspaceMigrationV2ViewFilterActionsBuilderService extends Workspa
     super(ALL_METADATA_NAME.viewFilter);
   }
 
-  protected async validateFlatEntityCreation(
+  protected validateFlatEntityCreation(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.viewFilter>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.viewFilter,
-      'created'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.viewFilter,
+    'create'
   > {
     const validationResult =
       this.flatViewFilterValidatorService.validateFlatViewFilterCreation(args);
@@ -42,19 +40,18 @@ export class WorkspaceMigrationV2ViewFilterActionsBuilderService extends Workspa
     return {
       status: 'success',
       action: {
-        type: 'create_view_filter',
-        viewFilter: flatViewFilterToValidate,
+        type: 'create',
+        metadataName: 'viewFilter',
+        flatEntity: flatViewFilterToValidate,
       },
     };
   }
 
-  protected async validateFlatEntityDeletion(
+  protected validateFlatEntityDeletion(
     args: FlatEntityValidationArgs<typeof ALL_METADATA_NAME.viewFilter>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.viewFilter,
-      'deleted'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.viewFilter,
+    'delete'
   > {
     const validationResult =
       this.flatViewFilterValidatorService.validateFlatViewFilterDeletion(args);
@@ -71,19 +68,18 @@ export class WorkspaceMigrationV2ViewFilterActionsBuilderService extends Workspa
     return {
       status: 'success',
       action: {
-        type: 'delete_view_filter',
-        viewFilterId: flatViewFilterToValidate.id,
+        type: 'delete',
+        metadataName: 'viewFilter',
+        entityId: flatViewFilterToValidate.id,
       },
     };
   }
 
-  protected async validateFlatEntityUpdate(
+  protected validateFlatEntityUpdate(
     args: FlatEntityUpdateValidationArgs<typeof ALL_METADATA_NAME.viewFilter>,
-  ): Promise<
-    FlatEntityValidationReturnType<
-      typeof ALL_METADATA_NAME.viewFilter,
-      'updated'
-    >
+  ): FlatEntityValidationReturnType<
+    typeof ALL_METADATA_NAME.viewFilter,
+    'update'
   > {
     const validationResult =
       this.flatViewFilterValidatorService.validateFlatViewFilterUpdate(args);
@@ -98,8 +94,9 @@ export class WorkspaceMigrationV2ViewFilterActionsBuilderService extends Workspa
     const { flatEntityId, flatEntityUpdates } = args;
 
     const updateViewFilterAction: UpdateViewFilterAction = {
-      type: 'update_view_filter',
-      viewFilterId: flatEntityId,
+      type: 'update',
+      metadataName: 'viewFilter',
+      entityId: flatEntityId,
       updates: flatEntityUpdates,
     };
 
