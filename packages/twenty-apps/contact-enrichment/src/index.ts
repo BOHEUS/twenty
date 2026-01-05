@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { type ServerlessFunctionConfig } from 'twenty-sdk/application';
+import { type FunctionConfig } from 'twenty-sdk';
 import type {
   fullEnrichRequest,
   fullEnrichPerson,
@@ -451,7 +451,7 @@ export const main = async (params: {
   }
 };
 
-export const config: ServerlessFunctionConfig = {
+export const config: FunctionConfig = {
   universalIdentifier: 'cfae75f0-11c2-4c01-aa6f-b8e52ba678a8',
   name: 'contact-enrichment',
   triggers: [

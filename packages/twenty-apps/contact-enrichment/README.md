@@ -3,16 +3,15 @@
 Contact enrichment when new person record is created.
 
 ## Requirements
-- twenty-cli `npm install -g twenty-cli`
-- an `apiKey`. Go to `https://twenty.com/settings/api-webhooks` to generate one
+- an `apiKey` - go to Settings > API & Webhooks to generate one
 - FullEnrich API key
 
 ## Setup
 1. Synchronize app with Twenty
 ```bash
-twenty auth login
-cd contact-enrichment
-twenty app sync
+cd packages/twenty-apps/contact-enrichment
+yarn auth
+yarn sync
 ```
 2. Go to Settings > Integrations > Contact enrichment > Settings and set variables
 
@@ -63,3 +62,6 @@ if you want to change that behaviour to look for more data, set value of FULLENR
   - company
     - employees
     - address
+
+## ToDo
+- update app once extending standard objects is possible
