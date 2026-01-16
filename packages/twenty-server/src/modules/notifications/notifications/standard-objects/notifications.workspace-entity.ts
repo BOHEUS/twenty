@@ -1,9 +1,8 @@
-import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { registerEnumType } from '@nestjs/graphql';
+
+import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import type { EntityRelation } from 'src/engine/workspace-manager/workspace-migration/types/entity-relation.interface';
-import type {
-  WorkspaceMemberWorkspaceEntity
-} from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
+import type { WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
 import type { TaskWorkspaceEntity } from 'src/modules/task/standard-objects/task.workspace-entity';
 import type { NoteWorkspaceEntity } from 'src/modules/note/standard-objects/note.workspace-entity';
 import type { PersonWorkspaceEntity } from 'src/modules/person/standard-objects/person.workspace-entity';
@@ -12,11 +11,9 @@ import type { OpportunityWorkspaceEntity } from 'src/modules/opportunity/standar
 import type { DashboardWorkspaceEntity } from 'src/modules/dashboard/standard-objects/dashboard.workspace-entity';
 import type { WorkflowWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow.workspace-entity';
 import type { CustomWorkspaceEntity } from 'src/engine/twenty-orm/custom.workspace-entity';
-import {
-  MessageChannelWorkspaceEntity
-} from 'src/modules/messaging/common/standard-objects/message-channel.workspace-entity';
-import { ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
-import { AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
+import { type MessageChannelWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-channel.workspace-entity';
+import { type ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
+import { type AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
 
 export enum NotificationType {
   READ = 'READ',
@@ -25,7 +22,7 @@ export enum NotificationType {
 
 registerEnumType(NotificationType, {
   name: 'NotificationType',
-})
+});
 
 export class NotificationsWorkspaceEntity extends BaseWorkspaceEntity {
   body: string;

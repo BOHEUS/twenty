@@ -233,12 +233,12 @@ export class NotificationsDatabaseEventTriggerListener {
   }
 
   private async enrichRecordsWithRelations({
-                                             records,
-                                             workspaceId,
-                                             flatObjectMetadata,
-                                             flatObjectMetadataMaps,
-                                             flatFieldMetadataMaps,
-                                           }: {
+    records,
+    workspaceId,
+    flatObjectMetadata,
+    flatObjectMetadataMaps,
+    flatFieldMetadataMaps,
+  }: {
     records: Partial<ObjectRecord>[];
     workspaceId: string;
     flatObjectMetadata: FlatObjectMetadata;
@@ -327,9 +327,9 @@ export class NotificationsDatabaseEventTriggerListener {
   }
 
   private async handleEvent({
-                              payload,
-                              action,
-                            }: {
+    payload,
+    action,
+  }: {
     payload: WorkspaceEventBatch<ObjectRecordNonDestructiveEvent>;
     action: DatabaseEventAction;
   }) {
@@ -386,10 +386,10 @@ export class NotificationsDatabaseEventTriggerListener {
   }
 
   private shouldTriggerJob({
-                             eventPayload,
-                             eventListener,
-                             action,
-                           }: {
+    eventPayload,
+    eventListener,
+    action,
+  }: {
     eventPayload: ObjectRecordNonDestructiveEvent;
     eventListener: WorkflowAutomatedTriggerWorkspaceEntity;
     action: DatabaseEventAction;
