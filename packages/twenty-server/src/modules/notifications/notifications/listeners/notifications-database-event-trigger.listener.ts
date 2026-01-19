@@ -27,6 +27,44 @@ import { NotificationsSettingsWorkspaceEntity } from 'src/modules/notifications/
 import {
   UpdateEventTriggerSettings
 } from 'src/modules/workflow/workflow-trigger/automated-trigger/constants/automated-trigger-settings';
+import {
+  NotificationTriggerJob,
+  NotificationTriggerJobData,
+} from 'src/modules/notifications/notifications/jobs/notifications-trigger.job';
+
+const objectsNotForUpdate: string[] = [
+  'attachments',
+  'blocklists',
+  'calendarEvents',
+  'calendarChannels',
+  'calendarChannelEventAssociations',
+  'calendarEventParticipants',
+  'connectedAccounts',
+  'favoriteFolders',
+  'favorites',
+  'messages',
+  'messageParticipants',
+  'messageThreads',
+  'messageChannelMessageAssociations',
+  'messageChannels',
+  'messageFolders',
+  'notifications',
+  'notificationSettings',
+  'noteTargets',
+  'taskTargets',
+  'timelineActivities',
+  'views',
+  'viewFields',
+  'viewFilters',
+  'viewFilterGroups',
+  'viewSorts',
+  'viewGroups',
+  'workflows',
+  'workflowAutomatedTriggers',
+  'workflowRuns',
+  'workflowVersions',
+  'workspaceMembers',
+];
 
 @Injectable()
 export class NotificationsDatabaseEventTriggerListener {
@@ -143,9 +181,6 @@ export class NotificationsDatabaseEventTriggerListener {
   ) {
     const workspaceId = payload.workspaceId;
     const databaseEventName = payload.name;
-    const isNotificationOrNotificationSettingsModified =
-      payload.objectMetadata.nameSingular === 'notification' ||
-      payload.objectMetadata.nameSingular === 'notificationSetting';
 
     if (!workspaceId || !databaseEventName) {
       this.logger.error(
@@ -157,14 +192,14 @@ export class NotificationsDatabaseEventTriggerListener {
       return true;
     }
 
-    return isNotificationOrNotificationSettingsModified;
+    return objectsNotForUpdate.includes(payload.objectMetadata.namePlural);
   }
 
   private async handleEvent({
     payload,
     action,
   }: {
-    payload: WorkspaceEventBatch<ObjectRecordNonDestructiveEvent>;
+    payload: WorkspaceEventBatch<ObjectRecordNonDestructiveEvent> | WorkspaceEventBatch<ObjectRecordDestroyEvent>;
     action: DatabaseEventAction;
   }) {
     const workspaceId = payload.workspaceId;
@@ -176,7 +211,7 @@ export class NotificationsDatabaseEventTriggerListener {
     await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
       authContext,
       async () => {
-        const notificationsSettingsWorkspaceEntityWorkspaceRepository =
+        const notificationsSettingsRepository =
           await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
             workspaceId,
             notificationSettingsTableName,
@@ -184,7 +219,7 @@ export class NotificationsDatabaseEventTriggerListener {
           );
 
         const eventListeners =
-          await notificationsSettingsWorkspaceEntityWorkspaceRepository.find({
+          await notificationsSettingsRepository.find({
             where: {
               settings: Raw(
                 () =>
@@ -197,18 +232,19 @@ export class NotificationsDatabaseEventTriggerListener {
         for (const eventListener of eventListeners) {
           for (const eventPayload of payload.events) {
             const shouldTriggerJob = this.shouldTriggerJob({
-              eventPayload,
               eventListener,
               action,
             });
 
             if (shouldTriggerJob) {
-              await this.messageQueueService.add<WorkflowTriggerJobData>(
-                WorkflowTriggerJob.name,
+              await this.messageQueueService.add<NotificationTriggerJobData>(
+                NotificationTriggerJob.name,
                 {
                   workspaceId,
-                  workflowId: eventListener.workflowId,
+                  recipientId: eventListener.createdById,
+                  objectSingularName: payload.objectMetadata.nameSingular,
                   payload: eventPayload,
+                  action
                 },
                 { retryLimit: 3 },
               );
@@ -220,37 +256,27 @@ export class NotificationsDatabaseEventTriggerListener {
   }
 
   private shouldTriggerJob({
-    eventPayload,
     eventListener,
     action,
   }: {
-    eventPayload: ObjectRecordNonDestructiveEvent;
     eventListener: NotificationsSettingsWorkspaceEntity;
     action: DatabaseEventAction;
   }) {
     if (action === DatabaseEventAction.UPDATED) {
-      const settings = eventListener.settings as UpdateEventTriggerSettings;
-      const updateEventPayload = eventPayload as ObjectRecordUpdateEvent;
+      const settings = eventListener.settings;
 
       return (
-        !settings.fields ||
-        settings.fields.length === 0 ||
-        settings.fields.some((field) =>
-          updateEventPayload?.properties?.updatedFields?.includes(field),
-        )
+        !settings ||
+        settings.length === 0
       );
     }
 
     if (action === DatabaseEventAction.UPSERTED) {
       const settings = eventListener.settings;
-      const upsertEventPayload = eventPayload as ObjectRecordUpsertEvent;
 
       return (
-        !settings.fields ||
-        settings.fields.length === 0 ||
-        settings.fields.some((field) =>
-          upsertEventPayload?.properties?.updatedFields?.includes(field),
-        )
+        !settings ||
+        settings.length === 0
       );
     }
 

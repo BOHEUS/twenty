@@ -6,11 +6,14 @@ import isEmpty from 'lodash.isempty';
 
 import { Processor } from 'src/engine/core-modules/message-queue/decorators/processor.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
-import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
-import { WorkflowRunnerWorkspaceService } from 'src/modules/workflow/workflow-runner/workspace-services/workflow-runner.workspace-service';
+import {
+  GlobalWorkspaceOrmManager,
+} from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
+import {
+  WorkflowRunnerWorkspaceService,
+} from 'src/modules/workflow/workflow-runner/workspace-services/workflow-runner.workspace-service';
 import { Process } from 'src/engine/core-modules/message-queue/decorators/process.decorator';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
-import type { WorkflowWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow.workspace-entity';
 import {
   WorkflowTriggerException,
   WorkflowTriggerExceptionCode,
@@ -19,11 +22,19 @@ import {
   WorkflowVersionStatus,
   WorkflowVersionWorkspaceEntity,
 } from 'src/modules/workflow/common/standard-objects/workflow-version.workspace-entity';
+import {
+  NotificationsWorkspaceEntity,
+  NotificationType,
+} from 'src/modules/notifications/notifications/standard-objects/notifications.workspace-entity';
+import { DatabaseEventAction } from 'src/engine/api/graphql/graphql-query-runner/enums/database-event-action';
+import { ObjectRecordDestroyEvent, ObjectRecordNonDestructiveEvent } from 'twenty-shared/database-events';
 
-export type WorkflowTriggerJobData = {
+export type NotificationTriggerJobData = {
   workspaceId: string;
-  workflowId: string;
-  payload: object;
+  recipientId: string;
+  objectSingularName: string;
+  payload: ObjectRecordNonDestructiveEvent | ObjectRecordDestroyEvent;
+  action: DatabaseEventAction;
 };
 
 const DEFAULT_WORKFLOW_NAME = 'Workflow';
@@ -33,29 +44,23 @@ export class NotificationTriggerJob {
   constructor(
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
     private readonly workflowRunnerWorkspaceService: WorkflowRunnerWorkspaceService,
-  ) {}
+  ) {
+  }
 
   @Process(NotificationTriggerJob.name)
-  async handle(data: WorkflowTriggerJobData): Promise<void> {
+  async handle(data: NotificationTriggerJobData): Promise<void> {
     const authContext = buildSystemAuthContext(data.workspaceId);
-    // get workspace member name
-    // get action
-    // create: "<creator> created new <objectSingularName>"
-    // update: "<creator> updated <objectSingularName> <recordName>" add fields?
-    // delete: "<creator> deleted <objectSingularName> <recordName>"
-    // destroy: "<creator> destroyed <objectSingularName> <recordName>"
-    // restore: "<creator> restored <objectSingularName> <recordName>"
-    // upsert: ???
 
     await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
       authContext,
       async () => {
-        const workflowRepository =
-          await this.globalWorkspaceOrmManager.getRepository<WorkflowWorkspaceEntity>(
+        const notificationRepository =
+          await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
             data.workspaceId,
             'workflow',
             { shouldBypassPermissionChecks: true },
           );
+
 
         const workflow = await workflowRepository.findOneBy({
           id: data.workflowId,
@@ -115,5 +120,39 @@ export class NotificationTriggerJob {
         });
       },
     );
+  }
+
+  private getData(recipientId: string, action: DatabaseEventAction, payload: ObjectRecordNonDestructiveEvent | ObjectRecordDestroyEvent, objectSingularName: string) {
+    switch (action) {
+      case DatabaseEventAction.CREATED:
+
+        const creator = payload.properties.after.createdBy.source;
+        const body = '';
+        break;
+      case DatabaseEventAction.DELETED:
+
+        break;
+      case DatabaseEventAction.DESTROYED:
+        break;
+      case DatabaseEventAction.RESTORED:
+        break;
+      case DatabaseEventAction.UPDATED:
+        break;
+      case DatabaseEventAction.UPSERTED:
+        break;
+    }
+    // get workspace member name
+    // get action
+    // create: "<creator> created new <objectSingularName>"
+    // update: "<creator> updated <objectSingularName> <recordName>" add fields?
+    // delete: "<creator> deleted <objectSingularName> <recordName>"
+    // destroy: "<creator> destroyed <objectSingularName> <recordName>"
+    // restore: "<creator> restored <objectSingularName> <recordName>"
+    // upsert: ???
+    const data = {
+      body: '',
+      status: NotificationType.UNREAD,
+      recipientId: recipientId,
+    };
   }
 }
