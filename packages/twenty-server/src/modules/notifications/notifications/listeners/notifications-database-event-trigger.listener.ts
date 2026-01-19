@@ -19,14 +19,7 @@ import { MessageQueueService } from 'src/engine/core-modules/message-queue/servi
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { type WorkspaceEventBatch } from 'src/engine/workspace-event-emitter/types/workspace-event-batch.type';
-import {
-  WorkflowTriggerJob,
-  type WorkflowTriggerJobData,
-} from 'src/modules/workflow/workflow-trigger/jobs/workflow-trigger.job';
 import { NotificationsSettingsWorkspaceEntity } from 'src/modules/notifications/notifications-settings/standard-objects/notifications-settings.workspace-entity';
-import {
-  UpdateEventTriggerSettings
-} from 'src/modules/workflow/workflow-trigger/automated-trigger/constants/automated-trigger-settings';
 import {
   NotificationTriggerJob,
   NotificationTriggerJobData,
@@ -199,7 +192,9 @@ export class NotificationsDatabaseEventTriggerListener {
     payload,
     action,
   }: {
-    payload: WorkspaceEventBatch<ObjectRecordNonDestructiveEvent> | WorkspaceEventBatch<ObjectRecordDestroyEvent>;
+    payload:
+      | WorkspaceEventBatch<ObjectRecordNonDestructiveEvent>
+      | WorkspaceEventBatch<ObjectRecordDestroyEvent>;
     action: DatabaseEventAction;
   }) {
     const workspaceId = payload.workspaceId;
@@ -218,16 +213,15 @@ export class NotificationsDatabaseEventTriggerListener {
             { shouldBypassPermissionChecks: true },
           );
 
-        const eventListeners =
-          await notificationsSettingsRepository.find({
-            where: {
-              settings: Raw(
-                () =>
-                  `"${notificationSettingsTableName}"."settings"->>'eventName' = :eventName`,
-                { eventName: databaseEventName },
-              ),
-            },
-          });
+        const eventListeners = await notificationsSettingsRepository.find({
+          where: {
+            settings: Raw(
+              () =>
+                `"${notificationSettingsTableName}"."settings"->>'eventName' = :eventName`,
+              { eventName: databaseEventName },
+            ),
+          },
+        });
 
         for (const eventListener of eventListeners) {
           for (const eventPayload of payload.events) {
@@ -244,7 +238,7 @@ export class NotificationsDatabaseEventTriggerListener {
                   recipientId: eventListener.createdById,
                   objectSingularName: payload.objectMetadata.nameSingular,
                   payload: eventPayload,
-                  action
+                  action,
                 },
                 { retryLimit: 3 },
               );
@@ -265,19 +259,13 @@ export class NotificationsDatabaseEventTriggerListener {
     if (action === DatabaseEventAction.UPDATED) {
       const settings = eventListener.settings;
 
-      return (
-        !settings ||
-        settings.length === 0
-      );
+      return !settings || settings.length === 0;
     }
 
     if (action === DatabaseEventAction.UPSERTED) {
       const settings = eventListener.settings;
 
-      return (
-        !settings ||
-        settings.length === 0
-      );
+      return !settings || settings.length === 0;
     }
 
     return true;
