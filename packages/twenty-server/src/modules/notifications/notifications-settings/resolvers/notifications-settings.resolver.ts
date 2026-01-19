@@ -18,6 +18,6 @@ export class NotificationsSettingsResolver {
   @Mutation(() => NotificationSettingsDto)
   async updateNotificationSettings() {}
 
-  @Mutation(() => Boolean)
+  @Mutation(() => NotificationSettingsDto)
   async deleteNotificationSettings() {}
 }

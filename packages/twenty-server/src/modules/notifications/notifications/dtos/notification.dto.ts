@@ -2,7 +2,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 
-@ObjectType('File')
+@ObjectType('Notification')
 export class NotificationDto {
   @Field(() => UUIDScalarType)
   id: string;

@@ -13,17 +13,74 @@ export class NotificationsSettingsService {
   async getNotificationSettings(
     workspaceId: string,
     workspaceMemberId: string,
-  ): Promise<void> {}
+  ) {
+    const authContext = buildSystemAuthContext(workspaceId);
+
+    return await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+      authContext,
+      async () => {
+        const notificationSettingsRepository =
+          await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
+            workspaceId,
+            'notificationSettings',
+          );
+
+        return notificationSettingsRepository.findOneBy({
+          createdById: workspaceMemberId,
+        });
+      },
+    );
+  }
 
   async deleteNotificationSettings(
     workspaceId: string,
     workspaceMemberId: string,
-  ): Promise<void> {}
+  ) {
+    const authContext = buildSystemAuthContext(workspaceId);
+
+    return await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+      authContext,
+      async () => {
+        const notificationSettingsRepository =
+          await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
+            workspaceId,
+            'notificationSettings',
+          );
+
+        return notificationSettingsRepository.delete({
+          createdById: workspaceMemberId,
+        });
+      },
+    );
+  }
 
   async updateNotificationSettings(
     workspaceId: string,
     workspaceMemberId: string,
-  ): Promise<void> {}
+    settings: string[],
+  ) {
+    const authContext = buildSystemAuthContext(workspaceId);
+
+    return await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
+      authContext,
+      async () => {
+        const notificationSettingsRepository =
+          await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
+            workspaceId,
+            'notificationSettings',
+          );
+
+        return notificationSettingsRepository.update(
+          {
+            createdById: workspaceMemberId,
+          },
+          {
+            settings: settings,
+          },
+        );
+      },
+    );
+  }
 
   async createNotificationSettings(
     workspaceId: string,
