@@ -22,15 +22,14 @@ export const fromRowLevelPermissionPredicateGroupEntityToFlatRowLevelPermissionP
       deletedAt:
         rowLevelPermissionPredicateGroupEntity.deletedAt?.toISOString() ?? null,
       universalIdentifier:
-        rowLevelPermissionPredicateGroupEntityWithoutRelations.universalIdentifier ??
-        rowLevelPermissionPredicateGroupEntityWithoutRelations.id,
-      childRowLevelPermissionPredicateGroupIds:
-        rowLevelPermissionPredicateGroupEntity.childRowLevelPermissionPredicateGroups.map(
-          ({ id }) => id,
-        ),
-      rowLevelPermissionPredicateIds:
-        rowLevelPermissionPredicateGroupEntity.rowLevelPermissionPredicates.map(
-          ({ id }) => id,
-        ),
+        rowLevelPermissionPredicateGroupEntityWithoutRelations.universalIdentifier,
+      childRowLevelPermissionPredicateGroupIds: (
+        rowLevelPermissionPredicateGroupEntity.childRowLevelPermissionPredicateGroups ??
+        []
+      ).map(({ id }) => id),
+      rowLevelPermissionPredicateIds: (
+        rowLevelPermissionPredicateGroupEntity.rowLevelPermissionPredicates ??
+        []
+      ).map(({ id }) => id),
     };
   };

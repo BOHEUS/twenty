@@ -13,9 +13,9 @@ import { type UseFindManyRecordsParams } from '@/object-record/hooks/useFetchMor
 import { useIncrementalFetchAndMutateRecords } from '@/object-record/hooks/useIncrementalFetchAndMutateRecords';
 import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
 import { useRefetchAggregateQueries } from '@/object-record/hooks/useRefetchAggregateQueries';
-import { useRegisterObjectOperation } from '@/object-record/hooks/useRegisterObjectOperation';
 import { useUpsertRecordsInStore } from '@/object-record/record-store/hooks/useUpsertRecordsInStore';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
+import { dispatchObjectRecordOperationBrowserEvent } from '@/object-record/utils/dispatchObjectRecordOperationBrowserEvent';
 import { useCallback } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 import { sleep } from '~/utils/sleep';
@@ -40,7 +40,6 @@ export const useIncrementalDeleteManyRecords = <T>({
   delayInMsBetweenMutations = DEFAULT_DELAY_BETWEEN_MUTATIONS_MS,
   skipOptimisticEffect = false,
 }: UseIncrementalDeleteManyRecordsParams<T>) => {
-  const { registerObjectOperation } = useRegisterObjectOperation();
   const { upsertRecordsInStore } = useUpsertRecordsInStore();
 
   const mutationPageSize = pageSize;
@@ -61,9 +60,7 @@ export const useIncrementalDeleteManyRecords = <T>({
 
   const { objectMetadataItems } = useObjectMetadataItems();
   const { objectPermissionsByObjectMetadataId } = useObjectPermissions();
-  const { refetchAggregateQueries } = useRefetchAggregateQueries({
-    objectMetadataNamePlural: objectMetadataItem.namePlural,
-  });
+  const { refetchAggregateQueries } = useRefetchAggregateQueries();
 
   const { incrementalFetchAndMutate, progress, isProcessing, updateProgress } =
     useIncrementalFetchAndMutateRecords<T>({
@@ -233,10 +230,15 @@ export const useIncrementalDeleteManyRecords = <T>({
       },
     );
 
-    await refetchAggregateQueries();
+    await refetchAggregateQueries({
+      objectMetadataNamePlural: objectMetadataItem.namePlural,
+    });
 
-    registerObjectOperation(objectMetadataItem, {
-      type: 'delete-many',
+    dispatchObjectRecordOperationBrowserEvent({
+      objectMetadataItem,
+      operation: {
+        type: 'delete-many',
+      },
     });
 
     return totalDeletedCount;

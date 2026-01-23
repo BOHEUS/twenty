@@ -18,6 +18,7 @@ export const fromFieldMetadataEntityToFlatFieldMetadata = <
 
   return {
     ...fieldMetadataWithoutRelations,
+    universalIdentifier: fieldMetadataWithoutRelations.universalIdentifier,
     createdAt: fieldMetadataWithoutRelations.createdAt.toISOString(),
     updatedAt: fieldMetadataWithoutRelations.updatedAt.toISOString(),
     kanbanAggregateOperationViewIds:
@@ -28,8 +29,5 @@ export const fromFieldMetadataEntityToFlatFieldMetadata = <
       [],
     viewFieldIds: fieldMetadataEntity.viewFields.map(({ id }) => id),
     viewFilterIds: fieldMetadataEntity.viewFilters.map(({ id }) => id),
-    universalIdentifier:
-      fieldMetadataWithoutRelations.standardId ??
-      fieldMetadataWithoutRelations.id,
   };
 };

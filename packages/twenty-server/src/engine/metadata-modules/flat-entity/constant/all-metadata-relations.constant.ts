@@ -11,7 +11,7 @@ import { type ExtractEntityOneToManyEntityRelationProperties } from 'src/engine/
 import { type FromMetadataEntityToMetadataName } from 'src/engine/metadata-modules/flat-entity/types/from-metadata-entity-to-metadata-name.type';
 import { type MetadataEntity } from 'src/engine/metadata-modules/flat-entity/types/metadata-entity.type';
 import { type MetadataFlatEntity } from 'src/engine/metadata-modules/flat-entity/types/metadata-flat-entity.type';
-import { type SyncableEntity } from 'src/engine/workspace-manager/workspace-sync/types/syncable-entity.interface';
+import { type SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
 
 type ManyToOneRelationValue<
   TSourceMetadataName extends AllMetadataName,
@@ -76,6 +76,36 @@ export const ALL_METADATA_RELATIONS = {
     manyToOne: {
       workspace: null,
       application: null,
+    },
+    oneToMany: {},
+  },
+  commandMenuItem: {
+    manyToOne: {
+      workspace: null,
+      application: null,
+      availabilityObjectMetadata: {
+        metadataName: 'objectMetadata',
+        flatEntityForeignKeyAggregator: null,
+        foreignKey: 'availabilityObjectMetadataId',
+      },
+    },
+    oneToMany: {},
+  },
+  navigationMenuItem: {
+    manyToOne: {
+      workspace: null,
+      userWorkspace: null,
+      application: null,
+      targetObjectMetadata: {
+        metadataName: 'objectMetadata',
+        flatEntityForeignKeyAggregator: null,
+        foreignKey: 'targetObjectMetadataId',
+      },
+      folder: {
+        metadataName: 'navigationMenuItem',
+        flatEntityForeignKeyAggregator: null,
+        foreignKey: 'folderId',
+      },
     },
     oneToMany: {},
   },
@@ -284,6 +314,12 @@ export const ALL_METADATA_RELATIONS = {
       objectPermissions: null,
       permissionFlags: null,
       fieldPermissions: null,
+      rowLevelPermissionPredicates: {
+        metadataName: 'rowLevelPermissionPredicate',
+      },
+      rowLevelPermissionPredicateGroups: {
+        metadataName: 'rowLevelPermissionPredicateGroup',
+      },
     },
   },
   roleTarget: {
@@ -378,7 +414,11 @@ export const ALL_METADATA_RELATIONS = {
   },
   rowLevelPermissionPredicateGroup: {
     manyToOne: {
-      workspace: null,
+      objectMetadata: {
+        metadataName: 'objectMetadata',
+        flatEntityForeignKeyAggregator: null,
+        foreignKey: 'objectMetadataId',
+      },
       role: {
         metadataName: 'role',
         foreignKey: 'roleId',
@@ -390,6 +430,7 @@ export const ALL_METADATA_RELATIONS = {
         flatEntityForeignKeyAggregator:
           'childRowLevelPermissionPredicateGroupIds',
       },
+      workspace: null,
       application: null,
     },
     oneToMany: {
@@ -424,6 +465,13 @@ export const ALL_METADATA_RELATIONS = {
         metadataName: 'viewFilter',
       },
     },
+  },
+  frontComponent: {
+    manyToOne: {
+      workspace: null,
+      application: null,
+    },
+    oneToMany: {},
   },
 } as const satisfies MetadataRelationsProperties;
 

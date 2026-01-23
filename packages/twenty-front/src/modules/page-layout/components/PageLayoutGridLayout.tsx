@@ -7,12 +7,12 @@ import {
   PAGE_LAYOUT_CONFIG,
   type PageLayoutBreakpoint,
 } from '@/page-layout/constants/PageLayoutBreakpoints';
+import { PAGE_LAYOUT_GRID_ITEM_DRAGGING_Z_INDEX } from '@/page-layout/constants/PageLayoutGridItemDraggingZIndex';
 import { PAGE_LAYOUT_GRID_ITEM_Z_INDEX } from '@/page-layout/constants/PageLayoutGridItemZIndex';
 import { PAGE_LAYOUT_GRID_MARGIN } from '@/page-layout/constants/PageLayoutGridMargin';
 import { PAGE_LAYOUT_GRID_ROW_HEIGHT } from '@/page-layout/constants/PageLayoutGridRowHeight';
 import { usePageLayoutHandleLayoutChange } from '@/page-layout/hooks/usePageLayoutHandleLayoutChange';
 import { usePageLayoutTabWithVisibleWidgetsOrThrow } from '@/page-layout/hooks/usePageLayoutTabWithVisibleWidgetsOrThrow';
-import { useShouldUseWhiteBackground } from '@/page-layout/hooks/useShouldUseWhiteBackground';
 import { isPageLayoutInEditModeComponentState } from '@/page-layout/states/isPageLayoutInEditModeComponentState';
 import { pageLayoutCurrentBreakpointComponentState } from '@/page-layout/states/pageLayoutCurrentBreakpointComponentState';
 import { pageLayoutCurrentLayoutsComponentState } from '@/page-layout/states/pageLayoutCurrentLayoutsComponentState';
@@ -26,6 +26,7 @@ import { WidgetPlaceholder } from '@/page-layout/widgets/components/WidgetPlaceh
 import { WidgetRenderer } from '@/page-layout/widgets/components/WidgetRenderer';
 import { useRecoilComponentValue } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValue';
 import { useSetRecoilComponentState } from '@/ui/utilities/state/component-state/hooks/useSetRecoilComponentState';
+import { css } from '@emotion/react';
 import styled from '@emotion/styled';
 import { useMemo, useRef } from 'react';
 import {
@@ -37,13 +38,7 @@ import {
 } from 'react-grid-layout';
 import { isDefined } from 'twenty-shared/utils';
 
-const StyledGridContainer = styled.div<{
-  shouldUseWhiteBackground: boolean;
-}>`
-  background: ${({ theme, shouldUseWhiteBackground }) =>
-    shouldUseWhiteBackground
-      ? theme.background.primary
-      : theme.background.secondary};
+const StyledGridContainer = styled.div<{ $disableTransitions: boolean }>`
   box-sizing: border-box;
   flex: 1;
   min-height: 100%;
@@ -66,9 +61,29 @@ const StyledGridContainer = styled.div<{
     z-index: ${PAGE_LAYOUT_GRID_ITEM_Z_INDEX};
   }
 
+  .react-grid-item.react-draggable-dragging {
+    z-index: ${PAGE_LAYOUT_GRID_ITEM_DRAGGING_Z_INDEX};
+  }
+
   .react-grid-item:hover .widget-card-resize-handle {
     display: block !important;
   }
+
+  ${({ $disableTransitions }) =>
+    $disableTransitions &&
+    css`
+      .react-grid-layout {
+        transition: none !important;
+      }
+
+      .react-grid-item {
+        transition: none !important;
+      }
+
+      .react-grid-item.cssTransforms {
+        transition-property: none !important;
+      }
+    `}
 `;
 
 type ExtendedResponsiveProps = ResponsiveProps & {
@@ -111,8 +126,6 @@ export const PageLayoutGridLayout = ({ tabId }: PageLayoutGridLayoutProps) => {
 
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
-  const { shouldUseWhiteBackground } = useShouldUseWhiteBackground();
-
   const isPageLayoutInEditMode = useRecoilComponentValue(
     isPageLayoutInEditModeComponentState,
   );
@@ -123,6 +136,9 @@ export const PageLayoutGridLayout = ({ tabId }: PageLayoutGridLayoutProps) => {
 
   const pageLayoutDraggedArea = useRecoilComponentValue(
     pageLayoutDraggedAreaComponentState,
+  );
+  const draggingWidgetId = useRecoilComponentValue(
+    pageLayoutDraggingWidgetIdComponentState,
   );
 
   const activeTab = usePageLayoutTabWithVisibleWidgetsOrThrow(tabId);
@@ -151,10 +167,12 @@ export const PageLayoutGridLayout = ({ tabId }: PageLayoutGridLayoutProps) => {
     [activeTabWidgets, hasPendingPlaceholder],
   );
 
+  const shouldDisableTransitions = !isDefined(draggingWidgetId);
+
   return (
     <StyledGridContainer
       ref={gridContainerRef}
-      shouldUseWhiteBackground={shouldUseWhiteBackground}
+      $disableTransitions={shouldDisableTransitions}
     >
       {isPageLayoutInEditMode && (
         <>

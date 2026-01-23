@@ -37,7 +37,7 @@ export const SettingsServerlessFunctionDetail = () => {
   const navigate = useNavigate();
   const currentWorkspace = useRecoilValue(currentWorkspaceState);
 
-  const { data } = useFindOneApplicationQuery({
+  const { data, loading: applicationLoading } = useFindOneApplicationQuery({
     variables: { id: applicationId },
     skip: !applicationId,
   });
@@ -110,7 +110,7 @@ export const SettingsServerlessFunctionDetail = () => {
     // Parse and save schema if editing the handler file
     let toolInputSchema: object | null | undefined;
 
-    if (filePath === serverlessFunction?.handlerPath) {
+    if (filePath === serverlessFunction?.sourceHandlerPath) {
       toolInputSchema = await getToolInputSchemaFromSourceCode(value);
     }
 
@@ -138,9 +138,9 @@ export const SettingsServerlessFunctionDetail = () => {
       content: file.content,
     }))
     .sort((a, b) =>
-      a.path === serverlessFunction?.handlerPath
+      a.path === serverlessFunction?.sourceHandlerPath
         ? -1
-        : b.path === serverlessFunction?.handlerPath
+        : b.path === serverlessFunction?.sourceHandlerPath
           ? 1
           : 0,
     );
@@ -187,7 +187,8 @@ export const SettingsServerlessFunctionDetail = () => {
         ];
 
   return (
-    !loading && (
+    !loading &&
+    !applicationLoading && (
       <SubMenuTopBarContainer
         title={
           <SettingsServerlessFunctionLabelContainer
