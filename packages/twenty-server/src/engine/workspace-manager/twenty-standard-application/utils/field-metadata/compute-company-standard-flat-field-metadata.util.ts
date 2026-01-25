@@ -331,6 +331,26 @@ export const buildCompanyStandardFlatFieldMetadatas = ({
     twentyStandardApplicationId,
     now,
   }),
+  lastInteraction: createStandardFieldFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      fieldName: 'lastInteraction',
+      type: FieldMetadataType.DATE_TIME,
+      label: 'Last interaction',
+      description: 'Shows when was last interaction with customer',
+      icon: 'IconCalendar',
+      isNullable: true,
+      isUIReadOnly: true,
+      settings: {
+        displayFormat: DateDisplayFormat.USER_SETTINGS,
+      },
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
 
   // Relation fields
   people: createStandardRelationFieldFlatMetadata({

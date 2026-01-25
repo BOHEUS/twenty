@@ -47,6 +47,7 @@ export class CompanyWorkspaceEntity {
   /** @deprecated Use `address` field instead */
   addressOld: string | null;
   searchVector: string;
+  lastInteraction: string | null;
 
   // Relations
   people: EntityRelation<PersonWorkspaceEntity[]>;

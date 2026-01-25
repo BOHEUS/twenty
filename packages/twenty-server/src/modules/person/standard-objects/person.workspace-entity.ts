@@ -59,4 +59,5 @@ export class PersonWorkspaceEntity extends BaseWorkspaceEntity {
   >;
   timelineActivities: EntityRelation<TimelineActivityWorkspaceEntity[]>;
   searchVector: string;
+  lastInteraction: string | null;
 }

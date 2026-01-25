@@ -141,6 +141,7 @@ export const COMPANY_STANDARD_FIELD_IDS = {
   attachments: '20202020-c1b5-4120-b0f0-987ca401ed53',
   timelineActivities: '20202020-0414-4daf-9c0d-64fe7b27f89f',
   searchVector: '85c71601-72f9-4b7b-b343-d46100b2c74d',
+  lastInteraction: '20202020-9574-4e53-abce-499dc31fd74d',
 } as const;
 
 export const CONNECTED_ACCOUNT_STANDARD_FIELD_IDS = {
@@ -345,6 +346,7 @@ export const PERSON_STANDARD_FIELD_IDS = {
   calendarEventParticipants: '20202020-52ee-45e9-a702-b64b3753e3a9',
   timelineActivities: '20202020-a43e-4873-9c23-e522de906ce5',
   searchVector: '57d1d7ad-fa10-44fc-82f3-ad0959ec2534',
+  lastInteraction: '20202020-9889-4c6d-a027-d5c7a44558a2',
 } as const;
 
 export const TASK_STANDARD_FIELD_IDS = {

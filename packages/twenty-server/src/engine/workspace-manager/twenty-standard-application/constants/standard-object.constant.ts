@@ -424,6 +424,9 @@ export const STANDARD_OBJECTS = {
       searchVector: {
         universalIdentifier: COMPANY_STANDARD_FIELD_IDS.searchVector,
       },
+      lastInteraction: {
+        universalIdentifier: COMPANY_STANDARD_FIELD_IDS.lastInteraction,
+      },
     },
     indexes: {
       accountOwnerIdIndex: {
@@ -1295,6 +1298,9 @@ export const STANDARD_OBJECTS = {
       },
       searchVector: {
         universalIdentifier: PERSON_STANDARD_FIELD_IDS.searchVector,
+      },
+      lastInteraction: {
+        universalIdentifier: PERSON_STANDARD_FIELD_IDS.lastInteraction,
       },
     },
     indexes: {
