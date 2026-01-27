@@ -236,6 +236,7 @@ export class CalendarSaveEventsService {
                       (participant) => ({
                         ...participant,
                         calendarEventId: newlyCreatedCalendarEvent.id,
+                        timestamp: newlyCreatedCalendarEvent.startsAt,
                       }),
                     );
                   },
@@ -259,6 +260,7 @@ export class CalendarSaveEventsService {
                     (participant) => ({
                       ...participant,
                       calendarEventId: existingCalendarEvent.id,
+                      timestamp: existingCalendarEvent.startsAt,
                     }),
                   );
                 });

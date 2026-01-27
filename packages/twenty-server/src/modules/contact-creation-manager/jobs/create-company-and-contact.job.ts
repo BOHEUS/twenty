@@ -12,6 +12,7 @@ export type CreateCompanyAndContactJobData = {
   contactsToCreate: {
     displayName: string;
     handle: string;
+    timestamp: string | null;
   }[];
   source: FieldActorSource;
 };
@@ -31,6 +32,7 @@ export class CreateCompanyAndContactJob {
       contactsToCreate.map((contact) => ({
         handle: contact.handle,
         displayName: contact.displayName,
+        timestamp: contact.timestamp,
       })),
       workspaceId,
       source,

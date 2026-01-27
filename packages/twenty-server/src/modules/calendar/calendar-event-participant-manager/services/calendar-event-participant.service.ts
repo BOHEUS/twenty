@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
-import { isDefined } from 'class-validator';
+import { isDefined } from 'twenty-shared/utils';
 import chunk from 'lodash.chunk';
 import differenceWith from 'lodash.differencewith';
 import { FieldActorSource } from 'twenty-shared/types';
-import { Any } from 'typeorm';
+import { Any, In } from 'typeorm';
 
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
@@ -21,10 +21,12 @@ import {
   type CreateCompanyAndContactJobData,
 } from 'src/modules/contact-creation-manager/jobs/create-company-and-contact.job';
 import { MatchParticipantService } from 'src/modules/match-participant/match-participant.service';
+import { PersonWorkspaceEntity } from 'src/modules/person/standard-objects/person.workspace-entity';
 
 type FetchedCalendarEventParticipantWithCalendarEventId =
   FetchedCalendarEventParticipant & {
     calendarEventId: string;
+    timestamp: string;
   };
 
 type FetchedCalendarEventParticipantWithCalendarEventIdAndExistingId =
@@ -62,6 +64,12 @@ export class CalendarEventParticipantService {
       authContext,
       async () => {
         const chunkedParticipantsToUpdate = chunk(participantsToUpdate, 200);
+
+        const personRepository =
+          await this.globalWorkspaceOrmManager.getRepository<PersonWorkspaceEntity>(
+            workspaceId,
+            'person',
+          );
 
         const calendarEventParticipantRepository =
           await this.globalWorkspaceOrmManager.getRepository<CalendarEventParticipantWorkspaceEntity>(
@@ -143,6 +151,68 @@ export class CalendarEventParticipantService {
             })),
             transactionManager,
           );
+
+          const relatedCalendarParticipantsPeople =
+            await calendarEventParticipantRepository.findBy({
+              id: In(
+                calendarEventParticipantsToUpdate.map(
+                  (participant) => participant.id,
+                ),
+              ),
+            });
+
+          const peopleToUpdate = calendarEventParticipantsToUpdate
+            .map((participant) => {
+              const existingParticipant =
+                relatedCalendarParticipantsPeople.find(
+                  (t) => t.id === participant.id,
+                );
+
+              if (
+                isDefined(existingParticipant) &&
+                isDefined(existingParticipant?.personId)
+              ) {
+                return {
+                  id: existingParticipant.personId,
+                  timestamp: participant.timestamp,
+                };
+              }
+            })
+            .filter((participant) => participant !== undefined);
+
+          const fetchedPeople = await personRepository.findBy({
+            id: In(peopleToUpdate.map((person) => person.id)),
+          });
+
+          for (const person of fetchedPeople) {
+            const timestamp = peopleToUpdate.filter(
+              (personToCheck) => personToCheck.id === person.id,
+            )[0];
+
+            if (
+              person.lastInteraction === null ||
+              person.lastInteraction < timestamp.timestamp
+            ) {
+              await personRepository.update(
+                {
+                  id: timestamp.id,
+                },
+                {
+                  lastInteraction: timestamp.timestamp,
+                },
+              );
+            }
+          }
+
+          await personRepository.updateMany(
+            peopleToUpdate.map((participant) => ({
+              criteria: participant.id,
+              partialEntity: {
+                lastInteraction: participant.timestamp,
+              },
+            })),
+          );
+
           participantsToCreate.push(...newCalendarEventParticipants);
         }
 
@@ -169,6 +239,7 @@ export class CalendarEventParticipantService {
                 handle: participant.handle ?? '',
                 displayName:
                   participant.displayName ?? participant.handle ?? '',
+                timestamp: null, // TODO: fix
               })),
               source: FieldActorSource.CALENDAR,
             },
