@@ -36,6 +36,7 @@ import { settingsDataModelFieldOnClickActionSchema } from '@/settings/data-model
 import { useFormContext } from 'react-hook-form';
 import { FieldMetadataType } from '~/generated-metadata/graphql';
 import { type SettingsDataModelFieldEditFormValues } from '~/pages/settings/data-model/SettingsObjectFieldEdit';
+import { SettingsDataModelFieldLinksSettingsFormCard } from '@/settings/data-model/fields/forms/links/components/SettingsDataModelFieldLinksSettingsFormCard';
 
 const isUniqueFieldFormSchema = z.object({
   isUnique: z.boolean().nullable().default(false),
@@ -320,6 +321,16 @@ export const SettingsDataModelFieldSettingsFormCard = ({
     );
   }
 
+  if (fieldType === FieldMetadataType.LINKS) {
+    return (
+      <SettingsDataModelFieldLinksSettingsFormCard
+        objectNameSingular={objectNameSingular}
+        existingFieldMetadataId={existingFieldMetadataId}
+        disabled={disabled}
+      />
+    );
+  }
+
   return (
     <SettingsDataModelPreviewFormCard
       preview={
@@ -338,7 +349,6 @@ export const SettingsDataModelFieldSettingsFormCard = ({
         <>
           {[
             FieldMetadataType.EMAILS,
-            FieldMetadataType.LINKS,
             FieldMetadataType.ARRAY,
             FieldMetadataType.FILES,
           ].includes(fieldType) && (
@@ -351,17 +361,11 @@ export const SettingsDataModelFieldSettingsFormCard = ({
               <Separator />
             </>
           )}
-          {[FieldMetadataType.EMAILS, FieldMetadataType.LINKS].includes(
-            fieldType,
-          ) && (
+          {[FieldMetadataType.EMAILS].includes(fieldType) && (
             <>
               <SettingsDataModelFieldOnClickActionForm
                 existingFieldMetadataId={existingFieldMetadataId}
-                fieldType={
-                  fieldType as
-                    | FieldMetadataType.EMAILS
-                    | FieldMetadataType.LINKS
-                }
+                fieldType={fieldType as FieldMetadataType.EMAILS}
                 disabled={disabled}
               />
               <Separator />
