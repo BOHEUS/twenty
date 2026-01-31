@@ -10,7 +10,7 @@ export type SettingsDataModelFieldLinksFormValues = {
   onlyDomainNameAllowed: boolean;
 };
 
-type SettingsDataModelFieldIsUniqueFormProps = {
+type SettingsDataModelFieldLinksFormProps = {
   existingFieldMetadataId: string;
   disabled?: boolean;
 };
@@ -18,7 +18,7 @@ type SettingsDataModelFieldIsUniqueFormProps = {
 export const SettingsDataModelFieldLinksForm = ({
   existingFieldMetadataId,
   disabled,
-}: SettingsDataModelFieldIsUniqueFormProps) => {
+}: SettingsDataModelFieldLinksFormProps) => {
   const { control } = useFormContext<SettingsDataModelFieldLinksFormValues>();
 
   const { fieldMetadataItem } = useFieldMetadataItemById(
