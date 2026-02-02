@@ -17,7 +17,6 @@ export class NotificationsSettingsService {
     const authContext = buildSystemAuthContext(workspaceId);
 
     return await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
       async () => {
         const notificationSettingsRepository =
           await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
@@ -29,6 +28,7 @@ export class NotificationsSettingsService {
           createdById: workspaceMemberId,
         });
       },
+      authContext,
     );
   }
 
@@ -39,7 +39,6 @@ export class NotificationsSettingsService {
     const authContext = buildSystemAuthContext(workspaceId);
 
     return await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
       async () => {
         const notificationSettingsRepository =
           await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
@@ -51,6 +50,7 @@ export class NotificationsSettingsService {
           createdById: workspaceMemberId,
         });
       },
+      authContext,
     );
   }
 
@@ -62,7 +62,6 @@ export class NotificationsSettingsService {
     const authContext = buildSystemAuthContext(workspaceId);
 
     return await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
       async () => {
         const notificationSettingsRepository =
           await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
@@ -79,6 +78,7 @@ export class NotificationsSettingsService {
           },
         );
       },
+      authContext,
     );
   }
 
@@ -90,7 +90,6 @@ export class NotificationsSettingsService {
     const authContext = buildSystemAuthContext(workspaceId);
 
     return await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
       async () => {
         const notificationSettingsRepository =
           await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
@@ -103,6 +102,7 @@ export class NotificationsSettingsService {
           settings,
         });
       },
+      authContext,
     );
   }
 }

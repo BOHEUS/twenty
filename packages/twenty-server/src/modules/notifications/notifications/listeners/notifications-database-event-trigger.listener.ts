@@ -203,50 +203,47 @@ export class NotificationsDatabaseEventTriggerListener {
 
     const authContext = buildSystemAuthContext(workspaceId);
 
-    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
-      async () => {
-        const notificationsSettingsRepository =
-          await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
-            workspaceId,
-            notificationSettingsTableName,
-            { shouldBypassPermissionChecks: true },
-          );
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
+      const notificationsSettingsRepository =
+        await this.globalWorkspaceOrmManager.getRepository<NotificationsSettingsWorkspaceEntity>(
+          workspaceId,
+          notificationSettingsTableName,
+          { shouldBypassPermissionChecks: true },
+        );
 
-        const eventListeners = await notificationsSettingsRepository.find({
-          where: {
-            settings: Raw(
-              () =>
-                `"${notificationSettingsTableName}"."settings"->>'eventName' = :eventName`,
-              { eventName: databaseEventName },
-            ),
-          },
-        });
+      const eventListeners = await notificationsSettingsRepository.find({
+        where: {
+          settings: Raw(
+            () =>
+              `"${notificationSettingsTableName}"."settings"->>'eventName' = :eventName`,
+            { eventName: databaseEventName },
+          ),
+        },
+      });
 
-        for (const eventListener of eventListeners) {
-          for (const eventPayload of payload.events) {
-            const shouldTriggerJob = this.shouldTriggerJob({
-              eventListener,
-              action,
-            });
+      for (const eventListener of eventListeners) {
+        for (const eventPayload of payload.events) {
+          const shouldTriggerJob = this.shouldTriggerJob({
+            eventListener,
+            action,
+          });
 
-            if (shouldTriggerJob) {
-              await this.messageQueueService.add<NotificationTriggerJobData>(
-                NotificationTriggerJob.name,
-                {
-                  workspaceId,
-                  recipientId: eventListener.createdById,
-                  objectSingularName: payload.objectMetadata.nameSingular,
-                  payload: eventPayload,
-                  action,
-                },
-                { retryLimit: 3 },
-              );
-            }
+          if (shouldTriggerJob) {
+            await this.messageQueueService.add<NotificationTriggerJobData>(
+              NotificationTriggerJob.name,
+              {
+                workspaceId,
+                recipientId: eventListener.createdById,
+                objectSingularName: payload.objectMetadata.nameSingular,
+                payload: eventPayload,
+                action,
+              },
+              { retryLimit: 3 },
+            );
           }
         }
-      },
-    );
+      }
+    }, authContext);
   }
 
   private shouldTriggerJob({

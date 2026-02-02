@@ -4,7 +4,7 @@ import {
   ObjectRecordCreateEvent,
   ObjectRecordDeleteEvent,
   ObjectRecordDestroyEvent,
-  ObjectRecordNonDestructiveEvent,
+  ObjectRecordEvent,
   ObjectRecordRestoreEvent,
   ObjectRecordUpdateEvent,
   ObjectRecordUpsertEvent,
@@ -20,12 +20,13 @@ import {
   NotificationType,
 } from 'src/modules/notifications/notifications/standard-objects/notifications.workspace-entity';
 import { DatabaseEventAction } from 'src/engine/api/graphql/graphql-query-runner/enums/database-event-action';
+import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 
 export type NotificationTriggerJobData = {
   workspaceId: string;
   recipientId: string;
   objectSingularName: string;
-  payload: ObjectRecordNonDestructiveEvent | ObjectRecordDestroyEvent;
+  payload: ObjectRecordEvent;
   action: DatabaseEventAction;
 };
 
@@ -39,31 +40,36 @@ export class NotificationTriggerJob {
   async handle(data: NotificationTriggerJobData): Promise<void> {
     const authContext = buildSystemAuthContext(data.workspaceId);
 
-    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
-      async () => {
-        const notificationRepository =
-          await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
-            data.workspaceId,
-            'workflow',
-            { shouldBypassPermissionChecks: true },
-          );
-      },
-    );
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
+      const notificationRepository =
+        await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
+          data.workspaceId,
+          'workflow',
+          { shouldBypassPermissionChecks: true },
+        );
+      const notification = this.getData(
+        data.recipientId,
+        data.action,
+        data.payload,
+        data.objectSingularName,
+      );
+
+      await notificationRepository.insert(notification);
+    }, authContext);
   }
 
   private getData(
     recipientId: string,
     action: DatabaseEventAction,
-    payload: ObjectRecordNonDestructiveEvent | ObjectRecordDestroyEvent,
+    payload: ObjectRecordEvent,
     objectSingularName: string,
   ) {
     let body = '';
 
     switch (action) {
       case DatabaseEventAction.CREATED: {
-        payload = payload as ObjectRecordCreateEvent;
-        const creator = payload.properties.after;
+        payload = payload as ObjectRecordCreateEvent<BaseWorkspaceEntity>;
+        const creator = 'CREATED';
 
         body = `${creator} created new ${objectSingularName}`;
 
@@ -71,30 +77,42 @@ export class NotificationTriggerJob {
       }
       case DatabaseEventAction.DELETED: {
         payload = payload as ObjectRecordDeleteEvent;
-        const creator = payload.properties.before;
+        const creator = 'DELETED';
 
-        body = `${creator} deleted ${objectSingularName} ${recordName}`;
+        body = `${creator} deleted ${objectSingularName}`;
 
         break;
       }
       case DatabaseEventAction.DESTROYED: {
         payload = payload as ObjectRecordDestroyEvent;
-        const creator = payload.properties.before;
+        const creator = 'DESTROYED';
 
-        body = `${creator} deleted ${objectSingularName} ${recordName}`;
+        body = `${creator} deleted ${objectSingularName}`;
 
         break;
       }
       case DatabaseEventAction.RESTORED: {
         payload = payload as ObjectRecordRestoreEvent;
+        const creator = 'RESTORED';
+
+        body = `${creator} restored ${objectSingularName}`;
+
         break;
       }
       case DatabaseEventAction.UPDATED: {
         payload = payload as ObjectRecordUpdateEvent;
+        const creator = 'UPDATED';
+
+        body = `${creator} updated ${objectSingularName}`;
+
         break;
       }
       case DatabaseEventAction.UPSERTED: {
         payload = payload as ObjectRecordUpsertEvent;
+        const creator = 'UPSERTED';
+
+        body = `${creator} upserted ${objectSingularName}`;
+
         break;
       }
     }
@@ -106,8 +124,9 @@ export class NotificationTriggerJob {
     // destroy: "<creator> destroyed <objectSingularName> <recordName>"
     // restore: "<creator> restored <objectSingularName> <recordName>"
     // upsert: ???
-    const data = {
-      body: '',
+
+    return {
+      body,
       status: NotificationType.UNREAD,
       recipientId: recipientId,
     };

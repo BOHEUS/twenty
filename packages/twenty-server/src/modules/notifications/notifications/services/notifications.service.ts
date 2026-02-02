@@ -16,20 +16,17 @@ export class NotificationsService {
   async getNotifications(workspaceId: string, workspaceMemberId: string) {
     const authContext = buildSystemAuthContext(workspaceId);
 
-    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
-      async () => {
-        const notificationsRepository =
-          await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
-            workspaceId,
-            'notifications',
-          );
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
+      const notificationsRepository =
+        await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
+          workspaceId,
+          'notifications',
+        );
 
-        return notificationsRepository.findBy({
-          recipientId: workspaceMemberId,
-        });
-      },
-    );
+      return notificationsRepository.findBy({
+        recipientId: workspaceMemberId,
+      });
+    }, authContext);
   }
 
   async updateSingleNotification(
@@ -39,24 +36,21 @@ export class NotificationsService {
   ) {
     const authContext = buildSystemAuthContext(workspaceId);
 
-    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
-      async () => {
-        const notificationsRepository =
-          await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
-            workspaceId,
-            'notifications',
-          );
-
-        const updatedStatus =
-          status === 'READ' ? NotificationType.UNREAD : NotificationType.READ;
-
-        await notificationsRepository.update(
-          { id: notificationId },
-          { status: updatedStatus },
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
+      const notificationsRepository =
+        await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
+          workspaceId,
+          'notifications',
         );
-      },
-    );
+
+      const updatedStatus =
+        status === 'READ' ? NotificationType.UNREAD : NotificationType.READ;
+
+      await notificationsRepository.update(
+        { id: notificationId },
+        { status: updatedStatus },
+      );
+    }, authContext);
   }
 
   async updateNotifications(
@@ -66,44 +60,35 @@ export class NotificationsService {
   ) {
     const authContext = buildSystemAuthContext(workspaceId);
 
-    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
-      async () => {
-        const notificationsRepository =
-          await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
-            workspaceId,
-            'notifications',
-          );
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
+      const notificationsRepository =
+        await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
+          workspaceId,
+          'notifications',
+        );
 
-        const updatedStatus =
-          status === 'UNREAD' ? NotificationType.UNREAD : NotificationType.READ;
+      const updatedStatus =
+        status === 'UNREAD' ? NotificationType.UNREAD : NotificationType.READ;
 
-        for (const id of notificationIds) {
-          await notificationsRepository.update(
-            { id },
-            { status: updatedStatus },
-          );
-        }
-      },
-    );
+      for (const id of notificationIds) {
+        await notificationsRepository.update({ id }, { status: updatedStatus });
+      }
+    }, authContext);
   }
 
   async removeNotifications(workspaceId: string, workspaceMemberId: string) {
     const authContext = buildSystemAuthContext(workspaceId);
 
-    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(
-      authContext,
-      async () => {
-        const notificationsRepository =
-          await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
-            workspaceId,
-            'notifications',
-          );
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
+      const notificationsRepository =
+        await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
+          workspaceId,
+          'notifications',
+        );
 
-        await notificationsRepository.delete({
-          recipientId: workspaceMemberId,
-        });
-      },
-    );
+      await notificationsRepository.delete({
+        recipientId: workspaceMemberId,
+      });
+    }, authContext);
   }
 }
