@@ -77,9 +77,9 @@ export const fromDeleteFieldInputToFlatFieldMetadatasToDelete = ({
   ];
 
   const flatIndexMap = new Map<string, FlatIndexMetadata>();
-  const allFlatIndexes = Object.values(existingFlatIndexMaps.byId).filter(
-    isDefined,
-  );
+  const allFlatIndexes = Object.values(
+    existingFlatIndexMaps.byUniversalIdentifier,
+  ).filter(isDefined);
 
   for (const flatFieldMetadata of flatFieldMetadatasToDelete) {
     allFlatIndexes.forEach((flatIndex) => {
@@ -143,7 +143,7 @@ export const fromDeleteFieldInputToFlatFieldMetadatasToDelete = ({
       const objectFlatFieldMetadatas =
         findManyFlatEntityByIdInFlatEntityMapsOrThrow({
           flatEntityMaps: existingFlatFieldMetadataMaps,
-          flatEntityIds: flatObjectMetadata.fieldMetadataIds,
+          flatEntityIds: flatObjectMetadata.fieldIds,
         });
 
       const newIndex = generateFlatIndexMetadataWithNameOrThrow({

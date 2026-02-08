@@ -195,10 +195,14 @@ export class ClientConfigService {
       isImapSmtpCaldavEnabled: this.twentyConfigService.get(
         'IS_IMAP_SMTP_CALDAV_ENABLED',
       ),
+      allowRequestsToTwentyIcons: this.twentyConfigService.get(
+        'ALLOW_REQUESTS_TO_TWENTY_ICONS',
+      ),
       calendarBookingPageId: isNonEmptyString(calendarBookingPageId)
         ? calendarBookingPageId
         : undefined,
       isCloudflareIntegrationEnabled: this.isCloudflareIntegrationEnabled(),
+      isClickHouseConfigured: !!this.twentyConfigService.get('CLICKHOUSE_URL'),
     };
 
     return clientConfig;

@@ -23,6 +23,7 @@ import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadat
 import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { RowLevelPermissionPredicateGroupEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate-group.entity';
 import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
+import { JsonbProperty } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/jsonb-property.type';
 
 @Entity({ name: 'rowLevelPermissionPredicate', schema: 'core' })
 @Index('IDX_RLPP_WORKSPACE_ID_ROLE_ID_OBJECT_METADATA_ID', [
@@ -71,7 +72,7 @@ export class RowLevelPermissionPredicateEntity
   operand: RowLevelPermissionPredicateOperand;
 
   @Column({ nullable: true, type: 'jsonb' })
-  value: RowLevelPermissionPredicateValue | null;
+  value: JsonbProperty<RowLevelPermissionPredicateValue> | null;
 
   @Column({ nullable: true, type: 'text', default: null })
   subFieldName: string | null;
@@ -86,7 +87,7 @@ export class RowLevelPermissionPredicateEntity
     onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'workspaceMemberFieldMetadataId' })
-  workspaceMemberFieldMetadata: Relation<FieldMetadataEntity>;
+  workspaceMemberFieldMetadata: Relation<FieldMetadataEntity> | null;
 
   @Column({ nullable: true, type: 'uuid' })
   rowLevelPermissionPredicateGroupId: string | null;
@@ -119,5 +120,5 @@ export class RowLevelPermissionPredicateEntity
     },
   )
   @JoinColumn({ name: 'rowLevelPermissionPredicateGroupId' })
-  rowLevelPermissionPredicateGroup: Relation<RowLevelPermissionPredicateGroupEntity>;
+  rowLevelPermissionPredicateGroup: Relation<RowLevelPermissionPredicateGroupEntity> | null;
 }

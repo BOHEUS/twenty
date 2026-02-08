@@ -7,20 +7,25 @@ import {
   FlatEntityMapsExceptionCode,
 } from 'src/engine/metadata-modules/flat-entity/exceptions/flat-entity-maps.exception';
 import { type AllFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/all-flat-entity-maps.type';
+import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { type FlatViewGroup } from 'src/engine/metadata-modules/flat-view-group/types/flat-view-group.type';
 
 type ComputeFlatViewGroupsOnViewCreateArgs = {
   flatViewToCreateId: string;
+  flatViewToCreateUniversalIdentifier: string;
   mainGroupByFieldMetadataId: string;
 } & Pick<AllFlatEntityMaps, 'flatFieldMetadataMaps'>;
 
 export const computeFlatViewGroupsOnViewCreate = ({
   flatViewToCreateId,
+  flatViewToCreateUniversalIdentifier,
   mainGroupByFieldMetadataId,
   flatFieldMetadataMaps,
 }: ComputeFlatViewGroupsOnViewCreateArgs): FlatViewGroup[] => {
-  const mainGroupByFieldMetadata =
-    flatFieldMetadataMaps.byId[mainGroupByFieldMetadataId];
+  const mainGroupByFieldMetadata = findFlatEntityByIdInFlatEntityMaps({
+    flatEntityId: mainGroupByFieldMetadataId,
+    flatEntityMaps: flatFieldMetadataMaps,
+  });
 
   if (!isDefined(mainGroupByFieldMetadata)) {
     throw new FlatEntityMapsException(
@@ -40,6 +45,7 @@ export const computeFlatViewGroupsOnViewCreate = ({
       id: viewGroupId,
       fieldMetadataId: mainGroupByFieldMetadata.id,
       viewId: flatViewToCreateId,
+      viewUniversalIdentifier: flatViewToCreateUniversalIdentifier,
       workspaceId: mainGroupByFieldMetadata.workspaceId,
       createdAt,
       updatedAt: createdAt,
@@ -49,6 +55,8 @@ export const computeFlatViewGroupsOnViewCreate = ({
       fieldValue: option.value,
       position: index,
       applicationId: mainGroupByFieldMetadata.applicationId,
+      applicationUniversalIdentifier:
+        mainGroupByFieldMetadata.applicationUniversalIdentifier,
     };
   });
 
@@ -61,6 +69,7 @@ export const computeFlatViewGroupsOnViewCreate = ({
     flatViewGroups.push({
       id: emptyGroupId,
       viewId: flatViewToCreateId,
+      viewUniversalIdentifier: flatViewToCreateUniversalIdentifier,
       workspaceId: mainGroupByFieldMetadata.workspaceId,
       createdAt,
       updatedAt: createdAt,
@@ -70,6 +79,8 @@ export const computeFlatViewGroupsOnViewCreate = ({
       fieldValue: '',
       position: emptyGroupPosition,
       applicationId: mainGroupByFieldMetadata.applicationId,
+      applicationUniversalIdentifier:
+        mainGroupByFieldMetadata.applicationUniversalIdentifier,
     });
   }
 

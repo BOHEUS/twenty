@@ -6,6 +6,7 @@ import {
 } from 'twenty-shared/metadata';
 import { isDefined } from 'twenty-shared/utils';
 
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { ALL_METADATA_REQUIRED_METADATA_FOR_VALIDATION } from 'src/engine/metadata-modules/flat-entity/constant/all-metadata-required-metadata-for-validation.constant';
 import { createEmptyFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-flat-entity-maps.constant';
 import { AllFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/all-flat-entity-maps.type';
@@ -31,6 +32,9 @@ type ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs = {
     [P in AllMetadataName]?: FlatEntityToCreateDeleteUpdate<P>;
   };
   isSystemBuild?: boolean;
+  // TODO remove once application synchronization do not consume services atomically anymore
+  // Should always be the universal workspace custom app id
+  applicationUniversalIdentifier: string;
 };
 
 @Injectable()
@@ -38,12 +42,18 @@ export class WorkspaceMigrationValidateBuildAndRunService {
   private readonly logger = new Logger(
     WorkspaceMigrationValidateBuildAndRunService.name,
   );
+  private readonly isDebugEnabled: boolean;
 
   constructor(
     private readonly workspaceMigrationRunnerService: WorkspaceMigrationRunnerService,
     private readonly workspaceMigrationBuildOrchestratorService: WorkspaceMigrationBuildOrchestratorService,
     private readonly workspaceCacheService: WorkspaceCacheService,
-  ) {}
+    twentyConfigService: TwentyConfigService,
+  ) {
+    const logLevels = twentyConfigService.get('LOG_LEVELS');
+
+    this.isDebugEnabled = logLevels.includes('debug');
+  }
 
   private async computeAllRelatedFlatEntityMaps({
     allFlatEntityOperationByMetadataName,
@@ -116,6 +126,7 @@ export class WorkspaceMigrationValidateBuildAndRunService {
   private async computeFromToAllFlatEntityMapsAndBuildOptions({
     allFlatEntityOperationByMetadataName,
     workspaceId,
+    applicationUniversalIdentifier,
   }: ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs): Promise<{
     fromToAllFlatEntityMaps: FromToAllFlatEntityMaps;
     inferDeletionFromMissingEntities: InferDeletionFromMissingEntities;
@@ -129,6 +140,7 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     } = await this.computeAllRelatedFlatEntityMaps({
       allFlatEntityOperationByMetadataName,
       workspaceId,
+      applicationUniversalIdentifier,
     });
 
     const fromToAllFlatEntityMaps: FromToAllFlatEntityMaps = {};
@@ -186,6 +198,10 @@ export class WorkspaceMigrationValidateBuildAndRunService {
         });
 
     if (validateAndBuildResult.status === 'fail') {
+      if (this.isDebugEnabled) {
+        this.logger.debug(JSON.stringify(validateAndBuildResult, null, 2));
+      }
+
       return validateAndBuildResult;
     }
 
@@ -205,6 +221,7 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     allFlatEntityOperationByMetadataName: allFlatEntities,
     workspaceId,
     isSystemBuild = false,
+    applicationUniversalIdentifier,
   }: ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs): Promise<
     WorkspaceMigrationOrchestratorFailedResult | undefined
   > {
@@ -216,9 +233,11 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     } = await this.computeFromToAllFlatEntityMapsAndBuildOptions({
       allFlatEntityOperationByMetadataName: allFlatEntities,
       workspaceId,
+      applicationUniversalIdentifier,
     });
 
     return await this.validateBuildAndRunWorkspaceMigrationFromTo({
+      applicationUniversalIdentifier,
       buildOptions: {
         isSystemBuild,
         inferDeletionFromMissingEntities,

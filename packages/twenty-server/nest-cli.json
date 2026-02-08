@@ -3,7 +3,13 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "watchOptions": {
-    "ignored": ["**/node_modules/**", "**/dist/**", "**/.git/**", "**/.nx/**"]
+    "ignored": [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.git/**",
+      "**/.nx/**",
+      "**/.local-storage/**"
+    ]
   },
   "compilerOptions": {
     "builder": "swc",
@@ -11,23 +17,27 @@
     "watchAssets": true,
     "assets": [
       {
-        "include": "engine/core-modules/serverless/drivers/constants/seed-project/**",
+        "include": "modules/workflow/workflow-builder/workflow-version-step/code-step/constants/seed-project/**",
         "outDir": "dist/assets"
       },
       {
-        "include": "engine/core-modules/serverless/drivers/layers/*/package.json",
+        "include": "engine/core-modules/logic-function/logic-function-source-builder/constants/seed-project/**",
         "outDir": "dist/assets"
       },
       {
-        "include": "engine/core-modules/serverless/drivers/layers/*/yarn.lock",
+        "include": "engine/core-modules/logic-function/logic-function-drivers/layers/*/package.json",
         "outDir": "dist/assets"
       },
       {
-        "include": "engine/core-modules/serverless/drivers/layers/engine/**",
+        "include": "engine/core-modules/logic-function/logic-function-drivers/layers/*/yarn.lock",
         "outDir": "dist/assets"
       },
       {
-        "include": "engine/core-modules/serverless/drivers/constants/executor/index.mjs",
+        "include": "engine/core-modules/logic-function/logic-function-drivers/layers/engine/**",
+        "outDir": "dist/assets"
+      },
+      {
+        "include": "engine/core-modules/logic-function/logic-function-drivers/constants/executor/index.mjs",
         "outDir": "dist/assets"
       },
       {
@@ -36,6 +46,10 @@
       },
       {
         "include": "engine/workspace-manager/dev-seeder/data/sample-files/**",
+        "outDir": "dist/assets"
+      },
+      {
+        "include": "engine/core-modules/application/constants/default-package-files/**",
         "outDir": "dist/assets"
       }
     ]

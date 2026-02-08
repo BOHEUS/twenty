@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { isDefined } from 'twenty-shared/utils';
 import { IsNull, Repository } from 'typeorm';
 
-import { ApplicationService } from 'src/engine/core-modules/application/application.service';
+import { ApplicationService } from 'src/engine/core-modules/application/services/application.service';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
 import { findManyFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-many-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
@@ -76,12 +76,22 @@ export class ViewFieldV2Service {
         },
       );
 
+    const { flatFieldMetadataMaps, flatViewMaps } =
+      await this.workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+        {
+          workspaceId,
+          flatMapsKeys: ['flatFieldMetadataMaps', 'flatViewMaps'],
+        },
+      );
+
     const flatViewFieldsToCreate = createViewFieldInputs.map(
       (createViewFieldInput) =>
         fromCreateViewFieldInputToFlatViewFieldToCreate({
           createViewFieldInput,
           workspaceId,
-          workspaceCustomApplicationId: workspaceCustomFlatApplication.id,
+          flatApplication: workspaceCustomFlatApplication,
+          flatFieldMetadataMaps,
+          flatViewMaps,
         }),
     );
 
@@ -97,6 +107,8 @@ export class ViewFieldV2Service {
           },
           workspaceId,
           isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
         },
       );
 
@@ -128,6 +140,13 @@ export class ViewFieldV2Service {
     workspaceId: string;
     updateViewFieldInput: UpdateViewFieldInput;
   }): Promise<ViewFieldDTO> {
+    const { workspaceCustomFlatApplication } =
+      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+        {
+          workspaceId,
+        },
+      );
+
     const { flatViewFieldMaps: existingFlatViewFieldMaps } =
       await this.workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
         {
@@ -154,6 +173,8 @@ export class ViewFieldV2Service {
           },
           workspaceId,
           isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
         },
       );
 
@@ -187,6 +208,13 @@ export class ViewFieldV2Service {
     deleteViewFieldInput: DeleteViewFieldInput;
     workspaceId: string;
   }): Promise<ViewFieldDTO> {
+    const { workspaceCustomFlatApplication } =
+      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+        {
+          workspaceId,
+        },
+      );
+
     const { flatViewFieldMaps: existingFlatViewFieldMaps } =
       await this.workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
         {
@@ -213,6 +241,8 @@ export class ViewFieldV2Service {
           },
           workspaceId,
           isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
         },
       );
 
@@ -246,6 +276,13 @@ export class ViewFieldV2Service {
     destroyViewFieldInput: DestroyViewFieldInput;
     workspaceId: string;
   }): Promise<ViewFieldDTO> {
+    const { workspaceCustomFlatApplication } =
+      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+        {
+          workspaceId,
+        },
+      );
+
     const { flatViewFieldMaps: existingFlatViewFieldMaps } =
       await this.workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
         {
@@ -272,6 +309,8 @@ export class ViewFieldV2Service {
           },
           workspaceId,
           isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
         },
       );
 

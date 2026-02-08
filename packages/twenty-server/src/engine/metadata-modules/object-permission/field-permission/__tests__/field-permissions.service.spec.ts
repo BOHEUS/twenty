@@ -150,11 +150,11 @@ describe('FieldPermissionService', () => {
     workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps.mockResolvedValue(
       {
         flatObjectMetadataMaps: {
-          byId: {
+          byUniversalIdentifier: {
             [testObjectMetadataId]: {
               ...objectMetadataItemMock,
               id: testObjectMetadataId,
-              fieldMetadataIds: [testFieldMetadataId],
+              fieldIds: [testFieldMetadataId],
               indexMetadataIds: [],
               viewIds: [],
               universalIdentifier: testObjectMetadataId,
@@ -163,22 +163,29 @@ describe('FieldPermissionService', () => {
             [fieldRelationMock.objectMetadataId]: {
               ...objectMetadataItemMock,
               id: fieldRelationMock.objectMetadataId,
-              fieldMetadataIds: [fieldRelationMock.id],
+              fieldIds: [fieldRelationMock.id],
               indexMetadataIds: [],
               viewIds: [],
               universalIdentifier: fieldRelationMock.objectMetadataId,
               applicationId: null,
             } as any,
           },
-          idByUniversalIdentifier: {},
+          universalIdentifierById: {
+            [testObjectMetadataId]: testObjectMetadataId,
+            [fieldRelationMock.objectMetadataId]:
+              fieldRelationMock.objectMetadataId,
+          },
           universalIdentifiersByApplicationId: {},
         },
         flatFieldMetadataMaps: {
-          byId: {
-            [testFieldMetadataId]: testFieldMetadata as any,
-            [fieldRelationMock.id]: fieldRelationMock as any,
+          byUniversalIdentifier: {
+            [testFieldMetadata.universalIdentifier]: testFieldMetadata as any,
+            [fieldRelationMock.universalIdentifier]: fieldRelationMock as any,
           },
-          idByUniversalIdentifier: {},
+          universalIdentifierById: {
+            [testFieldMetadataId]: testFieldMetadata.universalIdentifier,
+            [fieldRelationMock.id]: fieldRelationMock.universalIdentifier,
+          },
           universalIdentifiersByApplicationId: {},
         },
       } as any,
@@ -398,13 +405,13 @@ describe('FieldPermissionService', () => {
         workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps.mockResolvedValue(
           {
             flatObjectMetadataMaps: {
-              byId: {},
-              idByUniversalIdentifier: {},
+              byUniversalIdentifier: {},
+              universalIdentifierById: {},
               universalIdentifiersByApplicationId: {},
             },
             flatFieldMetadataMaps: {
-              byId: {},
-              idByUniversalIdentifier: {},
+              byUniversalIdentifier: {},
+              universalIdentifierById: {},
               universalIdentifiersByApplicationId: {},
             },
           } as any,
@@ -440,23 +447,25 @@ describe('FieldPermissionService', () => {
         workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps.mockResolvedValue(
           {
             flatObjectMetadataMaps: {
-              byId: {
+              byUniversalIdentifier: {
                 [testObjectMetadataId]: {
                   ...systemObjectMetadata,
                   id: testObjectMetadataId,
-                  fieldMetadataIds: [],
+                  fieldIds: [],
                   indexMetadataIds: [],
                   viewIds: [],
                   universalIdentifier: testObjectMetadataId,
                   applicationId: null,
                 } as any,
               },
-              idByUniversalIdentifier: {},
+              universalIdentifierById: {
+                [testObjectMetadataId]: testObjectMetadataId,
+              },
               universalIdentifiersByApplicationId: {},
             },
             flatFieldMetadataMaps: {
-              byId: {},
-              idByUniversalIdentifier: {},
+              byUniversalIdentifier: {},
+              universalIdentifierById: {},
               universalIdentifiersByApplicationId: {},
             },
           } as any,
@@ -486,23 +495,25 @@ describe('FieldPermissionService', () => {
         workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps.mockResolvedValue(
           {
             flatObjectMetadataMaps: {
-              byId: {
+              byUniversalIdentifier: {
                 [testObjectMetadataId]: {
                   ...objectMetadataItemMock,
                   id: testObjectMetadataId,
-                  fieldMetadataIds: [],
+                  fieldIds: [],
                   indexMetadataIds: [],
                   viewIds: [],
                   universalIdentifier: testObjectMetadataId,
                   applicationId: null,
                 } as any,
               },
-              idByUniversalIdentifier: {},
+              universalIdentifierById: {
+                [testObjectMetadataId]: testObjectMetadataId,
+              },
               universalIdentifiersByApplicationId: {},
             },
             flatFieldMetadataMaps: {
-              byId: {},
-              idByUniversalIdentifier: {},
+              byUniversalIdentifier: {},
+              universalIdentifierById: {},
               universalIdentifiersByApplicationId: {},
             },
           } as any,

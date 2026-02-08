@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { isDefined } from 'twenty-shared/utils';
 import { IsNull, Repository } from 'typeorm';
 
-import { ApplicationService } from 'src/engine/core-modules/application/application.service';
+import { ApplicationService } from 'src/engine/core-modules/application/services/application.service';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
 import { fromCreateViewFilterInputToFlatViewFilterToCreate } from 'src/engine/metadata-modules/flat-view-filter/utils/from-create-view-filter-input-to-flat-view-filter-to-create.util';
@@ -45,11 +45,26 @@ export class ViewFilterService {
         },
       );
 
+    const { flatFieldMetadataMaps, flatViewMaps, flatViewFilterGroupMaps } =
+      await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+        {
+          workspaceId,
+          flatMapsKeys: [
+            'flatFieldMetadataMaps',
+            'flatViewMaps',
+            'flatViewFilterGroupMaps',
+          ],
+        },
+      );
+
     const flatViewFilterToCreate =
       fromCreateViewFilterInputToFlatViewFilterToCreate({
         createViewFilterInput,
         workspaceId,
-        workspaceCustomApplicationId: workspaceCustomFlatApplication.id,
+        flatApplication: workspaceCustomFlatApplication,
+        flatFieldMetadataMaps,
+        flatViewMaps,
+        flatViewFilterGroupMaps,
       });
 
     const buildAndRunResult =
@@ -64,6 +79,8 @@ export class ViewFilterService {
           },
           workspaceId,
           isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
         },
       );
 
@@ -97,18 +114,34 @@ export class ViewFilterService {
     workspaceId: string;
     updateViewFilterInput: UpdateViewFilterInput;
   }): Promise<ViewFilterDTO> {
-    const { flatViewFilterMaps: existingFlatViewFilterMaps } =
-      await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+    const { workspaceCustomFlatApplication } =
+      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
         {
           workspaceId,
-          flatMapsKeys: ['flatViewFilterMaps'],
         },
       );
+
+    const {
+      flatViewFilterMaps: existingFlatViewFilterMaps,
+      flatFieldMetadataMaps: existingFlatFieldMetadataMaps,
+      flatViewFilterGroupMaps: existingFlatViewFilterGroupMaps,
+    } = await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+      {
+        workspaceId,
+        flatMapsKeys: [
+          'flatViewFilterMaps',
+          'flatFieldMetadataMaps',
+          'flatViewFilterGroupMaps',
+        ],
+      },
+    );
 
     const optimisticallyUpdatedFlatViewFilter =
       fromUpdateViewFilterInputToFlatViewFilterToUpdateOrThrow({
         flatViewFilterMaps: existingFlatViewFilterMaps,
         updateViewFilterInput,
+        flatFieldMetadataMaps: existingFlatFieldMetadataMaps,
+        flatViewFilterGroupMaps: existingFlatViewFilterGroupMaps,
       });
 
     const validateAndBuildResult =
@@ -123,6 +156,8 @@ export class ViewFilterService {
           },
           workspaceId,
           isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
         },
       );
 
@@ -156,6 +191,13 @@ export class ViewFilterService {
     deleteViewFilterInput: DeleteViewFilterInput;
     workspaceId: string;
   }): Promise<ViewFilterDTO> {
+    const { workspaceCustomFlatApplication } =
+      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+        {
+          workspaceId,
+        },
+      );
+
     const { flatViewFilterMaps: existingFlatViewFilterMaps } =
       await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
         {
@@ -184,6 +226,8 @@ export class ViewFilterService {
           },
           workspaceId,
           isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
         },
       );
 
@@ -217,6 +261,13 @@ export class ViewFilterService {
     destroyViewFilterInput: DestroyViewFilterInput;
     workspaceId: string;
   }): Promise<ViewFilterDTO> {
+    const { workspaceCustomFlatApplication } =
+      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+        {
+          workspaceId,
+        },
+      );
+
     const { flatViewFilterMaps: existingFlatViewFilterMaps } =
       await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
         {
@@ -243,6 +294,8 @@ export class ViewFilterService {
           },
           workspaceId,
           isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
         },
       );
 

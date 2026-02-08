@@ -33,17 +33,17 @@ describe('getAllSelectableFields', () => {
   const buildFlatFieldMetadataMaps = (
     fields: FlatFieldMetadata[],
   ): FlatEntityMaps<FlatFieldMetadata> => ({
-    byId: fields.reduce(
+    byUniversalIdentifier: fields.reduce(
       (acc, field) => {
-        acc[field.id] = field;
+        acc[field.universalIdentifier] = field;
 
         return acc;
       },
       {} as Record<string, FlatFieldMetadata>,
     ),
-    idByUniversalIdentifier: fields.reduce(
+    universalIdentifierById: fields.reduce(
       (acc, field) => {
-        acc[field.universalIdentifier] = field.id;
+        acc[field.id] = field.universalIdentifier;
 
         return acc;
       },
@@ -67,7 +67,7 @@ describe('getAllSelectableFields', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       universalIdentifier: 'object-id',
-      fieldMetadataIds: fieldIds,
+      fieldIds: fieldIds,
       indexMetadataIds: [],
       viewIds: [],
       applicationId: null,

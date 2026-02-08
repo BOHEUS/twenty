@@ -23,7 +23,7 @@ const createMockObjectMetadata = (
     id: 'test-object-id',
     nameSingular: 'testObject',
     namePlural: 'testObjects',
-    fieldMetadataIds: [],
+    fieldIds: [],
     universalIdentifier: 'test-object-universal-id',
     ...overrides,
   }) as FlatObjectMetadata;
@@ -51,7 +51,7 @@ describe('isRelationNestedFieldDateKind', () => {
     id: companyObjectId,
     nameSingular: 'company',
     namePlural: 'companies',
-    fieldMetadataIds: [createdAtFieldId, nameFieldId],
+    fieldIds: [createdAtFieldId, nameFieldId],
   });
 
   const relationField = createMockFieldMetadata({
@@ -63,19 +63,24 @@ describe('isRelationNestedFieldDateKind', () => {
   });
 
   const flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata> = {
-    byId: {
-      [companyObjectId]: companyObject,
+    byUniversalIdentifier: {
+      [companyObject.universalIdentifier as string]: companyObject,
     },
-    idByUniversalIdentifier: {},
+    universalIdentifierById: {
+      [companyObjectId]: companyObject.universalIdentifier as string,
+    },
     universalIdentifiersByApplicationId: {},
   };
 
   const flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata> = {
-    byId: {
-      [createdAtFieldId]: createdAtField,
-      [nameFieldId]: nameField,
+    byUniversalIdentifier: {
+      [createdAtField.universalIdentifier as string]: createdAtField,
+      [nameField.universalIdentifier as string]: nameField,
     },
-    idByUniversalIdentifier: {},
+    universalIdentifierById: {
+      [createdAtFieldId]: createdAtField.universalIdentifier as string,
+      [nameFieldId]: nameField.universalIdentifier as string,
+    },
     universalIdentifiersByApplicationId: {},
   };
 
@@ -180,7 +185,7 @@ describe('isRelationNestedFieldDateKind', () => {
       id: 'object-with-date-id',
       nameSingular: 'person',
       namePlural: 'people',
-      fieldMetadataIds: [dateFieldId],
+      fieldIds: [dateFieldId],
     });
 
     const personRelationField = createMockFieldMetadata({
@@ -193,13 +198,23 @@ describe('isRelationNestedFieldDateKind', () => {
       relationFieldMetadata: personRelationField,
       relationNestedFieldName: 'birthDate',
       flatObjectMetadataMaps: {
-        byId: { 'object-with-date-id': objectWithDateField },
-        idByUniversalIdentifier: {},
+        byUniversalIdentifier: {
+          [objectWithDateField.universalIdentifier as string]:
+            objectWithDateField,
+        },
+        universalIdentifierById: {
+          'object-with-date-id':
+            objectWithDateField.universalIdentifier as string,
+        },
         universalIdentifiersByApplicationId: {},
       },
       flatFieldMetadataMaps: {
-        byId: { [dateFieldId]: dateField },
-        idByUniversalIdentifier: {},
+        byUniversalIdentifier: {
+          [dateField.universalIdentifier as string]: dateField,
+        },
+        universalIdentifierById: {
+          [dateFieldId]: dateField.universalIdentifier as string,
+        },
         universalIdentifiersByApplicationId: {},
       },
     });

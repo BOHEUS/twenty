@@ -18,14 +18,19 @@ module.exports = {
 
     './src/modules/billing/graphql/**/*.{ts,tsx}',
     './src/modules/settings/**/graphql/**/*.{ts,tsx}',
+    './src/modules/logic-functions/graphql/**/*.{ts,tsx}',
 
     './src/modules/databases/graphql/**/*.{ts,tsx}',
     './src/modules/workflow/**/graphql/**/*.{ts,tsx}',
     './src/modules/analytics/graphql/**/*.{ts,tsx}',
     './src/modules/object-metadata/graphql/**/*.{ts,tsx}',
+    './src/modules/navigation-menu-item/graphql/**/*.{ts,tsx}',
+    './src/modules/command-menu-item/graphql/**/*.{ts,tsx}',
     './src/modules/attachments/graphql/**/*.{ts,tsx}',
     './src/modules/file/graphql/**/*.{ts,tsx}',
     './src/modules/onboarding/graphql/**/*.{ts,tsx}',
+
+    './src/modules/page-layout/widgets/**/graphql/**/*.{ts,tsx}',
 
     '!./src/**/*.test.{ts,tsx}',
     '!./src/**/*.stories.{ts,tsx}',

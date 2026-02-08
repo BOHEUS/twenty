@@ -19,11 +19,12 @@ import { SupportChatEffect } from '@/support/components/SupportChatEffect';
 import { DialogManager } from '@/ui/feedback/dialog-manager/components/DialogManager';
 import { DialogComponentInstanceContext } from '@/ui/feedback/dialog-manager/contexts/DialogComponentInstanceContext';
 import { SnackBarProvider } from '@/ui/feedback/snack-bar-manager/components/SnackBarProvider';
+import { GlobalFilePreviewModal } from '@/ui/field/display/components/GlobalFilePreviewModal';
 import { BaseThemeProvider } from '@/ui/theme/components/BaseThemeProvider';
 import { UserThemeProviderEffect } from '@/ui/theme/components/UserThemeProviderEffect';
 import { PageFavicon } from '@/ui/utilities/page-favicon/components/PageFavicon';
 import { PageTitle } from '@/ui/utilities/page-title/components/PageTitle';
-import { UserAndViewsProviderEffect } from '@/users/components/UserAndViewsProviderEffect';
+import { MetadataProviderEffect } from '@/users/components/MetadataProviderEffect';
 import { UserProvider } from '@/users/components/UserProvider';
 import { WorkspaceProviderEffect } from '@/workspace/components/WorkspaceProviderEffect';
 import { StrictMode } from 'react';
@@ -38,7 +39,7 @@ export const AppRouterProviders = () => {
     <ApolloProvider>
       <BaseThemeProvider>
         <ClientConfigProviderEffect />
-        <UserAndViewsProviderEffect />
+        <MetadataProviderEffect />
         <WorkspaceProviderEffect />
         <ClientConfigProvider>
           <CaptchaProvider>
@@ -64,6 +65,7 @@ export const AppRouterProviders = () => {
                                   <PageTitle title={pageTitle} />
                                   <PageFavicon />
                                   <Outlet />
+                                  <GlobalFilePreviewModal />
                                 </StrictMode>
                               </DialogManager>
                             </DialogComponentInstanceContext.Provider>

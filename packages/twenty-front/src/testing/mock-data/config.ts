@@ -56,5 +56,7 @@ export const mockedClientConfig: ClientConfig = {
   isImapSmtpCaldavEnabled: false,
   isTwoFactorAuthenticationEnabled: false,
   isEmailingDomainsEnabled: false,
+  allowRequestsToTwentyIcons: true,
   isCloudflareIntegrationEnabled: false,
+  isClickHouseConfigured: false,
 };

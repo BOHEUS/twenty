@@ -3,8 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { msg } from '@lingui/core/macro';
 import { isNull, isUndefined } from '@sniptt/guards';
 import {
-  FieldMetadataFilesSettings,
-  FieldMetadataRelationSettings,
+  FieldMetadataSettingsMapping,
   FieldMetadataType,
   ObjectRecord,
   RelationType,
@@ -56,6 +55,7 @@ import { transformPhonesValue } from 'src/engine/core-modules/record-transformer
 import { transformRichTextV2Value } from 'src/engine/core-modules/record-transformer/utils/transform-rich-text-v2.util';
 import { WorkspaceNotFoundDefaultError } from 'src/engine/core-modules/workspace/workspace.exception';
 import { FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
+import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { buildFieldMapsFromFlatObjectMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/build-field-maps-from-flat-object-metadata.util';
 import { FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
@@ -120,7 +120,10 @@ export class DataArgProcessor {
           );
         }
 
-        const fieldMetadata = flatFieldMetadataMaps.byId[fieldMetadataId];
+        const fieldMetadata = findFlatEntityByIdInFlatEntityMaps({
+          flatEntityId: fieldMetadataId,
+          flatEntityMaps: flatFieldMetadataMaps,
+        });
 
         if (!fieldMetadata) {
           throw new CommonQueryRunnerException(
@@ -219,7 +222,7 @@ export class DataArgProcessor {
       case FieldMetadataType.RELATION:
       case FieldMetadataType.MORPH_RELATION: {
         const fieldMetadataRelationSettings =
-          fieldMetadata.settings as FieldMetadataRelationSettings;
+          fieldMetadata.settings as FieldMetadataSettingsMapping['RELATION'];
 
         if (
           fieldMetadataRelationSettings.relationType ===
@@ -252,7 +255,7 @@ export class DataArgProcessor {
         const validatedValue = validateFilesFieldOrThrow(
           value,
           key,
-          fieldMetadata.settings as FieldMetadataFilesSettings,
+          fieldMetadata.settings as FieldMetadataSettingsMapping[FieldMetadataType.FILES],
         );
 
         return transformRawJsonField(validatedValue);

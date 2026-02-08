@@ -14,6 +14,7 @@ import { MAX_DEPTH } from 'src/engine/api/rest/input-request-parsers/constants/m
 import { Depth } from 'src/engine/api/rest/input-request-parsers/types/depth.type';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
+import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { isFlatFieldMetadataOfType } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-flat-field-metadata-of-type.util';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
@@ -89,7 +90,7 @@ export class CommonSelectedFieldsHandler {
         | { [key: string]: boolean | { [key: string]: boolean } };
     } = {};
 
-    for (const fieldId of flatObjectMetadata.fieldMetadataIds) {
+    for (const fieldId of flatObjectMetadata.fieldIds) {
       const field = findFlatEntityByIdInFlatEntityMapsOrThrow({
         flatEntityMaps: flatFieldMetadataMaps,
         flatEntityId: fieldId,
@@ -100,8 +101,10 @@ export class CommonSelectedFieldsHandler {
 
       if (!field.relationTargetObjectMetadataId) continue;
 
-      const relationTargetObjectMetadata =
-        flatObjectMetadataMaps.byId[field.relationTargetObjectMetadataId];
+      const relationTargetObjectMetadata = findFlatEntityByIdInFlatEntityMaps({
+        flatEntityId: field.relationTargetObjectMetadataId,
+        flatEntityMaps: flatObjectMetadataMaps,
+      });
 
       if (!isDefined(relationTargetObjectMetadata)) {
         throw new CommonQueryRunnerException(

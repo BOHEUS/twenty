@@ -4,6 +4,8 @@ import {
   trimAndRemoveDuplicatedWhitespacesFromObjectStringProperties,
 } from 'twenty-shared/utils';
 
+import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
+import { resolveEntityRelationUniversalIdentifiers } from 'src/engine/metadata-modules/flat-entity/utils/resolve-entity-relation-universal-identifiers.util';
 import { FLAT_VIEW_FILTER_GROUP_EDITABLE_PROPERTIES } from 'src/engine/metadata-modules/flat-view-filter-group/constants/flat-view-filter-group-editable-properties.constant';
 import { type FlatViewFilterGroupMaps } from 'src/engine/metadata-modules/flat-view-filter-group/types/flat-view-filter-group-maps.type';
 import { type FlatViewFilterGroup } from 'src/engine/metadata-modules/flat-view-filter-group/types/flat-view-filter-group.type';
@@ -29,7 +31,10 @@ export const fromUpdateViewFilterGroupInputToFlatViewFilterGroupToUpdateOrThrow 
       );
 
     const existingFlatViewFilterGroupToUpdate =
-      flatViewFilterGroupMaps.byId[viewFilterGroupToUpdateId];
+      findFlatEntityByIdInFlatEntityMaps({
+        flatEntityId: viewFilterGroupToUpdateId,
+        flatEntityMaps: flatViewFilterGroupMaps,
+      });
 
     if (!isDefined(existingFlatViewFilterGroupToUpdate)) {
       throw new ViewFilterGroupException(
@@ -43,9 +48,26 @@ export const fromUpdateViewFilterGroupInputToFlatViewFilterGroupToUpdateOrThrow 
       FLAT_VIEW_FILTER_GROUP_EDITABLE_PROPERTIES,
     );
 
-    return mergeUpdateInExistingRecord({
+    const flatViewFilterGroupToUpdate = mergeUpdateInExistingRecord({
       existing: existingFlatViewFilterGroupToUpdate,
       properties: FLAT_VIEW_FILTER_GROUP_EDITABLE_PROPERTIES,
       update: updatedEditableFieldProperties,
     });
+
+    if (updatedEditableFieldProperties.parentViewFilterGroupId !== undefined) {
+      const { parentViewFilterGroupUniversalIdentifier } =
+        resolveEntityRelationUniversalIdentifiers({
+          metadataName: 'viewFilterGroup',
+          foreignKeyValues: {
+            parentViewFilterGroupId:
+              flatViewFilterGroupToUpdate.parentViewFilterGroupId,
+          },
+          flatEntityMaps: { flatViewFilterGroupMaps },
+        });
+
+      flatViewFilterGroupToUpdate.parentViewFilterGroupUniversalIdentifier =
+        parentViewFilterGroupUniversalIdentifier;
+    }
+
+    return flatViewFilterGroupToUpdate;
   };

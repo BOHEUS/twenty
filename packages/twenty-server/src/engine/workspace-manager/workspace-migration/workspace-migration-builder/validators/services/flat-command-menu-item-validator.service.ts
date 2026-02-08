@@ -7,7 +7,6 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { CommandMenuItemExceptionCode } from 'src/engine/metadata-modules/command-menu-item/command-menu-item.exception';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
-import { findFlatEntityPropertyUpdate } from 'src/engine/workspace-manager/workspace-migration/utils/find-flat-entity-property-update.util';
 import { type FailedFlatEntityValidation } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/types/failed-flat-entity-validation.type';
 import { getEmptyFlatEntityValidationError } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/utils/get-flat-entity-validation-error.util';
 import { type FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/flat-entity-update-validation-args.type';
@@ -34,6 +33,19 @@ export class FlatCommandMenuItemValidatorService {
         code: CommandMenuItemExceptionCode.INVALID_COMMAND_MENU_ITEM_INPUT,
         message: t`Label is required`,
         userFriendlyMessage: msg`Label is required`,
+      });
+    }
+
+    const hasWorkflowVersionId = isDefined(
+      flatCommandMenuItem.workflowVersionId,
+    );
+    const hasFrontComponentId = isDefined(flatCommandMenuItem.frontComponentId);
+
+    if (hasWorkflowVersionId === hasFrontComponentId) {
+      validationResult.errors.push({
+        code: CommandMenuItemExceptionCode.WORKFLOW_OR_FRONT_COMPONENT_REQUIRED,
+        message: t`Exactly one of workflowVersionId or frontComponentId is required`,
+        userFriendlyMessage: msg`Exactly one of workflow version or front component is required`,
       });
     }
 
@@ -75,7 +87,7 @@ export class FlatCommandMenuItemValidatorService {
 
   public validateFlatCommandMenuItemUpdate({
     flatEntityId,
-    flatEntityUpdates,
+    flatEntityUpdate,
     optimisticFlatEntityMapsAndRelatedFlatEntityMaps: {
       flatCommandMenuItemMaps: optimisticFlatCommandMenuItemMaps,
     },
@@ -106,12 +118,9 @@ export class FlatCommandMenuItemValidatorService {
       return validationResult;
     }
 
-    const labelUpdate = findFlatEntityPropertyUpdate({
-      flatEntityUpdates,
-      property: 'label',
-    });
+    const labelUpdate = flatEntityUpdate.label;
 
-    if (isDefined(labelUpdate) && !isNonEmptyString(labelUpdate.to)) {
+    if (isDefined(labelUpdate) && !isNonEmptyString(labelUpdate)) {
       validationResult.errors.push({
         code: CommandMenuItemExceptionCode.INVALID_COMMAND_MENU_ITEM_INPUT,
         message: t`Label is required`,

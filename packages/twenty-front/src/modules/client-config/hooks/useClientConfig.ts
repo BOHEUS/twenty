@@ -11,6 +11,7 @@ import { isAnalyticsEnabledState } from '@/client-config/states/isAnalyticsEnabl
 import { isAttachmentPreviewEnabledState } from '@/client-config/states/isAttachmentPreviewEnabledState';
 import { isConfigVariablesInDbEnabledState } from '@/client-config/states/isConfigVariablesInDbEnabledState';
 import { isDeveloperDefaultSignInPrefilledState } from '@/client-config/states/isDeveloperDefaultSignInPrefilledState';
+import { isClickHouseConfiguredState } from '@/client-config/states/isClickHouseConfiguredState';
 import { isCloudflareIntegrationEnabledState } from '@/client-config/states/isCloudflareIntegrationEnabledState';
 import { isEmailingDomainsEnabledState } from '@/client-config/states/isEmailingDomainsEnabledState';
 import { isEmailVerificationRequiredState } from '@/client-config/states/isEmailVerificationRequiredState';
@@ -29,6 +30,7 @@ import { useCallback } from 'react';
 import { useRecoilState, useSetRecoilState } from 'recoil';
 import { clientConfigApiStatusState } from '@/client-config/states/clientConfigApiStatusState';
 import { getClientConfig } from '@/client-config/utils/getClientConfig';
+import { allowRequestsToTwentyIconsState } from '@/client-config/states/allowRequestsToTwentyIcons';
 
 type UseClientConfigResult = {
   data: { clientConfig: ClientConfig } | undefined;
@@ -110,8 +112,17 @@ export const useClientConfig = (): UseClientConfigResult => {
   const setIsEmailingDomainsEnabled = useSetRecoilState(
     isEmailingDomainsEnabledState,
   );
+
+  const setAllowRequestsToTwentyIcons = useSetRecoilState(
+    allowRequestsToTwentyIconsState,
+  );
+
   const setIsCloudflareIntegrationEnabled = useSetRecoilState(
     isCloudflareIntegrationEnabledState,
+  );
+
+  const setIsClickHouseConfigured = useSetRecoilState(
+    isClickHouseConfiguredState,
   );
 
   const setAppVersion = useSetRecoilState(appVersionState);
@@ -188,9 +199,11 @@ export const useClientConfig = (): UseClientConfigResult => {
       setCalendarBookingPageId(clientConfig?.calendarBookingPageId ?? null);
       setIsImapSmtpCaldavEnabled(clientConfig?.isImapSmtpCaldavEnabled);
       setIsEmailingDomainsEnabled(clientConfig?.isEmailingDomainsEnabled);
+      setAllowRequestsToTwentyIcons(clientConfig?.allowRequestsToTwentyIcons);
       setIsCloudflareIntegrationEnabled(
         clientConfig?.isCloudflareIntegrationEnabled,
       );
+      setIsClickHouseConfigured(clientConfig?.isClickHouseConfigured ?? false);
     } catch (err) {
       const error =
         err instanceof Error ? err : new Error('Failed to fetch client config');
@@ -224,12 +237,14 @@ export const useClientConfig = (): UseClientConfigResult => {
     setIsImapSmtpCaldavEnabled,
     setIsMultiWorkspaceEnabled,
     setIsEmailingDomainsEnabled,
+    setIsClickHouseConfigured,
     setIsCloudflareIntegrationEnabled,
     setLabPublicFeatureFlags,
     setMicrosoftCalendarEnabled,
     setMicrosoftMessagingEnabled,
     setSentryConfig,
     setSupportChat,
+    setAllowRequestsToTwentyIcons,
   ]);
 
   return {

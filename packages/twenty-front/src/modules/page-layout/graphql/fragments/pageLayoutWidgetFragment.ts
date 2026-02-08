@@ -15,6 +15,22 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
       row
       rowSpan
     }
+    position {
+      ... on PageLayoutWidgetGridPosition {
+        layoutMode
+        row
+        column
+        rowSpan
+        columnSpan
+      }
+      ... on PageLayoutWidgetVerticalListPosition {
+        layoutMode
+        index
+      }
+      ... on PageLayoutWidgetCanvasPosition {
+        layoutMode
+      }
+    }
     configuration {
       ... on BarChartConfiguration {
         configurationType
@@ -170,6 +186,10 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
       }
       ... on WorkflowVersionConfiguration {
         configurationType
+      }
+      ... on FrontComponentConfiguration {
+        configurationType
+        frontComponentId
       }
     }
     pageLayoutTabId
