@@ -22,7 +22,7 @@ export class NotificationsService {
       const notificationsRepository =
         await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
           workspaceId,
-          'notifications',
+          'notification',
         );
 
       return notificationsRepository.findBy({
@@ -41,7 +41,7 @@ export class NotificationsService {
       const notificationsRepository =
         await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
           workspaceId,
-          'notifications',
+          'notification',
         );
 
       const updatedStatus =
@@ -66,7 +66,7 @@ export class NotificationsService {
       const notificationsRepository =
         await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
           workspaceId,
-          'notifications',
+          'notification',
         );
 
       const updatedStatus =
@@ -87,7 +87,7 @@ export class NotificationsService {
       const notificationsRepository =
         await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
           workspaceId,
-          'notifications',
+          'notification',
         );
 
       await notificationsRepository.delete({

@@ -15,6 +15,9 @@ import { type MessageChannelWorkspaceEntity } from 'src/modules/messaging/common
 import { type ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { type AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
 import { ActorMetadata } from 'twenty-shared/types';
+import {
+  NotificationTargetWorkspaceEntity
+} from 'src/modules/notifications/notifications/standard-objects/notification-target.workspace-entity';
 
 export enum NotificationType {
   READ = 'READ',
@@ -33,25 +36,5 @@ export class NotificationsWorkspaceEntity extends BaseWorkspaceEntity {
   recipientId: string;
   author: EntityRelation<WorkspaceMemberWorkspaceEntity> | null;
   authorId: string | null;
-  messageChannel: EntityRelation<MessageChannelWorkspaceEntity> | null;
-  messageChannelId: string | null;
-  application: EntityRelation<ApplicationEntity> | null; // TODO: check if such relations are valid
-  applicationId: string | null;
-  agent: EntityRelation<AgentEntity> | null;
-  agentId: string | null;
-  task: EntityRelation<TaskWorkspaceEntity> | null;
-  taskId: string | null;
-  note: EntityRelation<NoteWorkspaceEntity> | null;
-  noteId: string | null;
-  person: EntityRelation<PersonWorkspaceEntity> | null;
-  personId: string | null;
-  company: EntityRelation<CompanyWorkspaceEntity> | null;
-  companyId: string | null;
-  opportunity: EntityRelation<OpportunityWorkspaceEntity> | null;
-  opportunityId: string | null;
-  dashboard: EntityRelation<DashboardWorkspaceEntity> | null;
-  dashboardId: string | null;
-  workflow: EntityRelation<WorkflowWorkspaceEntity> | null;
-  workflowId: string | null;
-  custom: EntityRelation<CustomWorkspaceEntity>;
+  notificationTargets: EntityRelation<NotificationTargetWorkspaceEntity[]>;
 }

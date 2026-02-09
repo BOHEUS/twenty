@@ -44,7 +44,7 @@ export class NotificationTriggerJob {
       const notificationRepository =
         await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
           data.workspaceId,
-          'workflow',
+          'notification',
           { shouldBypassPermissionChecks: true },
         );
       const notification = this.getData(
