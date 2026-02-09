@@ -5,21 +5,15 @@ import type { CompanyWorkspaceEntity } from 'src/modules/company/standard-object
 import type { OpportunityWorkspaceEntity } from 'src/modules/opportunity/standard-objects/opportunity.workspace-entity';
 import type { CustomWorkspaceEntity } from 'src/engine/twenty-orm/custom.workspace-entity';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
-import {
-  NotificationsWorkspaceEntity
-} from 'src/modules/notifications/notifications/standard-objects/notifications.workspace-entity';
-import { MessageWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message.workspace-entity';
-import {
-  CalendarEventWorkspaceEntity
-} from 'src/modules/calendar/common/standard-objects/calendar-event.workspace-entity';
-import { AttachmentWorkspaceEntity } from 'src/modules/attachment/standard-objects/attachment.workspace-entity';
-import { DashboardWorkspaceEntity } from 'src/modules/dashboard/standard-objects/dashboard.workspace-entity';
-import { NoteWorkspaceEntity } from 'src/modules/note/standard-objects/note.workspace-entity';
-import {
-  WorkspaceMemberWorkspaceEntity
-} from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
-import { WorkflowWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow.workspace-entity';
-import { WorkflowRunWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow-run.workspace-entity';
+import { type NotificationsWorkspaceEntity } from 'src/modules/notifications/notifications/standard-objects/notifications.workspace-entity';
+import { type MessageWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message.workspace-entity';
+import { type CalendarEventWorkspaceEntity } from 'src/modules/calendar/common/standard-objects/calendar-event.workspace-entity';
+import { type AttachmentWorkspaceEntity } from 'src/modules/attachment/standard-objects/attachment.workspace-entity';
+import { type DashboardWorkspaceEntity } from 'src/modules/dashboard/standard-objects/dashboard.workspace-entity';
+import { type NoteWorkspaceEntity } from 'src/modules/note/standard-objects/note.workspace-entity';
+import { type WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
+import { type WorkflowWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow.workspace-entity';
+import { type WorkflowRunWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow-run.workspace-entity';
 
 // TODO: wouldn't it be just way easier if this was a relation to notification entity with name of other objects notification is related to and array of records UUIDs?
 // all notifications will be only related to one type of object either way at the time with no possibility of notification being related to records from 2 or more objects
