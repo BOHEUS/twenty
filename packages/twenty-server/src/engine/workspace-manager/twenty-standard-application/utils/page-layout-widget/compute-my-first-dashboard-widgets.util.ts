@@ -1,5 +1,7 @@
 import { CalendarStartDay } from 'twenty-shared/constants';
+import { PageLayoutTabLayoutMode } from 'twenty-shared/types';
 import { v4 } from 'uuid';
+import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
 
 import { AggregateOperations } from 'src/engine/api/graphql/graphql-query-runner/constants/aggregate-operations.constant';
 import { type FlatPageLayoutWidget } from 'src/engine/metadata-modules/flat-page-layout-widget/types/flat-page-layout-widget.type';
@@ -58,6 +60,7 @@ const createWelcomeRichText = ({
 }): FlatPageLayoutWidget =>
   createStandardPageLayoutWidgetFlatMetadata({
     ...args,
+    objectMetadataUniversalIdentifier: null,
     context: {
       layoutName: 'myFirstDashboard',
       tabTitle: 'tab1',
@@ -65,6 +68,13 @@ const createWelcomeRichText = ({
       title: 'Untitled Rich Text',
       type: WidgetType.STANDALONE_RICH_TEXT,
       gridPosition: { row: 0, column: 0, rowSpan: 6, columnSpan: 6 },
+      position: {
+        layoutMode: PageLayoutTabLayoutMode.GRID,
+        row: 0,
+        column: 0,
+        rowSpan: 6,
+        columnSpan: 6,
+      },
       configuration: {
         configurationType:
           WidgetConfigurationType.STANDALONE_RICH_TEXT as const,
@@ -210,6 +220,7 @@ const createWelcomeRichText = ({
         },
       },
       objectMetadataId: null,
+      conditionalDisplay: null,
     },
   });
 
@@ -225,6 +236,8 @@ const createDealsByCompany = ({
 
   return createStandardPageLayoutWidgetFlatMetadata({
     ...args,
+    objectMetadataUniversalIdentifier:
+      STANDARD_OBJECTS.opportunity.universalIdentifier,
     context: {
       layoutName: 'myFirstDashboard',
       tabTitle: 'tab1',
@@ -232,6 +245,13 @@ const createDealsByCompany = ({
       title: 'Deals by Company',
       type: WidgetType.GRAPH,
       gridPosition: { row: 0, column: 6, rowSpan: 6, columnSpan: 6 },
+      position: {
+        layoutMode: PageLayoutTabLayoutMode.GRID,
+        row: 0,
+        column: 6,
+        rowSpan: 6,
+        columnSpan: 6,
+      },
       configuration: {
         configurationType: WidgetConfigurationType.PIE_CHART,
         groupByFieldMetadataId: opportunityFields.company.id,
@@ -247,6 +267,7 @@ const createDealsByCompany = ({
         firstDayOfTheWeek: CalendarStartDay.SUNDAY,
       },
       objectMetadataId: opportunityObjectId,
+      conditionalDisplay: null,
     },
   });
 };
@@ -263,6 +284,8 @@ const createPipelineValueByStage = ({
 
   return createStandardPageLayoutWidgetFlatMetadata({
     ...args,
+    objectMetadataUniversalIdentifier:
+      STANDARD_OBJECTS.opportunity.universalIdentifier,
     context: {
       layoutName: 'myFirstDashboard',
       tabTitle: 'tab1',
@@ -270,6 +293,13 @@ const createPipelineValueByStage = ({
       title: 'Pipeline Value by Stage',
       type: WidgetType.GRAPH,
       gridPosition: { row: 6, column: 0, rowSpan: 6, columnSpan: 6 },
+      position: {
+        layoutMode: PageLayoutTabLayoutMode.GRID,
+        row: 6,
+        column: 0,
+        rowSpan: 6,
+        columnSpan: 6,
+      },
       configuration: {
         configurationType: WidgetConfigurationType.BAR_CHART,
         aggregateFieldMetadataId: opportunityFields.amount.id,
@@ -291,6 +321,7 @@ const createPipelineValueByStage = ({
         firstDayOfTheWeek: CalendarStartDay.SUNDAY,
       },
       objectMetadataId: opportunityObjectId,
+      conditionalDisplay: null,
     },
   });
 };
@@ -307,6 +338,8 @@ const createRevenueTimeline = ({
 
   return createStandardPageLayoutWidgetFlatMetadata({
     ...args,
+    objectMetadataUniversalIdentifier:
+      STANDARD_OBJECTS.opportunity.universalIdentifier,
     context: {
       layoutName: 'myFirstDashboard',
       tabTitle: 'tab1',
@@ -314,6 +347,13 @@ const createRevenueTimeline = ({
       title: 'Revenue Timeline',
       type: WidgetType.GRAPH,
       gridPosition: { row: 6, column: 6, rowSpan: 6, columnSpan: 6 },
+      position: {
+        layoutMode: PageLayoutTabLayoutMode.GRID,
+        row: 6,
+        column: 6,
+        rowSpan: 6,
+        columnSpan: 6,
+      },
       configuration: {
         configurationType: WidgetConfigurationType.LINE_CHART,
         aggregateFieldMetadataId: opportunityFields.amount.id,
@@ -330,6 +370,7 @@ const createRevenueTimeline = ({
         firstDayOfTheWeek: CalendarStartDay.SUNDAY,
       },
       objectMetadataId: opportunityObjectId,
+      conditionalDisplay: null,
     },
   });
 };
@@ -346,6 +387,8 @@ const createOpportunitiesByOwner = ({
 
   return createStandardPageLayoutWidgetFlatMetadata({
     ...args,
+    objectMetadataUniversalIdentifier:
+      STANDARD_OBJECTS.opportunity.universalIdentifier,
     context: {
       layoutName: 'myFirstDashboard',
       tabTitle: 'tab1',
@@ -353,6 +396,13 @@ const createOpportunitiesByOwner = ({
       title: 'Opportunities by Owner',
       type: WidgetType.GRAPH,
       gridPosition: { row: 12, column: 0, rowSpan: 6, columnSpan: 6 },
+      position: {
+        layoutMode: PageLayoutTabLayoutMode.GRID,
+        row: 12,
+        column: 0,
+        rowSpan: 6,
+        columnSpan: 6,
+      },
       configuration: {
         configurationType: WidgetConfigurationType.BAR_CHART,
         aggregateFieldMetadataId: opportunityFields.id.id,
@@ -376,6 +426,7 @@ const createOpportunitiesByOwner = ({
         firstDayOfTheWeek: CalendarStartDay.SUNDAY,
       },
       objectMetadataId: opportunityObjectId,
+      conditionalDisplay: null,
     },
   });
 };
@@ -387,6 +438,7 @@ const createStockMarketIframe = ({
 }): FlatPageLayoutWidget =>
   createStandardPageLayoutWidgetFlatMetadata({
     ...args,
+    objectMetadataUniversalIdentifier: null,
     context: {
       layoutName: 'myFirstDashboard',
       tabTitle: 'tab1',
@@ -394,11 +446,19 @@ const createStockMarketIframe = ({
       title: 'Stock market (Iframe)',
       type: WidgetType.IFRAME,
       gridPosition: { row: 12, column: 6, rowSpan: 8, columnSpan: 6 },
+      position: {
+        layoutMode: PageLayoutTabLayoutMode.GRID,
+        row: 12,
+        column: 6,
+        rowSpan: 8,
+        columnSpan: 6,
+      },
       configuration: {
         configurationType: WidgetConfigurationType.IFRAME as const,
         url: 'https://www.tradingview.com/embed-widget/hotlists/?locale=en',
       },
       objectMetadataId: null,
+      conditionalDisplay: null,
     },
   });
 
@@ -414,6 +474,8 @@ const createDealsCreatedThisMonth = ({
 
   return createStandardPageLayoutWidgetFlatMetadata({
     ...args,
+    objectMetadataUniversalIdentifier:
+      STANDARD_OBJECTS.opportunity.universalIdentifier,
     context: {
       layoutName: 'myFirstDashboard',
       tabTitle: 'tab1',
@@ -421,6 +483,13 @@ const createDealsCreatedThisMonth = ({
       title: 'Deals created this month',
       type: WidgetType.GRAPH,
       gridPosition: { row: 18, column: 0, rowSpan: 2, columnSpan: 3 },
+      position: {
+        layoutMode: PageLayoutTabLayoutMode.GRID,
+        row: 18,
+        column: 0,
+        rowSpan: 2,
+        columnSpan: 3,
+      },
       configuration: {
         configurationType: WidgetConfigurationType.AGGREGATE_CHART,
         aggregateFieldMetadataId: opportunityFields.id.id,
@@ -441,6 +510,7 @@ const createDealsCreatedThisMonth = ({
         firstDayOfTheWeek: CalendarStartDay.SUNDAY,
       },
       objectMetadataId: opportunityObjectId,
+      conditionalDisplay: null,
     },
   });
 };
@@ -457,6 +527,8 @@ const createDealValueCreatedThisMonth = ({
 
   return createStandardPageLayoutWidgetFlatMetadata({
     ...args,
+    objectMetadataUniversalIdentifier:
+      STANDARD_OBJECTS.opportunity.universalIdentifier,
     context: {
       layoutName: 'myFirstDashboard',
       tabTitle: 'tab1',
@@ -464,6 +536,13 @@ const createDealValueCreatedThisMonth = ({
       title: 'Deal value created this month',
       type: WidgetType.GRAPH,
       gridPosition: { row: 18, column: 3, rowSpan: 2, columnSpan: 3 },
+      position: {
+        layoutMode: PageLayoutTabLayoutMode.GRID,
+        row: 18,
+        column: 3,
+        rowSpan: 2,
+        columnSpan: 3,
+      },
       configuration: {
         configurationType: WidgetConfigurationType.AGGREGATE_CHART,
         aggregateFieldMetadataId: opportunityFields.amount.id,
@@ -484,6 +563,7 @@ const createDealValueCreatedThisMonth = ({
         firstDayOfTheWeek: CalendarStartDay.SUNDAY,
       },
       objectMetadataId: opportunityObjectId,
+      conditionalDisplay: null,
     },
   });
 };

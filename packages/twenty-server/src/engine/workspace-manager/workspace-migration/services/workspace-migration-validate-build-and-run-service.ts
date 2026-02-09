@@ -32,6 +32,9 @@ type ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs = {
     [P in AllMetadataName]?: FlatEntityToCreateDeleteUpdate<P>;
   };
   isSystemBuild?: boolean;
+  // TODO remove once application synchronization do not consume services atomically anymore
+  // Should always be the universal workspace custom app id
+  applicationUniversalIdentifier: string;
 };
 
 @Injectable()
@@ -123,6 +126,7 @@ export class WorkspaceMigrationValidateBuildAndRunService {
   private async computeFromToAllFlatEntityMapsAndBuildOptions({
     allFlatEntityOperationByMetadataName,
     workspaceId,
+    applicationUniversalIdentifier,
   }: ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs): Promise<{
     fromToAllFlatEntityMaps: FromToAllFlatEntityMaps;
     inferDeletionFromMissingEntities: InferDeletionFromMissingEntities;
@@ -136,6 +140,7 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     } = await this.computeAllRelatedFlatEntityMaps({
       allFlatEntityOperationByMetadataName,
       workspaceId,
+      applicationUniversalIdentifier,
     });
 
     const fromToAllFlatEntityMaps: FromToAllFlatEntityMaps = {};
@@ -216,6 +221,7 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     allFlatEntityOperationByMetadataName: allFlatEntities,
     workspaceId,
     isSystemBuild = false,
+    applicationUniversalIdentifier,
   }: ValidateBuildAndRunWorkspaceMigrationFromMatriceArgs): Promise<
     WorkspaceMigrationOrchestratorFailedResult | undefined
   > {
@@ -227,9 +233,11 @@ export class WorkspaceMigrationValidateBuildAndRunService {
     } = await this.computeFromToAllFlatEntityMapsAndBuildOptions({
       allFlatEntityOperationByMetadataName: allFlatEntities,
       workspaceId,
+      applicationUniversalIdentifier,
     });
 
     return await this.validateBuildAndRunWorkspaceMigrationFromTo({
+      applicationUniversalIdentifier,
       buildOptions: {
         isSystemBuild,
         inferDeletionFromMissingEntities,

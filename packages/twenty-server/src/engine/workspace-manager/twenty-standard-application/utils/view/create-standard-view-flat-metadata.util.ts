@@ -1,4 +1,5 @@
 import { isDefined } from 'class-validator';
+import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
 
 import { type AggregateOperations } from 'src/engine/api/graphql/graphql-query-runner/constants/aggregate-operations.constant';
 import { type FlatView } from 'src/engine/metadata-modules/flat-view/types/flat-view.type';
@@ -6,7 +7,7 @@ import { type ViewKey } from 'src/engine/metadata-modules/view/enums/view-key.en
 import { ViewOpenRecordIn } from 'src/engine/metadata-modules/view/enums/view-open-record-in';
 import { type ViewType } from 'src/engine/metadata-modules/view/enums/view-type.enum';
 import { ViewVisibility } from 'src/engine/metadata-modules/view/enums/view-visibility.enum';
-import { STANDARD_OBJECTS } from 'src/engine/workspace-manager/twenty-standard-application/constants/standard-object.constant';
+import { TWENTY_STANDARD_APPLICATION } from 'src/engine/workspace-manager/twenty-standard-application/constants/twenty-standard-applications';
 import { type AllStandardObjectFieldName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-field-name.type';
 import { type AllStandardObjectName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-name.type';
 import { type AllStandardObjectViewName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-view-name.type';
@@ -70,6 +71,8 @@ export const createStandardViewFlatMetadata = <
 
   const objectMetadataId =
     standardObjectMetadataRelatedEntityIds[objectName].id;
+  const objectMetadataUniversalIdentifier =
+    STANDARD_OBJECTS[objectName].universalIdentifier;
 
   const kanbanAggregateOperationFieldMetadataId =
     kanbanAggregateOperationFieldName
@@ -91,9 +94,15 @@ export const createStandardViewFlatMetadata = <
     : null;
 
   return {
+    calendarFieldMetadataUniversalIdentifier: null,
+    kanbanAggregateOperationFieldMetadataUniversalIdentifier: null,
+    mainGroupByFieldMetadataUniversalIdentifier: null,
+    objectMetadataUniversalIdentifier,
     id: standardObjectMetadataRelatedEntityIds[objectName].views[viewName].id,
     universalIdentifier: viewDefinition.universalIdentifier,
     applicationId: twentyStandardApplicationId,
+    applicationUniversalIdentifier:
+      TWENTY_STANDARD_APPLICATION.universalIdentifier,
     workspaceId,
     objectMetadataId,
     name,
@@ -114,9 +123,13 @@ export const createStandardViewFlatMetadata = <
     visibility: ViewVisibility.WORKSPACE,
     createdByUserWorkspaceId: null,
     viewFieldIds: [],
+    viewFieldUniversalIdentifiers: [],
     viewFilterIds: [],
+    viewFilterUniversalIdentifiers: [],
     viewGroupIds: [],
+    viewGroupUniversalIdentifiers: [],
     viewFilterGroupIds: [],
+    viewFilterGroupUniversalIdentifiers: [],
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
