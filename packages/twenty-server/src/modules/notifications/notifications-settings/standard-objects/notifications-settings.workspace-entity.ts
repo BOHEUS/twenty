@@ -1,9 +1,7 @@
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
-import { type EntityRelation } from 'src/engine/workspace-manager/workspace-migration/types/entity-relation.interface';
-import { type WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
+import { ActorMetadata } from 'twenty-shared/types';
 
 export class NotificationsSettingsWorkspaceEntity extends BaseWorkspaceEntity {
-  createdBy: EntityRelation<WorkspaceMemberWorkspaceEntity>;
-  createdById: string;
+  createdBy: ActorMetadata;
   settings: string[];
 }

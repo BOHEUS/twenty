@@ -14,6 +14,7 @@ import type { CustomWorkspaceEntity } from 'src/engine/twenty-orm/custom.workspa
 import { type MessageChannelWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-channel.workspace-entity';
 import { type ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { type AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
+import { ActorMetadata } from 'twenty-shared/types';
 
 export enum NotificationType {
   READ = 'READ',
@@ -25,6 +26,7 @@ registerEnumType(NotificationType, {
 });
 
 export class NotificationsWorkspaceEntity extends BaseWorkspaceEntity {
+  createdBy: ActorMetadata;
   body: string;
   status: NotificationType;
   recipient: EntityRelation<WorkspaceMemberWorkspaceEntity>;

@@ -25,6 +25,7 @@ import {
   NotificationTriggerJobData,
 } from 'src/modules/notifications/notifications/jobs/notifications-trigger.job';
 
+// TODO: think of better solution than this array
 const objectsNotForUpdate: string[] = [
   'attachments',
   'blocklists',

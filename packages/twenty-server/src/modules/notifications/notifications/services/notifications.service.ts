@@ -6,6 +6,8 @@ import {
   NotificationsWorkspaceEntity,
   NotificationType,
 } from 'src/modules/notifications/notifications/standard-objects/notifications.workspace-entity';
+import { UpdateNotificationInput } from 'src/modules/notifications/notifications/dtos/update-notification-input';
+import { UpdateBatchNotificationsInput } from 'src/modules/notifications/notifications/dtos/update-batch-notifications-input';
 
 @Injectable()
 export class NotificationsService {
@@ -31,8 +33,7 @@ export class NotificationsService {
 
   async updateSingleNotification(
     workspaceId: string,
-    notificationId: string,
-    status: string,
+    input: UpdateNotificationInput,
   ) {
     const authContext = buildSystemAuthContext(workspaceId);
 
@@ -44,10 +45,12 @@ export class NotificationsService {
         );
 
       const updatedStatus =
-        status === 'READ' ? NotificationType.UNREAD : NotificationType.READ;
+        input.update.status === 'READ'
+          ? NotificationType.UNREAD
+          : NotificationType.READ;
 
       await notificationsRepository.update(
-        { id: notificationId },
+        { id: input.id },
         { status: updatedStatus },
       );
     }, authContext);
@@ -55,8 +58,7 @@ export class NotificationsService {
 
   async updateNotifications(
     workspaceId: string,
-    notificationIds: string[],
-    status: string,
+    input: UpdateBatchNotificationsInput,
   ) {
     const authContext = buildSystemAuthContext(workspaceId);
 
@@ -68,9 +70,11 @@ export class NotificationsService {
         );
 
       const updatedStatus =
-        status === 'UNREAD' ? NotificationType.UNREAD : NotificationType.READ;
+        input.status === 'UNREAD'
+          ? NotificationType.UNREAD
+          : NotificationType.READ;
 
-      for (const id of notificationIds) {
+      for (const id of input.id) {
         await notificationsRepository.update({ id }, { status: updatedStatus });
       }
     }, authContext);

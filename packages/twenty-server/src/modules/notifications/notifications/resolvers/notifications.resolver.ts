@@ -1,5 +1,5 @@
 import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
-import { Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
@@ -10,65 +10,56 @@ import { NotificationsService } from 'src/modules/notifications/notifications/se
 import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
 import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
 import { NotificationDto } from 'src/modules/notifications/notifications/dtos/notification.dto';
+import { CustomPermissionGuard } from 'src/engine/guards/custom-permission.guard';
+import { UpdateNotificationInput } from 'src/modules/notifications/notifications/dtos/update-notification-input';
+import { UpdateBatchNotificationsInput } from 'src/modules/notifications/notifications/dtos/update-batch-notifications-input';
 
-@UseGuards(WorkspaceAuthGuard)
+@UseGuards(WorkspaceAuthGuard, UserAuthGuard, CustomPermissionGuard)
 @UsePipes(ResolverValidationPipe)
 @UseFilters(PreventNestToAutoLogGraphqlErrorsFilter)
-@Resolver()
+@Resolver(() => NotificationDto)
 export class NotificationsResolver {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  // delete all notifications
-  // update all notifications
-  // get all notifications
-
   @Mutation(() => NotificationDto)
-  @UseGuards(UserAuthGuard)
   async deleteAllNotifications(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
     @AuthUserWorkspaceId() workspaceMemberId: string,
-  ): Promise<void> {
-    await this.notificationsService.removeNotifications(
+  ) {
+    return await this.notificationsService.removeNotifications(
       workspaceId,
       workspaceMemberId,
     );
   }
 
   @Mutation()
-  @UseGuards(UserAuthGuard)
   async updateSingleNotification(
+    @Args('input') input: UpdateNotificationInput,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-    notificationId: string,
-    status: string,
-  ): Promise<void> {
-    await this.notificationsService.updateSingleNotification(
+  ) {
+    return await this.notificationsService.updateSingleNotification(
       workspaceId,
-      notificationId,
-      status,
+      input,
     );
   }
 
   @Mutation()
-  @UseGuards(UserAuthGuard)
   async updateBatchNotifications(
+    @Args('input') input: UpdateBatchNotificationsInput,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-    notificationIds: string[],
-    status: string,
-  ): Promise<void> {
-    await this.notificationsService.updateNotifications(
+  ) {
+    return await this.notificationsService.updateNotifications(
       workspaceId,
-      notificationIds,
-      status,
+      input,
     );
   }
 
   @Query()
-  @UseGuards(UserAuthGuard)
-  async getNotifications(
+  async getWorkspaceMemberNotifications(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
     @AuthUserWorkspaceId() workspaceMemberId: string,
   ) {
-    await this.notificationsService.getNotifications(
+    return await this.notificationsService.getNotifications(
       workspaceId,
       workspaceMemberId,
     );
