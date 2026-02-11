@@ -40,7 +40,7 @@ export const computeStandardTaskViews = (
       objectName: 'task',
       context: {
         viewName: 'assignedToMe',
-        name: 'Assigned to Me',
+        name: 'My Tasks',
         type: ViewType.TABLE,
         key: null,
         position: 2,

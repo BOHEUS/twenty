@@ -158,5 +158,79 @@ export const computeStandardOpportunityViewFields = (
         size: 150,
       },
     }),
+
+    // myOpportunities view fields
+    myOpportunitiesName: createStandardViewFieldFlatMetadata({
+      ...args,
+      objectName: 'opportunity',
+      context: {
+        viewName: 'myOpportunities',
+        viewFieldName: 'name',
+        fieldName: 'name',
+        position: 0,
+        isVisible: true,
+        size: 150,
+      },
+    }),
+    myOpportunitiesAmount: createStandardViewFieldFlatMetadata({
+      ...args,
+      objectName: 'opportunity',
+      context: {
+        viewName: 'myOpportunities',
+        viewFieldName: 'amount',
+        fieldName: 'amount',
+        position: 1,
+        isVisible: true,
+        size: 150,
+      },
+    }),
+    myOpportunitiesCreatedBy: createStandardViewFieldFlatMetadata({
+      ...args,
+      objectName: 'opportunity',
+      context: {
+        viewName: 'myOpportunities',
+        viewFieldName: 'createdBy',
+        fieldName: 'createdBy',
+        position: 2,
+        isVisible: true,
+        size: 150,
+      },
+    }),
+    myOpportunitiesCloseDate: createStandardViewFieldFlatMetadata({
+      ...args,
+      objectName: 'opportunity',
+      context: {
+        viewName: 'myOpportunities',
+        viewFieldName: 'closeDate',
+        fieldName: 'closeDate',
+        position: 3,
+        isVisible: true,
+        size: 150,
+      },
+    }),
+    myOpportunitiesCompany: createStandardViewFieldFlatMetadata({
+      ...args,
+      objectName: 'opportunity',
+      context: {
+        viewName: 'myOpportunities',
+        viewFieldName: 'company',
+        fieldName: 'company',
+        position: 4,
+        isVisible: true,
+        size: 150,
+      },
+    }),
+    myOpportunitiesPointOfContact: createStandardViewFieldFlatMetadata({
+      ...args,
+      objectName: 'opportunity',
+      context: {
+        viewName: 'myOpportunities',
+        viewFieldName: 'pointOfContact',
+        fieldName: 'pointOfContact',
+        position: 5,
+        isVisible: true,
+        size: 150,
+      },
+    }),
   };
 };

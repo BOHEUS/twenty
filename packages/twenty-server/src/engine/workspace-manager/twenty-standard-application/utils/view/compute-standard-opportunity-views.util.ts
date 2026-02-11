@@ -38,5 +38,20 @@ export const computeStandardOpportunityViews = (
         kanbanAggregateOperationFieldName: 'amount',
       },
     }),
+    myOpportunities: createStandardViewFlatMetadata({
+      ...args,
+      objectName: 'opportunity',
+      context: {
+        viewName: 'myOpportunities',
+        name: 'My Opportunities',
+        type: ViewType.KANBAN,
+        key: null,
+        position: 2,
+        icon: 'IconUserCircle',
+        mainGroupByFieldName: 'stage',
+      kanbanAggregateOperation: AggregateOperations.SUM,
+      kanbanAggregateOperationFieldName: 'amount'
+      },
+    }),
   };
 };

@@ -1209,6 +1209,51 @@ export const STANDARD_OBJECTS = {
           },
         },
       },
+      myOpportunities: {
+        universalIdentifier: '20202020-3626-46ed-ba66-6f05d70eaaa8',
+        viewFields: {
+          name: {
+            universalIdentifier: '20202020-af24-4a04-8a04-0aa0b2ca2baf',
+          },
+          amount: {
+            universalIdentifier: '20202020-af24-4a04-8a04-0aa0b2ca2bb0',
+          },
+          createdBy: {
+            universalIdentifier: '20202020-af24-4a04-8a04-0aa0b2ca2bb1',
+          },
+          closeDate: {
+            universalIdentifier: '20202020-af24-4a04-8a04-0aa0b2ca2bb2',
+          },
+          company: {
+            universalIdentifier: '20202020-af24-4a04-8a04-0aa0b2ca2bb3',
+          },
+          pointOfContact: {
+            universalIdentifier: '20202020-af24-4a04-8a04-0aa0b2ca2bb4',
+          },
+        },
+        viewFilters: {
+          ownerIsMe: {
+            universalIdentifier: '20202020-af27-4a07-8a07-ba5ca551abf1',
+          },
+        },
+        viewGroups: {
+          new: {
+            universalIdentifier: '20202020-af34-4a04-8a04-0aa0b2ca2bf1',
+          },
+          screening: {
+            universalIdentifier: '20202020-af34-4a04-8a04-0aa0b2ca2bf2',
+          },
+          meeting: {
+            universalIdentifier: '20202020-af34-4a04-8a04-0aa0b2ca2bf3',
+          },
+          proposal: {
+            universalIdentifier: '20202020-af34-4a04-8a04-0aa0b2ca2bf4',
+          },
+          customer: {
+            universalIdentifier: '20202020-af34-4a04-8a04-0aa0b2ca2bf5',
+          },
+        },
+      }
     },
   },
   person: {
