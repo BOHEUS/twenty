@@ -4,11 +4,7 @@ describe('transformLinksValue', () => {
   it('should handle null/undefined/empty object values', () => {
     expect(transformLinksValue(null)).toBeNull();
     expect(transformLinksValue(undefined)).toBeUndefined();
-    expect(transformLinksValue({})).toEqual({
-      primaryLinkLabel: null,
-      primaryLinkUrl: null,
-      secondaryLinks: null,
-    });
+    expect(transformLinksValue({})).toEqual({});
   });
 
   describe('primary link', () => {
@@ -22,7 +18,7 @@ describe('transformLinksValue', () => {
       const expected = {
         primaryLinkUrl: 'https://example.com',
         primaryLinkLabel: 'Example',
-        secondaryLinks: null,
+        secondaryLinks: '[]',
       };
 
       expect(transformLinksValue(input)).toEqual(expected);
@@ -38,7 +34,7 @@ describe('transformLinksValue', () => {
       const expected = {
         primaryLinkUrl: 'https://example.com',
         primaryLinkLabel: 'Example',
-        secondaryLinks: null,
+        secondaryLinks: '[]',
       };
 
       expect(transformLinksValue(input)).toEqual(expected);
@@ -54,7 +50,7 @@ describe('transformLinksValue', () => {
       const expected = {
         primaryLinkUrl: 'example.com',
         primaryLinkLabel: 'Example',
-        secondaryLinks: null,
+        secondaryLinks: '[]',
       };
 
       expect(transformLinksValue(input)).toEqual(expected);
@@ -70,7 +66,7 @@ describe('transformLinksValue', () => {
       const expected = {
         primaryLinkUrl: 'www.example.com',
         primaryLinkLabel: 'Example',
-        secondaryLinks: null,
+        secondaryLinks: '[]',
       };
 
       expect(transformLinksValue(input)).toEqual(expected);
