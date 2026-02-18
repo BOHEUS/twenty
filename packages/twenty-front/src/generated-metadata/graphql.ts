@@ -1630,6 +1630,7 @@ export enum FileFolder {
   BuiltFrontComponent = 'BuiltFrontComponent',
   BuiltLogicFunction = 'BuiltLogicFunction',
   Dependencies = 'Dependencies',
+  Export = 'Export',
   File = 'File',
   FilesField = 'FilesField',
   PersonPicture = 'PersonPicture',

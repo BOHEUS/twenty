@@ -11,4 +11,5 @@ export enum FileFolder {
   Source = 'source',
   FilesField = 'files-field',
   Dependencies = 'dependencies',
+  Export = 'export',
 }
