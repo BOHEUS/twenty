@@ -125,6 +125,9 @@ export class FieldMetadataEntity<
   @Column({ nullable: true, default: false, type: 'boolean' })
   isUnique: boolean | null;
 
+  @Column({ default: false, type: 'boolean' })
+  isSearchable: boolean;
+
   @Column({ default: false })
   isLabelSyncedWithName: boolean;
 

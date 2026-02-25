@@ -23,6 +23,7 @@ import { generateIndexForFlatFieldMetadata } from 'src/engine/metadata-modules/f
 import { getDefaultFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/get-default-flat-field-metadata-from-create-field-input.util';
 import { type UniversalFlatFieldMetadata } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-field-metadata.type';
 import { type UniversalFlatIndexMetadata } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-index-metadata.type';
+import { recomputeSearchVectorField } from 'src/engine/metadata-modules/flat-field-metadata/utils/recompute-search-vector-field.util';
 
 export type FromCreateFieldInputToFlatObjectMetadataArgs = {
   createFieldInput: Omit<CreateFieldInput, 'workspaceId'>;
@@ -196,6 +197,13 @@ export const fromCreateFieldInputToFlatFieldMetadatasToCreate = async ({
             flatObjectMetadata: parentFlatObjectMetadata,
           }),
         );
+      }
+
+      if (commonFlatFieldMetadata.isSearchable) {
+        recomputeSearchVectorField({
+          existingFlatObjectMetadata: parentFlatObjectMetadata,
+          flatFieldMetadataMaps: commonFlatFieldMetadata,
+        });
       }
 
       return {

@@ -122,6 +122,11 @@ export class FieldMetadataDTO<T extends FieldMetadataType = FieldMetadataType> {
   @IsBoolean()
   @IsOptional()
   @Field({ nullable: true })
+  isSearchable?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Field({ nullable: true })
   isUnique?: boolean;
 
   @IsOptional()
