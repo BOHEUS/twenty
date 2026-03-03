@@ -2,13 +2,11 @@ import { gql } from '@apollo/client';
 import { MockedProvider, type MockedResponse } from '@apollo/client/testing';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { type ReactNode } from 'react';
-import { RecoilRoot } from 'recoil';
-
 import {
   ANALYTICS_COOKIE_NAME,
   useEventTracker,
 } from '@/analytics/hooks/useEventTracker';
-import { AnalyticsType } from '~/generated/graphql';
+import { AnalyticsType } from '~/generated-metadata/graphql';
 
 // Mock document.cookie
 Object.defineProperty(document, 'cookie', {
@@ -96,11 +94,9 @@ const mocks: MockedResponse[] = [
 ];
 
 const Wrapper = ({ children }: { children: ReactNode }) => (
-  <RecoilRoot>
-    <MockedProvider mocks={mocks} addTypename={false}>
-      {children}
-    </MockedProvider>
-  </RecoilRoot>
+  <MockedProvider mocks={mocks} addTypename={false}>
+    {children}
+  </MockedProvider>
 );
 
 describe('useEventTracker', () => {

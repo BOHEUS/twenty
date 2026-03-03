@@ -1,5 +1,17 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`CommandMenuItem creation should fail when creating with both workflowVersionId and frontComponentId 1`] = `
+{
+  "extensions": {
+    "code": "BAD_USER_INPUT",
+    "subCode": "WORKFLOW_OR_FRONT_COMPONENT_REQUIRED",
+    "userFriendlyMessage": "Either workflow version or front component is required.",
+  },
+  "message": "Exactly one of workflowVersionId or frontComponentId is required",
+  "name": "UserInputError",
+}
+`;
+
 exports[`CommandMenuItem creation should fail when creating with empty label 1`] = `
 {
   "extensions": {
@@ -15,7 +27,6 @@ exports[`CommandMenuItem creation should fail when creating with empty label 1`]
             },
           ],
           "flatEntityMinimalInformation": {
-            "id": Any<String>,
             "universalIdentifier": Any<String>,
           },
           "metadataName": "commandMenuItem",
@@ -36,6 +47,36 @@ exports[`CommandMenuItem creation should fail when creating with empty label 1`]
 }
 `;
 
+exports[`CommandMenuItem creation should fail when creating with empty workflowVersionId 1`] = `
+{
+  "extensions": {
+    "code": "GRAPHQL_VALIDATION_FAILED",
+    "http": {
+      "status": 400,
+    },
+    "userFriendlyMessage": "An error occurred.",
+    "value": "",
+  },
+  "message": "Invalid UUID: ''",
+  "name": "ValidationError",
+}
+`;
+
+exports[`CommandMenuItem creation should fail when creating with invalid workflowVersionId (not a UUID) 1`] = `
+{
+  "extensions": {
+    "code": "GRAPHQL_VALIDATION_FAILED",
+    "http": {
+      "status": 400,
+    },
+    "userFriendlyMessage": "An error occurred.",
+    "value": "not-a-valid-uuid",
+  },
+  "message": "Invalid UUID: 'not-a-valid-uuid'",
+  "name": "ValidationError",
+}
+`;
+
 exports[`CommandMenuItem creation should fail when creating with missing label 1`] = `
 {
   "extensions": {
@@ -51,48 +92,6 @@ exports[`CommandMenuItem creation should fail when creating with missing label 1
 `;
 
 exports[`CommandMenuItem creation should fail when creating with missing workflowVersionId 1`] = `
-{
-  "extensions": {
-    "code": "BAD_USER_INPUT",
-    "subCode": "WORKFLOW_OR_FRONT_COMPONENT_REQUIRED",
-    "userFriendlyMessage": "Either workflow version or front component is required.",
-  },
-  "message": "Exactly one of workflowVersionId or frontComponentId is required",
-  "name": "UserInputError",
-}
-`;
-
-exports[`CommandMenuItem creation should fail when creating with empty workflowVersionId 1`] = `
-{
-  "extensions": {
-    "code": "GRAPHQL_VALIDATION_FAILED",
-    "http": {
-      "status": 400,
-    },
-    "userFriendlyMessage": "An error occurred.",
-    "value": "",
-  },
-  "message": "Invalid UUID",
-  "name": "ValidationError",
-}
-`;
-
-exports[`CommandMenuItem creation should fail when creating with invalid workflowVersionId (not a UUID) 1`] = `
-{
-  "extensions": {
-    "code": "GRAPHQL_VALIDATION_FAILED",
-    "http": {
-      "status": 400,
-    },
-    "userFriendlyMessage": "An error occurred.",
-    "value": "not-a-valid-uuid",
-  },
-  "message": "Invalid UUID",
-  "name": "ValidationError",
-}
-`;
-
-exports[`CommandMenuItem creation should fail when creating with both workflowVersionId and frontComponentId 1`] = `
 {
   "extensions": {
     "code": "BAD_USER_INPUT",

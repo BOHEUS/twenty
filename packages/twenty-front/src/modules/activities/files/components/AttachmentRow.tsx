@@ -12,25 +12,27 @@ import {
 import { getFileCategoryFromExtension } from '@/object-record/record-field/ui/utils/getFileCategoryFromExtension';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
-import { useTheme } from '@emotion/react';
-import styled from '@emotion/styled';
-import { useState } from 'react';
-import { assertIsDefinedOrThrow, isDefined } from 'twenty-shared/utils';
+import { useContext, useState } from 'react';
+import { styled } from '@linaria/react';
+import { isDefined } from 'twenty-shared/utils';
 
 import { FileIcon } from '@/file/components/FileIcon';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
-import { t } from '@lingui/core/macro';
 import { IconCalendar, OverflowingTextWithTooltip } from 'twenty-ui/display';
+import { ThemeContext } from 'twenty-ui/theme';
+import { themeCssVariables } from 'twenty-ui/theme-constants';
 import { isNavigationModifierPressed } from 'twenty-ui/utilities';
-import { PermissionFlagType } from '~/generated-metadata/graphql';
-import { FeatureFlagKey } from '~/generated/graphql';
+import {
+  FeatureFlagKey,
+  PermissionFlagType,
+} from '~/generated-metadata/graphql';
 import { formatToHumanReadableDate } from '~/utils/date-utils';
 import { getFileNameAndExtension } from '~/utils/file/getFileNameAndExtension';
 
 const StyledLeftContent = styled.div`
   align-items: center;
   display: flex;
-  gap: ${({ theme }) => theme.spacing(3)};
+  gap: ${themeCssVariables.spacing[3]};
 
   width: 100%;
   overflow: auto;
@@ -40,12 +42,12 @@ const StyledLeftContent = styled.div`
 const StyledRightContent = styled.div`
   align-items: center;
   display: flex;
-  gap: ${({ theme }) => theme.spacing(0.5)};
+  gap: ${themeCssVariables.spacing['0.5']};
 `;
 
 const StyledCalendarIconContainer = styled.div`
   align-items: center;
-  color: ${({ theme }) => theme.font.color.light};
+  color: ${themeCssVariables.font.color.light};
   display: flex;
 `;
 
@@ -54,7 +56,7 @@ const StyledLink = styled.a`
   appearance: none;
   background: none;
   border: none;
-  color: ${({ theme }) => theme.font.color.primary};
+  color: ${themeCssVariables.font.color.primary};
   cursor: pointer;
   display: flex;
   font-family: inherit;
@@ -65,7 +67,7 @@ const StyledLink = styled.a`
   width: 100%;
 
   :hover {
-    color: ${({ theme }) => theme.font.color.secondary};
+    color: ${themeCssVariables.font.color.secondary};
   }
 `;
 
@@ -83,7 +85,7 @@ export const AttachmentRow = ({
   attachment,
   onPreview,
 }: AttachmentRowProps) => {
-  const theme = useTheme();
+  const { theme } = useContext(ThemeContext);
   const [isEditing, setIsEditing] = useState(false);
 
   const isFilesFieldMigrated = useIsFeatureEnabled(
@@ -95,7 +97,11 @@ export const AttachmentRow = ({
   );
 
   const { name: originalFileName, extension: attachmentFileExtension } =
-    getFileNameAndExtension(attachment.name);
+    getFileNameAndExtension(
+      isFilesFieldMigrated
+        ? (attachment.file?.[0]?.label as string)
+        : attachment.name,
+    );
 
   const [attachmentFileName, setAttachmentFileName] =
     useState(originalFileName);
@@ -105,10 +111,8 @@ export const AttachmentRow = ({
     : attachment.fileCategory;
 
   const fileUrl = isFilesFieldMigrated
-    ? attachment.file?.[0]?.url
+    ? (attachment.file?.[0]?.url as string) // TODO : fix attachment.file type after Files field migration
     : attachment.fullPath;
-
-  assertIsDefinedOrThrow(fileUrl, new Error(t`File URL is not defined`));
 
   const { destroyOneRecord: destroyOneAttachment } = useDestroyOneRecord({
     objectNameSingular: CoreObjectNameSingular.Attachment,
@@ -207,7 +211,9 @@ export const AttachmentRow = ({
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <OverflowingTextWithTooltip text={attachment.name} />
+                <OverflowingTextWithTooltip
+                  text={`${attachmentFileName}${attachmentFileExtension}`}
+                />
               </StyledLink>
             </StyledLinkContainer>
           )}

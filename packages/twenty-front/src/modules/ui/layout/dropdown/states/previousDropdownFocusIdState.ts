@@ -1,6 +1,6 @@
-import { createState } from 'twenty-ui/utilities';
+import { createAtomState } from '@/ui/utilities/state/jotai/utils/createAtomState';
 
-export const previousDropdownFocusIdState = createState<string | null>({
+export const previousDropdownFocusIdState = createAtomState<string | null>({
   key: 'previousDropdownFocusIdState',
   defaultValue: null,
 });

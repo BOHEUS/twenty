@@ -3,7 +3,7 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { type GroupByResolverArgs } from 'src/engine/api/graphql/workspace-resolver-builder/interfaces/workspace-resolvers-builder.interface';
 
-import { type GroupByField } from 'src/engine/api/graphql/graphql-query-runner/group-by/resolvers/types/group-by-field.types';
+import { type GroupByField } from 'src/engine/api/common/common-query-runners/types/group-by-field.types';
 import { isGroupByDateFieldDefinition } from 'src/engine/api/graphql/graphql-query-runner/group-by/resolvers/utils/is-group-by-date-field-definition.util';
 import { parseGroupByRelationField } from 'src/engine/api/graphql/graphql-query-runner/group-by/resolvers/utils/parse-group-by-relation-field.util';
 import { validateSingleKeyForGroupByOrThrow } from 'src/engine/api/graphql/graphql-query-runner/group-by/resolvers/utils/validate-single-key-for-group-by-or-throw.util';
@@ -91,6 +91,20 @@ export const parseGroupByArgs = (
           });
           continue;
         }
+      }
+
+      // Handle array unnest fields
+      if (
+        typeof fieldNames[fieldName] === 'object' &&
+        fieldNames[fieldName] !== null &&
+        'unnest' in fieldNames[fieldName]
+      ) {
+        groupByFields.push({
+          fieldMetadata,
+          subFieldName: undefined,
+          shouldUnnest: true,
+        });
+        continue;
       }
 
       // Handle regular fields and composite fields

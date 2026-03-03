@@ -117,9 +117,36 @@ export class UpdateWorkspaceInput {
   @IsOptional()
   smartModel?: string;
 
+  @Field({ nullable: true })
+  @IsString()
+  @IsOptional()
+  aiAdditionalInstructions?: string;
+
   @Field(() => [String], { nullable: true })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   editableProfileFields?: string[];
+
+  @Field({ nullable: true })
+  @IsBoolean()
+  @IsOptional()
+  autoEnableNewAiModels?: boolean;
+
+  @Field(() => [String], { nullable: true })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  disabledAiModelIds?: string[];
+
+  @Field(() => [String], { nullable: true })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  enabledAiModelIds?: string[];
+
+  @Field({ nullable: true })
+  @IsBoolean()
+  @IsOptional()
+  useRecommendedModels?: boolean;
 }

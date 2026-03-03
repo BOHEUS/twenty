@@ -1,18 +1,22 @@
-import { t } from '@lingui/core/macro';
+import { NavigationMenuItemStyleIcon } from '@/navigation-menu-item/components/NavigationMenuItemStyleIcon';
 import { useIsSettingsPage } from '@/navigation/hooks/useIsSettingsPage';
+import { NAVIGATION_DRAWER_COLLAPSED_WIDTH } from '@/ui/layout/resizable-panel/constants/NavigationDrawerCollapsedWidth';
 import { NavigationDrawerAnimatedCollapseWrapper } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerAnimatedCollapseWrapper';
 import { NavigationDrawerItemBreadcrumb } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItemBreadcrumb';
-import { NAVIGATION_DRAWER_COLLAPSED_WIDTH } from '@/ui/layout/resizable-panel/constants/NavigationDrawerCollapsedWidth';
 import { useNavigationDrawerTooltip } from '@/ui/navigation/navigation-drawer/hooks/useNavigationDrawerTooltip';
 import { type NavigationDrawerSubItemState } from '@/ui/navigation/navigation-drawer/types/NavigationDrawerSubItemState';
 import { isNavigationDrawerExpandedState } from '@/ui/navigation/states/isNavigationDrawerExpanded';
 import { useIsMobile } from '@/ui/utilities/responsive/hooks/useIsMobile';
+import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
+import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import isPropValid from '@emotion/is-prop-valid';
 import { css, useTheme } from '@emotion/react';
 import styled from '@emotion/styled';
+import { t } from '@lingui/core/macro';
+import { isNonEmptyString } from '@sniptt/guards';
 import { type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useRecoilState } from 'recoil';
+import { isDefined } from 'twenty-shared/utils';
 import { Pill } from 'twenty-ui/components';
 import {
   AppTooltip,
@@ -28,6 +32,7 @@ import {
   type TriggerEventType,
   useMouseDownNavigation,
 } from 'twenty-ui/utilities';
+import { FeatureFlagKey } from '~/generated-metadata/graphql';
 
 const DEFAULT_INDENTATION_LEVEL = 1;
 
@@ -42,6 +47,7 @@ export type NavigationDrawerItemProps = {
   to?: string;
   onClick?: () => void;
   Icon?: IconComponent | ((props: TablerIconsProps) => JSX.Element);
+  iconColor?: string | null;
   active?: boolean;
   danger?: boolean;
   soon?: boolean;
@@ -49,29 +55,51 @@ export type NavigationDrawerItemProps = {
   count?: number;
   keyboard?: string[];
   rightOptions?: ReactNode;
+  alwaysShowRightOptions?: boolean;
   isDragging?: boolean;
   isRightOptionsDropdownOpen?: boolean;
   triggerEvent?: TriggerEventType;
   mouseUpNavigation?: boolean;
   preventCollapseOnMobile?: boolean;
+  isSelectedInEditMode?: boolean;
 };
 
 type StyledItemProps = Pick<
   NavigationDrawerItemProps,
-  'active' | 'danger' | 'indentationLevel' | 'soon' | 'to' | 'isDragging'
-> & { isNavigationDrawerExpanded: boolean; hasRightOptions: boolean };
+  | 'active'
+  | 'danger'
+  | 'indentationLevel'
+  | 'soon'
+  | 'to'
+  | 'isDragging'
+  | 'isSelectedInEditMode'
+> & {
+  isNavigationDrawerExpanded: boolean;
+  hasRightOptions: boolean;
+  href?: string;
+  target?: string;
+  rel?: string;
+};
 
 const StyledItem = styled('button', {
   shouldForwardProp: (prop) =>
-    !['active', 'danger', 'soon', 'isDragging'].includes(prop) &&
-    isPropValid(prop),
+    ![
+      'active',
+      'danger',
+      'soon',
+      'isDragging',
+      'isSelectedInEditMode',
+    ].includes(prop) && isPropValid(prop),
 })<StyledItemProps>`
-  box-sizing: content-box;
+  box-sizing: border-box;
   align-items: center;
   background: ${(props) =>
     props.active ? props.theme.background.transparent.light : 'inherit'};
-  height: ${({ theme }) => theme.spacing(5)};
-  border: none;
+  height: ${({ theme }) => theme.spacing(7)};
+  border: ${({ theme, isSelectedInEditMode }) =>
+    isSelectedInEditMode
+      ? `1px solid ${theme.color.blue}`
+      : '1px solid transparent'};
   border-radius: ${({ theme }) => theme.border.radius.sm};
   text-decoration: none;
   color: ${(props) => {
@@ -104,8 +132,8 @@ const StyledItem = styled('button', {
 
   width: ${(props) =>
     !props.isNavigationDrawerExpanded
-      ? `calc(${NAVIGATION_DRAWER_COLLAPSED_WIDTH}px - ${props.theme.spacing(6)})`
-      : `calc(100% - ${props.theme.spacing(1.5)})`};
+      ? `calc(${NAVIGATION_DRAWER_COLLAPSED_WIDTH}px - ${props.theme.spacing(6)} + ${props.theme.spacing(1)} + ${props.hasRightOptions ? props.theme.spacing(0.5) : props.theme.spacing(1)})`
+      : `calc(100% - ${props.theme.spacing(1.5)} + ${props.theme.spacing(1)} + ${props.hasRightOptions ? props.theme.spacing(0.5) : props.theme.spacing(1)})`};
 
   ${({ isDragging }) =>
     isDragging &&
@@ -193,13 +221,27 @@ const StyledSpacer = styled.span`
   flex-grow: 1;
 `;
 
-const StyledIcon = styled.div`
-  flex-shrink: 0;
-  flex-grow: 0;
-  display: flex;
+const StyledIcon = styled.div<{
+  $backgroundColor?: string;
+  $borderColor?: string;
+}>`
   align-items: center;
+  display: flex;
+  flex-grow: 0;
+  flex-shrink: 0;
   justify-content: center;
   margin-right: ${({ theme }) => theme.spacing(2)};
+
+  ${({ theme, $backgroundColor, $borderColor }) =>
+    $backgroundColor &&
+    css`
+      background-color: ${$backgroundColor};
+      border-radius: 4px;
+      box-sizing: border-box;
+      height: ${theme.spacing(4)};
+      width: ${theme.spacing(4)};
+      ${$borderColor ? `border: 1px solid ${$borderColor};` : ''}
+    `}
 `;
 
 const StyledRightOptionsContainer = styled.div`
@@ -225,6 +267,7 @@ const visibleStateStyles = css`
 const StyledRightOptionsVisbility = styled.div<{
   isMobile: boolean;
   isRightOptionsDropdownOpen?: boolean;
+  alwaysVisible?: boolean;
 }>`
   display: block;
   opacity: 0;
@@ -237,8 +280,9 @@ const StyledRightOptionsVisbility = styled.div<{
   height: 1px;
   width: 1px;
 
-  ${({ isMobile, isRightOptionsDropdownOpen }) =>
-    (isMobile || isRightOptionsDropdownOpen) && visibleStateStyles}
+  ${({ isMobile, isRightOptionsDropdownOpen, alwaysVisible }) =>
+    (isMobile || isRightOptionsDropdownOpen || alwaysVisible) &&
+    visibleStateStyles}
 
   .navigation-drawer-item:hover & {
     ${visibleStateStyles}
@@ -251,6 +295,7 @@ export const NavigationDrawerItem = ({
   secondaryLabel,
   indentationLevel = DEFAULT_INDENTATION_LEVEL,
   Icon,
+  iconColor,
   to,
   onClick,
   active,
@@ -261,17 +306,22 @@ export const NavigationDrawerItem = ({
   keyboard,
   subItemState,
   rightOptions,
+  alwaysShowRightOptions = false,
   isDragging,
   isRightOptionsDropdownOpen,
   triggerEvent,
   mouseUpNavigation = false,
   preventCollapseOnMobile = false,
+  isSelectedInEditMode = false,
 }: NavigationDrawerItemProps) => {
   const theme = useTheme();
   const isMobile = useIsMobile();
   const isSettingsPage = useIsSettingsPage();
+  const isNavigationMenuItemEditingEnabled = useIsFeatureEnabled(
+    FeatureFlagKey.IS_NAVIGATION_MENU_ITEM_EDITING_ENABLED,
+  );
   const [isNavigationDrawerExpanded, setIsNavigationDrawerExpanded] =
-    useRecoilState(isNavigationDrawerExpandedState);
+    useAtomState(isNavigationDrawerExpandedState);
 
   const { navigationItemId } = useNavigationDrawerTooltip(label, to);
 
@@ -286,12 +336,22 @@ export const NavigationDrawerItem = ({
     }
   };
 
+  const isExternalLink =
+    isDefined(to) && (to.startsWith('http://') || to.startsWith('https://'));
+
+  const handleExternalLinkClick = () => {
+    handleMobileNavigation();
+    if (isDefined(to)) {
+      window.open(to, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   const {
     onClick: handleMouseDownNavigationClickClick,
     onMouseDown: handleMouseDown,
   } = useMouseDownNavigation({
-    to,
-    onClick,
+    to: isExternalLink ? undefined : to,
+    onClick: isExternalLink ? (onClick ?? handleExternalLinkClick) : onClick,
     onBeforeNavigation: handleMobileNavigation,
     triggerEvent,
   });
@@ -309,12 +369,20 @@ export const NavigationDrawerItem = ({
         aria-selected={active}
         danger={danger}
         soon={soon}
-        as={to ? Link : rightOptions ? 'div' : undefined}
-        to={to ? to : undefined}
+        as={
+          to ? (isExternalLink ? 'a' : Link) : rightOptions ? 'div' : undefined
+        }
+        role={to ? undefined : rightOptions ? 'button' : undefined}
+        to={isExternalLink ? undefined : to}
+        href={isExternalLink ? to : undefined}
+        target={isExternalLink ? '_blank' : undefined}
+        rel={isExternalLink ? 'noopener noreferrer' : undefined}
+        draggable={to && !isExternalLink ? false : undefined}
         indentationLevel={indentationLevel}
         isNavigationDrawerExpanded={isNavigationDrawerExpanded}
         isDragging={isDragging}
         hasRightOptions={!!rightOptions}
+        isSelectedInEditMode={isSelectedInEditMode}
       >
         <StyledItemElementsContainer>
           {showBreadcrumb && (
@@ -323,22 +391,30 @@ export const NavigationDrawerItem = ({
             </NavigationDrawerAnimatedCollapseWrapper>
           )}
 
-          {Icon && (
-            <StyledIcon>
-              <Icon
-                style={{ minWidth: theme.icon.size.md }}
-                size={theme.icon.size.md}
-                stroke={theme.icon.stroke.md}
-                color={
-                  showBreadcrumb &&
-                  !isSettingsPage &&
-                  !isNavigationDrawerExpanded
-                    ? theme.font.color.light
-                    : 'currentColor'
-                }
-              />
-            </StyledIcon>
-          )}
+          {Icon &&
+            (isNavigationMenuItemEditingEnabled &&
+            isNonEmptyString(iconColor) ? (
+              <StyledIcon>
+                <NavigationMenuItemStyleIcon Icon={Icon} color={iconColor} />
+              </StyledIcon>
+            ) : (
+              <StyledIcon>
+                <Icon
+                  style={{
+                    minWidth: theme.icon.size.md,
+                  }}
+                  size={theme.icon.size.md}
+                  stroke={theme.icon.stroke.md}
+                  color={
+                    showBreadcrumb &&
+                    !isSettingsPage &&
+                    !isNavigationDrawerExpanded
+                      ? theme.font.color.light
+                      : 'currentColor'
+                  }
+                />
+              </StyledIcon>
+            ))}
 
           <StyledLabelParent>
             <OverflowingTextWithTooltip
@@ -396,6 +472,7 @@ export const NavigationDrawerItem = ({
                 }}
               >
                 <StyledRightOptionsVisbility
+                  alwaysVisible={alwaysShowRightOptions}
                   isMobile={isMobile}
                   isRightOptionsDropdownOpen={
                     isRightOptionsDropdownOpen || false

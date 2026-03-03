@@ -1,7 +1,7 @@
 import { type ObjectMetadataItem } from '@/object-metadata/types/ObjectMetadataItem';
-import { createState } from 'twenty-ui/utilities';
+import { createAtomState } from '@/ui/utilities/state/jotai/utils/createAtomState';
 
-export const objectMetadataItemsState = createState<ObjectMetadataItem[]>({
+export const objectMetadataItemsState = createAtomState<ObjectMetadataItem[]>({
   key: 'objectMetadataItemsState',
   defaultValue: [],
 });

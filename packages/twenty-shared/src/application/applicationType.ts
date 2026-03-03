@@ -1,24 +1,26 @@
 import { type ApplicationVariables } from './applicationVariablesType';
+import { type ServerVariables } from './server-variables.type';
 import { type SyncableEntityOptions } from './syncableEntityOptionsType';
 
-export type ApplicationMarketplaceData = {
+export type ApplicationManifest = SyncableEntityOptions & {
+  defaultRoleUniversalIdentifier: string;
+  displayName: string;
+  description: string;
+  icon?: string;
+  applicationVariables?: ApplicationVariables;
+  serverVariables?: ServerVariables;
   author?: string;
   category?: string;
-  logo?: string;
+  logoUrl?: string;
   screenshots?: string[];
   aboutDescription?: string;
   providers?: string[];
   websiteUrl?: string;
   termsUrl?: string;
-};
-
-export type ApplicationManifest = SyncableEntityOptions & {
-  defaultRoleUniversalIdentifier: string;
-  displayName: string;
-  description?: string;
-  icon?: string;
-  applicationVariables?: ApplicationVariables;
-  marketplaceData?: ApplicationMarketplaceData;
+  preInstallLogicFunctionUniversalIdentifier?: string;
+  postInstallLogicFunctionUniversalIdentifier?: string;
+  settingsCustomTabFrontComponentUniversalIdentifier?: string;
   packageJsonChecksum: string | null;
   yarnLockChecksum: string | null;
+  apiClientChecksum: string | null;
 };

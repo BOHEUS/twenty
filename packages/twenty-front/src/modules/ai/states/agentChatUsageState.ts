@@ -1,15 +1,24 @@
-import { atom } from 'recoil';
+import { createAtomState } from '@/ui/utilities/state/jotai/utils/createAtomState';
 
-export type AgentChatUsageState = {
+export type AgentChatLastMessageUsage = {
   inputTokens: number;
   outputTokens: number;
-  totalTokens: number;
-  contextWindowTokens: number;
+  cachedInputTokens: number;
   inputCredits: number;
   outputCredits: number;
 };
 
-export const agentChatUsageState = atom<AgentChatUsageState | null>({
+export type AgentChatUsageState = {
+  lastMessage: AgentChatLastMessageUsage | null;
+  conversationSize: number;
+  contextWindowTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  inputCredits: number;
+  outputCredits: number;
+};
+
+export const agentChatUsageState = createAtomState<AgentChatUsageState | null>({
   key: 'agentChatUsageState',
-  default: null,
+  defaultValue: null,
 });

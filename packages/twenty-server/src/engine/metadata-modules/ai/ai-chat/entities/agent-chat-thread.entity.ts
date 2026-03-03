@@ -42,6 +42,9 @@ export class AgentChatThreadEntity {
   @Column({ type: 'int', nullable: true })
   contextWindowTokens: number | null;
 
+  @Column({ type: 'int', default: 0 })
+  conversationSize: number;
+
   @Column({ type: 'bigint', default: 0 })
   totalInputCredits: number;
 
@@ -54,9 +57,9 @@ export class AgentChatThreadEntity {
   @OneToMany(() => AgentMessageEntity, (message) => message.thread)
   messages: EntityRelation<AgentMessageEntity[]>;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 }

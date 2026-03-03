@@ -1,6 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 
-import { type RecordGqlOperationSignature } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
 import { type SerializableAuthContext } from 'src/engine/core-modules/auth/types/auth-context.type';
@@ -15,7 +14,10 @@ import {
   EventStreamException,
   EventStreamExceptionCode,
 } from 'src/engine/subscriptions/event-stream.exception';
-import { type EventStreamData } from 'src/engine/subscriptions/types/event-stream-data.type';
+import {
+  type EventStreamData,
+  type RecordOrMetadataGqlOperationSignature,
+} from 'src/engine/subscriptions/types/event-stream-data.type';
 
 @Injectable()
 export class EventStreamService implements OnModuleInit {
@@ -29,19 +31,13 @@ export class EventStreamService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    this.metricsService.createObservableGauge(
-      'twenty_event_streams_live_total',
-      { description: 'Current number of live event streams' },
-      async (observableResult) => {
-        try {
-          const count = await this.getTotalActiveStreamCount();
-
-          observableResult.observe(count);
-        } catch (error) {
-          this.logger.error('Failed to collect event streams metrics', error);
-        }
+    this.metricsService.createObservableGauge({
+      metricName: 'twenty_event_streams_live_total',
+      options: { description: 'Current number of live event streams' },
+      callback: async () => {
+        return this.getTotalActiveStreamCount();
       },
-    );
+    });
   }
 
   async getTotalActiveStreamCount(): Promise<number> {
@@ -186,7 +182,7 @@ export class EventStreamService implements OnModuleInit {
     workspaceId: string;
     eventStreamChannelId: string;
     queryId: string;
-    operationSignature: RecordGqlOperationSignature;
+    operationSignature: RecordOrMetadataGqlOperationSignature;
   }): Promise<void> {
     const key = this.getEventStreamKey(workspaceId, eventStreamChannelId);
     const existing = await this.cacheStorageService.get<EventStreamData>(key);

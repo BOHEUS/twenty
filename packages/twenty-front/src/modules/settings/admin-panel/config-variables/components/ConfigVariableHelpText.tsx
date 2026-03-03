@@ -2,8 +2,11 @@ import styled from '@emotion/styled';
 import { useLingui } from '@lingui/react/macro';
 
 import { isConfigVariablesInDbEnabledState } from '@/client-config/states/isConfigVariablesInDbEnabledState';
-import { useRecoilValue } from 'recoil';
-import { ConfigSource, type ConfigVariable } from '~/generated/graphql';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import {
+  ConfigSource,
+  type ConfigVariable,
+} from '~/generated-metadata/graphql';
 
 const StyledHelpText = styled.div<{ color?: string }>`
   color: ${({ theme, color }) => color || theme.font.color.tertiary};
@@ -21,7 +24,7 @@ export const ConfigVariableHelpText = ({
   variable,
   hasValueChanged,
 }: ConfigVariableHelpTextProps) => {
-  const isConfigVariablesInDbEnabled = useRecoilValue(
+  const isConfigVariablesInDbEnabled = useAtomStateValue(
     isConfigVariablesInDbEnabledState,
   );
   const { t } = useLingui();

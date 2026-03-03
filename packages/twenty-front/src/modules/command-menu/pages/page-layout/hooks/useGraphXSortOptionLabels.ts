@@ -4,17 +4,17 @@ import { objectMetadataItemsState } from '@/object-metadata/states/objectMetadat
 import { getAggregateOperationLabel } from '@/object-record/record-board/record-board-column/utils/getAggregateOperationLabel';
 import { type ExtendedAggregateOperations } from '@/object-record/record-table/types/ExtendedAggregateOperations';
 import { t } from '@lingui/core/macro';
-import { useRecoilValue } from 'recoil';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { type CompositeFieldSubFieldName } from 'twenty-shared/types';
 import { assertUnreachable, isDefined } from 'twenty-shared/utils';
-import { GraphOrderBy } from '~/generated/graphql';
+import { GraphOrderBy } from '~/generated-metadata/graphql';
 
 export const useGraphXSortOptionLabels = ({
   objectMetadataId,
 }: {
   objectMetadataId: string;
 }) => {
-  const objectMetadataItems = useRecoilValue(objectMetadataItemsState);
+  const objectMetadataItems = useAtomStateValue(objectMetadataItemsState);
 
   const objectMetadataItem = objectMetadataItems.find(
     (objectMetadataItem) => objectMetadataItem.id === objectMetadataId,

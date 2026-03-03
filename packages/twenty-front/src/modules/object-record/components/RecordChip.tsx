@@ -5,13 +5,13 @@ import { useRecordChipData } from '@/object-record/hooks/useRecordChipData';
 import { recordIndexOpenRecordInState } from '@/object-record/record-index/states/recordIndexOpenRecordInState';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { canOpenObjectInSidePanel } from '@/object-record/utils/canOpenObjectInSidePanel';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { ViewOpenRecordInType } from '@/views/types/ViewOpenRecordInType';
 import { t } from '@lingui/core/macro';
 import { type MouseEvent } from 'react';
-import { useRecoilValue } from 'recoil';
 import { isDefined } from 'twenty-shared/utils';
 import {
-  AvatarChip,
+  AvatarOrIcon,
   Chip,
   type ChipSize,
   ChipVariant,
@@ -25,6 +25,7 @@ export type RecordChipProps = {
   className?: string;
   variant?: ChipVariant.Highlighted | ChipVariant.Transparent;
   forceDisableClick?: boolean;
+  isBold?: boolean;
   maxWidth?: number;
   to?: string | undefined;
   size?: ChipSize;
@@ -39,6 +40,7 @@ export const RecordChip = ({
   record,
   className,
   variant,
+  isBold = false,
   maxWidth,
   to,
   size,
@@ -55,7 +57,9 @@ export const RecordChip = ({
 
   const { openRecordInCommandMenu } = useOpenRecordInCommandMenu();
 
-  const recordIndexOpenRecordIn = useRecoilValue(recordIndexOpenRecordInState);
+  const recordIndexOpenRecordIn = useAtomStateValue(
+    recordIndexOpenRecordInState,
+  );
   const canOpenInSidePanel = canOpenObjectInSidePanel(objectNameSingular);
 
   const isSidePanelViewOpenRecordInType =
@@ -83,13 +87,14 @@ export const RecordChip = ({
       <Chip
         label={recordChipData.name}
         emptyLabel={t`Untitled`}
+        isBold={isBold}
         size={size}
         maxWidth={maxWidth}
         className={className}
         variant={ChipVariant.Transparent}
         leftComponent={
           isIconHidden ? null : (
-            <AvatarChip
+            <AvatarOrIcon
               placeholder={recordChipData.name}
               placeholderColorSeed={record.id}
               avatarType={recordChipData.avatarType}
@@ -107,10 +112,11 @@ export const RecordChip = ({
       maxWidth={maxWidth}
       label={recordChipData.name}
       emptyLabel={t`Untitled`}
+      isBold={isBold}
       isLabelHidden={isLabelHidden}
       leftComponent={
         isIconHidden ? null : (
-          <AvatarChip
+          <AvatarOrIcon
             placeholder={recordChipData.name}
             placeholderColorSeed={record.id}
             avatarType={recordChipData.avatarType}

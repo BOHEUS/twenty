@@ -1,5 +1,5 @@
-import { createState } from 'twenty-ui/utilities';
-export const isCommandMenuClosingState = createState({
+import { createAtomState } from '@/ui/utilities/state/jotai/utils/createAtomState';
+export const isCommandMenuClosingState = createAtomState({
   key: 'command-menu/isCommandMenuClosingState',
   defaultValue: false,
 });

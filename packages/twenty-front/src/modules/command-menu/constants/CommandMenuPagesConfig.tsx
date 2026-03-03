@@ -4,6 +4,8 @@ import { CommandMenuAskAIPage } from '@/command-menu/pages/ask-ai/components/Com
 import { CommandMenuCalendarEventPage } from '@/command-menu/pages/calendar-event/components/CommandMenuCalendarEventPage';
 import { CommandMenuFrontComponentPage } from '@/command-menu/pages/front-component/components/CommandMenuFrontComponentPage';
 import { CommandMenuMessageThreadPage } from '@/command-menu/pages/message-thread/components/CommandMenuMessageThreadPage';
+import { CommandMenuNavigationMenuItemEditPage } from '@/command-menu/pages/navigation-menu-item/components/CommandMenuNavigationMenuItemEditPage';
+import { CommandMenuNewSidebarItemPage } from '@/command-menu/pages/navigation-menu-item/components/CommandMenuNewSidebarItemPage';
 import { CommandMenuPageLayoutChartSettings } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutChartSettings';
 import { CommandMenuPageLayoutFieldsLayout } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutFieldsLayout';
 import { CommandMenuPageLayoutFieldsSettings } from '@/command-menu/pages/page-layout/components/CommandMenuPageLayoutFieldsSettings';
@@ -22,7 +24,7 @@ import { CommandMenuWorkflowEditStepType } from '@/command-menu/pages/workflow/s
 import { CommandMenuWorkflowRunViewStep } from '@/command-menu/pages/workflow/step/view-run/components/CommandMenuWorkflowRunViewStep';
 import { CommandMenuWorkflowViewStep } from '@/command-menu/pages/workflow/step/view/components/CommandMenuWorkflowViewStep';
 import { CommandMenuWorkflowSelectTriggerType } from '@/command-menu/pages/workflow/trigger-type/components/CommandMenuWorkflowSelectTriggerType';
-import { CommandMenuPages } from '@/command-menu/types/CommandMenuPages';
+import { CommandMenuPages } from 'twenty-shared/types';
 
 export const COMMAND_MENU_PAGES_CONFIG = new Map<
   CommandMenuPages,
@@ -76,4 +78,9 @@ export const COMMAND_MENU_PAGES_CONFIG = new Map<
     <CommandMenuPageLayoutFieldsLayout />,
   ],
   [CommandMenuPages.ViewFrontComponent, <CommandMenuFrontComponentPage />],
+  [
+    CommandMenuPages.NavigationMenuItemEdit,
+    <CommandMenuNavigationMenuItemEditPage />,
+  ],
+  [CommandMenuPages.NavigationMenuAddItem, <CommandMenuNewSidebarItemPage />],
 ]);

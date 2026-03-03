@@ -27,13 +27,14 @@ import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { ConfirmationModal } from '@/ui/layout/modal/components/ConfirmationModal';
 import { useModal } from '@/ui/layout/modal/hooks/useModal';
 import { useSubscriptionStatus } from '@/workspace/hooks/useSubscriptionStatus';
-import styled from '@emotion/styled';
+import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
+import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useMemo, useState } from 'react';
-import { useSetRecoilState } from 'recoil';
 import { isDefined } from 'twenty-shared/utils';
 import {
   H2Title,
+  IconArrowDown,
   IconArrowUp,
   IconCalendarEvent,
   IconCalendarRepeat,
@@ -44,6 +45,7 @@ import {
 } from 'twenty-ui/display';
 import { Button } from 'twenty-ui/input';
 import { Section } from 'twenty-ui/layout';
+import { themeCssVariables } from 'twenty-ui/theme-constants';
 import {
   BillingPlanKey,
   BillingProductKey,
@@ -54,8 +56,8 @@ import {
   useCancelSwitchMeteredPriceMutation,
   useSwitchBillingPlanMutation,
   useSwitchSubscriptionIntervalMutation,
+  SubscriptionStatus,
 } from '~/generated-metadata/graphql';
-import { SubscriptionStatus } from '~/generated/graphql';
 import { beautifyExactDate } from '~/utils/date-utils';
 
 const SWITCH_BILLING_INTERVAL_TO_MONTHLY_MODAL_ID =
@@ -82,8 +84,8 @@ const CANCEL_SWITCH_METERED_PRICE_MODAL_ID =
 const StyledSwitchButtonContainer = styled.div`
   align-items: center;
   display: flex;
-  gap: ${({ theme }) => theme.spacing(2)};
-  margin-top: ${({ theme }) => theme.spacing(4)};
+  gap: ${themeCssVariables.spacing[2]};
+  margin-top: ${themeCssVariables.spacing[4]};
 `;
 
 export const SettingsBillingSubscriptionInfo = ({
@@ -143,7 +145,7 @@ export const SettingsBillingSubscriptionInfo = ({
 
   const [cancelSwitchMeteredPrice] = useCancelSwitchMeteredPriceMutation();
 
-  const setCurrentWorkspace = useSetRecoilState(currentWorkspaceState);
+  const setCurrentWorkspace = useSetAtomState(currentWorkspaceState);
 
   const isTrialPeriod = subscriptionStatus === SubscriptionStatus.Trialing;
 
@@ -473,7 +475,7 @@ export const SettingsBillingSubscriptionInfo = ({
         {isEnterprisePlan &&
           (!nextPlan || currentPlan.planKey === nextPlan.planKey) && (
             <Button
-              Icon={IconArrowUp}
+              Icon={IconArrowDown}
               title={t`Switch to Pro`}
               variant="secondary"
               onClick={() => openModal(SWITCH_BILLING_PLAN_TO_PRO_MODAL_ID)}

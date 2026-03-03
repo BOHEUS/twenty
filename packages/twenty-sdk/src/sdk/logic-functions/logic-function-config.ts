@@ -1,7 +1,5 @@
-import {
-  type LogicFunctionManifest,
-  type LogicFunctionTriggerManifest,
-} from 'twenty-shared/application';
+import { type LogicFunctionManifest } from 'twenty-shared/application';
+import { type InputJsonSchema } from 'twenty-shared/logic-function';
 
 export type LogicFunctionHandler = (...args: any[]) => any | Promise<any>;
 
@@ -11,7 +9,8 @@ export type LogicFunctionConfig = Omit<
   | 'builtHandlerPath'
   | 'builtHandlerChecksum'
   | 'handlerName'
+  | 'toolInputSchema'
 > & {
   handler: LogicFunctionHandler;
-  triggers?: LogicFunctionTriggerManifest[];
+  toolInputSchema?: InputJsonSchema;
 };

@@ -1,7 +1,7 @@
-import { createState } from 'twenty-ui/utilities';
+import { createAtomState } from '@/ui/utilities/state/jotai/utils/createAtomState';
 import { type NavigationMenuItem } from '~/generated-metadata/graphql';
 
-export const prefetchNavigationMenuItemsState = createState<
+export const prefetchNavigationMenuItemsState = createAtomState<
   NavigationMenuItem[]
 >({
   key: 'prefetchNavigationMenuItemsState',

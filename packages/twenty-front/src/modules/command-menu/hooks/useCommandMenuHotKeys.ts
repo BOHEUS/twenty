@@ -7,17 +7,17 @@ import { useOpenRecordsSearchPageInCommandMenu } from '@/command-menu/hooks/useO
 import { useSetGlobalCommandMenuContext } from '@/command-menu/hooks/useSetGlobalCommandMenuContext';
 import { commandMenuPageState } from '@/command-menu/states/commandMenuPageState';
 import { commandMenuSearchState } from '@/command-menu/states/commandMenuSearchState';
-import { CommandMenuPages } from '@/command-menu/types/CommandMenuPages';
 import { contextStoreTargetedRecordsRuleComponentState } from '@/context-store/states/contextStoreTargetedRecordsRuleComponentState';
 import { useKeyboardShortcutMenu } from '@/keyboard-shortcut-menu/hooks/useKeyboardShortcutMenu';
 import { useGlobalHotkeys } from '@/ui/utilities/hotkey/hooks/useGlobalHotkeys';
 import { useHotkeysOnFocusedElement } from '@/ui/utilities/hotkey/hooks/useHotkeysOnFocusedElement';
-import { useRecoilComponentValue } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValue';
+import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import { isNonEmptyString } from '@sniptt/guards';
-import { useRecoilValue } from 'recoil';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { Key } from 'ts-key-enum';
-import { FeatureFlagKey } from '~/generated/graphql';
+import { CommandMenuPages } from 'twenty-shared/types';
+import { FeatureFlagKey } from '~/generated-metadata/graphql';
 
 export const useCommandMenuHotKeys = () => {
   const { toggleCommandMenu } = useCommandMenu();
@@ -30,15 +30,15 @@ export const useCommandMenuHotKeys = () => {
 
   const { setGlobalCommandMenuContext } = useSetGlobalCommandMenuContext();
 
-  const commandMenuSearch = useRecoilValue(commandMenuSearchState);
+  const commandMenuSearch = useAtomStateValue(commandMenuSearchState);
 
   const { closeKeyboardShortcutMenu } = useKeyboardShortcutMenu();
 
-  const commandMenuPage = useRecoilValue(commandMenuPageState);
+  const commandMenuPage = useAtomStateValue(commandMenuPageState);
 
   const isAiEnabled = useIsFeatureEnabled(FeatureFlagKey.IS_AI_ENABLED);
 
-  const contextStoreTargetedRecordsRuleComponent = useRecoilComponentValue(
+  const contextStoreTargetedRecordsRule = useAtomComponentStateValue(
     contextStoreTargetedRecordsRuleComponentState,
     COMMAND_MENU_COMPONENT_INSTANCE_ID,
   );
@@ -86,6 +86,9 @@ export const useCommandMenuHotKeys = () => {
     },
     focusId: SIDE_PANEL_FOCUS_ID,
     dependencies: [goBackFromCommandMenu],
+    options: {
+      enableOnFormTags: false,
+    },
   });
 
   useHotkeysOnFocusedElement({
@@ -98,9 +101,8 @@ export const useCommandMenuHotKeys = () => {
       if (
         commandMenuPage === CommandMenuPages.Root &&
         !(
-          contextStoreTargetedRecordsRuleComponent.mode === 'selection' &&
-          contextStoreTargetedRecordsRuleComponent.selectedRecordIds.length ===
-            0
+          contextStoreTargetedRecordsRule.mode === 'selection' &&
+          contextStoreTargetedRecordsRule.selectedRecordIds.length === 0
         )
       ) {
         setGlobalCommandMenuContext();
@@ -113,12 +115,13 @@ export const useCommandMenuHotKeys = () => {
     dependencies: [
       commandMenuPage,
       commandMenuSearch,
-      contextStoreTargetedRecordsRuleComponent,
+      contextStoreTargetedRecordsRule,
       goBackFromCommandMenu,
       setGlobalCommandMenuContext,
     ],
     options: {
       preventDefault: false,
+      enableOnFormTags: false,
     },
   });
 };

@@ -11,7 +11,10 @@ import { CreateCalendarChannelService } from 'src/engine/core-modules/auth/servi
 import { CreateConnectedAccountService } from 'src/engine/core-modules/auth/services/create-connected-account.service';
 import { CreateMessageChannelService } from 'src/engine/core-modules/auth/services/create-message-channel.service';
 import { GoogleAPIScopesService } from 'src/engine/core-modules/auth/services/google-apis-scopes';
+import { GoogleApisServiceAvailabilityService } from 'src/engine/core-modules/auth/services/google-apis-service-availability.service';
 import { UpdateConnectedAccountOnReconnectService } from 'src/engine/core-modules/auth/services/update-connected-account-on-reconnect.service';
+import { FeatureFlagKey } from 'src/engine/core-modules/feature-flag/enums/feature-flag-key.enum';
+import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
@@ -34,6 +37,7 @@ import { type ConnectedAccountWorkspaceEntity } from 'src/modules/connected-acco
 import { MessageChannelSyncStatusService } from 'src/modules/messaging/common/services/message-channel-sync-status.service';
 import {
   MessageChannelSyncStage,
+  MessageChannelSyncStatus,
   type MessageChannelVisibility,
   type MessageChannelWorkspaceEntity,
 } from 'src/modules/messaging/common/standard-objects/message-channel.workspace-entity';
@@ -60,6 +64,8 @@ export class GoogleAPIsService {
     private readonly createConnectedAccountService: CreateConnectedAccountService,
     private readonly updateConnectedAccountOnReconnectService: UpdateConnectedAccountOnReconnectService,
     private readonly googleAPIScopesService: GoogleAPIScopesService,
+    private readonly googleApisServiceAvailabilityService: GoogleApisServiceAvailabilityService,
+    private readonly featureFlagService: FeatureFlagService,
   ) {}
 
   async refreshGoogleRefreshToken(input: {
@@ -85,14 +91,36 @@ export class GoogleAPIsService {
       'CALENDAR_PROVIDER_GOOGLE_ENABLED',
     );
 
+    const isMessagingEnabled = this.twentyConfigService.get(
+      'MESSAGING_PROVIDER_GMAIL_ENABLED',
+    );
+
+    const isDraftEmailEnabled = await this.featureFlagService.isFeatureEnabled(
+      FeatureFlagKey.IS_DRAFT_EMAIL_ENABLED,
+      workspaceId,
+    );
+
     const { scopes, isValid } =
       await this.googleAPIScopesService.getScopesFromGoogleAccessTokenAndCheckIfExpectedScopesArePresent(
         input.accessToken,
+        isDraftEmailEnabled,
       );
 
     if (!isValid) {
       throw new AuthException(
         'Unable to connect: Please ensure all permissions are granted',
+        AuthExceptionCode.INSUFFICIENT_SCOPES,
+      );
+    }
+
+    const { isMessagingAvailable, isCalendarAvailable } =
+      await this.googleApisServiceAvailabilityService.checkServicesAvailability(
+        input.accessToken,
+      );
+
+    if (!isMessagingAvailable && !isCalendarAvailable) {
+      throw new AuthException(
+        'Unable to connect: Your Google account does not have access to Gmail or Calendar. Please contact your workspace administrator.',
         AuthExceptionCode.INSUFFICIENT_SCOPES,
       );
     }
@@ -144,16 +172,18 @@ export class GoogleAPIsService {
                 manager,
               });
 
-              await this.createMessageChannelService.createMessageChannel({
-                workspaceId,
-                connectedAccountId: newOrExistingConnectedAccountId,
-                handle,
-                messageVisibility,
-                manager,
-                skipMessageChannelConfiguration,
-              });
+              if (isMessagingEnabled && isMessagingAvailable) {
+                await this.createMessageChannelService.createMessageChannel({
+                  workspaceId,
+                  connectedAccountId: newOrExistingConnectedAccountId,
+                  handle,
+                  messageVisibility,
+                  manager,
+                  skipMessageChannelConfiguration,
+                });
+              }
 
-              if (isCalendarEnabled) {
+              if (isCalendarEnabled && isCalendarAvailable) {
                 await this.createCalendarChannelService.createCalendarChannel({
                   workspaceId,
                   connectedAccountId: newOrExistingConnectedAccountId,
@@ -195,62 +225,69 @@ export class GoogleAPIsService {
                 workspaceId,
                 newOrExistingConnectedAccountId,
               );
-
-              await this.messagingChannelSyncStatusService.resetAndMarkAsMessagesListFetchPending(
-                [newOrExistingConnectedAccountId],
-                workspaceId,
-              );
-
-              await this.calendarChannelSyncStatusService.resetAndMarkAsCalendarEventListFetchPending(
-                [newOrExistingConnectedAccountId],
-                workspaceId,
-              );
             }
           },
         );
 
-        if (this.twentyConfigService.get('MESSAGING_PROVIDER_GMAIL_ENABLED')) {
+        if (isMessagingEnabled) {
           const messageChannels = await messageChannelRepository.find({
-            where: {
-              connectedAccountId: newOrExistingConnectedAccountId,
-            },
+            where: { connectedAccountId: newOrExistingConnectedAccountId },
           });
 
-          for (const messageChannel of messageChannels) {
-            if (
-              messageChannel.syncStage !==
-              MessageChannelSyncStage.PENDING_CONFIGURATION
-            ) {
-              await this.messageQueueService.add<MessagingMessageListFetchJobData>(
-                MessagingMessageListFetchJob.name,
-                {
+          if (!isMessagingAvailable && messageChannels.length > 0) {
+            await this.messagingChannelSyncStatusService.markAsFailed(
+              messageChannels.map((channel) => channel.id),
+              workspaceId,
+              MessageChannelSyncStatus.FAILED_INSUFFICIENT_PERMISSIONS,
+            );
+          }
+
+          if (isMessagingAvailable) {
+            for (const messageChannel of messageChannels) {
+              if (
+                messageChannel.syncStage !==
+                MessageChannelSyncStage.PENDING_CONFIGURATION
+              ) {
+                await this.messagingChannelSyncStatusService.resetAndMarkAsMessagesListFetchPending(
+                  [messageChannel.id],
                   workspaceId,
-                  messageChannelId: messageChannel.id,
-                },
-              );
+                );
+                await this.messageQueueService.add<MessagingMessageListFetchJobData>(
+                  MessagingMessageListFetchJob.name,
+                  { workspaceId, messageChannelId: messageChannel.id },
+                );
+              }
             }
           }
         }
 
         if (isCalendarEnabled) {
           const calendarChannels = await calendarChannelRepository.find({
-            where: {
-              connectedAccountId: newOrExistingConnectedAccountId,
-            },
+            where: { connectedAccountId: newOrExistingConnectedAccountId },
           });
 
-          for (const calendarChannel of calendarChannels) {
-            if (
-              calendarChannel.syncStage !==
-              CalendarChannelSyncStage.PENDING_CONFIGURATION
-            ) {
-              await this.calendarQueueService.add<CalendarEventListFetchJobData>(
-                CalendarEventListFetchJob.name,
-                {
-                  calendarChannelId: calendarChannel.id,
+          if (!isCalendarAvailable && calendarChannels.length > 0) {
+            await this.calendarChannelSyncStatusService.markAsFailedInsufficientPermissionsAndFlushCalendarEventsToImport(
+              calendarChannels.map((channel) => channel.id),
+              workspaceId,
+            );
+          }
+
+          if (isCalendarAvailable) {
+            for (const calendarChannel of calendarChannels) {
+              if (
+                calendarChannel.syncStage !==
+                CalendarChannelSyncStage.PENDING_CONFIGURATION
+              ) {
+                await this.calendarChannelSyncStatusService.resetAndMarkAsCalendarEventListFetchPending(
+                  [calendarChannel.id],
                   workspaceId,
-                },
-              );
+                );
+                await this.calendarQueueService.add<CalendarEventListFetchJobData>(
+                  CalendarEventListFetchJob.name,
+                  { workspaceId, calendarChannelId: calendarChannel.id },
+                );
+              }
             }
           }
         }

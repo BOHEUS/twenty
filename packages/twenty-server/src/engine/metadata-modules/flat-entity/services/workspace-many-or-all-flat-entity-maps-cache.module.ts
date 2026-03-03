@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
+import { FrontComponentEntity } from 'src/engine/metadata-modules/front-component/entities/front-component.entity';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { WorkspaceFlatFieldMetadataMapCacheService } from 'src/engine/metadata-modules/flat-field-metadata/services/workspace-flat-field-metadata-map-cache.service';
 import { WorkspaceFlatIndexMapCacheService } from 'src/engine/metadata-modules/flat-index-metadata/services/workspace-flat-index-map-cache.service';
@@ -12,6 +13,7 @@ import { WorkspaceFlatPageLayoutWidgetMapCacheService } from 'src/engine/metadat
 import { WorkspaceFlatPageLayoutMapCacheService } from 'src/engine/metadata-modules/flat-page-layout/services/workspace-flat-page-layout-map-cache.service';
 import { WorkspaceFlatRowLevelPermissionPredicateGroupMapCacheService } from 'src/engine/metadata-modules/flat-row-level-permission-predicate/services/workspace-flat-row-level-permission-predicate-group-map-cache.service';
 import { WorkspaceFlatRowLevelPermissionPredicateMapCacheService } from 'src/engine/metadata-modules/flat-row-level-permission-predicate/services/workspace-flat-row-level-permission-predicate-map-cache.service';
+import { WorkspaceFlatViewFieldGroupMapCacheService } from 'src/engine/metadata-modules/flat-view-field-group/services/workspace-flat-view-field-group-map-cache.service';
 import { WorkspaceFlatViewFieldMapCacheService } from 'src/engine/metadata-modules/flat-view-field/services/workspace-flat-view-field-map-cache.service';
 import { WorkspaceFlatViewFilterGroupMapCacheService } from 'src/engine/metadata-modules/flat-view-filter-group/services/workspace-flat-view-filter-group-map-cache.service';
 import { WorkspaceFlatViewFilterMapCacheService } from 'src/engine/metadata-modules/flat-view-filter/services/workspace-flat-view-filter-map-cache.service';
@@ -26,6 +28,7 @@ import { PageLayoutEntity } from 'src/engine/metadata-modules/page-layout/entiti
 import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { RowLevelPermissionPredicateGroupEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate-group.entity';
 import { RowLevelPermissionPredicateEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate.entity';
+import { ViewFieldGroupEntity } from 'src/engine/metadata-modules/view-field-group/entities/view-field-group.entity';
 import { ViewFieldEntity } from 'src/engine/metadata-modules/view-field/entities/view-field.entity';
 import { ViewFilterGroupEntity } from 'src/engine/metadata-modules/view-filter-group/entities/view-filter-group.entity';
 import { ViewFilterEntity } from 'src/engine/metadata-modules/view-filter/entities/view-filter.entity';
@@ -39,6 +42,7 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
     TypeOrmModule.forFeature([
       ViewEntity,
       ViewFieldEntity,
+      ViewFieldGroupEntity,
       ViewFilterEntity,
       ViewFilterGroupEntity,
       ViewGroupEntity,
@@ -53,6 +57,7 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
       RowLevelPermissionPredicateGroupEntity,
       ApplicationEntity,
       RoleEntity,
+      FrontComponentEntity,
     ]),
   ],
   providers: [
@@ -60,6 +65,7 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
     WorkspaceFlatObjectMetadataMapCacheService,
     WorkspaceFlatViewMapCacheService,
     WorkspaceFlatViewFieldMapCacheService,
+    WorkspaceFlatViewFieldGroupMapCacheService,
     WorkspaceFlatViewFilterMapCacheService,
     WorkspaceFlatViewFilterGroupMapCacheService,
     WorkspaceFlatIndexMapCacheService,
@@ -76,6 +82,7 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
     WorkspaceFlatObjectMetadataMapCacheService,
     WorkspaceFlatViewMapCacheService,
     WorkspaceFlatViewFieldMapCacheService,
+    WorkspaceFlatViewFieldGroupMapCacheService,
     WorkspaceFlatViewFilterMapCacheService,
     WorkspaceFlatViewFilterGroupMapCacheService,
     WorkspaceFlatIndexMapCacheService,

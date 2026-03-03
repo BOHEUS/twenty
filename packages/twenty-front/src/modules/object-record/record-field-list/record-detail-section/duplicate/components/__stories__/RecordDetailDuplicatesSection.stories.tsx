@@ -6,13 +6,10 @@ import { MemoryRouterDecorator } from '~/testing/decorators/MemoryRouterDecorato
 import { ObjectMetadataItemsDecorator } from '~/testing/decorators/ObjectMetadataItemsDecorator';
 import { SnackBarDecorator } from '~/testing/decorators/SnackBarDecorator';
 import { graphqlMocks } from '~/testing/graphqlMocks';
-import { getCompaniesMock } from '~/testing/mock-data/companies';
-
 import { RecordDetailDuplicatesSection } from '@/object-record/record-field-list/record-detail-section/duplicate/components/RecordDetailDuplicatesSection';
 import { ComponentDecorator } from 'twenty-ui/testing';
-import { PageLayoutType } from '~/generated/graphql';
-
-const companiesMock = getCompaniesMock();
+import { PageLayoutType } from '~/generated-metadata/graphql';
+import { mockedCompanyRecords } from '~/testing/mock-data/generated/data/companies/mock-companies-data';
 
 const meta: Meta<typeof RecordDetailDuplicatesSection> = {
   title:
@@ -23,13 +20,11 @@ const meta: Meta<typeof RecordDetailDuplicatesSection> = {
       <LayoutRenderingProvider
         value={{
           targetRecordIdentifier: {
-            id: companiesMock[0].id,
+            id: mockedCompanyRecords[0].id,
             targetObjectNameSingular: 'company',
           },
           layoutType: PageLayoutType.RECORD_PAGE,
           isInRightDrawer: false,
-          // TODO: Remove once the traditional record show page is removed.
-          isLegacyRecordShowPage: true,
         }}
       >
         <Story />
@@ -41,7 +36,7 @@ const meta: Meta<typeof RecordDetailDuplicatesSection> = {
     MemoryRouterDecorator,
   ],
   args: {
-    objectRecordId: companiesMock[0].id,
+    objectRecordId: mockedCompanyRecords[0].id,
     objectNameSingular: CoreObjectNameSingular.Company,
   },
   parameters: {

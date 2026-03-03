@@ -1,18 +1,20 @@
-import { useSetRecoilState } from 'recoil';
 import {
   type SendInvitationsMutationVariables,
   useSendInvitationsMutation,
 } from '~/generated-metadata/graphql';
 import { workspaceInvitationsState } from '@/workspace-invitation/states/workspaceInvitationsStates';
+import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 
 export const useCreateWorkspaceInvitation = () => {
   const [sendInvitationsMutation] = useSendInvitationsMutation();
 
-  const setWorkspaceInvitations = useSetRecoilState(workspaceInvitationsState);
+  const setWorkspaceInvitations = useSetAtomState(workspaceInvitationsState);
 
-  const sendInvitation = async (emails: SendInvitationsMutationVariables) => {
+  const sendInvitation = async (
+    variables: SendInvitationsMutationVariables,
+  ) => {
     return await sendInvitationsMutation({
-      variables: emails,
+      variables,
       onCompleted: (data) => {
         setWorkspaceInvitations((workspaceInvitations) => [
           ...workspaceInvitations,

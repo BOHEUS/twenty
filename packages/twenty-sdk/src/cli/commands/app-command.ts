@@ -1,8 +1,9 @@
 import { formatPath } from '@/cli/utilities/file/file-path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
+import { AppBuildCommand } from './app/app-build';
 import { AppDevCommand } from './app/app-dev';
-import { AppGenerateCommand } from './app/app-generate';
+import { AppTypecheckCommand } from './app/app-typecheck';
 import { AppUninstallCommand } from './app/app-uninstall';
 import { AuthListCommand } from './auth/auth-list';
 import { AuthLoginCommand } from './auth/auth-login';
@@ -60,12 +61,22 @@ export const registerCommands = (program: Command): void => {
     });
 
   // App commands
+  const buildCommand = new AppBuildCommand();
   const devCommand = new AppDevCommand();
+  const typecheckCommand = new AppTypecheckCommand();
   const uninstallCommand = new AppUninstallCommand();
   const addCommand = new EntityAddCommand();
-  const generateCommand = new AppGenerateCommand();
   const logsCommand = new LogicFunctionLogsCommand();
   const executeCommand = new LogicFunctionExecuteCommand();
+
+  program
+    .command('app:build [appPath]')
+    .description('Build the application without watching for changes')
+    .action(async (appPath) => {
+      await buildCommand.execute({
+        appPath: formatPath(appPath),
+      });
+    });
 
   program
     .command('app:dev [appPath]')
@@ -77,13 +88,23 @@ export const registerCommands = (program: Command): void => {
     });
 
   program
+    .command('app:typecheck [appPath]')
+    .description('Run TypeScript type checking on the application')
+    .action(async (appPath) => {
+      await typecheckCommand.execute({
+        appPath: formatPath(appPath),
+      });
+    });
+
+  program
     .command('app:uninstall [appPath]')
     .description('Uninstall application from Twenty')
-    .action(async (appPath?: string) => {
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .action(async (appPath?: string, options?: { yes?: boolean }) => {
       try {
         const result = await uninstallCommand.execute({
           appPath: formatPath(appPath),
-          askForConfirmation: true,
+          askForConfirmation: !options?.yes,
         });
         process.exit(result.success ? 0 : 1);
       } catch {
@@ -99,13 +120,6 @@ export const registerCommands = (program: Command): void => {
     )
     .action(async (entityType?: string, options?: { path?: string }) => {
       await addCommand.execute(entityType as SyncableEntity, options?.path);
-    });
-
-  program
-    .command('app:generate [appPath]')
-    .description('Generate Twenty client')
-    .action(async (appPath?: string) => {
-      await generateCommand.execute(formatPath(appPath));
     });
 
   // Function commands
@@ -137,6 +151,7 @@ export const registerCommands = (program: Command): void => {
 
   program
     .command('function:execute [appPath]')
+    .option('--postInstall', 'Execute post-install logic function if defined')
     .option(
       '-p, --payload <payload>',
       'JSON payload to send to the function',
@@ -155,15 +170,20 @@ export const registerCommands = (program: Command): void => {
       async (
         appPath?: string,
         options?: {
+          postInstall?: boolean;
           payload?: string;
           functionUniversalIdentifier?: string;
           functionName?: string;
         },
       ) => {
-        if (!options?.functionUniversalIdentifier && !options?.functionName) {
+        if (
+          !options?.postInstall &&
+          !options?.functionUniversalIdentifier &&
+          !options?.functionName
+        ) {
           console.error(
             chalk.red(
-              'Error: Either --functionName (-n) or --functionUniversalIdentifier (-u) is required.',
+              'Error: Either --postInstall or --functionName (-n) or --functionUniversalIdentifier (-u) is required.',
             ),
           );
           process.exit(1);

@@ -18,9 +18,9 @@ import {
 import {
   type AccessTokenJwtPayload,
   type ApiKeyTokenJwtPayload,
-  ApplicationTokenJwtPayload,
+  ApplicationAccessTokenJwtPayload,
   type AuthContext,
-  type FileTokenJwtPayload,
+  FileTokenJwtPayloadLegacy,
   type JwtPayload,
   JwtTokenTypeEnum,
   type WorkspaceAgnosticTokenJwtPayload,
@@ -55,7 +55,7 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
     const secretOrKeyProviderFunction = async (_request, rawJwtToken, done) => {
       try {
         const decodedToken = jwtWrapperService.decode<
-          | FileTokenJwtPayload
+          | FileTokenJwtPayloadLegacy
           | AccessTokenJwtPayload
           | WorkspaceAgnosticTokenJwtPayload
         >(rawJwtToken);
@@ -145,17 +145,6 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
       );
     }
 
-    user = await this.userRepository.findOne({
-      where: { id: userId },
-    });
-
-    if (!isDefined(user)) {
-      throw new AuthException(
-        'User not found',
-        AuthExceptionCode.USER_NOT_FOUND,
-      );
-    }
-
     if (!payload.userWorkspaceId) {
       throw new AuthException(
         'UserWorkspaceEntity not found',
@@ -163,29 +152,31 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
       );
     }
 
-    const userWorkspace = await this.userWorkspaceRepository.findOne({
-      where: { id: payload.userWorkspaceId },
-      relations: ['user', 'workspace'],
+    const userContext = await this.resolveUserContext({
+      userId,
+      userWorkspaceId: payload.userWorkspaceId,
     });
 
     assertIsDefinedOrThrow(
-      userWorkspace,
+      userContext,
       new AuthException(
-        'UserWorkspaceEntity not found',
-        AuthExceptionCode.USER_WORKSPACE_NOT_FOUND,
+        'User or user workspace not found',
+        AuthExceptionCode.USER_NOT_FOUND,
         {
           userFriendlyMessage: msg`User does not have access to this workspace`,
         },
       ),
     );
 
+    user = userContext.user;
+
     context = {
       ...context,
       user,
       workspace,
       authProvider: payload.authProvider,
-      userWorkspace,
-      userWorkspaceId: userWorkspace.id,
+      userWorkspace: userContext.userWorkspace,
+      userWorkspaceId: userContext.userWorkspace.id,
       workspaceMemberId: payload.workspaceMemberId,
     };
 
@@ -223,6 +214,41 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
       ...context,
       workspaceMember,
     };
+  }
+
+  private async resolveUserContext(params: {
+    userId: string;
+    userWorkspaceId: string;
+    expectedWorkspaceId?: string;
+  }): Promise<{
+    user: UserEntity;
+    userWorkspace: UserWorkspaceEntity;
+  } | null> {
+    const user = await this.userRepository.findOne({
+      where: { id: params.userId },
+    });
+
+    if (!isDefined(user)) {
+      return null;
+    }
+
+    const userWorkspace = await this.userWorkspaceRepository.findOne({
+      where: { id: params.userWorkspaceId },
+      relations: ['user', 'workspace'],
+    });
+
+    if (!isDefined(userWorkspace)) {
+      return null;
+    }
+
+    if (
+      isDefined(params.expectedWorkspaceId) &&
+      userWorkspace.workspace.id !== params.expectedWorkspaceId
+    ) {
+      return null;
+    }
+
+    return { user, userWorkspace };
   }
 
   private async validateImpersonation(payload: AccessTokenJwtPayload) {
@@ -333,7 +359,7 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   private async validateApplicationToken(
-    payload: ApplicationTokenJwtPayload,
+    payload: ApplicationAccessTokenJwtPayload,
   ): Promise<AuthContext> {
     const workspace = await this.workspaceRepository.findOneBy({
       id: payload.workspaceId,
@@ -359,10 +385,23 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
       );
     }
 
-    return {
-      application,
-      workspace,
-    };
+    const context: AuthContext = { application, workspace };
+
+    if (payload.userId && payload.userWorkspaceId) {
+      const userContext = await this.resolveUserContext({
+        userId: payload.userId,
+        userWorkspaceId: payload.userWorkspaceId,
+        expectedWorkspaceId: workspace.id,
+      });
+
+      if (isDefined(userContext)) {
+        context.user = userContext.user;
+        context.userWorkspace = userContext.userWorkspace;
+        context.userWorkspaceId = userContext.userWorkspace.id;
+      }
+    }
+
+    return context;
   }
 
   private isLegacyApiKeyPayload(
@@ -388,7 +427,7 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
       return await this.validateAccessToken(payload);
     }
 
-    if (payload.type === JwtTokenTypeEnum.APPLICATION) {
+    if (payload.type === JwtTokenTypeEnum.APPLICATION_ACCESS) {
       return await this.validateApplicationToken(payload);
     }
 

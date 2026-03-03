@@ -2,12 +2,14 @@ import { SettingsCard } from '@/settings/components/SettingsCard';
 import { SettingsListCard } from '@/settings/components/SettingsListCard';
 import { SettingPublicDomainRowDropdownMenu } from '@/settings/domains/components/SettingPublicDomainRowDropdownMenu';
 import { selectedPublicDomainState } from '@/settings/domains/states/selectedPublicDomainState';
+import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useLingui } from '@lingui/react/macro';
-import { useSetRecoilState } from 'recoil';
 import { SettingsPath } from 'twenty-shared/types';
 import { IconAt, IconMailCog, Status } from 'twenty-ui/display';
-import { useFindManyPublicDomainsQuery } from '~/generated-metadata/graphql';
-import { type PublicDomain } from '~/generated/graphql';
+import {
+  useFindManyPublicDomainsQuery,
+  type PublicDomain,
+} from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
 
 export const SettingsPublicDomainsListCard = () => {
@@ -15,7 +17,7 @@ export const SettingsPublicDomainsListCard = () => {
 
   const { t } = useLingui();
 
-  const setSelectedPublicDomain = useSetRecoilState(selectedPublicDomainState);
+  const setSelectedPublicDomain = useSetAtomState(selectedPublicDomainState);
 
   const { data, loading } = useFindManyPublicDomainsQuery();
 

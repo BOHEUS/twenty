@@ -1,10 +1,9 @@
-import { useRecoilValue } from 'recoil';
-
 import { objectMetadataItemsState } from '@/object-metadata/states/objectMetadataItemsState';
 import { useMemo } from 'react';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 
 export const useFilteredObjectMetadataItems = () => {
-  const objectMetadataItems = useRecoilValue(objectMetadataItemsState);
+  const objectMetadataItems = useAtomStateValue(objectMetadataItemsState);
 
   const activeNonSystemObjectMetadataItems = useMemo(
     () =>
@@ -22,16 +21,17 @@ export const useFilteredObjectMetadataItems = () => {
     [objectMetadataItems],
   );
 
-  const alphaSortedActiveNonSystemObjectMetadataItems =
-    activeNonSystemObjectMetadataItems.sort((a, b) => {
-      if (a.nameSingular < b.nameSingular) {
-        return -1;
-      }
-      if (a.nameSingular > b.nameSingular) {
-        return 1;
-      }
-      return 0;
-    });
+  const alphaSortedActiveNonSystemObjectMetadataItems = [
+    ...activeNonSystemObjectMetadataItems,
+  ].sort((a, b) => {
+    if (a.nameSingular < b.nameSingular) {
+      return -1;
+    }
+    if (a.nameSingular > b.nameSingular) {
+      return 1;
+    }
+    return 0;
+  });
 
   const inactiveNonSystemObjectMetadataItems = objectMetadataItems.filter(
     ({ isActive, isSystem }) => !isActive && !isSystem,

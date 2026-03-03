@@ -1,10 +1,10 @@
 import { type FieldDateMetadataSettings } from '@/object-record/record-field/ui/types/FieldMetadata';
 import { TimeZoneAbbreviation } from '@/ui/input/components/internal/date/components/TimeZoneAbbreviation';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { UserContext } from '@/users/contexts/UserContext';
 import styled from '@emotion/styled';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useContext } from 'react';
-import { useRecoilValue } from 'recoil';
 import { Temporal } from 'temporal-polyfill';
 import { dateLocaleState } from '~/localization/states/dateLocaleState';
 import { formatDateTimeString } from '~/utils/string/formatDateTimeString';
@@ -24,7 +24,7 @@ export const DateTimeDisplay = ({
   dateFieldSettings,
 }: DateTimeDisplayProps) => {
   const { dateFormat, timeFormat, timeZone } = useContext(UserContext);
-  const dateLocale = useRecoilValue(dateLocaleState);
+  const dateLocale = useAtomStateValue(dateLocaleState);
 
   const formattedDate = formatDateTimeString({
     value,

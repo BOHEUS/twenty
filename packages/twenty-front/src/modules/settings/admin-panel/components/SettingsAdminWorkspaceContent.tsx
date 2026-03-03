@@ -18,10 +18,11 @@ import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/consta
 import styled from '@emotion/styled';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useState } from 'react';
-import { useRecoilState, useRecoilValue } from 'recoil';
 import { getImageAbsoluteURI, isDefined } from 'twenty-shared/utils';
-import { AvatarChip, Chip } from 'twenty-ui/components';
+import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
+import { AvatarOrIcon, Chip } from 'twenty-ui/components';
 import {
   H2Title,
   IconEyeShare,
@@ -57,10 +58,10 @@ const StyledButtonContainer = styled.div`
 export const SettingsAdminWorkspaceContent = ({
   activeWorkspace,
 }: SettingsAdminWorkspaceContentProps) => {
-  const canManageFeatureFlags = useRecoilValue(canManageFeatureFlagsState);
+  const canManageFeatureFlags = useAtomStateValue(canManageFeatureFlagsState);
   const { enqueueErrorSnackBar } = useSnackBar();
-  const [currentUser] = useRecoilState(currentUserState);
-  const currentWorkspace = useRecoilValue(currentWorkspaceState);
+  const [currentUser] = useAtomState(currentUserState);
+  const currentWorkspace = useAtomStateValue(currentWorkspaceState);
 
   const [updateFeatureFlag] = useUpdateWorkspaceFeatureFlagMutation();
   const [isImpersonateLoading, setIsImpersonationLoading] = useState(false);
@@ -69,7 +70,7 @@ export const SettingsAdminWorkspaceContent = ({
   const [impersonate] = useImpersonateMutation();
 
   const { updateFeatureFlagState } = useFeatureFlagState();
-  const userLookupResult = useRecoilValue(userLookupResultState);
+  const userLookupResult = useAtomStateValue(userLookupResultState);
 
   const { t } = useLingui();
 
@@ -150,7 +151,7 @@ export const SettingsAdminWorkspaceContent = ({
           label={activeWorkspace?.name ?? ''}
           emptyLabel={t`Untitled`}
           leftComponent={
-            <AvatarChip
+            <AvatarOrIcon
               avatarUrl={
                 getImageAbsoluteURI({
                   imageUrl: isNonEmptyString(activeWorkspace?.logo)

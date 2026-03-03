@@ -4,17 +4,16 @@ import {
 } from '@/settings/roles/role-assignment/components/SettingsRoleAssignmentTableRow';
 import { settingsDraftRoleFamilyState } from '@/settings/roles/states/settingsDraftRoleFamilyState';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
+import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
 import styled from '@emotion/styled';
 import { t } from '@lingui/core/macro';
 import { useMemo, useState } from 'react';
-import { useRecoilValue } from 'recoil';
 
 import { H2Title, IconSearch } from 'twenty-ui/display';
-import { type Agent } from '~/generated-metadata/graphql';
-import { type ApiKeyForRole } from '~/generated/graphql';
+import { type Agent, type ApiKeyForRole } from '~/generated-metadata/graphql';
 import { normalizeSearchText } from '~/utils/normalizeSearchText';
 import { type PartialWorkspaceMember } from '@/settings/roles/types/RoleWithPartialMembers';
 
@@ -53,8 +52,9 @@ export const SettingsRoleAssignmentTable = <T extends RoleTargetType>({
   roleTargetType,
   roleId,
 }: SettingsRoleAssignmentTableProps<T>) => {
-  const settingsDraftRole = useRecoilValue(
-    settingsDraftRoleFamilyState(roleId),
+  const settingsDraftRole = useAtomFamilyStateValue(
+    settingsDraftRoleFamilyState,
+    roleId,
   );
   const [searchFilter, setSearchFilter] = useState('');
 

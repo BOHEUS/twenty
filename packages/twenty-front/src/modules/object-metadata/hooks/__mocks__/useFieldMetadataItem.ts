@@ -1,5 +1,5 @@
 import { gql } from '@apollo/client';
-import { FieldMetadataType } from '~/generated/graphql';
+import { FieldMetadataType } from '~/generated-metadata/graphql';
 
 export const FIELD_METADATA_ID = '2c43466a-fe9e-4005-8d08-c5836067aa6c';
 export const FIELD_RELATION_METADATA_ID =
@@ -194,7 +194,7 @@ export const responseData = {
         metadataVersion: 1,
         currentBillingSubscription: null,
         workspaceMembersCount: 1,
-        defaultRole:  {
+        defaultRole: {
           id: 'default-role-id',
           label: 'Default Role',
           description: 'Default Role Description',
@@ -204,7 +204,7 @@ export const responseData = {
           canUpdateAllObjectRecords: true,
           canSoftDeleteAllObjectRecords: true,
           canDestroyAllObjectRecords: true,
-        }
+        },
       },
       currentBillingSubscription: null,
       billingSubscriptions: [],

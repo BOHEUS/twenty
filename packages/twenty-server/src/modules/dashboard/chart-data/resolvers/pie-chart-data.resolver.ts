@@ -1,7 +1,8 @@
 import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
-import { Args, Query, Resolver } from '@nestjs/graphql';
+import { Args, Query } from '@nestjs/graphql';
 
 import { AuthContext } from 'src/engine/core-modules/auth/types/auth-context.type';
+import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
 import { UserEntity } from 'src/engine/core-modules/user/user.entity';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
@@ -12,18 +13,18 @@ import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorat
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { PieChartDataInput } from 'src/modules/dashboard/chart-data/dtos/inputs/pie-chart-data.input';
-import { PieChartDataOutputDTO } from 'src/modules/dashboard/chart-data/dtos/outputs/pie-chart-data-output.dto';
+import { PieChartDataDTO } from 'src/modules/dashboard/chart-data/dtos/pie-chart-data.dto';
 import { ChartDataGraphqlApiExceptionFilter } from 'src/modules/dashboard/chart-data/filters/chart-data-graphql-api-exception.filter';
 import { PieChartDataService } from 'src/modules/dashboard/chart-data/services/pie-chart-data.service';
 
-@Resolver()
+@MetadataResolver()
 @UseFilters(ChartDataGraphqlApiExceptionFilter)
 @UseGuards(WorkspaceAuthGuard)
 @UsePipes(ResolverValidationPipe)
 export class PieChartDataResolver {
   constructor(private readonly pieChartDataService: PieChartDataService) {}
 
-  @Query(() => PieChartDataOutputDTO)
+  @Query(() => PieChartDataDTO)
   @UseGuards(NoPermissionGuard)
   async pieChartData(
     @Args('input') input: PieChartDataInput,
@@ -31,7 +32,7 @@ export class PieChartDataResolver {
     @AuthUser() user: UserEntity,
     @AuthWorkspaceMemberId() workspaceMemberId: string,
     @AuthUserWorkspaceId() userWorkspaceId: string,
-  ): Promise<PieChartDataOutputDTO> {
+  ): Promise<PieChartDataDTO> {
     const authContext: AuthContext = {
       user,
       workspace,

@@ -5,7 +5,10 @@ import { SettingsProtectedRouteWrapper } from '@/settings/components/SettingsPro
 import { SettingsSkeletonLoader } from '@/settings/components/SettingsSkeletonLoader';
 import { SettingPublicDomain } from '@/settings/domains/components/SettingPublicDomain';
 import { SettingsPath } from 'twenty-shared/types';
-import { FeatureFlagKey, PermissionFlagType } from '~/generated/graphql';
+import {
+  FeatureFlagKey,
+  PermissionFlagType,
+} from '~/generated-metadata/graphql';
 
 const SettingsGraphQLPlayground = lazy(() =>
   import(
@@ -167,6 +170,14 @@ const SettingsAvailableApplicationDetails = lazy(() =>
   })),
 );
 
+const SettingsApplicationRegistrationDetails = lazy(() =>
+  import(
+    '~/pages/settings/applications/SettingsApplicationRegistrationDetails'
+  ).then((module) => ({
+    default: module.SettingsApplicationRegistrationDetails,
+  })),
+);
+
 const SettingsAgentForm = lazy(() =>
   import('~/pages/settings/ai/SettingsAgentForm').then((module) => ({
     default: module.SettingsAgentForm,
@@ -182,6 +193,12 @@ const SettingsAgentTurnDetail = lazy(() =>
 const SettingsSkillForm = lazy(() =>
   import('~/pages/settings/ai/SettingsSkillForm').then((module) => ({
     default: module.SettingsSkillForm,
+  })),
+);
+
+const SettingsAIPrompts = lazy(() =>
+  import('~/pages/settings/ai/SettingsAIPrompts').then((module) => ({
+    default: module.SettingsAIPrompts,
   })),
 );
 
@@ -406,28 +423,39 @@ export const SettingsRoutes = ({ isAdminPageEnabled }: SettingsRoutesProps) => (
         element={<SettingsTwoFactorAuthenticationMethod />}
       />
       <Route path={SettingsPath.Experience} element={<SettingsExperience />} />
-      <Route path={SettingsPath.Accounts} element={<SettingsAccounts />} />
-      <Route path={SettingsPath.NewAccount} element={<SettingsNewAccount />} />
       <Route
-        path={SettingsPath.AccountsConfiguration}
-        element={<SettingsAccountsConfiguration />}
-      />
-      <Route
-        path={SettingsPath.AccountsCalendars}
-        element={<SettingsAccountsCalendars />}
-      />
-      <Route
-        path={SettingsPath.AccountsEmails}
-        element={<SettingsAccountsEmails />}
-      />
-      <Route
-        path={SettingsPath.NewImapSmtpCaldavConnection}
-        element={<SettingsNewImapSmtpCaldavConnection />}
-      />
-      <Route
-        path={SettingsPath.EditImapSmtpCaldavConnection}
-        element={<SettingsEditImapSmtpCaldavConnection />}
-      />
+        element={
+          <SettingsProtectedRouteWrapper
+            settingsPermission={PermissionFlagType.CONNECTED_ACCOUNTS}
+          />
+        }
+      >
+        <Route path={SettingsPath.Accounts} element={<SettingsAccounts />} />
+        <Route
+          path={SettingsPath.NewAccount}
+          element={<SettingsNewAccount />}
+        />
+        <Route
+          path={SettingsPath.AccountsConfiguration}
+          element={<SettingsAccountsConfiguration />}
+        />
+        <Route
+          path={SettingsPath.AccountsCalendars}
+          element={<SettingsAccountsCalendars />}
+        />
+        <Route
+          path={SettingsPath.AccountsEmails}
+          element={<SettingsAccountsEmails />}
+        />
+        <Route
+          path={SettingsPath.NewImapSmtpCaldavConnection}
+          element={<SettingsNewImapSmtpCaldavConnection />}
+        />
+        <Route
+          path={SettingsPath.EditImapSmtpCaldavConnection}
+          element={<SettingsEditImapSmtpCaldavConnection />}
+        />
+      </Route>
       <Route
         element={
           <SettingsProtectedRouteWrapper
@@ -442,6 +470,7 @@ export const SettingsRoutes = ({ isAdminPageEnabled }: SettingsRoutesProps) => (
           element={<SettingsApiWebhooks />}
         />
         <Route path={SettingsPath.AI} element={<SettingsAI />} />
+        <Route path={SettingsPath.AIPrompts} element={<SettingsAIPrompts />} />
         <Route
           path={SettingsPath.AINewAgent}
           element={<SettingsAgentForm mode="create" />}
@@ -600,6 +629,10 @@ export const SettingsRoutes = ({ isAdminPageEnabled }: SettingsRoutesProps) => (
         <Route
           path={SettingsPath.AvailableApplicationDetail}
           element={<SettingsAvailableApplicationDetails />}
+        />
+        <Route
+          path={SettingsPath.ApplicationRegistrationDetail}
+          element={<SettingsApplicationRegistrationDetails />}
         />
         <Route
           path={SettingsPath.ApplicationLogicFunctionDetail}

@@ -17,7 +17,7 @@ import { generateFieldWidgetInstanceId } from '@/page-layout/widgets/field/utils
 import { useCurrentWidget } from '@/page-layout/widgets/hooks/useCurrentWidget';
 import { getObjectPermissionsFromMapByObjectMetadataId } from '@/settings/roles/role-permissions/objects-permissions/utils/getObjectPermissionsFromMapByObjectMetadataId';
 import { RightDrawerProvider } from '@/ui/layout/right-drawer/contexts/RightDrawerContext';
-import { useRecoilComponentState } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentState';
+import { useAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentState';
 import styled from '@emotion/styled';
 
 const StyledContainer = styled.div`
@@ -41,7 +41,7 @@ export const FieldWidgetDisplay = ({
 }: FieldWidgetDisplayProps) => {
   const widget = useCurrentWidget();
 
-  const [isHovered, setIsHovered] = useRecoilComponentState(
+  const [fieldWidgetHover, setFieldWidgetHover] = useAtomComponentState(
     fieldWidgetHoverComponentState,
   );
 
@@ -56,7 +56,6 @@ export const FieldWidgetDisplay = ({
 
   const { useUpdateOneObjectRecordMutation } = useRecordShowContainerActions({
     objectNameSingular: objectMetadataItem.nameSingular,
-    objectRecordId: recordId,
   });
 
   const isRecordReadOnly = useIsRecordReadOnly({
@@ -64,8 +63,8 @@ export const FieldWidgetDisplay = ({
     objectMetadataId: objectMetadataItem.id,
   });
 
-  const handleMouseEnter = () => setIsHovered(true);
-  const handleMouseLeave = () => setIsHovered(false);
+  const handleMouseEnter = () => setFieldWidgetHover(true);
+  const handleMouseLeave = () => setFieldWidgetHover(false);
 
   return (
     <RecordFieldsScopeContextProvider value={{ scopeInstanceId: instanceId }}>
@@ -117,7 +116,7 @@ export const FieldWidgetDisplay = ({
             fieldMetadataItem={fieldMetadataItem}
             recordId={recordId}
             instanceId={instanceId}
-            isHovered={isHovered}
+            isHovered={fieldWidgetHover}
             onMouseLeave={handleMouseLeave}
           />
           <FieldWidgetCellEditModePortal

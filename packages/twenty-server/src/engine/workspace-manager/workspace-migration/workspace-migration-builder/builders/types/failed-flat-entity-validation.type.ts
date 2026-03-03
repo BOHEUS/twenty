@@ -13,11 +13,10 @@ export type FlatEntityValidationError<TCode extends string = string> = {
 
 export type FailedFlatEntityValidation<
   TMetadataName extends AllMetadataName,
-  TAcionType extends WorkspaceMigrationActionType,
+  TActionType extends WorkspaceMigrationActionType,
 > = {
-  type: TAcionType;
+  type: TActionType;
   metadataName: TMetadataName;
   errors: FlatEntityValidationError[];
-  flatEntityMinimalInformation: Pick<MetadataFlatEntity<TMetadataName>, 'id'> &
-    Partial<Omit<MetadataFlatEntity<TMetadataName>, 'id'>>;
+  flatEntityMinimalInformation: Partial<MetadataFlatEntity<TMetadataName>>;
 };

@@ -18,13 +18,13 @@ import { SelectableList } from '@/ui/layout/selectable-list/components/Selectabl
 import { SelectableListItem } from '@/ui/layout/selectable-list/components/SelectableListItem';
 import { selectedItemIdComponentState } from '@/ui/layout/selectable-list/states/selectedItemIdComponentState';
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
-import { useRecoilComponentValue } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValue';
+import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { isDefined } from 'twenty-shared/utils';
 import { MenuItemSelect } from 'twenty-ui/navigation';
 import {
   GraphOrderBy,
   type GraphOrderBy as GraphOrderByType,
-} from '~/generated/graphql';
+} from '~/generated-metadata/graphql';
 
 export const ChartSortByGroupByFieldDropdownContent = () => {
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
@@ -53,7 +53,7 @@ export const ChartSortByGroupByFieldDropdownContent = () => {
     DropdownComponentInstanceContext,
   );
 
-  const selectedItemId = useRecoilComponentValue(
+  const selectedItemId = useAtomComponentStateValue(
     selectedItemIdComponentState,
     dropdownId,
   );
@@ -139,7 +139,7 @@ export const ChartSortByGroupByFieldDropdownContent = () => {
                 text={getGroupBySortOptionLabel({
                   graphOrderBy: sortOption.value,
                   groupByFieldMetadataId:
-                    configuration.secondaryAxisGroupByFieldMetadataId,
+                    configuration.secondaryAxisGroupByFieldMetadataId ?? '',
                 })}
                 selected={
                   configuration.secondaryAxisOrderBy === sortOption.value

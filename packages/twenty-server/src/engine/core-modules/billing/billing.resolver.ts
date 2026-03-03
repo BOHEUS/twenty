@@ -1,7 +1,7 @@
 /* @license Enterprise */
 
 import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Args, Mutation, Query } from '@nestjs/graphql';
 
 import { PermissionFlagType } from 'twenty-shared/constants';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
@@ -10,11 +10,11 @@ import { type ApiKeyEntity } from 'src/engine/core-modules/api-key/api-key.entit
 import { BillingCheckoutSessionInput } from 'src/engine/core-modules/billing/dtos/inputs/billing-checkout-session.input';
 import { BillingSessionInput } from 'src/engine/core-modules/billing/dtos/inputs/billing-session.input';
 import { BillingUpdateSubscriptionItemPriceInput } from 'src/engine/core-modules/billing/dtos/inputs/billing-update-subscription-item-price.input';
-import { BillingEndTrialPeriodOutput } from 'src/engine/core-modules/billing/dtos/outputs/billing-end-trial-period.output';
-import { BillingMeteredProductUsageOutput } from 'src/engine/core-modules/billing/dtos/outputs/billing-metered-product-usage.output';
-import { BillingPlanOutput } from 'src/engine/core-modules/billing/dtos/outputs/billing-plan.output';
-import { BillingSessionOutput } from 'src/engine/core-modules/billing/dtos/outputs/billing-session.output';
-import { BillingUpdateOutput } from 'src/engine/core-modules/billing/dtos/outputs/billing-update.output';
+import { BillingEndTrialPeriodDTO } from 'src/engine/core-modules/billing/dtos/billing-end-trial-period.dto';
+import { BillingMeteredProductUsageDTO } from 'src/engine/core-modules/billing/dtos/billing-metered-product-usage.dto';
+import { BillingPlanDTO } from 'src/engine/core-modules/billing/dtos/billing-plan.dto';
+import { BillingSessionDTO } from 'src/engine/core-modules/billing/dtos/billing-session.dto';
+import { BillingUpdateDTO } from 'src/engine/core-modules/billing/dtos/billing-update.dto';
 import { BillingPlanKey } from 'src/engine/core-modules/billing/enums/billing-plan-key.enum';
 import { BillingPlanService } from 'src/engine/core-modules/billing/services/billing-plan.service';
 import { BillingPortalWorkspaceService } from 'src/engine/core-modules/billing/services/billing-portal.workspace-service';
@@ -23,6 +23,10 @@ import { BillingSubscriptionService } from 'src/engine/core-modules/billing/serv
 import { BillingUsageService } from 'src/engine/core-modules/billing/services/billing-usage.service';
 import { BillingService } from 'src/engine/core-modules/billing/services/billing.service';
 import { formatBillingDatabaseProductToGraphqlDTO } from 'src/engine/core-modules/billing/utils/format-database-product-to-graphql-dto.util';
+import {
+  INTERNAL_CREDITS_PER_DISPLAY_CREDIT,
+  toDisplayCredits,
+} from 'src/engine/core-modules/billing/utils/to-display-credits.util';
 import { PreventNestToAutoLogGraphqlErrorsFilter } from 'src/engine/core-modules/graphql/filters/prevent-nest-to-auto-log-graphql-errors.filter';
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
 import { type UserEntity } from 'src/engine/core-modules/user/user.entity';
@@ -42,8 +46,9 @@ import {
 } from 'src/engine/metadata-modules/permissions/permissions.exception';
 import { PermissionsService } from 'src/engine/metadata-modules/permissions/permissions.service';
 import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/metadata-modules/permissions/utils/permissions-graphql-api-exception.filter';
+import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
 
-@Resolver()
+@MetadataResolver()
 @UsePipes(ResolverValidationPipe)
 @UseFilters(
   PermissionsGraphqlApiExceptionFilter,
@@ -60,7 +65,7 @@ export class BillingResolver {
     private readonly permissionsService: PermissionsService,
   ) {}
 
-  @Query(() => BillingSessionOutput)
+  @Query(() => BillingSessionDTO)
   @UseGuards(
     WorkspaceAuthGuard,
     SettingsPermissionGuard(PermissionFlagType.BILLING),
@@ -77,7 +82,7 @@ export class BillingResolver {
     };
   }
 
-  @Mutation(() => BillingSessionOutput)
+  @Mutation(() => BillingSessionDTO)
   @UseGuards(WorkspaceAuthGuard, UserAuthGuard, NoPermissionGuard)
   async checkoutSession(
     @AuthWorkspace() workspace: WorkspaceEntity,
@@ -138,7 +143,7 @@ export class BillingResolver {
     }
   }
 
-  @Mutation(() => BillingUpdateOutput)
+  @Mutation(() => BillingUpdateDTO)
   @UseGuards(
     WorkspaceAuthGuard,
     SettingsPermissionGuard(PermissionFlagType.BILLING),
@@ -160,7 +165,7 @@ export class BillingResolver {
     };
   }
 
-  @Mutation(() => BillingUpdateOutput)
+  @Mutation(() => BillingUpdateDTO)
   @UseGuards(
     WorkspaceAuthGuard,
     SettingsPermissionGuard(PermissionFlagType.BILLING),
@@ -180,7 +185,7 @@ export class BillingResolver {
     };
   }
 
-  @Mutation(() => BillingUpdateOutput)
+  @Mutation(() => BillingUpdateDTO)
   @UseGuards(
     WorkspaceAuthGuard,
     SettingsPermissionGuard(PermissionFlagType.BILLING),
@@ -200,7 +205,7 @@ export class BillingResolver {
     };
   }
 
-  @Mutation(() => BillingUpdateOutput)
+  @Mutation(() => BillingUpdateDTO)
   @UseGuards(
     WorkspaceAuthGuard,
     SettingsPermissionGuard(PermissionFlagType.BILLING),
@@ -224,7 +229,7 @@ export class BillingResolver {
     };
   }
 
-  @Mutation(() => BillingUpdateOutput)
+  @Mutation(() => BillingUpdateDTO)
   @UseGuards(
     WorkspaceAuthGuard,
     SettingsPermissionGuard(PermissionFlagType.BILLING),
@@ -250,22 +255,22 @@ export class BillingResolver {
     };
   }
 
-  @Query(() => [BillingPlanOutput])
+  @Query(() => [BillingPlanDTO])
   @UseGuards(WorkspaceAuthGuard, NoPermissionGuard)
-  async listPlans(): Promise<BillingPlanOutput[]> {
+  async listPlans(): Promise<BillingPlanDTO[]> {
     const plans = await this.billingPlanService.listPlans();
 
     return plans.map(formatBillingDatabaseProductToGraphqlDTO);
   }
 
-  @Mutation(() => BillingEndTrialPeriodOutput)
+  @Mutation(() => BillingEndTrialPeriodDTO)
   @UseGuards(
     WorkspaceAuthGuard,
     SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   async endSubscriptionTrialPeriod(
     @AuthWorkspace() workspace: WorkspaceEntity,
-  ): Promise<BillingEndTrialPeriodOutput> {
+  ): Promise<BillingEndTrialPeriodDTO> {
     const result =
       await this.billingSubscriptionService.endTrialPeriod(workspace);
 
@@ -290,18 +295,28 @@ export class BillingResolver {
     };
   }
 
-  @Query(() => [BillingMeteredProductUsageOutput])
+  @Query(() => [BillingMeteredProductUsageDTO])
   @UseGuards(
     WorkspaceAuthGuard,
     SettingsPermissionGuard(PermissionFlagType.BILLING),
   )
   async getMeteredProductsUsage(
     @AuthWorkspace() workspace: WorkspaceEntity,
-  ): Promise<BillingMeteredProductUsageOutput[]> {
-    return await this.billingUsageService.getMeteredProductsUsage(workspace);
+  ): Promise<BillingMeteredProductUsageDTO[]> {
+    const usageData =
+      await this.billingUsageService.getMeteredProductsUsage(workspace);
+
+    return usageData.map((item) => ({
+      ...item,
+      usedCredits: toDisplayCredits(item.usedCredits),
+      grantedCredits: toDisplayCredits(item.grantedCredits),
+      rolloverCredits: toDisplayCredits(item.rolloverCredits),
+      totalGrantedCredits: toDisplayCredits(item.totalGrantedCredits),
+      unitPriceCents: item.unitPriceCents * INTERNAL_CREDITS_PER_DISPLAY_CREDIT,
+    }));
   }
 
-  @Mutation(() => BillingUpdateOutput)
+  @Mutation(() => BillingUpdateDTO)
   @UseGuards(
     WorkspaceAuthGuard,
     SettingsPermissionGuard(PermissionFlagType.BILLING),

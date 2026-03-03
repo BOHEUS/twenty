@@ -7,10 +7,10 @@ import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
 import { SelectableListItem } from '@/ui/layout/selectable-list/components/SelectableListItem';
 import { selectedItemIdComponentState } from '@/ui/layout/selectable-list/states/selectedItemIdComponentState';
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
-import { useRecoilComponentValue } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValue';
+import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { MenuItemSelectTag } from 'twenty-ui/navigation';
 import { type ThemeColor } from 'twenty-ui/theme';
-import { AggregateOperations } from '~/generated/graphql';
+import { AggregateOperations } from '~/generated-metadata/graphql';
 
 export const ChartRatioOptionSelectSelectableListItem = ({
   optionValue,
@@ -33,7 +33,7 @@ export const ChartRatioOptionSelectSelectableListItem = ({
     DropdownComponentInstanceContext,
   );
 
-  const selectedItemId = useRecoilComponentValue(
+  const selectedItemId = useAtomComponentStateValue(
     selectedItemIdComponentState,
     dropdownId,
   );

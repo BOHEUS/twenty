@@ -1,6 +1,7 @@
 import { DEFAULT_COMPANY_RECORD_PAGE_LAYOUT_ID } from '@/page-layout/constants/DefaultCompanyRecordPageLayoutId';
 import { type PageLayout } from '@/page-layout/types/PageLayout';
 import {
+  PageLayoutTabLayoutMode,
   PageLayoutType,
   WidgetConfigurationType,
   WidgetType,
@@ -18,11 +19,12 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
   tabs: [
     {
       __typename: 'PageLayoutTab',
+      applicationId: '',
       id: 'company-tab-fields',
       title: 'Home',
       icon: 'IconHome',
       position: 100,
-      layoutMode: 'vertical-list',
+      layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
       pageLayoutId: DEFAULT_COMPANY_RECORD_PAGE_LAYOUT_ID,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -45,7 +47,7 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
           configuration: {
             __typename: 'FieldsConfiguration',
             configurationType: WidgetConfigurationType.FIELDS,
-            sections: [],
+            viewId: null,
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -55,11 +57,12 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
     },
     {
       __typename: 'PageLayoutTab',
+      applicationId: '',
       id: 'company-tab-timeline',
       title: 'Timeline',
       icon: 'IconTimelineEvent',
       position: 200,
-      layoutMode: 'canvas',
+      layoutMode: PageLayoutTabLayoutMode.CANVAS,
       pageLayoutId: DEFAULT_COMPANY_RECORD_PAGE_LAYOUT_ID,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -82,7 +85,7 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
           configuration: {
             __typename: 'FieldsConfiguration',
             configurationType: WidgetConfigurationType.FIELDS,
-            sections: [],
+            viewId: null,
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -92,11 +95,12 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
     },
     {
       __typename: 'PageLayoutTab',
+      applicationId: '',
       id: 'company-tab-tasks',
       title: 'Tasks',
       icon: 'IconCheckbox',
       position: 300,
-      layoutMode: 'canvas',
+      layoutMode: PageLayoutTabLayoutMode.CANVAS,
       pageLayoutId: DEFAULT_COMPANY_RECORD_PAGE_LAYOUT_ID,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -119,7 +123,7 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
           configuration: {
             __typename: 'FieldsConfiguration',
             configurationType: WidgetConfigurationType.FIELDS,
-            sections: [],
+            viewId: null,
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -129,11 +133,12 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
     },
     {
       __typename: 'PageLayoutTab',
+      applicationId: '',
       id: 'company-tab-notes',
       title: 'Notes',
       icon: 'IconNotes',
       position: 400,
-      layoutMode: 'canvas',
+      layoutMode: PageLayoutTabLayoutMode.CANVAS,
       pageLayoutId: DEFAULT_COMPANY_RECORD_PAGE_LAYOUT_ID,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -156,7 +161,7 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
           configuration: {
             __typename: 'FieldsConfiguration',
             configurationType: WidgetConfigurationType.FIELDS,
-            sections: [],
+            viewId: null,
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -166,11 +171,12 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
     },
     {
       __typename: 'PageLayoutTab',
+      applicationId: '',
       id: 'company-tab-files',
       title: 'Files',
       icon: 'IconPaperclip',
       position: 500,
-      layoutMode: 'canvas',
+      layoutMode: PageLayoutTabLayoutMode.CANVAS,
       pageLayoutId: DEFAULT_COMPANY_RECORD_PAGE_LAYOUT_ID,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -193,7 +199,7 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
           configuration: {
             __typename: 'FieldsConfiguration',
             configurationType: WidgetConfigurationType.FIELDS,
-            sections: [],
+            viewId: null,
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -203,11 +209,12 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
     },
     {
       __typename: 'PageLayoutTab',
+      applicationId: '',
       id: 'company-tab-emails',
       title: 'Emails',
       icon: 'IconMail',
       position: 600,
-      layoutMode: 'canvas',
+      layoutMode: PageLayoutTabLayoutMode.CANVAS,
       pageLayoutId: DEFAULT_COMPANY_RECORD_PAGE_LAYOUT_ID,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -230,7 +237,7 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
           configuration: {
             __typename: 'FieldsConfiguration',
             configurationType: WidgetConfigurationType.FIELDS,
-            sections: [],
+            viewId: null,
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -240,11 +247,12 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
     },
     {
       __typename: 'PageLayoutTab',
+      applicationId: '',
       id: 'company-tab-calendar',
       title: 'Calendar',
       icon: 'IconCalendarEvent',
       position: 700,
-      layoutMode: 'canvas',
+      layoutMode: PageLayoutTabLayoutMode.CANVAS,
       pageLayoutId: DEFAULT_COMPANY_RECORD_PAGE_LAYOUT_ID,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -267,7 +275,7 @@ export const DEFAULT_COMPANY_RECORD_PAGE_LAYOUT: PageLayout = {
           configuration: {
             __typename: 'FieldsConfiguration',
             configurationType: WidgetConfigurationType.FIELDS,
-            sections: [],
+            viewId: null,
           },
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

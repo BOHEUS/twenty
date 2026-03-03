@@ -1,8 +1,9 @@
 import {
   type GridPosition,
+  PageLayoutTabLayoutMode,
   WidgetConfigurationType,
   WidgetType,
-} from '~/generated/graphql';
+} from '~/generated-metadata/graphql';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
 
 export const createDefaultFrontComponentWidget = (
@@ -24,6 +25,14 @@ export const createDefaultFrontComponentWidget = (
       frontComponentId,
     },
     gridPosition,
+    position: {
+      __typename: 'PageLayoutWidgetGridPosition',
+      layoutMode: PageLayoutTabLayoutMode.GRID,
+      row: gridPosition.row,
+      column: gridPosition.column,
+      rowSpan: gridPosition.rowSpan,
+      columnSpan: gridPosition.columnSpan,
+    },
     objectMetadataId: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

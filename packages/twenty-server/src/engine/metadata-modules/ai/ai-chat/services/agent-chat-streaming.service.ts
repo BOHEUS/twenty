@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { createUIMessageStream, pipeUIMessageStreamToResponse } from 'ai';
@@ -16,7 +16,11 @@ import {
   AgentExceptionCode,
 } from 'src/engine/metadata-modules/ai/ai-agent/agent.exception';
 import { type BrowsingContextType } from 'src/engine/metadata-modules/ai/ai-agent/types/browsingContext.type';
-import { convertCentsToBillingCredits } from 'src/engine/metadata-modules/ai/ai-billing/utils/convert-cents-to-billing-credits.util';
+import { computeCostBreakdown } from 'src/engine/metadata-modules/ai/ai-billing/utils/compute-cost-breakdown.util';
+import { convertDollarsToBillingCredits } from 'src/engine/metadata-modules/ai/ai-billing/utils/convert-dollars-to-billing-credits.util';
+import { extractCacheCreationTokens } from 'src/engine/metadata-modules/ai/ai-billing/utils/extract-cache-creation-tokens.util';
+import { toDisplayCredits } from 'src/engine/core-modules/billing/utils/to-display-credits.util';
+import { type AIModelConfig } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-models-types.const';
 import { AgentChatThreadEntity } from 'src/engine/metadata-modules/ai/ai-chat/entities/agent-chat-thread.entity';
 
 import { AgentChatService } from './agent-chat.service';
@@ -33,8 +37,6 @@ export type StreamAgentChatOptions = {
 
 @Injectable()
 export class AgentChatStreamingService {
-  private readonly logger = new Logger(AgentChatStreamingService.name);
-
   constructor(
     @InjectRepository(AgentChatThreadEntity)
     private readonly threadRepository: Repository<AgentChatThreadEntity>,
@@ -64,6 +66,33 @@ export class AgentChatStreamingService {
       );
     }
 
+    // Fire user-message save without awaiting to avoid delaying time-to-first-letter.
+    // The promise is awaited inside onFinish where we need the turnId.
+    const lastUserText =
+      messages[messages.length - 1]?.parts.find((part) => part.type === 'text')
+        ?.text ?? '';
+
+    const userMessagePromise = this.agentChatService.addMessage({
+      threadId: thread.id,
+      uiMessage: {
+        role: AgentMessageRole.USER,
+        parts: [{ type: 'text', text: lastUserText }],
+      },
+    });
+
+    // Prevent unhandled rejection if onFinish never runs (e.g. stream
+    // setup error or empty response early-return). The real error still
+    // surfaces when awaited in onFinish.
+    userMessagePromise.catch(() => {});
+
+    // Title generation runs in parallel with AI streaming so it's
+    // typically ready by the time onFinish fires
+    const titlePromise = thread.title
+      ? Promise.resolve(null)
+      : this.agentChatService
+          .generateTitleIfNeeded(thread.id, lastUserText)
+          .catch(() => null);
+
     try {
       const uiStream = createUIMessageStream<ExtendedUIMessage>({
         execute: async ({ writer }) => {
@@ -84,52 +113,53 @@ export class AgentChatStreamingService {
               onCodeExecutionUpdate,
             });
 
-          writer.write({
-            type: 'data-routing-status' as const,
-            id: 'execution-status',
-            data: {
-              text: 'Processing your request...',
-              state: 'loading',
-            },
-          });
-
           let streamUsage = {
             inputTokens: 0,
             outputTokens: 0,
             inputCredits: 0,
             outputCredits: 0,
           };
+          let lastStepConversationSize = 0;
+          let totalCacheCreationTokens = 0;
 
           writer.merge(
             stream.toUIMessageStream({
               onError: (error) => {
-                this.logger.error('Stream error:', error);
-
                 return error instanceof Error ? error.message : String(error);
               },
               sendStart: false,
               messageMetadata: ({ part }) => {
+                if (part.type === 'finish-step') {
+                  const stepInput = part.usage?.inputTokens ?? 0;
+                  const stepCached =
+                    part.usage?.inputTokenDetails?.cacheReadTokens ?? 0;
+                  const stepCacheCreation = extractCacheCreationTokens(
+                    (
+                      part as {
+                        providerMetadata?: Record<
+                          string,
+                          Record<string, unknown> | undefined
+                        >;
+                      }
+                    ).providerMetadata,
+                  );
+
+                  totalCacheCreationTokens += stepCacheCreation;
+                  lastStepConversationSize =
+                    stepInput + stepCached + stepCacheCreation;
+                }
+
                 if (part.type === 'finish') {
-                  const inputTokens = part.totalUsage?.inputTokens ?? 0;
-                  const outputTokens = part.totalUsage?.outputTokens ?? 0;
-
-                  const inputCostInCents =
-                    (inputTokens / 1000) *
-                    modelConfig.inputCostPer1kTokensInCents;
-                  const outputCostInCents =
-                    (outputTokens / 1000) *
-                    modelConfig.outputCostPer1kTokensInCents;
-
-                  const inputCredits = Math.round(
-                    convertCentsToBillingCredits(inputCostInCents),
-                  );
-                  const outputCredits = Math.round(
-                    convertCentsToBillingCredits(outputCostInCents),
-                  );
+                  const { inputCredits, outputCredits, tokenCounts } =
+                    computeStreamCosts(
+                      modelConfig,
+                      part.totalUsage,
+                      totalCacheCreationTokens,
+                    );
 
                   streamUsage = {
-                    inputTokens,
-                    outputTokens,
+                    inputTokens: tokenCounts.totalInputTokens,
+                    outputTokens: tokenCounts.outputTokens,
                     inputCredits,
                     outputCredits,
                   };
@@ -137,10 +167,12 @@ export class AgentChatStreamingService {
                   return {
                     createdAt: new Date().toISOString(),
                     usage: {
-                      inputTokens,
-                      outputTokens,
-                      inputCredits,
-                      outputCredits,
+                      inputTokens: tokenCounts.totalInputTokens,
+                      outputTokens: tokenCounts.outputTokens,
+                      cachedInputTokens: tokenCounts.cachedInputTokens,
+                      inputCredits: toDisplayCredits(inputCredits),
+                      outputCredits: toDisplayCredits(outputCredits),
+                      conversationSize: lastStepConversationSize,
                     },
                     model: {
                       contextWindowTokens: modelConfig.contextWindowTokens,
@@ -155,64 +187,35 @@ export class AgentChatStreamingService {
                   return;
                 }
 
-                writer.write({
-                  type: 'data-routing-status' as const,
-                  id: 'execution-status',
-                  data: {
-                    text: 'Completed',
-                    state: 'routed',
-                  },
+                const userMessage = await userMessagePromise;
+
+                await this.agentChatService.addMessage({
+                  threadId: thread.id,
+                  uiMessage: responseMessage,
+                  turnId: userMessage.turnId,
                 });
 
-                const validThreadId = thread.id;
+                await this.threadRepository.update(thread.id, {
+                  totalInputTokens: () =>
+                    `"totalInputTokens" + ${streamUsage.inputTokens}`,
+                  totalOutputTokens: () =>
+                    `"totalOutputTokens" + ${streamUsage.outputTokens}`,
+                  totalInputCredits: () =>
+                    `"totalInputCredits" + ${streamUsage.inputCredits}`,
+                  totalOutputCredits: () =>
+                    `"totalOutputCredits" + ${streamUsage.outputCredits}`,
+                  contextWindowTokens: modelConfig.contextWindowTokens,
+                  conversationSize: lastStepConversationSize,
+                });
 
-                if (!validThreadId) {
-                  this.logger.error('Thread ID is unexpectedly null/undefined');
+                const generatedTitle = await titlePromise;
 
-                  return;
-                }
-
-                try {
-                  const userMessage = await this.agentChatService.addMessage({
-                    threadId: validThreadId,
-                    uiMessage: {
-                      role: AgentMessageRole.USER,
-                      parts: [
-                        {
-                          type: 'text',
-                          text:
-                            messages[messages.length - 1].parts.find(
-                              (part) => part.type === 'text',
-                            )?.text ?? '',
-                        },
-                      ],
-                    },
+                if (generatedTitle) {
+                  writer.write({
+                    type: 'data-thread-title' as const,
+                    id: `thread-title-${thread.id}`,
+                    data: { title: generatedTitle },
                   });
-
-                  await this.agentChatService.addMessage({
-                    threadId: validThreadId,
-                    uiMessage: responseMessage,
-                    turnId: userMessage.turnId,
-                  });
-
-                  await this.threadRepository.update(validThreadId, {
-                    totalInputTokens: () =>
-                      `"totalInputTokens" + ${streamUsage.inputTokens}`,
-                    totalOutputTokens: () =>
-                      `"totalOutputTokens" + ${streamUsage.outputTokens}`,
-                    totalInputCredits: () =>
-                      `"totalInputCredits" + ${streamUsage.inputCredits}`,
-                    totalOutputCredits: () =>
-                      `"totalOutputCredits" + ${streamUsage.outputCredits}`,
-                    contextWindowTokens: modelConfig.contextWindowTokens,
-                  });
-                } catch (saveError) {
-                  this.logger.error(
-                    'Failed to save messages:',
-                    saveError instanceof Error
-                      ? saveError.message
-                      : String(saveError),
-                  );
                 }
               },
               sendReasoning: true,
@@ -221,13 +224,53 @@ export class AgentChatStreamingService {
         },
       });
 
-      pipeUIMessageStreamToResponse({ stream: uiStream, response });
+      pipeUIMessageStreamToResponse({
+        stream: uiStream,
+        response,
+        // Consume the stream independently so onFinish fires even if
+        // the client disconnects (e.g., page refresh mid-stream)
+        consumeSseStream: ({ stream }) => {
+          stream.pipeTo(new WritableStream()).catch(() => {});
+        },
+      });
     } catch (error) {
-      this.logger.error(
-        'Failed to stream chat:',
-        error instanceof Error ? error.message : String(error),
-      );
       response.end();
+      throw error;
     }
   }
+}
+
+function computeStreamCosts(
+  modelConfig: AIModelConfig,
+  totalUsage:
+    | {
+        inputTokens?: number;
+        outputTokens?: number;
+        inputTokenDetails?: { cacheReadTokens?: number };
+        outputTokenDetails?: { reasoningTokens?: number };
+      }
+    | undefined,
+  cacheCreationTokens: number,
+) {
+  const breakdown = computeCostBreakdown(modelConfig, {
+    inputTokens: totalUsage?.inputTokens,
+    outputTokens: totalUsage?.outputTokens,
+    cachedInputTokens: totalUsage?.inputTokenDetails?.cacheReadTokens,
+    reasoningTokens: totalUsage?.outputTokenDetails?.reasoningTokens,
+    cacheCreationTokens,
+  });
+
+  return {
+    inputCredits: Math.round(
+      convertDollarsToBillingCredits(breakdown.inputCostInDollars),
+    ),
+    outputCredits: Math.round(
+      convertDollarsToBillingCredits(breakdown.outputCostInDollars),
+    ),
+    tokenCounts: {
+      totalInputTokens: breakdown.tokenCounts.totalInputTokens,
+      outputTokens: totalUsage?.outputTokens ?? 0,
+      cachedInputTokens: breakdown.tokenCounts.cachedInputTokens,
+    },
+  };
 }

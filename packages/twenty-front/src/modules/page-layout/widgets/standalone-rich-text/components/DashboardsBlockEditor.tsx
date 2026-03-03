@@ -1,31 +1,31 @@
-import { filterSuggestionItems } from '@blocknote/core';
+import { filterSuggestionItems } from '@blocknote/core/extensions';
 import { BlockNoteView } from '@blocknote/mantine';
 import { SuggestionMenuController } from '@blocknote/react';
 import { useTheme } from '@emotion/react';
 import styled from '@emotion/styled';
 import { type ClipboardEvent } from 'react';
 
-import { type BLOCK_SCHEMA } from '@/activities/blocks/constants/Schema';
-import { getSlashMenu } from '@/activities/blocks/utils/getSlashMenu';
-import { DashboardEditorSideMenu } from '@/page-layout/widgets/standalone-rich-text/components/DashboardEditorSideMenu';
-import { DashboardFormattingToolbar } from '@/page-layout/widgets/standalone-rich-text/components/DashboardFormattingToolbar';
 import {
   CustomSlashMenu,
   type SuggestionItem,
-} from '@/ui/input/editor/components/CustomSlashMenu';
+} from '@/blocknote-editor/components/CustomSlashMenu';
+import { DashboardEditorSideMenu } from '@/page-layout/widgets/standalone-rich-text/components/DashboardEditorSideMenu';
+import { DashboardFormattingToolbar } from '@/page-layout/widgets/standalone-rich-text/components/DashboardFormattingToolbar';
+import { type DASHBOARD_BLOCK_SCHEMA } from '@/page-layout/widgets/standalone-rich-text/constants/DashboardBlockSchema';
+import { getDashboardSlashMenu } from '@/page-layout/widgets/standalone-rich-text/utils/getDashboardSlashMenu';
 
-interface DashboardsBlockEditorProps {
-  editor: typeof BLOCK_SCHEMA.BlockNoteEditor;
+type DashboardsBlockEditorProps = {
+  editor: typeof DASHBOARD_BLOCK_SCHEMA.BlockNoteEditor;
   onFocus?: () => void;
   onBlur?: () => void;
   onPaste?: (event: ClipboardEvent) => void;
   onChange?: () => void;
   readonly?: boolean;
   boundaryElement?: HTMLElement | null;
-}
+};
 
 // TODO: Refactor these BlockNote CSS overrides - some may be dead code now that we have custom components
-// (DashboardBlockDragHandleMenu, DashboardEditorSideMenu, DashboardColorSelectionMenu).
+// (DashboardEditorSideMenu, DashboardColorSelectionMenu).
 // Test removing each selector and move necessary styles to appropriate components.
 // eslint-disable-next-line twenty/no-hardcoded-colors
 const StyledEditor = styled.div`
@@ -183,14 +183,11 @@ export const DashboardsBlockEditor = ({
         {!readonly && (
           <>
             <DashboardFormattingToolbar boundaryElement={boundaryElement} />
-            <DashboardEditorSideMenu
-              editor={editor}
-              boundaryElement={boundaryElement}
-            />
+            <DashboardEditorSideMenu editor={editor} />
             <SuggestionMenuController
               triggerCharacter="/"
               getItems={async (query) => {
-                const items = getSlashMenu(editor);
+                const items = getDashboardSlashMenu(editor);
                 return filterSuggestionItems<SuggestionItem>(items, query);
               }}
               suggestionMenuComponent={CustomSlashMenu}

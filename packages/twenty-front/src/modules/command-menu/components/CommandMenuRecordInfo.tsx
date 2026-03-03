@@ -1,3 +1,4 @@
+import { allowRequestsToTwentyIconsState } from '@/client-config/states/allowRequestsToTwentyIcons';
 import { viewableRecordIdComponentState } from '@/command-menu/pages/record-page/states/viewableRecordIdComponentState';
 import { viewableRecordNameSingularComponentState } from '@/command-menu/pages/record-page/states/viewableRecordNameSingularComponentState';
 import { useLabelIdentifierFieldMetadataItem } from '@/object-metadata/hooks/useLabelIdentifierFieldMetadataItem';
@@ -7,34 +8,38 @@ import { FieldContext } from '@/object-record/record-field/ui/contexts/FieldCont
 import { useRecordShowContainerActions } from '@/object-record/record-show/hooks/useRecordShowContainerActions';
 import { useRecordShowPage } from '@/object-record/record-show/hooks/useRecordShowPage';
 import { recordStoreFamilySelector } from '@/object-record/record-store/states/selectors/recordStoreFamilySelector';
-import { recordStoreIdentifierFamilySelector } from '@/object-record/record-store/states/selectors/recordStoreIdentifierSelector';
+import { recordStoreIdentifierFamilySelector } from '@/object-record/record-store/states/selectors/recordStoreIdentifierFamilySelector';
 import { RecordTitleCell } from '@/object-record/record-title-cell/components/RecordTitleCell';
 import { RecordTitleCellContainerType } from '@/object-record/record-title-cell/types/RecordTitleCellContainerType';
-import { useRecoilComponentValue } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValue';
+import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
+import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import { Trans } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
-import { useRecoilValue } from 'recoil';
+import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { Avatar } from 'twenty-ui/display';
-import { FieldMetadataType } from '~/generated-metadata/graphql';
+import {
+  FeatureFlagKey,
+  FieldMetadataType,
+} from '~/generated-metadata/graphql';
 import { dateLocaleState } from '~/localization/states/dateLocaleState';
 import { beautifyPastDateRelativeToNow } from '~/utils/date-utils';
 import { CommandMenuPageInfoLayout } from './CommandMenuPageInfoLayout';
-import { allowRequestsToTwentyIconsState } from '@/client-config/states/allowRequestsToTwentyIcons';
 
 export const CommandMenuRecordInfo = ({
   commandMenuPageInstanceId,
 }: {
   commandMenuPageInstanceId: string;
 }) => {
-  const viewableRecordNameSingular = useRecoilComponentValue(
+  const viewableRecordNameSingular = useAtomComponentStateValue(
     viewableRecordNameSingularComponentState,
     commandMenuPageInstanceId,
   );
-  const allowRequestsToTwentyIcons = useRecoilValue(
+  const allowRequestsToTwentyIcons = useAtomStateValue(
     allowRequestsToTwentyIconsState,
   );
 
-  const viewableRecordId = useRecoilComponentValue(
+  const viewableRecordId = useAtomComponentStateValue(
     viewableRecordIdComponentState,
     commandMenuPageInstanceId,
   );
@@ -44,21 +49,28 @@ export const CommandMenuRecordInfo = ({
     viewableRecordId!,
   );
 
-  const recordCreatedAt = useRecoilValue<string | null>(
-    recordStoreFamilySelector({
+  const recordCreatedAt = useAtomFamilySelectorValue(
+    recordStoreFamilySelector,
+    {
       recordId: objectRecordId,
       fieldName: 'createdAt',
-    }),
+    },
+  ) as string | null;
+
+  const isFilesFieldMigrated = useIsFeatureEnabled(
+    FeatureFlagKey.IS_FILES_FIELD_MIGRATED,
   );
 
-  const recordIdentifier = useRecoilValue(
-    recordStoreIdentifierFamilySelector({
+  const recordIdentifier = useAtomFamilySelectorValue(
+    recordStoreIdentifierFamilySelector,
+    {
       recordId: objectRecordId,
       allowRequestsToTwentyIcons,
-    }),
+      isFilesFieldMigrated,
+    },
   );
 
-  const { localeCatalog } = useRecoilValue(dateLocaleState);
+  const { localeCatalog } = useAtomStateValue(dateLocaleState);
   const beautifiedCreatedAt = isNonEmptyString(recordCreatedAt)
     ? beautifyPastDateRelativeToNow(recordCreatedAt, localeCatalog)
     : '';
@@ -80,7 +92,6 @@ export const CommandMenuRecordInfo = ({
 
   const { useUpdateOneObjectRecordMutation } = useRecordShowContainerActions({
     objectNameSingular,
-    objectRecordId,
   });
 
   const fieldDefinition = {

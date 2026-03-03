@@ -1,8 +1,9 @@
 import { Trans, useLingui } from '@lingui/react/macro';
-import { useRecoilValue } from 'recoil';
 
 import { useAuth } from '@/auth/hooks/useAuth';
 import { currentUserState } from '@/auth/states/currentUserState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { useRedirectToDefaultDomain } from '@/domain-manager/hooks/useRedirectToDefaultDomain';
 import { ConfirmationModal } from '@/ui/layout/modal/components/ConfirmationModal';
 import { useModal } from '@/ui/layout/modal/hooks/useModal';
 import { H2Title, IconTrash } from 'twenty-ui/display';
@@ -13,16 +14,18 @@ const DELETE_WORKSPACE_MODAL_ID = 'delete-workspace-modal';
 
 export const DeleteWorkspace = () => {
   const [deleteCurrentWorkspace] = useDeleteCurrentWorkspaceMutation();
-  const currentUser = useRecoilValue(currentUserState);
+  const currentUser = useAtomStateValue(currentUserState);
   const userEmail = currentUser?.email;
   const { t } = useLingui();
   const { openModal } = useModal();
 
   const { signOut } = useAuth();
+  const { redirectToDefaultDomain } = useRedirectToDefaultDomain();
 
   const deleteWorkspace = async () => {
     await deleteCurrentWorkspace();
     await signOut();
+    redirectToDefaultDomain();
   };
 
   return (

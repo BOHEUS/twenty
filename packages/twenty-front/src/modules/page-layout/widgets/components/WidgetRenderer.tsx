@@ -22,14 +22,18 @@ import { WidgetCardContent } from '@/page-layout/widgets/widget-card/components/
 import { WidgetCardHeader } from '@/page-layout/widgets/widget-card/components/WidgetCardHeader';
 import { useLayoutRenderingContext } from '@/ui/layout/contexts/LayoutRenderingContext';
 import { useIsMobile } from '@/ui/utilities/responsive/hooks/useIsMobile';
-import { useRecoilComponentValue } from '@/ui/utilities/state/component-state/hooks/useRecoilComponentValue';
-import { useSetRecoilComponentFamilyState } from '@/ui/utilities/state/component-state/hooks/useSetRecoilComponentFamilyState';
+import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
+import { useSetAtomComponentFamilyState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentFamilyState';
 import { useTheme } from '@emotion/react';
 import styled from '@emotion/styled';
 import { type MouseEvent } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { IconLock } from 'twenty-ui/display';
-import { PageLayoutType, WidgetType } from '~/generated/graphql';
+import {
+  PageLayoutTabLayoutMode,
+  PageLayoutType,
+  WidgetType,
+} from '~/generated-metadata/graphql';
 
 const StyledNoAccessContainer = styled.div`
   align-items: center;
@@ -46,27 +50,27 @@ export const WidgetRenderer = ({ widget }: WidgetRendererProps) => {
   const { deletePageLayoutWidget } = useDeletePageLayoutWidget();
   const { handleEditWidget } = useEditPageLayoutWidget();
 
-  const isPageLayoutInEditMode = useRecoilComponentValue(
+  const isPageLayoutInEditMode = useAtomComponentStateValue(
     isPageLayoutInEditModeComponentState,
   );
 
-  const draggingWidgetId = useRecoilComponentValue(
+  const pageLayoutDraggingWidgetId = useAtomComponentStateValue(
     pageLayoutDraggingWidgetIdComponentState,
   );
 
-  const resizingWidgetId = useRecoilComponentValue(
+  const pageLayoutResizingWidgetId = useAtomComponentStateValue(
     pageLayoutResizingWidgetIdComponentState,
   );
 
-  const currentlyEditingWidgetId = useRecoilComponentValue(
+  const pageLayoutEditingWidgetId = useAtomComponentStateValue(
     pageLayoutEditingWidgetIdComponentState,
   );
 
-  const isEditing = currentlyEditingWidgetId === widget.id;
+  const isEditing = pageLayoutEditingWidgetId === widget.id;
 
-  const isDragging = draggingWidgetId === widget.id;
+  const isDragging = pageLayoutDraggingWidgetId === widget.id;
 
-  const isResizing = resizingWidgetId === widget.id;
+  const isResizing = pageLayoutResizingWidgetId === widget.id;
 
   const { hasAccess, restriction } = useWidgetPermissions(widget);
 
@@ -82,12 +86,16 @@ export const WidgetRenderer = ({ widget }: WidgetRendererProps) => {
   const isReorderEnabled =
     currentPageLayout.type !== PageLayoutType.RECORD_PAGE;
 
+  const isDeletingWidgetEnabled =
+    currentPageLayout.type !== PageLayoutType.RECORD_PAGE;
+
   // TODO: when we have more widgets without headers, we should use a more generic approach to hide the header
   // each widget type could have metadata (e.g., hasHeader: boolean or headerMode: 'always' | 'editOnly' | 'never')
   const isRichTextWidget = widget.type === WidgetType.STANDALONE_RICH_TEXT;
   const hideRichTextHeader = isRichTextWidget && !isPageLayoutInEditMode;
 
-  const showHeader = layoutMode !== 'canvas' && !hideRichTextHeader;
+  const showHeader =
+    layoutMode !== PageLayoutTabLayoutMode.CANVAS && !hideRichTextHeader;
 
   const handleClick = () => {
     handleEditWidget({
@@ -101,17 +109,17 @@ export const WidgetRenderer = ({ widget }: WidgetRendererProps) => {
     deletePageLayoutWidget(widget.id);
   };
 
-  const setIsHovered = useSetRecoilComponentFamilyState(
+  const setWidgetCardHovered = useSetAtomComponentFamilyState(
     widgetCardHoveredComponentFamilyState,
     widget.id,
   );
 
   const handleMouseEnter = () => {
-    setIsHovered(true);
+    setWidgetCardHovered(true);
   };
 
   const handleMouseLeave = () => {
-    setIsHovered(false);
+    setWidgetCardHovered(false);
   };
 
   const variant = getWidgetCardVariant({
@@ -148,6 +156,7 @@ export const WidgetRenderer = ({ widget }: WidgetRendererProps) => {
             isInEditMode={isPageLayoutInEditMode}
             isResizing={isResizing}
             isReorderEnabled={isReorderEnabled}
+            isDeletingWidgetEnabled={isDeletingWidgetEnabled}
             title={widget.title}
             onRemove={handleRemove}
             actions={actions}
@@ -170,6 +179,11 @@ export const WidgetRenderer = ({ widget }: WidgetRendererProps) => {
           {hasAccess ? (
             <ErrorBoundary
               FallbackComponent={PageLayoutWidgetInvalidConfigDisplay}
+              resetKeys={[
+                widget.id,
+                widget.configuration,
+                widget.objectMetadataId,
+              ]}
             >
               <WidgetContentRenderer widget={widget} />
             </ErrorBoundary>

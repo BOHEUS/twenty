@@ -1,6 +1,7 @@
 import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { Args, Mutation } from '@nestjs/graphql';
 
+import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
 import { AuditExceptionFilter } from 'src/engine/core-modules/audit/audit-exception-filter';
 import {
   AuditException,
@@ -9,8 +10,9 @@ import {
 import { CreateObjectEventInput } from 'src/engine/core-modules/audit/dtos/create-object-event.input';
 import { PreventNestToAutoLogGraphqlErrorsFilter } from 'src/engine/core-modules/graphql/filters/prevent-nest-to-auto-log-graphql-errors.filter';
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
+import { UserEntity } from 'src/engine/core-modules/user/user.entity';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
-import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
+import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
@@ -24,7 +26,7 @@ import {
 } from './dtos/create-analytics.input';
 import { AuditService } from './services/audit.service';
 
-@Resolver(() => Analytics)
+@MetadataResolver(() => Analytics)
 @UsePipes(ResolverValidationPipe)
 @UseFilters(AuditExceptionFilter, PreventNestToAutoLogGraphqlErrorsFilter)
 export class AuditResolver {
@@ -36,13 +38,9 @@ export class AuditResolver {
     createAnalyticsInput: CreateAnalyticsInputV2,
     @AuthWorkspace({ allowUndefined: true })
     workspace: WorkspaceEntity | undefined,
-    @AuthUserWorkspaceId() userWorkspaceId: string | undefined,
+    @AuthUser({ allowUndefined: true }) user: UserEntity | undefined,
   ) {
-    return this.trackAnalytics(
-      createAnalyticsInput,
-      workspace,
-      userWorkspaceId,
-    );
+    return this.trackAnalytics(createAnalyticsInput, workspace, user);
   }
 
   @Mutation(() => Analytics)
@@ -51,7 +49,7 @@ export class AuditResolver {
     @Args()
     createObjectEventInput: CreateObjectEventInput,
     @AuthWorkspace() workspace: WorkspaceEntity | undefined,
-    @AuthUserWorkspaceId() userWorkspaceId: string | undefined,
+    @AuthUser({ allowUndefined: true }) user: UserEntity | undefined,
   ) {
     if (!workspace) {
       throw new AuditException(
@@ -62,7 +60,7 @@ export class AuditResolver {
 
     const analyticsContext = this.auditService.createContext({
       workspaceId: workspace.id,
-      userWorkspaceId,
+      userId: user?.id,
     });
 
     return analyticsContext.createObjectEvent(createObjectEventInput.event, {
@@ -80,11 +78,11 @@ export class AuditResolver {
     createAnalyticsInput: CreateAnalyticsInputV2,
     @AuthWorkspace({ allowUndefined: true })
     workspace: WorkspaceEntity | undefined,
-    @AuthUserWorkspaceId() userWorkspaceId: string | undefined,
+    @AuthUser({ allowUndefined: true }) user: UserEntity | undefined,
   ) {
     const analyticsContext = this.auditService.createContext({
       workspaceId: workspace?.id,
-      userWorkspaceId,
+      userId: user?.id,
     });
 
     if (isPageviewAnalyticsInput(createAnalyticsInput)) {

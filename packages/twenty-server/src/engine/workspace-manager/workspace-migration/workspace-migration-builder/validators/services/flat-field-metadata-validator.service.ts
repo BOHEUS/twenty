@@ -6,19 +6,19 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { FieldMetadataExceptionCode } from 'src/engine/metadata-modules/field-metadata/field-metadata.exception';
 import { createEmptyFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-flat-entity-maps.constant';
-import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
+import { findFlatEntityByUniversalIdentifier } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier.util';
 import { FLAT_FIELD_METADATA_RELATION_PROPERTIES_TO_COMPARE } from 'src/engine/metadata-modules/flat-field-metadata/constants/flat-field-metadata-relation-properties-to-compare.constant';
 import { FlatFieldMetadataTypeValidatorService } from 'src/engine/metadata-modules/flat-field-metadata/services/flat-field-metadata-type-validator.service';
 import { FlatFieldMetadataRelationPropertiesToCompare } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata-relation-properties-to-compare.type';
 import { isFlatFieldMetadataNameSyncedWithLabel } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-flat-field-metadata-name-synced-with-label.util';
-import { isMorphOrRelationFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-morph-or-relation-flat-field-metadata.util';
+import { isMorphOrRelationUniversalFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-morph-or-relation-flat-field-metadata.util';
 import { validateFlatFieldMetadataNameAvailability } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-flat-field-metadata-name-availability.util';
 import { validateFlatFieldMetadataName } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-flat-field-metadata-name.util';
-import { belongsToTwentyStandardApp } from 'src/engine/metadata-modules/utils/belongs-to-twenty-standard-app.util';
+import { UniversalFlatFieldMetadata } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-field-metadata.type';
 import { FailedFlatEntityValidation } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/types/failed-flat-entity-validation.type';
 import { getEmptyFlatEntityValidationError } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/utils/get-flat-entity-validation-error.util';
-import { FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/flat-entity-update-validation-args.type';
-import { FlatEntityValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/flat-entity-validation-args.type';
+import { FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-update-validation-args.type';
+import { UniversalFlatEntityValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-validation-args.type';
 
 @Injectable()
 export class FlatFieldMetadataValidatorService {
@@ -27,7 +27,7 @@ export class FlatFieldMetadataValidatorService {
   ) {}
 
   validateFlatFieldMetadataUpdate({
-    flatEntityId,
+    universalIdentifier,
     flatEntityUpdate,
     optimisticFlatEntityMapsAndRelatedFlatEntityMaps: {
       flatFieldMetadataMaps: optimisticFlatFieldMetadataMaps,
@@ -40,16 +40,14 @@ export class FlatFieldMetadataValidatorService {
     typeof ALL_METADATA_NAME.fieldMetadata
   >): FailedFlatEntityValidation<'fieldMetadata', 'update'> {
     const existingFlatFieldMetadataToUpdate =
-      findFlatEntityByIdInFlatEntityMaps({
-        flatEntityId,
+      findFlatEntityByUniversalIdentifier({
+        universalIdentifier,
         flatEntityMaps: optimisticFlatFieldMetadataMaps,
       });
 
     const validationResult = getEmptyFlatEntityValidationError({
       flatEntityMinimalInformation: {
-        id: flatEntityId,
-        universalIdentifier:
-          existingFlatFieldMetadataToUpdate?.universalIdentifier,
+        universalIdentifier,
       },
       metadataName: 'fieldMetadata',
       type: 'update',
@@ -72,13 +70,39 @@ export class FlatFieldMetadataValidatorService {
 
     validationResult.flatEntityMinimalInformation = {
       ...validationResult.flatEntityMinimalInformation,
-      id: flatFieldMetadataToValidate.id,
       name: flatFieldMetadataToValidate.name,
-      objectMetadataId: flatFieldMetadataToValidate.objectMetadataId,
+      objectMetadataUniversalIdentifier:
+        flatFieldMetadataToValidate.objectMetadataUniversalIdentifier,
     };
 
-    const flatObjectMetadata = findFlatEntityByIdInFlatEntityMaps({
-      flatEntityId: flatFieldMetadataToValidate.objectMetadataId,
+    const SYSTEM_FIELD_ALLOWED_UPDATE_PROPERTIES = [
+      'universalSettings',
+      'isActive',
+    ] as const satisfies (keyof UniversalFlatFieldMetadata)[];
+
+    if (
+      !buildOptions.isSystemBuild &&
+      existingFlatFieldMetadataToUpdate.isSystem
+    ) {
+      const disallowedProperties = Object.keys(flatEntityUpdate).filter(
+        (property) =>
+          !SYSTEM_FIELD_ALLOWED_UPDATE_PROPERTIES.includes(
+            property as (typeof SYSTEM_FIELD_ALLOWED_UPDATE_PROPERTIES)[number],
+          ),
+      );
+
+      if (disallowedProperties.length > 0) {
+        validationResult.errors.push({
+          code: FieldMetadataExceptionCode.FIELD_MUTATION_NOT_ALLOWED,
+          message: `System fields only allow updating: ${SYSTEM_FIELD_ALLOWED_UPDATE_PROPERTIES.join(', ')}. Forbidden properties: ${disallowedProperties.join(', ')}`,
+          userFriendlyMessage: msg`System fields cannot be updated`,
+        });
+      }
+    }
+
+    const flatObjectMetadata = findFlatEntityByUniversalIdentifier({
+      universalIdentifier:
+        flatFieldMetadataToValidate.objectMetadataUniversalIdentifier,
       flatEntityMaps: flatObjectMetadataMaps,
     });
 
@@ -92,15 +116,19 @@ export class FlatFieldMetadataValidatorService {
       return validationResult;
     }
 
-    if (!isDefined(flatObjectMetadata.labelIdentifierFieldMetadataId)) {
+    if (
+      !isDefined(
+        flatObjectMetadata.labelIdentifierFieldMetadataUniversalIdentifier,
+      )
+    ) {
       validationResult.errors.push({
         code: FieldMetadataExceptionCode.LABEL_IDENTIFIER_FIELD_METADATA_ID_NOT_FOUND,
         message: 'Label identifier field metadata id does not exist',
         userFriendlyMessage: msg`Object related to updated field does not have a label identifier`,
       });
     } else if (
-      flatObjectMetadata.labelIdentifierFieldMetadataId ===
-        flatFieldMetadataToValidate.id &&
+      flatObjectMetadata.labelIdentifierFieldMetadataUniversalIdentifier ===
+        flatFieldMetadataToValidate.universalIdentifier &&
       isDefined(flatEntityUpdate.isActive) &&
       flatFieldMetadataToValidate.isActive === false
     ) {
@@ -112,7 +140,9 @@ export class FlatFieldMetadataValidatorService {
     }
 
     // Should be moved in relation field validator
-    if (isMorphOrRelationFlatFieldMetadata(flatFieldMetadataToValidate)) {
+    if (
+      isMorphOrRelationUniversalFlatFieldMetadata(flatFieldMetadataToValidate)
+    ) {
       const updatedProperties = Object.keys(flatEntityUpdate);
       const relationNonEditableUpdatedProperties = updatedProperties.filter(
         (property) =>
@@ -139,8 +169,8 @@ export class FlatFieldMetadataValidatorService {
         }),
         ...validateFlatFieldMetadataNameAvailability({
           name: flatFieldMetadataToValidate.name,
-          flatFieldMetadataMaps: optimisticFlatFieldMetadataMaps,
-          flatObjectMetadata,
+          universalFlatFieldMetadataMaps: optimisticFlatFieldMetadataMaps,
+          universalFlatObjectMetadata: flatObjectMetadata,
           buildOptions,
         }),
       );
@@ -150,7 +180,7 @@ export class FlatFieldMetadataValidatorService {
       flatFieldMetadataToValidate.isLabelSyncedWithName &&
       !isFlatFieldMetadataNameSyncedWithLabel({
         flatFieldMetadata: flatFieldMetadataToValidate,
-        isSystemBuild: buildOptions.isSystemBuild,
+        buildOptions,
       })
     ) {
       validationResult.errors.push({
@@ -195,29 +225,26 @@ export class FlatFieldMetadataValidatorService {
   }
 
   validateFlatFieldMetadataDeletion({
-    flatEntityToValidate: {
-      id: flatFieldMetadataToDeleteId,
-      universalIdentifier,
-    },
+    flatEntityToValidate: { universalIdentifier },
     optimisticFlatEntityMapsAndRelatedFlatEntityMaps: {
       flatFieldMetadataMaps: optimisticFlatFieldMetadataMaps,
       flatObjectMetadataMaps,
     },
-  }: FlatEntityValidationArgs<
+    buildOptions,
+  }: UniversalFlatEntityValidationArgs<
     typeof ALL_METADATA_NAME.fieldMetadata
   >): FailedFlatEntityValidation<'fieldMetadata', 'delete'> {
+    const flatFieldMetadataToDelete = findFlatEntityByUniversalIdentifier({
+      universalIdentifier,
+      flatEntityMaps: optimisticFlatFieldMetadataMaps,
+    });
+
     const validationResult = getEmptyFlatEntityValidationError({
       flatEntityMinimalInformation: {
-        id: flatFieldMetadataToDeleteId,
         universalIdentifier,
       },
       metadataName: 'fieldMetadata',
       type: 'delete',
-    });
-
-    const flatFieldMetadataToDelete = findFlatEntityByIdInFlatEntityMaps({
-      flatEntityId: flatFieldMetadataToDeleteId,
-      flatEntityMaps: optimisticFlatFieldMetadataMaps,
     });
 
     if (!isDefined(flatFieldMetadataToDelete)) {
@@ -233,52 +260,42 @@ export class FlatFieldMetadataValidatorService {
     validationResult.flatEntityMinimalInformation = {
       ...validationResult.flatEntityMinimalInformation,
       name: flatFieldMetadataToDelete.name,
-      objectMetadataId: flatFieldMetadataToDelete.objectMetadataId,
+      objectMetadataUniversalIdentifier:
+        flatFieldMetadataToDelete.objectMetadataUniversalIdentifier,
     };
 
-    const relatedFlatObjectMetadata = findFlatEntityByIdInFlatEntityMaps({
-      flatEntityId: flatFieldMetadataToDelete.objectMetadataId,
+    const relatedFlatObjectMetadata = findFlatEntityByUniversalIdentifier({
+      universalIdentifier:
+        flatFieldMetadataToDelete.objectMetadataUniversalIdentifier,
       flatEntityMaps: flatObjectMetadataMaps,
     });
 
+    const parentObjectMetadataHasBeenDeleted = !isDefined(
+      relatedFlatObjectMetadata,
+    );
+
+    if (
+      !buildOptions.isSystemBuild &&
+      flatFieldMetadataToDelete.isSystem &&
+      !parentObjectMetadataHasBeenDeleted
+    ) {
+      validationResult.errors.push({
+        code: FieldMetadataExceptionCode.FIELD_MUTATION_NOT_ALLOWED,
+        message: 'System fields cannot be deleted',
+        userFriendlyMessage: msg`System fields cannot be deleted`,
+      });
+    }
+
     if (
       isDefined(relatedFlatObjectMetadata) &&
-      relatedFlatObjectMetadata.labelIdentifierFieldMetadataId ===
-        flatFieldMetadataToDelete.id
+      relatedFlatObjectMetadata.labelIdentifierFieldMetadataUniversalIdentifier ===
+        flatFieldMetadataToDelete.universalIdentifier
     ) {
       validationResult.errors.push({
         code: FieldMetadataExceptionCode.FIELD_MUTATION_NOT_ALLOWED,
         message:
           'Cannot delete, please update the label identifier field first',
         userFriendlyMessage: msg`Cannot delete, please update the label identifier field first`,
-      });
-    }
-
-    const relationTargetObjectMetadataHasBeenDeleted =
-      isMorphOrRelationFlatFieldMetadata(flatFieldMetadataToDelete) &&
-      !isDefined(
-        findFlatEntityByIdInFlatEntityMaps({
-          flatEntityId:
-            flatFieldMetadataToDelete.relationTargetObjectMetadataId,
-          flatEntityMaps: flatObjectMetadataMaps,
-        }),
-      );
-    const parentObjectMetadataHasBeenDeleted = !isDefined(
-      findFlatEntityByIdInFlatEntityMaps({
-        flatEntityId: flatFieldMetadataToDelete.objectMetadataId,
-        flatEntityMaps: flatObjectMetadataMaps,
-      }),
-    );
-
-    if (
-      belongsToTwentyStandardApp(flatFieldMetadataToDelete) &&
-      !relationTargetObjectMetadataHasBeenDeleted &&
-      !parentObjectMetadataHasBeenDeleted
-    ) {
-      validationResult.errors.push({
-        code: FieldMetadataExceptionCode.INVALID_FIELD_INPUT,
-        message: "Standard Fields can't be deleted",
-        userFriendlyMessage: msg`Standard fields cannot be deleted`,
       });
     }
 
@@ -295,22 +312,23 @@ export class FlatFieldMetadataValidatorService {
     buildOptions,
     remainingFlatEntityMapsToValidate,
     additionalCacheDataMaps,
-  }: FlatEntityValidationArgs<
+  }: UniversalFlatEntityValidationArgs<
     typeof ALL_METADATA_NAME.fieldMetadata
   >): FailedFlatEntityValidation<'fieldMetadata', 'create'> {
     const validationResult = getEmptyFlatEntityValidationError({
       flatEntityMinimalInformation: {
-        id: flatFieldMetadataToValidate.id,
         universalIdentifier: flatFieldMetadataToValidate.universalIdentifier,
         name: flatFieldMetadataToValidate.name,
-        objectMetadataId: flatFieldMetadataToValidate.objectMetadataId,
+        objectMetadataUniversalIdentifier:
+          flatFieldMetadataToValidate.objectMetadataUniversalIdentifier,
       },
       metadataName: 'fieldMetadata',
       type: 'create',
     });
 
-    const parentFlatObjectMetadata = findFlatEntityByIdInFlatEntityMaps({
-      flatEntityId: flatFieldMetadataToValidate.objectMetadataId,
+    const parentFlatObjectMetadata = findFlatEntityByUniversalIdentifier({
+      universalIdentifier:
+        flatFieldMetadataToValidate.objectMetadataUniversalIdentifier,
       flatEntityMaps: flatObjectMetadataMaps,
     });
 
@@ -323,15 +341,17 @@ export class FlatFieldMetadataValidatorService {
     } else {
       if (
         isDefined(
-          findFlatEntityByIdInFlatEntityMaps({
-            flatEntityId: flatFieldMetadataToValidate.id,
+          findFlatEntityByUniversalIdentifier({
+            universalIdentifier:
+              flatFieldMetadataToValidate.universalIdentifier,
             flatEntityMaps: optimisticFlatFieldMetadataMaps,
           }),
         )
       ) {
         validationResult.errors.push({
           code: FieldMetadataExceptionCode.FIELD_ALREADY_EXISTS,
-          message: 'Field with same id already exists in object',
+          message:
+            'Field with same universal identifier already exists in object',
           userFriendlyMessage: msg`Field already exists`,
         });
       }
@@ -347,8 +367,8 @@ export class FlatFieldMetadataValidatorService {
       validationResult.errors.push(
         ...validateFlatFieldMetadataNameAvailability({
           name: flatFieldMetadataToValidate.name,
-          flatFieldMetadataMaps: optimisticFlatFieldMetadataMaps,
-          flatObjectMetadata: parentFlatObjectMetadata,
+          universalFlatFieldMetadataMaps: optimisticFlatFieldMetadataMaps,
+          universalFlatObjectMetadata: parentFlatObjectMetadata,
           buildOptions,
         }),
       );
@@ -358,7 +378,7 @@ export class FlatFieldMetadataValidatorService {
       flatFieldMetadataToValidate.isLabelSyncedWithName &&
       !isFlatFieldMetadataNameSyncedWithLabel({
         flatFieldMetadata: flatFieldMetadataToValidate,
-        isSystemBuild: buildOptions.isSystemBuild,
+        buildOptions,
       })
     ) {
       validationResult.errors.push({

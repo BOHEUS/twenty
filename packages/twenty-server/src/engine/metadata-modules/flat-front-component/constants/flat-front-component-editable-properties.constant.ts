@@ -1,5 +1,11 @@
-import { type FlatFrontComponent } from 'src/engine/metadata-modules/flat-front-component/types/flat-front-component.type';
+import { type MetadataEntityPropertyName } from 'src/engine/metadata-modules/flat-entity/constant/all-entity-properties-configuration-by-metadata-name.constant';
 
 export const FLAT_FRONT_COMPONENT_EDITABLE_PROPERTIES = [
   'name',
-] as const satisfies (keyof FlatFrontComponent)[];
+  'description',
+  'builtComponentChecksum',
+  'sourceComponentPath',
+  'builtComponentPath',
+  'componentName',
+  'isHeadless',
+] as const satisfies MetadataEntityPropertyName<'frontComponent'>[];

@@ -1,11 +1,11 @@
 import { type FieldConfiguration } from '@/page-layout/types/FieldConfiguration';
-import { type FieldsConfiguration } from '@/page-layout/types/FieldsConfiguration';
 import {
   type AggregateChartConfiguration,
   type BarChartConfiguration,
   type CalendarConfiguration,
   type EmailsConfiguration,
   type FieldRichTextConfiguration,
+  type FieldsConfiguration,
   type FilesConfiguration,
   type FrontComponentConfiguration,
   type GaugeChartConfiguration,
@@ -22,7 +22,7 @@ import {
   type WorkflowConfiguration,
   type WorkflowRunConfiguration,
   type WorkflowVersionConfiguration,
-} from '~/generated/graphql';
+} from '~/generated-metadata/graphql';
 
 type WidgetConfigurationTypenameMap = {
   AggregateChartConfiguration: Omit<
