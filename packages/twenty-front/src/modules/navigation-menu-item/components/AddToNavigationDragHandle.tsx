@@ -3,8 +3,7 @@ import { isNonEmptyString } from '@sniptt/guards';
 import { type ReactNode, useContext } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 import { IconGripVertical, type IconComponent } from 'twenty-ui/display';
-import { ThemeContext } from 'twenty-ui/theme';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
 import { NavigationMenuItemStyleIcon } from '@/navigation-menu-item/components/NavigationMenuItemStyleIcon';
 import { DEFAULT_NAVIGATION_MENU_ITEM_COLOR_FOLDER } from '@/navigation-menu-item/constants/NavigationMenuItemDefaultColorFolder';
@@ -18,14 +17,10 @@ const StyledIconSlot = styled.div<{ $hasFixedSize: boolean }>`
   display: flex;
   flex-shrink: 0;
   justify-content: center;
-
-  ${({ $hasFixedSize }) =>
-    $hasFixedSize
-      ? `
-      height: ${themeCssVariables.spacing[4]};
-      width: ${themeCssVariables.spacing[4]};
-    `
-      : ''}
+  height: ${({ $hasFixedSize }) =>
+    $hasFixedSize ? themeCssVariables.spacing[4] : 'auto'};
+  width: ${({ $hasFixedSize }) =>
+    $hasFixedSize ? themeCssVariables.spacing[4] : 'auto'};
 
   &:active {
     cursor: grabbing;

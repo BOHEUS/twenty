@@ -1,12 +1,13 @@
-import { useContext } from 'react';
 import { styled } from '@linaria/react';
 
 import { ActivityRow } from '@/activities/components/ActivityRow';
 import { EmailThreadNotShared } from '@/activities/emails/components/EmailThreadNotShared';
-import { useOpenEmailThreadInCommandMenu } from '@/command-menu/hooks/useOpenEmailThreadInCommandMenu';
+import { useOpenEmailThreadInSidePanel } from '@/side-panel/hooks/useOpenEmailThreadInSidePanel';
+import { useContext } from 'react';
+
+import { isDefined } from 'twenty-shared/utils';
 import { Avatar } from 'twenty-ui/display';
-import { ThemeContext } from 'twenty-ui/theme';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 import {
   MessageChannelVisibility,
   type TimelineThread,
@@ -25,7 +26,7 @@ const StyledParticipantsContainer = styled.div`
   display: flex;
 `;
 
-const StyledAvatar = styled(Avatar)`
+const StyledAvatarWrapper = styled.div`
   margin-left: calc(-1 * ${themeCssVariables.spacing[1]});
 `;
 
@@ -75,7 +76,8 @@ type EmailThreadPreviewProps = {
 };
 
 export const EmailThreadPreview = ({ thread }: EmailThreadPreviewProps) => {
-  const { openEmailThreadInCommandMenu } = useOpenEmailThreadInCommandMenu();
+  const { theme } = useContext(ThemeContext);
+  const { openEmailThreadInSidePanel } = useOpenEmailThreadInSidePanel();
 
   const visibility = thread.visibility;
 
@@ -102,13 +104,11 @@ export const EmailThreadPreview = ({ thread }: EmailThreadPreviewProps) => {
       thread.visibility === MessageChannelVisibility.SHARE_EVERYTHING;
 
     if (canOpen) {
-      openEmailThreadInCommandMenu(thread.id);
+      openEmailThreadInSidePanel(thread.id);
     }
   };
 
   const isDisabled = visibility !== MessageChannelVisibility.SHARE_EVERYTHING;
-  const { theme } = useContext(ThemeContext);
-
   return (
     <ActivityRow onClick={handleThreadClick} disabled={isDisabled}>
       <StyledHeading unread={!thread.read}>
@@ -122,25 +122,31 @@ export const EmailThreadPreview = ({ thread }: EmailThreadPreviewProps) => {
             }
             type="rounded"
           />
-          {thread?.lastTwoParticipants?.[0] && (
-            <StyledAvatar
-              avatarUrl={thread.lastTwoParticipants[0].avatarUrl}
-              placeholder={thread.lastTwoParticipants[0].displayName}
-              placeholderColorSeed={
-                thread.lastTwoParticipants[0].workspaceMemberId ||
-                thread.lastTwoParticipants[0].personId
-              }
-              type="rounded"
-            />
+          {isDefined(thread?.lastTwoParticipants?.[0]) && (
+            <StyledAvatarWrapper>
+              <Avatar
+                avatarUrl={thread.lastTwoParticipants[0].avatarUrl}
+                placeholder={thread.lastTwoParticipants[0].displayName}
+                placeholderColorSeed={
+                  thread.lastTwoParticipants[0].workspaceMemberId ||
+                  thread.lastTwoParticipants[0].personId
+                }
+                type="rounded"
+              />
+            </StyledAvatarWrapper>
           )}
           {finalDisplayedName && (
-            <StyledAvatar
-              avatarUrl={finalAvatarUrl}
-              placeholder={finalDisplayedName}
-              type="rounded"
-              color={isCountIcon ? theme.grayScale.gray11 : undefined}
-              backgroundColor={isCountIcon ? theme.grayScale.gray2 : undefined}
-            />
+            <StyledAvatarWrapper>
+              <Avatar
+                avatarUrl={finalAvatarUrl}
+                placeholder={finalDisplayedName}
+                type="rounded"
+                color={isCountIcon ? theme.grayScale.gray11 : undefined}
+                backgroundColor={
+                  isCountIcon ? theme.grayScale.gray2 : undefined
+                }
+              />
+            </StyledAvatarWrapper>
           )}
         </StyledParticipantsContainer>
 

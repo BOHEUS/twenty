@@ -1,7 +1,5 @@
 import { styled } from '@linaria/react';
-import { Card } from 'twenty-ui/layout';
-import { MOBILE_VIEWPORT } from 'twenty-ui/theme';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { MOBILE_VIEWPORT, themeCssVariables } from 'twenty-ui/theme-constants';
 
 type EventCardProps = {
   children: React.ReactNode;
@@ -23,7 +21,7 @@ const StyledCardContainer = styled.div`
   }
 `;
 
-const StyledCard = styled(Card)`
+const StyledCardInnerContainer = styled.div`
   background: ${themeCssVariables.background.secondary};
   border: 1px solid ${themeCssVariables.border.color.medium};
   border-radius: ${themeCssVariables.border.radius.md};
@@ -41,7 +39,7 @@ export const EventCard = ({ children, isOpen }: EventCardProps) => {
   return (
     isOpen && (
       <StyledCardContainer>
-        <StyledCard fullWidth>{children}</StyledCard>
+        <StyledCardInnerContainer>{children}</StyledCardInnerContainer>
       </StyledCardContainer>
     )
   );
