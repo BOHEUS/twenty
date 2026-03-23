@@ -25,8 +25,8 @@ const StyledWrapper = styled.div`
 const StyledContainer = styled.div`
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
   flex: 1;
+  flex-direction: column;
   height: 85%;
   overflow-y: auto;
 `;
@@ -34,11 +34,11 @@ const StyledContainer = styled.div`
 const StyledButtonContainer = styled.div`
   background: ${themeCssVariables.background.secondary};
   border-top: 1px solid ${themeCssVariables.border.color.light};
+  box-sizing: border-box;
   display: flex;
   justify-content: flex-end;
   padding: ${themeCssVariables.spacing[2]};
   width: 100%;
-  box-sizing: border-box;
 `;
 
 const ALLOWED_REPLY_PROVIDERS = [
@@ -86,8 +86,8 @@ export const SidePanelMessageThreadPage = () => {
 
   const canReply = useMemo(() => {
     return (
-      connectedAccountHandle &&
-      connectedAccountProvider &&
+      isDefined(connectedAccountHandle) &&
+      isDefined(connectedAccountProvider) &&
       ALLOWED_REPLY_PROVIDERS.includes(connectedAccountProvider) &&
       (connectedAccountProvider !== ConnectedAccountProvider.IMAP_SMTP_CALDAV ||
         isDefined(connectedAccountConnectionParameters?.SMTP)) &&
@@ -103,7 +103,7 @@ export const SidePanelMessageThreadPage = () => {
   ]);
 
   const handleReplyClick = () => {
-    if (!isDefined(canReply)) {
+    if (!canReply) {
       return;
     }
 
@@ -118,9 +118,10 @@ export const SidePanelMessageThreadPage = () => {
         window.open(url, '_blank');
         break;
       case ConnectedAccountProvider.IMAP_SMTP_CALDAV:
-        throw new Error('Account provider not supported');
+      case ConnectedAccountProvider.OIDC:
+      case ConnectedAccountProvider.SAML:
       case null:
-        throw new Error('Account provider not provided');
+        return;
       default:
         assertUnreachable(connectedAccountProvider);
     }
@@ -166,14 +167,14 @@ export const SidePanelMessageThreadPage = () => {
           </>
         )}
       </StyledContainer>
-      {isDefined(canReply) && !messageChannelLoading && (
+      {!messageChannelLoading && (
         <StyledButtonContainer>
           <Button
             size="small"
             onClick={handleReplyClick}
             title={t`Reply`}
             Icon={IconArrowBackUp}
-            disabled={!isDefined(canReply)}
+            disabled={!canReply}
           />
         </StyledButtonContainer>
       )}

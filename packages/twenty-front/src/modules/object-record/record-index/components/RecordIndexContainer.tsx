@@ -21,16 +21,16 @@ const StyledContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%;
-
   overflow: hidden;
+
+  width: 100%;
 `;
 
 const StyledContainerWithPadding = styled.div`
   box-sizing: border-box;
   flex: 1;
-  min-height: 0;
   margin-left: ${themeCssVariables.spacing[2]};
+  min-height: 0;
 `;
 
 export const RecordIndexContainer = () => {
@@ -54,7 +54,7 @@ export const RecordIndexContainer = () => {
               <ObjectOptionsDropdown
                 recordIndexId={recordIndexId}
                 objectMetadataItem={objectMetadataItem}
-                viewType={recordIndexViewType ?? ViewType.Table}
+                viewType={recordIndexViewType ?? ViewType.TABLE}
               />
             }
           />
@@ -64,12 +64,12 @@ export const RecordIndexContainer = () => {
           />
         </SpreadsheetImportProvider>
         <RecordIndexFiltersToContextStoreEffect />
-        {recordIndexViewType === ViewType.Table && (
+        {recordIndexViewType === ViewType.TABLE && (
           <>
             <RecordIndexTableContainer recordTableId={recordIndexId} />
           </>
         )}
-        {recordIndexViewType === ViewType.Kanban && (
+        {recordIndexViewType === ViewType.KANBAN && (
           <StyledContainerWithPadding>
             <RecordBoardContainer
               recordBoardId={recordIndexId}
@@ -78,7 +78,7 @@ export const RecordIndexContainer = () => {
             />
           </StyledContainerWithPadding>
         )}
-        {recordIndexViewType === ViewType.Calendar && (
+        {recordIndexViewType === ViewType.CALENDAR && (
           <StyledContainerWithPadding>
             <RecordIndexCalendarContainer
               recordCalendarInstanceId={recordIndexId}

@@ -4,10 +4,8 @@ import { ConfigService } from '@/cli/utilities/config/config-service';
 import { type OrchestratorState } from '@/cli/utilities/dev/orchestrator/dev-mode-orchestrator-state';
 import { BuildManifestOrchestratorStep } from '@/cli/utilities/dev/orchestrator/steps/build-manifest-orchestrator-step';
 import { CheckServerOrchestratorStep } from '@/cli/utilities/dev/orchestrator/steps/check-server-orchestrator-step';
-import { EnsureValidTokensOrchestratorStep } from '@/cli/utilities/dev/orchestrator/steps/ensure-valid-tokens-orchestrator-step';
 import { GenerateApiClientOrchestratorStep } from '@/cli/utilities/dev/orchestrator/steps/generate-api-client-orchestrator-step';
 import { RegisterAppOrchestratorStep } from '@/cli/utilities/dev/orchestrator/steps/register-app-orchestrator-step';
-import { ResolveApplicationOrchestratorStep } from '@/cli/utilities/dev/orchestrator/steps/resolve-application-orchestrator-step';
 import {
   StartWatchersOrchestratorStep,
   type FileBuiltEvent,
@@ -30,13 +28,12 @@ export class DevModeOrchestrator {
   private syncTimer: NodeJS.Timeout | null = null;
   private serverCheckInterval: NodeJS.Timeout | null = null;
 
+  private apiService: ApiService;
   private clientService: ClientService;
   private skipTypecheck = true;
   private checkServerStep: CheckServerOrchestratorStep;
-  private ensureValidTokensStep: EnsureValidTokensOrchestratorStep;
   private buildManifestStep: BuildManifestOrchestratorStep;
   private registerAppStep: RegisterAppOrchestratorStep;
-  private resolveApplicationStep: ResolveApplicationOrchestratorStep;
   private uploadFilesStep: UploadFilesOrchestratorStep;
   private generateApiClientStep: GenerateApiClientOrchestratorStep;
   private syncApplicationStep: SyncApplicationOrchestratorStep;
@@ -46,7 +43,8 @@ export class DevModeOrchestrator {
     this.debounceMs = options.debounceMs ?? 200;
     this.state = options.state;
 
-    const apiService = new ApiService({ disableInterceptors: true });
+    this.apiService = new ApiService({ disableInterceptors: true });
+    const apiService = this.apiService;
     const configService = new ConfigService();
     this.clientService = new ClientService();
     const stepDeps = { state: this.state, notify: () => this.state.notify() };
@@ -55,20 +53,11 @@ export class DevModeOrchestrator {
       ...stepDeps,
       apiService,
     });
-    this.ensureValidTokensStep = new EnsureValidTokensOrchestratorStep({
-      ...stepDeps,
-      apiService,
-      configService,
-    });
     this.buildManifestStep = new BuildManifestOrchestratorStep(stepDeps);
     this.registerAppStep = new RegisterAppOrchestratorStep({
       ...stepDeps,
       apiService,
       configService,
-    });
-    this.resolveApplicationStep = new ResolveApplicationOrchestratorStep({
-      ...stepDeps,
-      apiService,
     });
     this.uploadFilesStep = new UploadFilesOrchestratorStep(stepDeps);
     this.generateApiClientStep = new GenerateApiClientOrchestratorStep({
@@ -93,10 +82,6 @@ export class DevModeOrchestrator {
 
     await ensureDir(outputDir);
     await emptyDir(outputDir);
-
-    await this.clientService.ensureGeneratedClientStub({
-      appPath: this.state.appPath,
-    });
 
     await this.startWatchersStep.start();
 
@@ -175,10 +160,6 @@ export class DevModeOrchestrator {
       return;
     }
 
-    await this.ensureValidTokensStep.execute({
-      applicationId: this.state.steps.resolveApplication.output.applicationId,
-    });
-
     const buildResult = await this.buildManifestStep.execute({
       appPath: this.state.appPath,
     });
@@ -223,21 +204,35 @@ export class DevModeOrchestrator {
   }
 
   private async initializePipeline(manifest: Manifest): Promise<boolean> {
-    const registerResult = await this.registerAppStep.execute({ manifest });
+    await this.registerAppStep.execute({ manifest });
 
-    const resolveResult = await this.resolveApplicationStep.execute({
-      manifest,
-      applicationRegistrationId:
-        registerResult.applicationRegistrationId ?? undefined,
+    const createResult = await this.apiService.createDevelopmentApplication({
+      universalIdentifier: manifest.application.universalIdentifier,
+      name: manifest.application.displayName,
     });
 
-    if (!resolveResult.applicationId) {
+    if (!createResult.success || !createResult.data) {
+      this.state.applyStepEvents([
+        {
+          message: 'Failed to create development application',
+          status: 'error',
+        },
+        { message: JSON.stringify(createResult, null, 2), status: 'error' },
+      ]);
+      this.state.updatePipeline({ status: 'error' });
+
       return false;
     }
 
-    await this.ensureValidTokensStep.exchangeTokens({
-      applicationId: resolveResult.applicationId,
-    });
+    this.state.steps.resolveApplication.output = {
+      applicationId: createResult.data.id,
+      universalIdentifier: createResult.data.universalIdentifier,
+    };
+    this.state.steps.resolveApplication.status = 'done';
+
+    this.state.applyStepEvents([
+      { message: 'Application created', status: 'success' },
+    ]);
 
     this.uploadFilesStep.initialize({
       appPath: this.state.appPath,

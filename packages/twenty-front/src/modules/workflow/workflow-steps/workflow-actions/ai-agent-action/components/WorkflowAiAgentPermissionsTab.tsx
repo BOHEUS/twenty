@@ -14,7 +14,8 @@ import { useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 import { IconChevronLeft } from 'twenty-ui/display';
 import { IconButton } from 'twenty-ui/input';
-import { type Agent, useGetRolesQuery } from '~/generated-metadata/graphql';
+import { useQuery } from '@apollo/client/react';
+import { type Agent, GetRolesDocument } from '~/generated-metadata/graphql';
 import { SidePanelSkeletonLoader } from '~/loading/components/SidePanelSkeletonLoader';
 import { filterBySearchQuery } from '~/utils/filterBySearchQuery';
 
@@ -27,14 +28,14 @@ import { WorkflowAiAgentPermissionsObjectsList } from './WorkflowAiAgentPermissi
 import { getFilteredPermissions } from './workflowAiAgentPermissions.utils';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 const StyledSearchInputContainer = styled.div`
-  width: 100%;
-  height: 40px;
   border-block: 1px solid ${themeCssVariables.border.color.medium};
+  height: 40px;
+  width: 100%;
   & input {
-    height: 40px;
-    line-height: 40px;
     border: none;
     border-radius: 0;
+    height: 40px;
+    line-height: 40px;
     width: 100%;
   }
 `;
@@ -44,7 +45,6 @@ const StyledBackButtonText = styled.span`
 `;
 
 const StyledBackButton = styled.button`
-  width: 100%;
   align-items: center;
   background: none;
   border: none;
@@ -54,6 +54,7 @@ const StyledBackButton = styled.button`
   gap: ${themeCssVariables.spacing[1]};
   padding: ${themeCssVariables.spacing[3]};
   text-align: left;
+  width: 100%;
 
   &:hover {
     color: ${themeCssVariables.font.color.primary};
@@ -96,7 +97,7 @@ export const WorkflowAiAgentPermissionsTab = ({
     data: rolesData,
     loading: rolesLoading,
     refetch: refetchRoles,
-  } = useGetRolesQuery();
+  } = useQuery(GetRolesDocument);
 
   const [searchQuery, setSearchQuery] = useState('');
   const role = rolesData?.getRoles.find(

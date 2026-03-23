@@ -1,89 +1,32 @@
 import { formatPath } from '@/cli/utilities/file/file-path';
 import chalk from 'chalk';
 import type { Command } from 'commander';
-import { AppBuildCommand } from './app/app-build';
-import { AppDevCommand } from './app/app-dev';
-import { AppPackCommand } from './app/app-pack';
-import { AppPushCommand } from './app/app-push';
-import { AppTypecheckCommand } from './app/app-typecheck';
-import { AppUninstallCommand } from './app/app-uninstall';
-import { AuthListCommand } from './auth/auth-list';
-import { AuthLoginCommand } from './auth/auth-login';
-import { AuthLogoutCommand } from './auth/auth-logout';
-import { AuthStatusCommand } from './auth/auth-status';
-import { LogicFunctionExecuteCommand } from './logic-function/logic-function-execute';
-import { LogicFunctionLogsCommand } from './logic-function/logic-function-logs';
-import { AuthSwitchCommand } from './auth/auth-switch';
-import { EntityAddCommand } from './entity/entity-add';
+import { AppBuildCommand } from './build';
+import { AppDevCommand } from './dev';
+import { AppPublishCommand } from './publish';
+import { AppTypecheckCommand } from './typecheck';
+import { AppUninstallCommand } from './uninstall';
+import { DeployCommand } from './deploy';
+import { LogicFunctionExecuteCommand } from './exec';
+import { LogicFunctionLogsCommand } from './logs';
+import { EntityAddCommand } from './add';
+import { registerRemoteCommands } from './remote';
+import { registerServerCommands } from './server';
 import { SyncableEntity } from 'twenty-shared/application';
 
 export const registerCommands = (program: Command): void => {
-  // Auth commands
-  const listCommand = new AuthListCommand();
-  const loginCommand = new AuthLoginCommand();
-  const logoutCommand = new AuthLogoutCommand();
-  const statusCommand = new AuthStatusCommand();
-  const switchCommand = new AuthSwitchCommand();
-
-  program
-    .command('auth:login')
-    .description('Authenticate with Twenty')
-    .option('--api-key <key>', 'API key for authentication')
-    .option('--api-url <url>', 'Twenty API URL')
-    .action(async (options) => {
-      await loginCommand.execute(options);
-    });
-
-  program
-    .command('auth:logout')
-    .description('Remove authentication credentials')
-    .action(async () => {
-      await logoutCommand.execute();
-    });
-
-  program
-    .command('auth:status')
-    .description('Check authentication status')
-    .action(async () => {
-      await statusCommand.execute();
-    });
-
-  program
-    .command('auth:switch [workspace]')
-    .description('Switch the default workspace for authentication')
-    .action(async (workspace?: string) => {
-      await switchCommand.execute({ workspace });
-    });
-
-  program
-    .command('auth:list')
-    .description('List all configured workspaces')
-    .action(async () => {
-      await listCommand.execute();
-    });
-
-  // App commands
   const buildCommand = new AppBuildCommand();
   const devCommand = new AppDevCommand();
-  const packCommand = new AppPackCommand();
-  const pushCommand = new AppPushCommand();
+  const publishCommand = new AppPublishCommand();
   const typecheckCommand = new AppTypecheckCommand();
   const uninstallCommand = new AppUninstallCommand();
+  const deployCommand = new DeployCommand();
   const addCommand = new EntityAddCommand();
   const logsCommand = new LogicFunctionLogsCommand();
   const executeCommand = new LogicFunctionExecuteCommand();
 
   program
-    .command('app:build [appPath]')
-    .description('Build the application without watching for changes')
-    .action(async (appPath) => {
-      await buildCommand.execute({
-        appPath: formatPath(appPath),
-      });
-    });
-
-  program
-    .command('app:dev [appPath]')
+    .command('dev [appPath]')
     .description('Watch and sync local application changes')
     .action(async (appPath) => {
       await devCommand.execute({
@@ -92,7 +35,40 @@ export const registerCommands = (program: Command): void => {
     });
 
   program
-    .command('app:typecheck [appPath]')
+    .command('build [appPath]')
+    .description('Build, sync, and generate API client into .twenty/output/')
+    .option('--tarball', 'Also pack into a .tgz tarball')
+    .action(async (appPath, options) => {
+      await buildCommand.execute({
+        appPath: formatPath(appPath),
+        tarball: options.tarball,
+      });
+    });
+
+  program
+    .command('deploy [appPath]')
+    .description('Build and deploy to a Twenty server')
+    .option('-r, --remote <name>', 'Deploy to a specific remote')
+    .action(async (appPath, options) => {
+      await deployCommand.execute({
+        appPath: formatPath(appPath),
+        remote: options.remote,
+      });
+    });
+
+  program
+    .command('publish [appPath]')
+    .description('Build and publish to npm')
+    .option('--tag <tag>', 'npm dist-tag (e.g. beta, next)')
+    .action(async (appPath, options) => {
+      await publishCommand.execute({
+        appPath: formatPath(appPath),
+        tag: options.tag,
+      });
+    });
+
+  program
+    .command('typecheck [appPath]')
     .description('Run TypeScript type checking on the application')
     .action(async (appPath) => {
       await typecheckCommand.execute({
@@ -101,7 +77,7 @@ export const registerCommands = (program: Command): void => {
     });
 
   program
-    .command('app:uninstall [appPath]')
+    .command('uninstall [appPath]')
     .description('Uninstall application from Twenty')
     .option('-y, --yes', 'Skip confirmation prompt')
     .action(async (appPath?: string, options?: { yes?: boolean }) => {
@@ -116,30 +92,11 @@ export const registerCommands = (program: Command): void => {
       }
     });
 
-  program
-    .command('app:pack [appPath]')
-    .description('Build and pack the application into a .tgz tarball')
-    .action(async (appPath) => {
-      await packCommand.execute({ appPath: formatPath(appPath) });
-    });
+  registerRemoteCommands(program);
+  registerServerCommands(program);
 
   program
-    .command('app:push [appPath]')
-    .description(
-      'Build, upload, and install a local application on a Twenty server (for air-gapped/dev deployments)',
-    )
-    .option('--server <url>', 'Twenty server URL')
-    .option('--token <token>', 'Auth token for the server')
-    .action(async (appPath, options) => {
-      await pushCommand.execute({
-        appPath: formatPath(appPath),
-        server: options.server,
-        token: options.token,
-      });
-    });
-
-  program
-    .command('entity:add [entityType]')
+    .command('add [entityType]')
     .option('--path <path>', 'Path in which the entity should be created.')
     .description(
       `Add a new entity to your application (${Object.values(SyncableEntity).join('|')})`,
@@ -148,35 +105,8 @@ export const registerCommands = (program: Command): void => {
       await addCommand.execute(entityType as SyncableEntity, options?.path);
     });
 
-  // Function commands
   program
-    .command('function:logs [appPath]')
-    .option(
-      '-u, --functionUniversalIdentifier <functionUniversalIdentifier>',
-      'Only show logs for the function with this universal ID',
-    )
-    .option(
-      '-n, --functionName <functionName>',
-      'Only show logs for the function with this name',
-    )
-    .description('Watch application function logs')
-    .action(
-      async (
-        appPath?: string,
-        options?: {
-          functionUniversalIdentifier?: string;
-          functionName?: string;
-        },
-      ) => {
-        await logsCommand.execute({
-          ...options,
-          appPath: formatPath(appPath),
-        });
-      },
-    );
-
-  program
-    .command('function:execute [appPath]')
+    .command('exec [appPath]')
     .option('--postInstall', 'Execute post-install logic function if defined')
     .option(
       '-p, --payload <payload>',
@@ -217,6 +147,32 @@ export const registerCommands = (program: Command): void => {
         await executeCommand.execute({
           ...options,
           payload: options?.payload ?? '{}',
+          appPath: formatPath(appPath),
+        });
+      },
+    );
+
+  program
+    .command('logs [appPath]')
+    .option(
+      '-u, --functionUniversalIdentifier <functionUniversalIdentifier>',
+      'Only show logs for the function with this universal ID',
+    )
+    .option(
+      '-n, --functionName <functionName>',
+      'Only show logs for the function with this name',
+    )
+    .description('Watch application function logs')
+    .action(
+      async (
+        appPath?: string,
+        options?: {
+          functionUniversalIdentifier?: string;
+          functionName?: string;
+        },
+      ) => {
+        await logsCommand.execute({
+          ...options,
           appPath: formatPath(appPath),
         });
       },

@@ -10,6 +10,7 @@ import { v4 } from 'uuid';
 
 import { ALL_OAUTH_SCOPES } from 'src/engine/core-modules/application/application-oauth/constants/oauth-scopes';
 import { ApplicationRegistrationEntity } from 'src/engine/core-modules/application/application-registration/application-registration.entity';
+import { TWENTY_CLI_APPLICATION_REGISTRATION } from 'src/engine/workspace-manager/twenty-standard-application/constants/twenty-cli-application-registration.constant';
 import {
   ApplicationRegistrationException,
   ApplicationRegistrationExceptionCode,
@@ -327,68 +328,30 @@ export class ApplicationRegistrationService {
     await this.applicationRegistrationRepository.save(registration);
   }
 
-  async createFromNpmPackage(params: {
-    packageName: string;
-    universalIdentifier: string;
-    name: string;
-    description?: string;
-    author?: string;
-    logoUrl?: string;
-    websiteUrl?: string;
-    termsUrl?: string;
-    version?: string;
-    ownerWorkspaceId: string;
-  }): Promise<ApplicationRegistrationEntity> {
-    const existingByUid = await this.findOneByUniversalIdentifier(
-      params.universalIdentifier,
+  async createCliRegistrationIfNotExists(): Promise<ApplicationRegistrationEntity | null> {
+    const existing = await this.findOneByUniversalIdentifier(
+      TWENTY_CLI_APPLICATION_REGISTRATION.universalIdentifier,
     );
 
-    if (isDefined(existingByUid)) {
-      throw new ApplicationRegistrationException(
-        `An app with universalIdentifier "${params.universalIdentifier}" is already registered`,
-        ApplicationRegistrationExceptionCode.UNIVERSAL_IDENTIFIER_ALREADY_CLAIMED,
-      );
-    }
-
-    const existingByPackage =
-      await this.applicationRegistrationRepository.findOne({
-        where: { sourcePackage: params.packageName },
-      });
-
-    if (isDefined(existingByPackage)) {
-      throw new ApplicationRegistrationException(
-        `Package "${params.packageName}" is already registered`,
-        ApplicationRegistrationExceptionCode.INVALID_INPUT,
-      );
+    if (isDefined(existing)) {
+      return null;
     }
 
     const registration = this.applicationRegistrationRepository.create({
-      universalIdentifier: params.universalIdentifier,
-      name: params.name,
-      description: params.description ?? null,
-      author: params.author ?? null,
-      logoUrl: params.logoUrl ?? null,
-      websiteUrl: params.websiteUrl ?? null,
-      termsUrl: params.termsUrl ?? null,
-      latestAvailableVersion: params.version ?? null,
-      sourceType: ApplicationRegistrationSourceType.NPM,
-      sourcePackage: params.packageName,
-      isListed: true,
+      universalIdentifier:
+        TWENTY_CLI_APPLICATION_REGISTRATION.universalIdentifier,
+      name: TWENTY_CLI_APPLICATION_REGISTRATION.name,
+      description: TWENTY_CLI_APPLICATION_REGISTRATION.description,
       oAuthClientId: v4(),
+      oAuthClientSecretHash: null,
       oAuthRedirectUris: [],
-      oAuthScopes: [],
-      ownerWorkspaceId: params.ownerWorkspaceId,
+      oAuthScopes: TWENTY_CLI_APPLICATION_REGISTRATION.oAuthScopes,
+      ownerWorkspaceId: null,
+      sourceType: ApplicationRegistrationSourceType.OAUTH_ONLY,
+      createdByUserId: null,
     });
 
     return this.applicationRegistrationRepository.save(registration);
-  }
-
-  async findManyBySourceType(
-    sourceType: ApplicationRegistrationSourceType,
-  ): Promise<ApplicationRegistrationEntity[]> {
-    return this.applicationRegistrationRepository.find({
-      where: { sourceType },
-    });
   }
 
   async findManyListed(): Promise<ApplicationRegistrationEntity[]> {

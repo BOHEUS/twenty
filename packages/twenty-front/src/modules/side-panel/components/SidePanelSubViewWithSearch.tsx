@@ -1,7 +1,6 @@
 import { styled } from '@linaria/react';
 import { type ReactNode } from 'react';
 
-import { SidePanelSubPageNavigationHeader } from '@/side-panel/pages/common/components/SidePanelSubPageNavigationHeader';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 const StyledSubViewContainer = styled.div`
@@ -27,9 +26,9 @@ const StyledSearchInput = styled.input`
   border-radius: ${themeCssVariables.border.radius.sm};
   box-sizing: border-box;
 
+  outline: none;
   padding: 0;
   width: 100%;
-  outline: none;
 
   &::placeholder {
     color: ${themeCssVariables.font.color.tertiary};
@@ -38,8 +37,8 @@ const StyledSearchInput = styled.input`
 
 const StyledScrollableListWrapper = styled.div`
   display: flex;
-  flex-direction: column;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
 
@@ -50,8 +49,6 @@ const StyledScrollableListWrapper = styled.div`
 `;
 
 type SidePanelSubViewWithSearchProps = {
-  backBarTitle: string;
-  onBack: () => void;
   searchPlaceholder: string;
   searchValue: string;
   onSearchChange: (value: string) => void;
@@ -60,8 +57,6 @@ type SidePanelSubViewWithSearchProps = {
 };
 
 export const SidePanelSubViewWithSearch = ({
-  backBarTitle,
-  onBack,
   searchPlaceholder,
   searchValue,
   onSearchChange,
@@ -69,10 +64,6 @@ export const SidePanelSubViewWithSearch = ({
   children,
 }: SidePanelSubViewWithSearchProps) => (
   <StyledSubViewContainer>
-    <SidePanelSubPageNavigationHeader
-      title={backBarTitle}
-      onBackClick={onBack}
-    />
     <StyledSearchContainer>
       <StyledSearchInput
         placeholder={searchPlaceholder}

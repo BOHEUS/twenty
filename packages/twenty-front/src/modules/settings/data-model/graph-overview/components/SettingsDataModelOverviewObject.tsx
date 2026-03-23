@@ -3,7 +3,7 @@ import { styled } from '@linaria/react';
 import { type Node, type NodeProps } from '@xyflow/react';
 import { Link } from 'react-router-dom';
 
-import { type ObjectMetadataItem } from '@/object-metadata/types/ObjectMetadataItem';
+import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { isHiddenSystemField } from '@/object-metadata/utils/isHiddenSystemField';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
 import { ObjectFieldRow } from '@/settings/data-model/graph-overview/components/SettingsDataModelOverviewField';
@@ -17,20 +17,23 @@ import { IconChevronDown, IconChevronUp, useIcons } from 'twenty-ui/display';
 import { SettingsItemTypeTag } from '@/settings/components/SettingsItemTypeTag';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
-type SettingsDataModelOverviewObjectNode = Node<ObjectMetadataItem, 'object'>;
+type SettingsDataModelOverviewObjectNode = Node<
+  EnrichedObjectMetadataItem,
+  'object'
+>;
 type SettingsDataModelOverviewObjectProps =
   NodeProps<SettingsDataModelOverviewObjectNode>;
 
 const StyledNode = styled.div`
   background-color: ${themeCssVariables.background.secondary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
   border-radius: ${themeCssVariables.border.radius.md};
+  box-shadow: ${themeCssVariables.boxShadow.light};
   display: flex;
   flex-direction: column;
-  width: 220px;
-  padding: ${themeCssVariables.spacing[2]};
   gap: ${themeCssVariables.spacing[2]};
-  border: 1px solid ${themeCssVariables.border.color.medium};
-  box-shadow: ${themeCssVariables.boxShadow.light};
+  padding: ${themeCssVariables.spacing[2]};
+  width: 220px;
 `;
 
 const StyledHeader = styled.div`
@@ -50,30 +53,30 @@ const StyledObjectName = styled.div`
 `;
 
 const StyledInnerCard = styled.div`
-  border: 1px solid ${themeCssVariables.border.color.light};
   background-color: ${themeCssVariables.background.primary};
+  border: 1px solid ${themeCssVariables.border.color.light};
   border-radius: ${themeCssVariables.border.radius.sm};
-  padding: ${themeCssVariables.spacing[2]} 0 ${themeCssVariables.spacing[2]} 0;
+  color: ${themeCssVariables.font.color.tertiary};
   display: flex;
   flex-flow: column nowrap;
   gap: ${themeCssVariables.spacing['0.5']};
-  color: ${themeCssVariables.font.color.tertiary};
+  padding: ${themeCssVariables.spacing[2]} 0 ${themeCssVariables.spacing[2]} 0;
 `;
 
 const StyledCardRow = styled.div`
   align-items: center;
   display: flex;
-  height: 24px;
   gap: ${themeCssVariables.spacing[1]};
+  height: 24px;
 `;
 
 const StyledCardRowOther = styled.div`
   align-items: center;
   cursor: pointer;
   display: flex;
+  gap: ${themeCssVariables.spacing[2]};
   height: 24px;
   padding: 0 ${themeCssVariables.spacing[2]};
-  gap: ${themeCssVariables.spacing[2]};
 
   &:hover {
     background-color: ${themeCssVariables.background.tertiary};
@@ -89,10 +92,10 @@ const StyledObjectInstanceCount = styled.div`
 const StyledObjectLinkContainer = styled.div`
   > a {
     align-items: center;
+    color: ${themeCssVariables.font.color.primary};
     display: flex;
     gap: ${themeCssVariables.spacing[1]};
     text-decoration: none;
-    color: ${themeCssVariables.font.color.primary};
 
     &:hover {
       color: ${themeCssVariables.font.color.secondary};

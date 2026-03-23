@@ -4,7 +4,7 @@ import { type Attachment } from '@/activities/files/types/Attachment';
 import { getActivityTargetObjectFieldIdName } from '@/activities/utils/getActivityTargetObjectFieldIdName';
 import { CoreObjectNameSingular } from 'twenty-shared/types';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
-import { isPageLayoutInEditModeComponentState } from '@/page-layout/states/isPageLayoutInEditModeComponentState';
+import { useIsPageLayoutInEditMode } from '@/page-layout/hooks/useIsPageLayoutInEditMode';
 import { pageLayoutEditingWidgetIdComponentState } from '@/page-layout/states/pageLayoutEditingWidgetIdComponentState';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
 import { StandaloneRichTextEditorContent } from '@/page-layout/widgets/standalone-rich-text/components/StandaloneRichTextEditorContent';
@@ -26,10 +26,10 @@ const StyledContainer = styled.div<{ isPageLayoutInEditMode?: boolean }>`
   display: flex;
   flex-direction: column;
   height: 100%;
-  width: 100%;
   overflow: hidden;
   padding-left: ${({ isPageLayoutInEditMode }) =>
     isPageLayoutInEditMode ? themeCssVariables.spacing[5] : 0};
+  width: 100%;
 `;
 
 type StandaloneRichTextWidgetProps = {
@@ -40,9 +40,7 @@ export const StandaloneRichTextWidget = ({
   widget,
 }: StandaloneRichTextWidgetProps) => {
   const containerElementRef = useRef<HTMLDivElement>(null);
-  const isPageLayoutInEditMode = useAtomComponentStateValue(
-    isPageLayoutInEditModeComponentState,
-  );
+  const isPageLayoutInEditMode = useIsPageLayoutInEditMode();
 
   const pageLayoutEditingWidgetId = useAtomComponentStateValue(
     pageLayoutEditingWidgetIdComponentState,

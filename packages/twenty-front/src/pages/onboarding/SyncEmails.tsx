@@ -23,20 +23,21 @@ import { IconGoogle, IconMicrosoft } from 'twenty-ui/display';
 import { MainButton } from 'twenty-ui/input';
 import { ClickToActionLink } from 'twenty-ui/navigation';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { useMutation } from '@apollo/client/react';
 import {
   CalendarChannelVisibility,
   MessageChannelVisibility,
 } from '~/generated/graphql';
-import { useSkipSyncEmailOnboardingStepMutation } from '~/generated-metadata/graphql';
+import { SkipSyncEmailOnboardingStepDocument } from '~/generated-metadata/graphql';
 import { lastAuthenticatedMethodState } from '@/auth/states/lastAuthenticatedMethodState';
 import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod.enum';
 
 const StyledSyncEmailsContainer = styled.div`
   display: flex;
   flex-direction: row;
-  width: 100%;
-  margin: ${themeCssVariables.spacing[8]} 0;
   gap: ${themeCssVariables.spacing[2]};
+  margin: ${themeCssVariables.spacing[8]} 0;
+  width: 100%;
 `;
 
 const StyledActionLinkContainer = styled.div`
@@ -60,8 +61,9 @@ export const SyncEmails = () => {
     MessageChannelVisibility.SHARE_EVERYTHING,
   );
   const [lastAuthenticatedMethod] = useAtomState(lastAuthenticatedMethodState);
-  const [skipSyncEmailOnboardingStatusMutation] =
-    useSkipSyncEmailOnboardingStepMutation();
+  const [skipSyncEmailOnboardingStatusMutation] = useMutation(
+    SkipSyncEmailOnboardingStepDocument,
+  );
 
   const handleButtonClick = async (provider: ConnectedAccountProvider) => {
     const calendarChannelVisibility =

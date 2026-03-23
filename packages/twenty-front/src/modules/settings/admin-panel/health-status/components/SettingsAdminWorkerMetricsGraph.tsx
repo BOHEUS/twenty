@@ -1,22 +1,23 @@
 import { isDefined } from 'twenty-shared/utils';
 import { SettingsAdminTableCard } from '@/settings/admin-panel/components/SettingsAdminTableCard';
 import { SettingsAdminWorkerMetricsTooltip } from '@/settings/admin-panel/health-status/components/SettingsAdminWorkerMetricsTooltip';
-import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
+import { useSnackBarOnQueryError } from '@/apollo/hooks/useSnackBarOnQueryError';
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
 import { ResponsiveLine } from '@nivo/line';
 import { useContext } from 'react';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { useQuery } from '@apollo/client/react';
 import {
   QueueMetricsTimeRange,
-  useGetQueueMetricsQuery,
+  GetQueueMetricsDocument,
 } from '~/generated-metadata/graphql';
 
 const StyledGraphContainer = styled.div`
   background-color: ${themeCssVariables.background.secondary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
   border-radius: ${themeCssVariables.border.radius.md};
   height: 240px;
-  border: 1px solid ${themeCssVariables.border.color.medium};
   margin-bottom: ${themeCssVariables.spacing[4]};
   padding-top: 10px;
   width: 100%;
@@ -48,21 +49,16 @@ export const SettingsAdminWorkerMetricsGraph = ({
   timeRange,
 }: SettingsAdminWorkerMetricsGraphProps) => {
   const { theme } = useContext(ThemeContext);
-  const { enqueueErrorSnackBar } = useSnackBar();
 
-  const { loading, data } = useGetQueueMetricsQuery({
+  const { loading, data, error } = useQuery(GetQueueMetricsDocument, {
     variables: {
       queueName,
       timeRange,
     },
     fetchPolicy: 'no-cache',
-    onError: (error) => {
-      const errorMessage = error.message;
-      enqueueErrorSnackBar({
-        message: t`Error fetching worker metrics: ${errorMessage}`,
-      });
-    },
   });
+
+  useSnackBarOnQueryError(error);
 
   const metricsData = data?.getQueueMetrics?.data || [];
   const hasData =

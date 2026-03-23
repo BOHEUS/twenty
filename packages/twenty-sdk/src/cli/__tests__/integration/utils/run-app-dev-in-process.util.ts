@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { OUTPUT_DIR } from 'twenty-shared/application';
 
-import { AppDevCommand } from '@/cli/commands/app/app-dev';
+import { AppDevCommand } from '@/cli/commands/dev';
 import { pathExists } from '@/cli/utilities/file/fs-utils';
 
 export type RunAppDevResult = {
@@ -19,7 +19,7 @@ export const runAppDevInProcess = async (options: {
 
   const command = new AppDevCommand();
 
-  await command.execute({ appPath });
+  await command.execute({ appPath, headless: true });
 
   const startTime = Date.now();
 

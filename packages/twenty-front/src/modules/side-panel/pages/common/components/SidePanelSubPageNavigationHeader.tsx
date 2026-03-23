@@ -8,8 +8,8 @@ const StyledContainer = styled.div`
   border-bottom: 1px solid ${themeCssVariables.border.color.light};
   display: flex;
   gap: ${themeCssVariables.spacing[1]};
-  padding: 0 ${themeCssVariables.spacing[2]};
   height: 40px;
+  padding: 0 ${themeCssVariables.spacing[2]};
 `;
 
 const StyledText = styled.span`
@@ -34,6 +34,7 @@ export const SidePanelSubPageNavigationHeader = ({
         Icon={IconChevronLeft}
         variant="tertiary"
         size="small"
+        ariaLabel="Go back"
       />
       <StyledText>{title}</StyledText>
     </StyledContainer>

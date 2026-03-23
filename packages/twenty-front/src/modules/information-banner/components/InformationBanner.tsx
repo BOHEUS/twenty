@@ -15,7 +15,6 @@ import { themeCssVariables } from 'twenty-ui/theme-constants';
 const StyledText = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 `;
 
 const StyledCloseButtonContainer = styled.div`
@@ -25,11 +24,11 @@ const StyledCloseButtonContainer = styled.div`
 
 const StyledContent = styled.div<{ hasCloseButton: boolean }>`
   align-items: center;
-  justify-content: center;
   display: flex;
   flex: 1;
-  margin-left: ${({ hasCloseButton }) => (hasCloseButton ? '24px' : '0')};
   gap: ${themeCssVariables.spacing[3]};
+  justify-content: center;
+  margin-left: ${({ hasCloseButton }) => (hasCloseButton ? '24px' : '0')};
 `;
 
 export const InformationBanner = ({
