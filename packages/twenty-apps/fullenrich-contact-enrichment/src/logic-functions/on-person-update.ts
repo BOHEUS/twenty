@@ -1,0 +1,106 @@
+import {
+  DatabaseEventPayload,
+  defineLogicFunction,
+  ObjectRecordUpdateEvent,
+} from 'twenty-sdk';
+import { fullEnrichRequest, twentyCompany, twentyPerson } from './shared/types';
+import { checkCompanyRequirements } from 'src/logic-functions/shared/check-company-requirements';
+import { checkPersonRequirements } from 'src/logic-functions/shared/check-person-requirements';
+import { fullEnrichRequirements } from 'src/logic-functions/shared/create-fullenrich-requirements';
+import { sendRequestToFullEnrich } from 'src/logic-functions/shared/send-request-to-fullenrich';
+import { CoreApiClient } from 'twenty-sdk/clients';
+
+const FULL_ENRICH_API_KEY: string = process.env.FULL_ENRICH_API_KEY ?? '';
+const TWENTY_URL: string = process.env.TWENTY_URL ?? '';
+
+type PersonUpdateEvent = DatabaseEventPayload<
+  ObjectRecordUpdateEvent<twentyPerson>
+>;
+
+const fetchTwentyCompany = async (companyId: string) => {
+  const client = new CoreApiClient();
+
+  const result = await client.query({});
+
+  if (!result) {
+    throw new Error(`Failed to fetch company ${companyId}: no result`);
+  }
+
+  return result;
+}
+
+const handler = async (event: PersonUpdateEvent): Promise<object | undefined> => {
+  if (FULL_ENRICH_API_KEY === '' || TWENTY_URL === '') {
+    console.warn('Missing parameters');
+    return {};
+  }
+  const { recordId, properties } = event;
+
+  if (
+    properties.after.companyId === null ||
+    properties.after.linkedinLink.primaryLinkUrl === '' ||
+    properties.after.name.firstName === '' ||
+    properties.after.name.lastName === ''
+  ) {
+    console.warn('Missing person parameters');
+    return {};
+  }
+  if (checkPersonRequirements(properties.after)) {
+    console.log(
+      `Request to FullEnrich not sent as all necessary data are present in ${properties.after.name.firstName} ${properties.after.name.lastName} record.`,
+    );
+    return {};
+  }
+  const linkedCompany: twentyCompany = await fetchTwentyCompany(
+    properties.after.companyId,
+  );
+  if (
+    linkedCompany.name === '' &&
+    linkedCompany.domainName.primaryLinkUrl === ''
+  ) {
+    console.warn('Missing company parameters');
+    return {};
+  }
+  if (checkCompanyRequirements(linkedCompany)) {
+    console.log(
+      `Request to FullEnrich not sent as all necessary data are present in ${linkedCompany.name} record.`,
+    );
+    return {};
+  }
+  const fullEnrichRequestData: fullEnrichRequest = {
+    name: `Twenty contact enrichment - ${properties.after.name.firstName} ${properties.after.name.lastName}`,
+    webhook_url: `${TWENTY_URL}/s/webhook/fullenrich`,
+    datas: [
+      {
+        firstname: properties.after.name.firstName,
+        lastname: properties.after.name.lastName,
+        domain: linkedCompany.domainName.primaryLinkUrl,
+        company_name: linkedCompany.name,
+        linkedin_url: properties.after.linkedinLink.primaryLinkUrl,
+        enrich_fields: fullEnrichRequirements(),
+        custom: {
+          personId: recordId,
+          companyId: properties.after.companyId,
+        },
+      },
+    ],
+  };
+  const isRequestSent = await sendRequestToFullEnrich(fullEnrichRequestData);
+  if (isRequestSent) {
+    console.log('Request to FullEnrich sent successfully.');
+  } else {
+    console.error('Request to FullEnrich failed.');
+  }
+  return {};
+};
+
+export default defineLogicFunction({
+  universalIdentifier: 'a0c734bf-f86e-4920-9138-0f7d20a01154',
+  name: 'on-person-update',
+  description: 'Send request to FullEnrich on person update',
+  timeoutSeconds: 5,
+  handler,
+  databaseEventTriggerSettings: {
+    eventName: 'company.updated',
+  },
+});

@@ -105,64 +105,6 @@ const findLinkedPerson = async (companyId: string): Promise<twentyPerson[]> => {
   }
 };
 
-const sendRequestToFullEnrich = async (
-  data: fullEnrichRequest,
-): Promise<boolean> => {
-  const options = {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${FULL_ENRICH_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    url: FULL_ENRICH_API_URL,
-    data: data,
-  };
-  try {
-    const response = await axios.request(options);
-    return response.status === 200;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw error;
-    }
-  }
-};
-
-const fullEnrichRequirements = () => {
-  let options: string[] = ['contact.emails'];
-  if (FULL_ENRICH_DATA_REQUIREMENTS.includes('personal_emails')) {
-    options.push('contact.personal_emails');
-  }
-  if (FULL_ENRICH_DATA_REQUIREMENTS.includes('phones')) {
-    options.push('contact.phones');
-  }
-  return options;
-};
-
-const checkPersonRequirements = (twentyPerson: twentyPerson) => {
-  const phones = FULL_ENRICH_REQUEST_CONSTRAINTS.includes("person.phones") ? (twentyPerson.phones.primaryPhoneNumber !== "") : true;
-  const email = FULL_ENRICH_REQUEST_CONSTRAINTS.includes("person.email") ? (twentyPerson.emails.primaryEmail !== "") : true;
-  const x = FULL_ENRICH_REQUEST_CONSTRAINTS.includes("person.xLink") ? (twentyPerson.xLink.primaryLinkUrl !== "") : true;
-  const city = FULL_ENRICH_REQUEST_CONSTRAINTS.includes("person.city") ? (twentyPerson.city !== "") : true;
-  const intro = FULL_ENRICH_REQUEST_CONSTRAINTS.includes("person.intro") ? (twentyPerson.intro !== "") : true;
-  const jobTitle = FULL_ENRICH_REQUEST_CONSTRAINTS.includes("person.jobTitle") ? (twentyPerson.jobTitle !== "") : true;
-  return twentyPerson.name.firstName !== "" &&
-    twentyPerson.name.lastName !== "" &&
-    twentyPerson.linkedinLink.primaryLinkUrl !== "" &&
-    phones && email && x && city && intro && jobTitle;
-}
-
-const checkCompanyRequirements = (twentyCompany: twentyCompany) => {
-  const employees = FULL_ENRICH_REQUEST_CONSTRAINTS.includes("company.employees") ? (twentyCompany.employees !== null) : true;
-  const address = FULL_ENRICH_REQUEST_CONSTRAINTS.includes("company.address") ? (
-      twentyCompany.address.addressStreet1 !== "" &&
-      twentyCompany.address.addressStreet2 !== "" &&
-      twentyCompany.address.addressState !== "" &&
-      twentyCompany.address.addressCity !== "" &&
-      twentyCompany.address.addressPostCode !== "" &&
-      twentyCompany.address.addressCountry !== ""
-  ) : true;
-  return twentyCompany.name !== "" && twentyCompany.domainName.primaryLinkUrl !== "" && employees && address;
-}
 
 export const main = async (params: {
   properties: Record<string, any>;
@@ -179,6 +121,7 @@ export const main = async (params: {
   }
 
   try {
+    // webhook
     const { properties, recordId } = params;
     if (recordId === undefined) {
       const input: fullEnrichPerson = {
@@ -298,6 +241,7 @@ export const main = async (params: {
         throw new Error(`There was an error updating ${input.firstname} ${input.lastname} person.`);
       }
     } else {
+      // person
       if (properties.after.companyId !== undefined) {
         // map to twentyPerson
         // companyId is either string or null but never undefined

@@ -1,3 +1,8 @@
+type fullEnrichCustomProperties = {
+  companyId: string;
+  personId: string;
+}
+
 type fullEnrichRequestData = {
   firstname: string;
   lastname: string;
@@ -5,7 +10,7 @@ type fullEnrichRequestData = {
   company_name: string;
   linkedin_url: string;
   enrich_fields: string[];
-  custom: object;
+  custom: fullEnrichCustomProperties;
 }
 
 type fullEnrichRequest = {
@@ -72,6 +77,13 @@ type fullEnrichPerson = {
   profile: fullEnrichPersonLinkedinProfile;
 }
 
+type fullEnrichWebhookResponse = {
+  id: string;
+  name: string;
+  status: string;
+  datas: (fullEnrichPerson & {custom: fullEnrichCustomProperties})[];
+}
+
 type twentyDomainName = {
   primaryLinkLabel: string;
   primaryLinkUrl: string;
@@ -87,7 +99,7 @@ type twentyAddress = {
 }
 
 type twentyCompany = {
-  id?: string;
+  id: string;
   name: string;
   domainName: twentyDomainName;
   employees: number | null;
@@ -117,7 +129,7 @@ type twentyPersonPhones = {
 }
 
 type twentyPerson = {
-  id?: string;
+  id: string;
   name: twentyPersonName;
   emails: twentyPersonEmail;
   linkedinLink: twentyPersonSocialMedia;
@@ -129,4 +141,4 @@ type twentyPerson = {
   companyId: string | null;
 }
 
-export {fullEnrichRequest, fullEnrichPerson, twentyCompany, twentyPerson, twentyPersonSocialMedia, twentyPersonPhones};
+export {fullEnrichRequest, fullEnrichPerson, twentyCompany, twentyPerson, twentyPersonSocialMedia, twentyPersonPhones, fullEnrichWebhookResponse};
