@@ -29,9 +29,3 @@ export type stripeCustomer = {
   name: string | null;
   email: string | null;
 };
-
-export type twentyObject = {
-  id: string;
-  nameSingular: string;
-  fields: Record<string, any>[];
-};
