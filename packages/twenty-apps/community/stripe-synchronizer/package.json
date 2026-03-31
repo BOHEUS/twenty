@@ -11,7 +11,7 @@
   "dependencies": {
     "axios": "^1.13.2",
     "stripe": "^21.0.1",
-    "twenty-sdk": "0.8.0-canary.4"
+    "twenty-sdk": "0.8.0-canary.6"
   },
   "devDependencies": {
     "@types/node": "^24.7.2",

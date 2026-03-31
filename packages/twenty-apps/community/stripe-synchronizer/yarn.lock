@@ -5378,7 +5378,7 @@ __metadata:
     oxlint: "npm:^0.16.0"
     react: "npm:^18.2.0"
     stripe: "npm:^21.0.1"
-    twenty-sdk: "npm:0.8.0-canary.4"
+    twenty-sdk: "npm:0.8.0-canary.6"
     typescript: "npm:^5.9.3"
   languageName: unknown
   linkType: soft
@@ -5537,21 +5537,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"twenty-client-sdk@npm:0.8.0-canary.4":
-  version: 0.8.0-canary.4
-  resolution: "twenty-client-sdk@npm:0.8.0-canary.4"
+"twenty-client-sdk@npm:0.8.0-canary.6":
+  version: 0.8.0-canary.6
+  resolution: "twenty-client-sdk@npm:0.8.0-canary.6"
   dependencies:
     "@genql/cli": "npm:^3.0.3"
     "@genql/runtime": "npm:^2.10.0"
     esbuild: "npm:^0.25.0"
     graphql: "npm:^16.8.1"
-  checksum: 10c0/8fa63cee3019d58e7da7d73cfe14934805e555be1ba28d2aef853becf56133c031be26104c05aa7cce40f92a7e24a580790e3397a74e513298723cf82f8e3856
+  checksum: 10c0/92961d6d7b3d9100a64f59946f6c8bb1e8d416f89325122ae62fa13e9a63f3aec9a4c8a588e57665a04695ded8e055eb3c745278093c7b6fa42aee7248864499
   languageName: node
   linkType: hard
 
-"twenty-sdk@npm:0.8.0-canary.4":
-  version: 0.8.0-canary.4
-  resolution: "twenty-sdk@npm:0.8.0-canary.4"
+"twenty-sdk@npm:0.8.0-canary.6":
+  version: 0.8.0-canary.6
+  resolution: "twenty-sdk@npm:0.8.0-canary.6"
   dependencies:
     "@chakra-ui/react": "npm:^3.33.0"
     "@emotion/react": "npm:^11.14.0"
@@ -5576,7 +5576,7 @@ __metadata:
     react: "npm:^19.0.0"
     react-dom: "npm:^19.0.0"
     tinyglobby: "npm:^0.2.15"
-    twenty-client-sdk: "npm:0.8.0-canary.4"
+    twenty-client-sdk: "npm:0.8.0-canary.6"
     typescript: "npm:^5.9.2"
     uuid: "npm:^13.0.0"
     vite: "npm:^7.0.0"
@@ -5584,7 +5584,7 @@ __metadata:
     zod: "npm:^4.1.11"
   bin:
     twenty: dist/cli.cjs
-  checksum: 10c0/91e0c6e77356d8f35622efccbc7bc3f28ddde595c89d6694e0a441694d393652359ec763460a4831f48812bd48a29e6476a5f1355d2401159e2498fa3ffe5ca2
+  checksum: 10c0/51cab04b6e113e53541232ed46ab4866819564ead31d3b0a21a403f83f07a72e23134e7e6bfe9ff9fac40633fc926de0415eb5ee38bd054ba052f48552a42eb2
   languageName: node
   linkType: hard
 

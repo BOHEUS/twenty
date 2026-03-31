@@ -4,7 +4,7 @@ import {
   type stripeCustomer,
   type stripeEvent,
   type stripeStatus,
-} from '../types';
+} from './types';
 import stripe from 'stripe';
 import { CoreApiClient } from 'twenty-client-sdk/core';
 
@@ -41,17 +41,37 @@ const getStripeCustomerData = async (
 
 const checkIfCompanyExistsInTwenty = async (
   name: string | undefined,
-): Promise<void> => {
-  /*
+) => {
+
   const client = new CoreApiClient();
+  client.mutation({
+
+  })
   // filter by name
-  const result = await client.query({});
+  const result = await client.query({
+    companies: {
+      edges: {
+        node: {
+          id: true,
+          name: true,
+          // Add other fields as needed
+        },
+      },
+      __args: {
+        filter: {
+          name: {
+            eq: 'Your Company Name', // Exact match
+          },
+        },
+      },
+    },
+  });
 
   if (!result){
     throw new Error('');
   }
 
-  return result;*/
+  return result;
 };
 
 const updateTwentyCompany = async (
@@ -189,7 +209,7 @@ const handler = async (
       return {};
     }
 
-    const twentyCompanyId: string | undefined = 'a';
+    const twentyCompanyId: string | undefined = '';
       await checkIfCompanyExistsInTwenty(stripeCustomer?.businessName);
     const seats: number =
       stripeEvent.data.object.quantity ??
@@ -199,7 +219,7 @@ const handler = async (
       ); // we don't know if subscription has only 1 item (product) or more
     let updatedTwentyCompanyId: string | undefined;
     if (twentyCompanyId === '') {
-      const twentyCompanyCreated: string | undefined = 'a';
+      const twentyCompanyCreated: string | undefined = '';
         await createTwentyCompany(
           stripeCustomer?.businessName,
           seats,
@@ -221,7 +241,7 @@ const handler = async (
     if (updatedTwentyCompanyId === undefined || updatedTwentyCompanyId === '') {
       throw new Error('TwentyCompanyId not found');
     } else {
-      const stripeCustomerInTwenty: string | undefined = 'a';
+      const stripeCustomerInTwenty: string | undefined = '';
         await checkIfStripePersonExistsInTwenty(stripeCustomer.email);
       if (stripeCustomerInTwenty === '') {
         if (!stripeCustomer.name) {

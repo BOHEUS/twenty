@@ -30,8 +30,3 @@ yarn sync
 ## Notes
 - app synchronizes only new customers, those created before start of app won't be synchronized unless they're updated
 - customers will be added to Twenty People object only if their name and email are filled with data, otherwise app will throw an error 
-
-## Todo
-- add validation of signature key from Stripe to ensure that incoming request is valid
-  (possible once request headers are exposed to serverless functions)
-- update app so it'll use provided Twenty generated object with native types from workspace once extending objects is possible

@@ -12,5 +12,10 @@ export default defineApplication({
       isSecret: true,
       description: 'Required to send request to Stripe',
     },
+    STRIPE_WEBHOOK_SECRET: {
+      universalIdentifier: 'df51f0df-7ccd-4f3c-9f39-6d230a8e93d9',
+      isSecret: true,
+      description: 'Required to verify webhook data from Stripe',
+    },
   },
 });

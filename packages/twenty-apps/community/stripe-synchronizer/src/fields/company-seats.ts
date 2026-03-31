@@ -2,7 +2,7 @@ import { defineField, FieldType, STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS } from 't
 
 export default defineField({
   universalIdentifier: '1bb42c73-0321-48db-9b0d-66ddf7722b41',
-  name: 'stripe-seats',
+  name: 'stripeSeats',
   label: 'Stripe seats',
   type: FieldType.NUMBER,
   objectUniversalIdentifier:
