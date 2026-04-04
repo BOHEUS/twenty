@@ -46,22 +46,12 @@ export const seedFeatureFlags = async ({
         value: true,
       },
       {
-        key: FeatureFlagKey.IS_NAVIGATION_MENU_ITEM_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_NAVIGATION_MENU_ITEM_EDITING_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
         key: FeatureFlagKey.IS_MARKETPLACE_ENABLED,
         workspaceId: workspaceId,
         value: true,
       },
       {
-        key: FeatureFlagKey.IS_COMMAND_MENU_ITEM_ENABLED,
+        key: FeatureFlagKey.IS_MARKETPLACE_SETTING_TAB_VISIBLE,
         workspaceId: workspaceId,
         value: true,
       },
