@@ -39,48 +39,39 @@ const getStripeCustomerData = async (
   }
 };
 
-const checkIfCompanyExistsInTwenty = async (
-  name: string | undefined,
-) => {
-
+const checkIfCompanyExistsInTwenty = async (name: string | undefined) => {
   const client = new CoreApiClient();
-  client.mutation({
-
-  })
-  // filter by name
   const result = await client.query({
     companies: {
       edges: {
         node: {
           id: true,
           name: true,
-          // Add other fields as needed
         },
       },
       __args: {
         filter: {
           name: {
-            eq: 'Your Company Name', // Exact match
+            eq: name,
           },
         },
       },
     },
   });
 
-  if (!result){
-    throw new Error('');
+  if (!result) {
+    throw new Error('Error checking if company exists in Twenty');
   }
 
   return result;
 };
 
 const updateTwentyCompany = async (
-  companyId: string | undefined,
-  seats: number | null,
+  companyId: string,
+  seats: number,
   subStatus: stripeStatus,
 ): Promise<void> => {
   const client = new CoreApiClient();
-  /*
   const result = await client.mutation({
     updateCompany: {
       __args: {
@@ -88,31 +79,61 @@ const updateTwentyCompany = async (
         data: {
           seats: seats,
           subStatus: subStatus,
-        }
+        },
       },
       id: true,
     },
   });
 
   if (!result.updateCompany) {
-            throw new Error('Update of Stripe customer in Twenty failed');
-
-  }*/
+    throw new Error('Update of Stripe customer in Twenty failed');
+  }
 };
 
 const createTwentyCompany = async (
-  customerName: string | undefined,
-  seats: number | null,
+  customerName: string,
+  seats: number,
   subStatus: string,
 ): Promise<void> => {
   const client = new CoreApiClient();
+  const result = await client.mutation({
+    createCompany: {
+      __args: {
+        data: {
+          name: customerName,
+          seats: seats,
+          subStatus: subStatus,
+        },
+      },
+    },
+  });
 
-  throw new Error('Creation of Stripe customer in Twenty failed');
+  if (!result.createCompany) {
+    throw new Error('Creation of Stripe customer in Twenty failed');
+  }
 };
 
 const checkIfStripePersonExistsInTwenty = async (email: string | null) => {
   // mail is unique by default so there can be only 1 person with given mail
   const client = new CoreApiClient();
+  const result = await client.query({
+    people: {
+      __args: {
+        filter: {
+          emails: {
+            primaryEmail: {
+              eq: email,
+            },
+          },
+        },
+      },
+      countNotEmptyId: true,
+    },
+  });
+  if (result.people === undefined) {
+    throw new Error('');
+  }
+  return result.people.countNotEmptyId;
 };
 
 const addTwentyPerson = async (
@@ -124,26 +145,28 @@ const addTwentyPerson = async (
   subStatus: stripeStatus,
 ): Promise<void> => {
   const client = new CoreApiClient();
-
-  /*const options = {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${TWENTY_API_KEY}`,
-      'Content-Type': 'application/json',
+  const result = await client.mutation({
+    createPerson: {
+      __args: {
+        data: {
+          name: {
+            firstName: firstName,
+            lastName: lastName,
+          },
+          emails: {
+            primaryEmail: email,
+          },
+          companyId: companyId,
+          seats: seats,
+          subStatus: subStatus,
+        },
+      },
     },
-    url: `${TWENTY_API_URL}/people`,
-    data: {
-      firstName: firstName,
-      lastName: lastName,
-      emails: { primaryEmail: email },
-      companyId: companyId,
-      seats: seats,
-      subStatus: subStatus,
-    },
-  };
-          throw new Error('Adding Stripe person to Twenty failed');
+  });
 
-  */
+  if (!result.createPerson) {
+    throw new Error('Adding Stripe person in Twenty failed');
+  }
 };
 
 const updateTwentyPerson = async (
@@ -152,7 +175,6 @@ const updateTwentyPerson = async (
   subStatus: stripeStatus,
 ): Promise<void> => {
   const client = new CoreApiClient();
-  /*
   const result = await client.mutation({
     updatePerson: {
       __args: {
@@ -160,23 +182,18 @@ const updateTwentyPerson = async (
         data: {
           seats: seats,
           subStatus: subStatus,
-        }
+        },
       },
       id: true,
-    }
+    },
   });
 
   if (!result.updatePerson) {
-              throw new Error('Update of Stripe person in Twenty failed');
+    throw new Error('Update of Stripe person in Twenty failed');
   }
-
-  return result;
-   */
 };
 
-const handler = async (
-  event: RoutePayload
-): Promise<object | undefined> => {
+const handler = async (event: RoutePayload): Promise<object | undefined> => {
   if (STRIPE_API_KEY === '' || STRIPE_WEBHOOK_SECRET === '') {
     throw new Error('Missing variables');
   }
@@ -186,15 +203,22 @@ const handler = async (
       event.body === null ||
       event.headers['http_stripe_signature'] === undefined
     ) {
-      console.warn('');
+      console.warn('Missing webhook data');
       return {};
     }
-    const stripEvent = stripe.webhooks.constructEvent(event.body.toString(), event.headers['http_stripe_signature'], STRIPE_WEBHOOK_SECRET);
+    const stripEvent = stripe.webhooks.constructEvent(
+      event.body.toString(),
+      event.headers['http_stripe_signature'],
+      STRIPE_WEBHOOK_SECRET,
+    );
     const stripeEvent = event.body as stripeEvent;
     const allowed_types: string[] = [
       'customer.subscription.created',
       'customer.subscription.updated',
     ];
+    if (!allowed_types.includes(stripEvent.type)) {
+      throw new Error('Wrong webhook type');
+    }
     if (!allowed_types.includes(stripeEvent.type)) {
       throw new Error('Wrong type of webhook');
     }
@@ -210,7 +234,7 @@ const handler = async (
     }
 
     const twentyCompanyId: string | undefined = '';
-      await checkIfCompanyExistsInTwenty(stripeCustomer?.businessName);
+    await checkIfCompanyExistsInTwenty(stripeCustomer?.businessName);
     const seats: number =
       stripeEvent.data.object.quantity ??
       stripeEvent.data.object.items.data.reduce(
@@ -220,29 +244,28 @@ const handler = async (
     let updatedTwentyCompanyId: string | undefined;
     if (twentyCompanyId === '') {
       const twentyCompanyCreated: string | undefined = '';
-        await createTwentyCompany(
-          stripeCustomer?.businessName,
-          seats,
-          stripeEvent.data.object.status.toUpperCase(),
-        );
-        console.log('Creation of Stripe customer in Twenty succeeded');
-        updatedTwentyCompanyId = twentyCompanyCreated;
+      await createTwentyCompany(
+        stripeCustomer?.businessName,
+        seats,
+        stripeEvent.data.object.status.toUpperCase(),
+      );
+      console.log('Creation of Stripe customer in Twenty succeeded');
+      updatedTwentyCompanyId = twentyCompanyCreated;
     } else {
-        await updateTwentyCompany(
-          twentyCompanyId,
-          seats,
-          stripeEvent.data.object.status.toUpperCase() as stripeStatus,
-        );
-        console.log('Update of Stripe customer in Twenty succeeded');
-        updatedTwentyCompanyId = twentyCompanyId;
-
+      await updateTwentyCompany(
+        twentyCompanyId,
+        seats,
+        stripeEvent.data.object.status.toUpperCase() as stripeStatus,
+      );
+      console.log('Update of Stripe customer in Twenty succeeded');
+      updatedTwentyCompanyId = twentyCompanyId;
     }
 
     if (updatedTwentyCompanyId === undefined || updatedTwentyCompanyId === '') {
       throw new Error('TwentyCompanyId not found');
     } else {
       const stripeCustomerInTwenty: string | undefined = '';
-        await checkIfStripePersonExistsInTwenty(stripeCustomer.email);
+      await checkIfStripePersonExistsInTwenty(stripeCustomer.email);
       if (stripeCustomerInTwenty === '') {
         if (!stripeCustomer.name) {
           throw new Error('Missing Stripe customer first or last name');
@@ -252,22 +275,22 @@ const handler = async (
         }
         const firstName: string = stripeCustomer.name?.split(' ')[0];
         const lastName: string = stripeCustomer.name?.split(' ')[1];
-         await addTwentyPerson(
-            firstName,
-            lastName,
-            stripeCustomer.email,
-            updatedTwentyCompanyId,
-            seats,
-            stripeEvent.data.object.status.toUpperCase() as stripeStatus,
-          );
-          console.log('Stripe person was added to Twenty');
+        await addTwentyPerson(
+          firstName,
+          lastName,
+          stripeCustomer.email,
+          updatedTwentyCompanyId,
+          seats,
+          stripeEvent.data.object.status.toUpperCase() as stripeStatus,
+        );
+        console.log('Stripe person was added to Twenty');
       } else if (stripeCustomerInTwenty !== undefined) {
-          await updateTwentyPerson(
-            stripeCustomerInTwenty,
-            seats,
-            stripeEvent.data.object.status.toUpperCase() as stripeStatus,
-          );
-          console.log('Update of Stripe person in Twenty succeeded');
+        await updateTwentyPerson(
+          stripeCustomerInTwenty,
+          seats,
+          stripeEvent.data.object.status.toUpperCase() as stripeStatus,
+        );
+        console.log('Update of Stripe person in Twenty succeeded');
       } else {
         throw new Error('Twenty not found');
       }
@@ -288,11 +311,10 @@ export default defineLogicFunction({
   name: 'on-stripe-webhook',
   description: 'Triggered on webhook from Stripe',
   handler,
-  httpRouteTriggerSettings:
-    {
-      path: '/webhook/stripe',
-      httpMethod: 'POST',
-      isAuthRequired: false,
-      forwardedRequestHeaders: ['HTTP_STRIPE_SIGNATURE']
-    },
+  httpRouteTriggerSettings: {
+    path: '/webhook/stripe',
+    httpMethod: 'POST',
+    isAuthRequired: false,
+    forwardedRequestHeaders: ['HTTP_STRIPE_SIGNATURE'],
+  },
 });
