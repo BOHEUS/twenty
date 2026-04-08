@@ -8,7 +8,7 @@ import { checkCompanyRequirements } from 'src/logic-functions/shared/check-compa
 import { checkPersonRequirements } from 'src/logic-functions/shared/check-person-requirements';
 import { fullEnrichRequirements } from 'src/logic-functions/shared/create-fullenrich-requirements';
 import { sendRequestToFullEnrich } from 'src/logic-functions/shared/send-request-to-fullenrich';
-import { CoreApiClient } from 'twenty-sdk/clients';
+import { CoreApiClient } from 'twenty-client-sdk/core';
 
 const FULL_ENRICH_API_KEY: string = process.env.FULL_ENRICH_API_KEY ?? '';
 const TWENTY_URL: string = process.env.TWENTY_URL ?? '';

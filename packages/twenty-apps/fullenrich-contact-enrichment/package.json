@@ -16,14 +16,15 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@types/node": "^24.7.2",
+    "@types/node": "24.7.2",
     "@types/react": "^18.2.0",
-    "axios": "^1.13.6",
-    "oxlint": "^0.16.0",
+    "axios": "1.14.0",
+    "oxlint": "1.58.0",
+    "papaparse": "5.5.3",
     "react": "^18.2.0",
-    "twenty-sdk": "0.7.0",
-    "typescript": "^5.9.3",
+    "twenty-sdk": "0.8.0",
+    "typescript": "5.9.3",
     "vite-tsconfig-paths": "^4.2.1",
-    "vitest": "^3.1.1"
+    "vitest": "3.1.1"
   }
 }

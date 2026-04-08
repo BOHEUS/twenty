@@ -6,8 +6,8 @@ import {
   twentyPersonPhones,
   twentyPersonSocialMedia,
 } from './shared/types';
-import { defineLogicFunction } from 'twenty-sdk';
-import { CoreApiClient } from 'twenty-sdk/clients';
+import { defineLogicFunction, RoutePayload } from 'twenty-sdk';
+import { CoreApiClient } from 'twenty-client-sdk/core';
 import { HTTPMethod } from 'twenty-shared/types';
 
 type fullEnrichTwentyCompany = Omit<twentyCompany, "id">;
@@ -55,15 +55,22 @@ const updatePersonInTwenty = async (
   }
 };
 
-const handler = async (data: fullEnrichWebhookResponse): Promise<object | undefined> => {
-  const properties = data.datas[0];
+const handler = async (event: RoutePayload): Promise<object | undefined> => {
+  const { body } = event;
+  if (!body) {
+    throw new Error('Error parsing webhook data from FullEnrich');
+  }
+  const data = body as fullEnrichWebhookResponse;
+  const properties = data.data[0].input;
   const input: fullEnrichPerson = {
     firstname: properties.firstname,
     lastname: properties.lastname,
-    most_probable_email: properties.most_probable_email,
-    most_probable_email_status: properties.most_probable_email_status,
+    most_probable_email: {
+      email: properties.most_probable_email.email,
+      status: properties.most_probable_email.status
+    },
     most_probable_phone: properties.most_probable_phone,
-    emails: properties.emails,
+    work_emails: properties.work_emails,
     phones: properties.phones,
     social_medias: properties.social_medias,
     profile: properties.profile,
