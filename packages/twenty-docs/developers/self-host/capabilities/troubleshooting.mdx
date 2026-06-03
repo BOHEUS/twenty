@@ -162,6 +162,10 @@ Run `UPDATE core."user" SET "canAccessFullAdminPanel" = TRUE WHERE email = 'you@
 
 In production, logic functions are disabled by default. Set the `LOGIC_FUNCTION_TYPE` environment variable to `LOCAL` or `LAMBDA` to enable them. This can be configured via environment variables or through the admin panel database variables. See the [Logic Functions setup guide](/developers/self-host/capabilities/setup#logic-functions-available-drivers) for details.
 
+#### Error "File not found" while executing logic function
+
+Run `yarn command:prod application:rebuild-default-deps` command in server container to fix the issue.
+
 ### 1-click Docker compose
 
 #### Unable to Log In
