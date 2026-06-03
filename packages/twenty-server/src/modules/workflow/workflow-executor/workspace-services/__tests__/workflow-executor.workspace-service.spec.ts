@@ -78,7 +78,7 @@ describe('WorkflowExecutorWorkspaceService', () => {
 
   const mockBillingUsageService = {
     hasAvailableCredits: jest.fn().mockResolvedValue(true),
-    decrementAvailableCredits: jest.fn().mockResolvedValue(undefined),
+    decrementAvailableCreditsInCache: jest.fn().mockResolvedValue(undefined),
   };
 
   const mockExceptionHandlerService = {
@@ -86,7 +86,7 @@ describe('WorkflowExecutorWorkspaceService', () => {
   };
 
   const mockMetricsService = {
-    incrementCounter: jest.fn(),
+    incrementCounterForEvent: jest.fn(),
   };
 
   const mockMessageQueueService = {
@@ -542,7 +542,7 @@ describe('WorkflowExecutorWorkspaceService', () => {
       });
     });
 
-    it('should return nextStepIds for a fail-safe iterator instead of entering the loop', async () => {
+    it('should return loop children as nextStepIdsToFailSafely for a fail-safe iterator', async () => {
       const step = {
         id: 'iterator-1',
         type: WorkflowActionType.ITERATOR,
@@ -562,11 +562,11 @@ describe('WorkflowExecutorWorkspaceService', () => {
       });
 
       expect(result).toEqual({
-        nextStepIdsToExecute: ['after-loop'],
+        nextStepIdsToFailSafely: ['loop-step-1'],
       });
     });
 
-    it('should return nextStepIds for a skipped iterator instead of entering the loop', async () => {
+    it('should return loop children as nextStepIdsToSkip for a skipped iterator', async () => {
       const step = {
         id: 'iterator-1',
         type: WorkflowActionType.ITERATOR,
@@ -586,7 +586,7 @@ describe('WorkflowExecutorWorkspaceService', () => {
       });
 
       expect(result).toEqual({
-        nextStepIdsToExecute: ['after-loop'],
+        nextStepIdsToSkip: ['loop-step-1'],
       });
     });
 
