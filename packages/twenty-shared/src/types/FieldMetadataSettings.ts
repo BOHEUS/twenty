@@ -65,6 +65,9 @@ type FieldMetadataFilesSettings = {
 type FieldMetadataTsVectorSettings = {
   asExpression?: string;
   generatedType?: 'STORED' | 'VIRTUAL';
+  // Field metadata ids whose columns feed the search vector. Source of truth
+  // for the user-configurable searchable fields; asExpression is derived from it.
+  searchFieldMetadataIds?: string[];
 };
 
 export type FieldMetadataSettingsMapping = {

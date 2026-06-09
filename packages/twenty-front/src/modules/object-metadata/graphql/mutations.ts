@@ -213,6 +213,20 @@ export const UPDATE_ONE_OBJECT_METADATA_ITEM = gql`
   }
 `;
 
+export const UPDATE_OBJECT_SEARCHABLE_FIELDS = gql`
+  mutation UpdateObjectSearchableFields(
+    $input: UpdateObjectSearchableFieldsInput!
+  ) {
+    updateObjectSearchableFields(input: $input) {
+      id
+      fieldsList {
+        id
+        settings
+      }
+    }
+  }
+`;
+
 export const DELETE_ONE_OBJECT_METADATA_ITEM = gql`
   mutation DeleteOneObjectMetadataItem($idToDelete: UUID!) {
     deleteOneObject(input: { id: $idToDelete }) {

@@ -26,6 +26,7 @@ import { fromDeleteFieldInputToFlatFieldMetadatasToDelete } from 'src/engine/met
 import { fromUpdateFieldInputToFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/from-update-field-input-to-flat-field-metadata.util';
 import { throwOnFieldInputTranspilationsError } from 'src/engine/metadata-modules/flat-field-metadata/utils/throw-on-field-input-transpilations-error.util';
 import { computeFlatViewFieldsFromFieldsWidgets } from 'src/engine/metadata-modules/flat-view-field/utils/compute-flat-view-fields-from-fields-widgets.util';
+import { computeSearchVectorFieldUpdatesForDeletedFields } from 'src/engine/metadata-modules/search-field-metadata/utils/compute-search-vector-field-updates-for-deleted-fields.util';
 import { WidgetConfigurationType } from 'src/engine/metadata-modules/page-layout-widget/enums/widget-configuration-type.type';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 import { EMPTY_ORCHESTRATOR_FAILURE_REPORT } from 'src/engine/workspace-manager/workspace-migration/constant/empty-orchestrator-failure-report.constant';
@@ -149,6 +150,43 @@ export class FieldMetadataService extends TypeOrmQueryService<FieldMetadataEntit
             WidgetConfigurationType.FIELD &&
           deletedFieldIds.has(widget.configuration.fieldMetadataId),
       );
+
+    // A field feeding a generated searchVector column cannot be dropped while
+    // the searchVector still references it, and field deletes run before field
+    // updates within a migration. Rebuild the affected searchVectors first, in
+    // a preliminary migration, so the delete below no longer hits the dependency.
+    const searchVectorFieldUpdates =
+      computeSearchVectorFieldUpdatesForDeletedFields({
+        deletedFieldMetadataIds: [...deletedFieldIds],
+        flatObjectMetadataMaps: existingFlatObjectMetadataMaps,
+        flatFieldMetadataMaps: existingFlatFieldMetadataMaps,
+      });
+
+    if (searchVectorFieldUpdates.length > 0) {
+      const searchVectorRebuildResult =
+        await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunWorkspaceMigration(
+          {
+            allFlatEntityOperationByMetadataName: {
+              fieldMetadata: {
+                flatEntityToCreate: [],
+                flatEntityToDelete: [],
+                flatEntityToUpdate: searchVectorFieldUpdates,
+              },
+            },
+            workspaceId,
+            isSystemBuild,
+            applicationUniversalIdentifier:
+              resolvedOwnerFlatApplication.universalIdentifier,
+          },
+        );
+
+      if (searchVectorRebuildResult.status === 'fail') {
+        throw new WorkspaceMigrationBuilderException(
+          searchVectorRebuildResult,
+          'Multiple validation errors occurred while rebuilding search vector before field deletion',
+        );
+      }
+    }
 
     const validateAndBuildResult =
       await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunWorkspaceMigration(

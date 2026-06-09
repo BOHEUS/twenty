@@ -27,6 +27,7 @@ import { CreateOneObjectInput } from 'src/engine/metadata-modules/object-metadat
 import { DeleteOneObjectInput } from 'src/engine/metadata-modules/object-metadata/dtos/delete-object.input';
 import { ObjectMetadataDTO } from 'src/engine/metadata-modules/object-metadata/dtos/object-metadata.dto';
 import { ObjectRecordCountDTO } from 'src/engine/metadata-modules/object-metadata/dtos/object-record-count.dto';
+import { UpdateObjectSearchableFieldsInput } from 'src/engine/metadata-modules/object-metadata/dtos/update-object-searchable-fields.input';
 import { UpdateOneObjectInput } from 'src/engine/metadata-modules/object-metadata/dtos/update-object.input';
 import { ObjectMetadataService } from 'src/engine/metadata-modules/object-metadata/object-metadata.service';
 import { ObjectRecordCountService } from 'src/engine/metadata-modules/object-metadata/object-record-count.service';
@@ -184,6 +185,26 @@ export class ObjectMetadataResolver {
         });
 
       return fromFlatObjectMetadataToObjectMetadataDto(flatobjectMetadata);
+    } catch (error) {
+      objectMetadataGraphqlApiExceptionHandler(error);
+    }
+  }
+
+  @UseGuards(SettingsPermissionGuard(PermissionFlagType.DATA_MODEL))
+  @Mutation(() => ObjectMetadataDTO)
+  async updateObjectSearchableFields(
+    @Args('input') input: UpdateObjectSearchableFieldsInput,
+    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+  ) {
+    try {
+      const flatObjectMetadata =
+        await this.objectMetadataService.updateObjectSearchableFields({
+          objectMetadataId: input.objectMetadataId,
+          fieldMetadataIds: input.fieldMetadataIds,
+          workspaceId,
+        });
+
+      return fromFlatObjectMetadataToObjectMetadataDto(flatObjectMetadata);
     } catch (error) {
       objectMetadataGraphqlApiExceptionHandler(error);
     }

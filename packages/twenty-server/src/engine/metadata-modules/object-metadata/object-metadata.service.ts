@@ -3,12 +3,17 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { TypeOrmQueryService } from '@ptc-org/nestjs-query-typeorm';
 import {
+  FieldMetadataType,
   ViewKey,
   ViewOpenRecordIn,
   ViewType,
   ViewVisibility,
 } from 'twenty-shared/types';
-import { fromArrayToUniqueKeyRecord, isDefined } from 'twenty-shared/utils';
+import {
+  fromArrayToUniqueKeyRecord,
+  isDefined,
+  isSearchableFieldType,
+} from 'twenty-shared/utils';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { v4, v5 } from 'uuid';
 
@@ -24,6 +29,7 @@ import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/
 import { findFlatEntityByUniversalIdentifierOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier-or-throw.util';
 import { findFlatEntityByUniversalIdentifier } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier.util';
 import { findManyFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-many-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
+import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { FlatIndexMetadata } from 'src/engine/metadata-modules/flat-index-metadata/types/flat-index-metadata.type';
 import { FlatNavigationMenuItem } from 'src/engine/metadata-modules/flat-navigation-menu-item/types/flat-navigation-menu-item.type';
 import { FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
@@ -45,6 +51,8 @@ import {
 import { computeFlatDefaultRecordPageLayoutToCreate } from 'src/engine/metadata-modules/object-metadata/utils/compute-flat-default-record-page-layout-to-create.util';
 import { computeFlatRecordPageFieldsViewToCreate } from 'src/engine/metadata-modules/object-metadata/utils/compute-flat-record-page-fields-view-to-create.util';
 import { computeFlatViewFieldsToCreate } from 'src/engine/metadata-modules/object-metadata/utils/compute-flat-view-fields-to-create.util';
+import { SEARCH_VECTOR_FIELD } from 'src/engine/metadata-modules/search-field-metadata/constants/search-vector-field.constants';
+import { buildSearchVectorSettingsFromFieldMetadataIds } from 'src/engine/metadata-modules/search-field-metadata/utils/build-search-vector-settings.util';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 import { WorkspaceMigrationBuilderException } from 'src/engine/workspace-manager/workspace-migration/exceptions/workspace-migration-builder-exception';
 import { WorkspaceMigrationValidateBuildAndRunService } from 'src/engine/workspace-manager/workspace-migration/services/workspace-migration-validate-build-and-run-service';
@@ -250,6 +258,150 @@ export class ObjectMetadataService extends TypeOrmQueryService<ObjectMetadataEnt
         workspaceId,
         flatMapsKeys: ['flatNavigationMenuItemMaps', 'flatCommandMenuItemMaps'],
       });
+    }
+
+    return updatedFlatObjectMetadata;
+  }
+
+  async updateObjectSearchableFields({
+    objectMetadataId,
+    fieldMetadataIds,
+    workspaceId,
+  }: {
+    objectMetadataId: string;
+    fieldMetadataIds: string[];
+    workspaceId: string;
+  }): Promise<FlatObjectMetadata> {
+    const { workspaceCustomFlatApplication } =
+      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+        { workspaceId },
+      );
+
+    const {
+      flatObjectMetadataMaps: existingFlatObjectMetadataMaps,
+      flatFieldMetadataMaps: existingFlatFieldMetadataMaps,
+    } =
+      await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+        {
+          workspaceId,
+          flatMapsKeys: ['flatObjectMetadataMaps', 'flatFieldMetadataMaps'],
+        },
+      );
+
+    const flatObjectMetadata = findFlatEntityByIdInFlatEntityMaps({
+      flatEntityMaps: existingFlatObjectMetadataMaps,
+      flatEntityId: objectMetadataId,
+    });
+
+    if (!isDefined(flatObjectMetadata)) {
+      throw new ObjectMetadataException(
+        'Object metadata not found',
+        ObjectMetadataExceptionCode.OBJECT_METADATA_NOT_FOUND,
+      );
+    }
+
+    const objectFlatFieldMetadatas =
+      findManyFlatEntityByIdInFlatEntityMapsOrThrow({
+        flatEntityMaps: existingFlatFieldMetadataMaps,
+        flatEntityIds: flatObjectMetadata.fieldIds,
+      });
+
+    const searchVectorFlatFieldMetadata = objectFlatFieldMetadatas.find(
+      (flatFieldMetadata) =>
+        flatFieldMetadata.name === SEARCH_VECTOR_FIELD.name,
+    ) as FlatFieldMetadata<FieldMetadataType.TS_VECTOR> | undefined;
+
+    if (!isDefined(searchVectorFlatFieldMetadata)) {
+      throw new ObjectMetadataException(
+        'Search vector field not found for object metadata',
+        ObjectMetadataExceptionCode.OBJECT_METADATA_NOT_FOUND,
+      );
+    }
+
+    const dedupedFieldMetadataIds = [...new Set(fieldMetadataIds)];
+
+    for (const fieldMetadataId of dedupedFieldMetadataIds) {
+      const flatFieldMetadata = objectFlatFieldMetadatas.find(
+        (field) => field.id === fieldMetadataId,
+      );
+
+      if (!isDefined(flatFieldMetadata)) {
+        throw new ObjectMetadataException(
+          `Field ${fieldMetadataId} does not belong to object ${objectMetadataId}`,
+          ObjectMetadataExceptionCode.INVALID_OBJECT_INPUT,
+        );
+      }
+
+      if (!flatFieldMetadata.isActive) {
+        throw new ObjectMetadataException(
+          `Field ${flatFieldMetadata.name} is not active and cannot be searchable`,
+          ObjectMetadataExceptionCode.INVALID_OBJECT_INPUT,
+        );
+      }
+
+      if (!isSearchableFieldType(flatFieldMetadata.type)) {
+        throw new ObjectMetadataException(
+          `Field ${flatFieldMetadata.name} of type ${flatFieldMetadata.type} cannot be added to the search vector`,
+          ObjectMetadataExceptionCode.INVALID_OBJECT_INPUT,
+        );
+      }
+    }
+
+    const newSearchVectorSettings =
+      buildSearchVectorSettingsFromFieldMetadataIds({
+        searchFieldMetadataIds: dedupedFieldMetadataIds,
+        flatFieldMetadataMaps: existingFlatFieldMetadataMaps,
+      });
+
+    const updatedSearchVectorFlatFieldMetadata: FlatFieldMetadata<FieldMetadataType.TS_VECTOR> =
+      {
+        ...searchVectorFlatFieldMetadata,
+        settings: newSearchVectorSettings,
+        universalSettings: newSearchVectorSettings,
+      };
+
+    const validateAndBuildResult =
+      await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunWorkspaceMigration(
+        {
+          allFlatEntityOperationByMetadataName: {
+            fieldMetadata: {
+              flatEntityToCreate: [],
+              flatEntityToDelete: [],
+              flatEntityToUpdate: [updatedSearchVectorFlatFieldMetadata],
+            },
+          },
+          workspaceId,
+          isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
+        },
+      );
+
+    if (validateAndBuildResult.status === 'fail') {
+      throw new WorkspaceMigrationBuilderException(
+        validateAndBuildResult,
+        'Multiple validation errors occurred while updating searchable fields',
+      );
+    }
+
+    const { flatObjectMetadataMaps: recomputedFlatObjectMetadataMaps } =
+      await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+        {
+          workspaceId,
+          flatMapsKeys: ['flatObjectMetadataMaps'],
+        },
+      );
+
+    const updatedFlatObjectMetadata = findFlatEntityByUniversalIdentifier({
+      universalIdentifier: flatObjectMetadata.universalIdentifier,
+      flatEntityMaps: recomputedFlatObjectMetadataMaps,
+    });
+
+    if (!isDefined(updatedFlatObjectMetadata)) {
+      throw new ObjectMetadataException(
+        'Updated object metadata not found in recomputed cache',
+        ObjectMetadataExceptionCode.INTERNAL_SERVER_ERROR,
+      );
     }
 
     return updatedFlatObjectMetadata;

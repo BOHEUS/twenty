@@ -1,19 +1,25 @@
+import { isDDLLockedState } from '@/client-config/states/isDDLLockedState';
 import { useUpdateOneObjectMetadataItem } from '@/object-metadata/hooks/useUpdateOneObjectMetadataItem';
+import { useUpdateObjectSearchableFields } from '@/object-metadata/hooks/useUpdateObjectSearchableFields';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
+import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
 import { SEARCH_VECTOR_FIELD_NAME } from '@/object-record/constants/SearchVectorFieldName';
 import { SettingsOptionCardContentToggle } from '@/settings/components/SettingsOptions/SettingsOptionCardContentToggle';
 import { SettingsObjectFieldDataType } from '@/settings/data-model/object-details/components/SettingsObjectFieldDataType';
 import { type SettingsFieldType } from '@/settings/data-model/types/SettingsFieldType';
+import { Select } from '@/ui/input/components/Select';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { useContext, useMemo, useState } from 'react';
-
-import { IconEye, IconSearch, useIcons } from 'twenty-ui/display';
+import { isDefined, isSearchableFieldType } from 'twenty-shared/utils';
+import { IconEye, IconSearch, IconX, useIcons } from 'twenty-ui/display';
+import { LightIconButton, type SelectOption } from 'twenty-ui/input';
 import { Card } from 'twenty-ui/layout';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
@@ -22,11 +28,15 @@ type SettingsObjectSearchSectionProps = {
   isReadOnly: boolean;
 };
 
-type IndexedFieldEntry = {
+type SearchVectorSettings = {
+  asExpression?: string;
+  searchFieldMetadataIds?: string[];
+} | null;
+
+type SearchFieldEntry = {
   id: string;
   label: string;
   icon?: string | null;
-  weight: number;
   fieldType: string;
 };
 
@@ -42,22 +52,18 @@ const StyledNameLabel = styled.div`
   white-space: nowrap;
 `;
 
-const INDEXED_FIELDS_GRID_TEMPLATE_COLUMNS = 'minmax(0, 1fr) 100px 148px';
+const SEARCH_FIELD_PICKER_DROPDOWN_ID = 'object-search-field-picker';
 
-// TODO: This is very DIRTY ; let's migrate searchVector to be proper tables
-// Already tracked here: https://github.com/twentyhq/core-team-issues/issues/1428
-const extractIndexedFields = (
+const SEARCH_FIELDS_GRID_TEMPLATE_COLUMNS = 'minmax(0, 1fr) 148px 32px';
+
+// Fallback for searchVector fields that predate the configurable searchable
+// fields feature: recover the included field ids from the generated
+// asExpression by matching quoted column names back to fields.
+const deriveSearchFieldIdsFromAsExpression = (
   objectMetadataItem: EnrichedObjectMetadataItem,
-): IndexedFieldEntry[] => {
-  const searchVectorField = objectMetadataItem.fields.find(
-    (field) => field.name === SEARCH_VECTOR_FIELD_NAME,
-  );
-
-  const asExpression = (
-    searchVectorField?.settings as { asExpression?: string } | null
-  )?.asExpression;
-
-  if (!asExpression) {
+  asExpression: string | undefined,
+): string[] => {
+  if (!isDefined(asExpression)) {
     return [];
   }
 
@@ -67,34 +73,55 @@ const extractIndexedFields = (
     ),
   ];
 
+  const candidateFields = [...objectMetadataItem.fields]
+    .filter(
+      (field) =>
+        field.name !== SEARCH_VECTOR_FIELD_NAME &&
+        isSearchableFieldType(field.type),
+    )
+    .sort((a, b) => b.name.length - a.name.length);
+
+  const includedFieldIds: string[] = [];
   const seenFieldIds = new Set<string>();
-  const entries: IndexedFieldEntry[] = [];
 
   for (const columnName of columnNames) {
-    const field = objectMetadataItem.fields.find(
-      (fieldItem) =>
-        fieldItem.name === columnName || columnName.startsWith(fieldItem.name),
+    const matchingField = candidateFields.find(
+      (field) => columnName === field.name || columnName.startsWith(field.name),
     );
 
-    if (
-      field &&
-      field.name !== SEARCH_VECTOR_FIELD_NAME &&
-      !seenFieldIds.has(field.id)
-    ) {
-      seenFieldIds.add(field.id);
-
-      entries.push({
-        id: field.id,
-        label: field.label,
-        icon: field.icon,
-        weight: 1,
-        fieldType: field.type,
-      });
+    if (isDefined(matchingField) && !seenFieldIds.has(matchingField.id)) {
+      seenFieldIds.add(matchingField.id);
+      includedFieldIds.push(matchingField.id);
     }
   }
 
-  return entries;
+  return includedFieldIds;
 };
+
+const getSearchFieldMetadataIds = (
+  objectMetadataItem: EnrichedObjectMetadataItem,
+): string[] => {
+  const searchVectorField = objectMetadataItem.fields.find(
+    (field) => field.name === SEARCH_VECTOR_FIELD_NAME,
+  );
+
+  const settings = searchVectorField?.settings as SearchVectorSettings;
+
+  if (isDefined(settings?.searchFieldMetadataIds)) {
+    return settings.searchFieldMetadataIds;
+  }
+
+  return deriveSearchFieldIdsFromAsExpression(
+    objectMetadataItem,
+    settings?.asExpression,
+  );
+};
+
+const isFieldEligibleForSearch = (field: FieldMetadataItem): boolean =>
+  field.name !== SEARCH_VECTOR_FIELD_NAME &&
+  field.isActive === true &&
+  field.isSystem !== true &&
+  isSearchableFieldType(field.type);
 
 export const SettingsObjectSearchSection = ({
   objectMetadataItem,
@@ -104,28 +131,79 @@ export const SettingsObjectSearchSection = ({
   const { getIcon } = useIcons();
   const { theme } = useContext(ThemeContext);
   const { updateOneObjectMetadataItem } = useUpdateOneObjectMetadataItem();
+  const { updateObjectSearchableFields, loading } =
+    useUpdateObjectSearchableFields();
+  const isDDLLocked = useAtomStateValue(isDDLLockedState);
 
   const [isSearchable, setIsSearchable] = useState(
     objectMetadataItem.isSearchable,
   );
   const [searchTerm, setSearchTerm] = useState('');
 
-  const indexedFields = useMemo(
-    () => extractIndexedFields(objectMetadataItem),
+  const isEditingDisabled = isReadOnly || isDDLLocked || loading;
+
+  const searchFieldMetadataIds = useMemo(
+    () => getSearchFieldMetadataIds(objectMetadataItem),
     [objectMetadataItem],
   );
 
-  const filteredIndexedFields = searchTerm
-    ? indexedFields.filter((entry) =>
+  const searchFieldEntries = useMemo<SearchFieldEntry[]>(
+    () =>
+      searchFieldMetadataIds
+        .map((fieldId) =>
+          objectMetadataItem.fields.find((field) => field.id === fieldId),
+        )
+        .filter(isDefined)
+        .map((field) => ({
+          id: field.id,
+          label: field.label,
+          icon: field.icon,
+          fieldType: field.type,
+        })),
+    [searchFieldMetadataIds, objectMetadataItem],
+  );
+
+  const availableFieldOptions = useMemo<SelectOption<string>[]>(
+    () =>
+      objectMetadataItem.fields
+        .filter(
+          (field) =>
+            isFieldEligibleForSearch(field) &&
+            !searchFieldMetadataIds.includes(field.id),
+        )
+        .map((field) => ({
+          value: field.id,
+          label: field.label,
+          Icon: getIcon(field.icon),
+        })),
+    [objectMetadataItem, searchFieldMetadataIds, getIcon],
+  );
+
+  const filteredSearchFieldEntries = searchTerm
+    ? searchFieldEntries.filter((entry) =>
         entry.label.toLowerCase().includes(searchTerm.toLowerCase()),
       )
-    : indexedFields;
+    : searchFieldEntries;
 
   const handleToggleSearchable = async (value: boolean) => {
     setIsSearchable(value);
     await updateOneObjectMetadataItem({
       idToUpdate: objectMetadataItem.id,
       updatePayload: { isSearchable: value },
+    });
+  };
+
+  const handleAddSearchField = async (fieldId: string) => {
+    await updateObjectSearchableFields({
+      objectMetadataId: objectMetadataItem.id,
+      fieldMetadataIds: [...searchFieldMetadataIds, fieldId],
+    });
+  };
+
+  const handleRemoveSearchField = async (fieldId: string) => {
+    await updateObjectSearchableFields({
+      objectMetadataId: objectMetadataItem.id,
+      fieldMetadataIds: searchFieldMetadataIds.filter((id) => id !== fieldId),
     });
   };
 
@@ -143,7 +221,7 @@ export const SettingsObjectSearchSection = ({
           />
         </Card>
       )}
-      {indexedFields.length > 0 && (
+      {searchFieldEntries.length > 0 && (
         <>
           <SettingsTextInput
             instanceId="indexed-fields-search"
@@ -153,19 +231,18 @@ export const SettingsObjectSearchSection = ({
             onChange={setSearchTerm}
           />
           <Table>
-            <TableRow
-              gridTemplateColumns={INDEXED_FIELDS_GRID_TEMPLATE_COLUMNS}
-            >
+            <TableRow gridTemplateColumns={SEARCH_FIELDS_GRID_TEMPLATE_COLUMNS}>
               <TableHeader>{t`Name`}</TableHeader>
-              <TableHeader>{t`Weight`}</TableHeader>
               <TableHeader>{t`Data type`}</TableHeader>
+              <TableHeader></TableHeader>
             </TableRow>
-            {filteredIndexedFields.map((entry) => {
+            {filteredSearchFieldEntries.map((entry) => {
               const FieldIcon = getIcon(entry.icon);
+
               return (
                 <TableRow
                   key={entry.id}
-                  gridTemplateColumns={INDEXED_FIELDS_GRID_TEMPLATE_COLUMNS}
+                  gridTemplateColumns={SEARCH_FIELDS_GRID_TEMPLATE_COLUMNS}
                 >
                   <TableCell
                     color={theme.font.color.primary}
@@ -177,17 +254,41 @@ export const SettingsObjectSearchSection = ({
                     />
                     <StyledNameLabel>{entry.label}</StyledNameLabel>
                   </TableCell>
-                  <TableCell>{entry.weight}</TableCell>
                   <TableCell>
                     <SettingsObjectFieldDataType
                       value={entry.fieldType as SettingsFieldType}
                     />
+                  </TableCell>
+                  <TableCell>
+                    {!isReadOnly && (
+                      <LightIconButton
+                        Icon={IconX}
+                        accent="tertiary"
+                        disabled={isEditingDisabled}
+                        onClick={() => handleRemoveSearchField(entry.id)}
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               );
             })}
           </Table>
         </>
+      )}
+      {!isReadOnly && availableFieldOptions.length > 0 && (
+        <Select
+          dropdownId={SEARCH_FIELD_PICKER_DROPDOWN_ID}
+          options={availableFieldOptions}
+          emptyOption={{ label: t`Add a field…`, value: '' }}
+          value=""
+          disabled={isEditingDisabled}
+          fullWidth
+          onChange={(fieldId) => {
+            if (isDefined(fieldId) && fieldId !== '') {
+              handleAddSearchField(fieldId);
+            }
+          }}
+        />
       )}
     </StyledSearchSectionContent>
   );
