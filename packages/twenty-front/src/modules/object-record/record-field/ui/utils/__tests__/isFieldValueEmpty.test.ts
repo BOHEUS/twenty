@@ -9,10 +9,35 @@ import {
   selectFieldDefinition,
 } from '@/object-record/record-field/ui/__mocks__/fieldDefinitions';
 import { type FieldDefinition } from '@/object-record/record-field/ui/types/FieldDefinition';
-import { type FieldCurrencyMetadata } from '@/object-record/record-field/ui/types/FieldMetadata';
+import {
+  type FieldCurrencyMetadata,
+  type FieldMetadata,
+} from '@/object-record/record-field/ui/types/FieldMetadata';
 import { FieldMetadataType } from '~/generated-metadata/graphql';
 
 import { isFieldValueEmpty } from '@/object-record/record-field/ui/utils/isFieldValueEmpty';
+
+const addressFieldDefinition = {
+  fieldMetadataId,
+  label: 'Address',
+  type: FieldMetadataType.ADDRESS,
+  iconName: 'IconMap',
+  metadata: {
+    fieldName: 'address',
+    placeHolder: 'Address',
+  },
+} as FieldDefinition<FieldMetadata>;
+
+const emptyAddressValue = {
+  addressStreet1: null,
+  addressStreet2: null,
+  addressCity: null,
+  addressState: null,
+  addressPostcode: null,
+  addressCountry: null,
+  addressLat: null,
+  addressLng: null,
+};
 
 describe('isFieldValueEmpty', () => {
   it('should return correct value for boolean field', () => {
@@ -252,6 +277,94 @@ describe('isFieldValueEmpty', () => {
           blocknote: '[{"type":"paragraph"}]',
           markdown: 'some text',
         },
+      }),
+    ).toBe(false);
+  });
+
+  it('should return true for an address with every subfield empty', () => {
+    expect(
+      isFieldValueEmpty({
+        fieldDefinition: addressFieldDefinition,
+        fieldValue: emptyAddressValue,
+      }),
+    ).toBe(true);
+
+    expect(
+      isFieldValueEmpty({
+        fieldDefinition: addressFieldDefinition,
+        fieldValue: null,
+      }),
+    ).toBe(true);
+
+    expect(
+      isFieldValueEmpty({
+        fieldDefinition: addressFieldDefinition,
+        fieldValue: undefined,
+      }),
+    ).toBe(true);
+  });
+
+  it('should return false when only the city is filled and street1 is null', () => {
+    expect(
+      isFieldValueEmpty({
+        fieldDefinition: addressFieldDefinition,
+        fieldValue: {
+          __typename: 'Address',
+          ...emptyAddressValue,
+          addressCity: 'Mountain View',
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it('should return false for a populated address even when coordinates are strings', () => {
+    expect(
+      isFieldValueEmpty({
+        fieldDefinition: addressFieldDefinition,
+        fieldValue: {
+          ...emptyAddressValue,
+          addressStreet1: '1 Infinite Loop',
+          addressCity: 'Cupertino',
+          addressLat: '37.3318',
+          addressLng: '-122.0312',
+        },
+      }),
+    ).toBe(false);
+  });
+
+  it('should return true for an address that only has coordinates and no text', () => {
+    expect(
+      isFieldValueEmpty({
+        fieldDefinition: addressFieldDefinition,
+        fieldValue: {
+          ...emptyAddressValue,
+          addressLat: 37.3318,
+          addressLng: -122.0312,
+        },
+      }),
+    ).toBe(true);
+  });
+
+  it('should respect configured subFields when computing emptiness', () => {
+    const streetOnlyAddressFieldDefinition = {
+      ...addressFieldDefinition,
+      metadata: {
+        ...addressFieldDefinition.metadata,
+        settings: { subFields: ['addressStreet1'] },
+      },
+    } as FieldDefinition<FieldMetadata>;
+
+    expect(
+      isFieldValueEmpty({
+        fieldDefinition: streetOnlyAddressFieldDefinition,
+        fieldValue: { ...emptyAddressValue, addressCity: 'Cupertino' },
+      }),
+    ).toBe(true);
+
+    expect(
+      isFieldValueEmpty({
+        fieldDefinition: streetOnlyAddressFieldDefinition,
+        fieldValue: { ...emptyAddressValue, addressStreet1: '1 Infinite Loop' },
       }),
     ).toBe(false);
   });

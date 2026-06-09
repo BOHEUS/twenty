@@ -2,11 +2,13 @@ import { isArray, isNonEmptyArray, isString } from '@sniptt/guards';
 
 import { getFieldLinkDefinedLinks } from '@/object-record/record-field/ui/meta-types/input/utils/getFieldLinkDefinedLinks';
 import { type FieldDefinition } from '@/object-record/record-field/ui/types/FieldDefinition';
-import { type FieldMetadata } from '@/object-record/record-field/ui/types/FieldMetadata';
+import {
+  type FieldAddressValue,
+  type FieldMetadata,
+} from '@/object-record/record-field/ui/types/FieldMetadata';
 import { isFieldActor } from '@/object-record/record-field/ui/types/guards/isFieldActor';
 import { isFieldActorValue } from '@/object-record/record-field/ui/types/guards/isFieldActorValue';
 import { isFieldAddress } from '@/object-record/record-field/ui/types/guards/isFieldAddress';
-import { isFieldAddressValue } from '@/object-record/record-field/ui/types/guards/isFieldAddressValue';
 import { isFieldArray } from '@/object-record/record-field/ui/types/guards/isFieldArray';
 import { isFieldArrayValue } from '@/object-record/record-field/ui/types/guards/isFieldArrayValue';
 import { isFieldBoolean } from '@/object-record/record-field/ui/types/guards/isFieldBoolean';
@@ -40,6 +42,7 @@ import { isFieldText } from '@/object-record/record-field/ui/types/guards/isFiel
 import { isFieldTsVector } from '@/object-record/record-field/ui/types/guards/isFieldTsVectorValue';
 import { isFieldUuid } from '@/object-record/record-field/ui/types/guards/isFieldUuid';
 import { isDefined } from 'twenty-shared/utils';
+import { formatAddressDisplay } from '~/utils/formatAddressDisplay';
 
 const isValueEmpty = (value: unknown) =>
   !isDefined(value) || (isString(value) && value === '');
@@ -49,7 +52,8 @@ export const isFieldValueEmpty = ({
   fieldValue,
   selectOptionValues,
 }: {
-  fieldDefinition: Pick<FieldDefinition<FieldMetadata>, 'type'>;
+  fieldDefinition: Pick<FieldDefinition<FieldMetadata>, 'type'> &
+    Partial<Pick<FieldDefinition<FieldMetadata>, 'metadata'>>;
   fieldValue: unknown;
   selectOptionValues?: string[];
 }) => {
@@ -134,14 +138,17 @@ export const isFieldValueEmpty = ({
   }
 
   if (isFieldAddress(fieldDefinition)) {
+    const settings = fieldDefinition.metadata?.settings;
+    const subFields =
+      isDefined(settings) && 'subFields' in settings
+        ? settings.subFields
+        : undefined;
+
     return (
-      !isFieldAddressValue(fieldValue) ||
-      (isValueEmpty(fieldValue?.addressStreet1) &&
-        isValueEmpty(fieldValue?.addressStreet2) &&
-        isValueEmpty(fieldValue?.addressCity) &&
-        isValueEmpty(fieldValue?.addressState) &&
-        isValueEmpty(fieldValue?.addressPostcode) &&
-        isValueEmpty(fieldValue?.addressCountry))
+      formatAddressDisplay(
+        fieldValue as FieldAddressValue | undefined,
+        subFields,
+      ) === ''
     );
   }
 
