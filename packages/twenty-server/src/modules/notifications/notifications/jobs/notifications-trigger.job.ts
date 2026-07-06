@@ -1,0 +1,112 @@
+import { Scope } from '@nestjs/common';
+
+import {
+  ObjectRecordCreateEvent,
+  ObjectRecordDeleteEvent,
+  ObjectRecordDestroyEvent,
+  ObjectRecordEvent,
+  ObjectRecordRestoreEvent,
+  ObjectRecordUpdateEvent,
+  ObjectRecordUpsertEvent,
+} from 'twenty-shared/database-events';
+
+import { Processor } from 'src/engine/core-modules/message-queue/decorators/processor.decorator';
+import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
+import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
+import { Process } from 'src/engine/core-modules/message-queue/decorators/process.decorator';
+import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
+import {
+  NotificationsWorkspaceEntity,
+  NotificationType,
+} from 'src/modules/notifications/notifications/standard-objects/notifications.workspace-entity';
+import { DatabaseEventAction } from 'src/engine/api/graphql/graphql-query-runner/enums/database-event-action';
+import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
+
+export type NotificationTriggerJobData = {
+  workspaceId: string;
+  recipientId: string | null;
+  objectSingularName: string;
+  payload: ObjectRecordEvent;
+  action: DatabaseEventAction;
+};
+
+@Processor({ queueName: MessageQueue.notificationQueue, scope: Scope.REQUEST })
+export class NotificationTriggerJob {
+  constructor(
+    private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
+  ) {}
+
+  @Process(NotificationTriggerJob.name)
+  async handle(data: NotificationTriggerJobData): Promise<void> {
+    const authContext = buildSystemAuthContext(data.workspaceId);
+
+    if (data.recipientId === null) {
+      return;
+    }
+
+    await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
+      const notificationRepository =
+        await this.globalWorkspaceOrmManager.getRepository<NotificationsWorkspaceEntity>(
+          data.workspaceId,
+          'notification',
+          { shouldBypassPermissionChecks: true },
+        );
+      const notification = this.getData(
+        // @ts-ignore check is higher if recipientId is not null but TS seems to ignore it?
+        data.recipientId,
+        data.action,
+        data.payload,
+        data.objectSingularName,
+      );
+
+      await notificationRepository.insert(notification);
+    }, authContext);
+  }
+
+  private getData(
+    recipientId: string,
+    action: DatabaseEventAction,
+    payload: ObjectRecordEvent,
+    objectSingularName: string,
+  ) {
+    let body = '';
+
+    switch (action) {
+      case DatabaseEventAction.CREATED: {
+        payload = payload as ObjectRecordCreateEvent<BaseWorkspaceEntity>;
+        const creator = 'CREATED';
+
+        body = `${creator} created new ${objectSingularName}`;
+
+        break;
+      }
+      case DatabaseEventAction.DELETED: {
+        payload = payload as ObjectRecordDeleteEvent;
+        const creator = 'DELETED';
+
+        body = `${creator} deleted ${objectSingularName}`;
+
+        break;
+      }
+      case DatabaseEventAction.UPDATED: {
+        payload = payload as ObjectRecordUpdateEvent;
+        const creator = 'UPDATED';
+
+        body = `${creator} updated ${objectSingularName}`;
+
+        break;
+      }
+    }
+    // get workspace member name
+    // get action
+    // create: "<creator> created new <objectSingularName>"
+    // update: "<creator> updated <objectSingularName> <recordName>" add fields?
+    // delete: "<creator> deleted <objectSingularName> <recordName>"
+
+    return {
+      body,
+      status: NotificationType.UNREAD,
+      recipientId: recipientId,
+    };
+  }
+}
