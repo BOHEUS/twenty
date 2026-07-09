@@ -37,6 +37,18 @@ export class ConnectedAccountResolver {
     return accounts.map((account) => buildPublicConnectedAccount(account));
   }
 
+  @Query(() => [ConnectedAccountDTO])
+  @UseGuards(NoPermissionGuard)
+  async getWorkspaceConnectedAccounts(
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<ConnectedAccountDTO[]> {
+    return await this.connectedAccountMetadataService.findWorkspaceConnectedAccounts(
+      {
+        workspaceId: workspace.id,
+      },
+    );
+  }
+
   @Mutation(() => ConnectedAccountPublicDTO)
   @UseGuards(NoPermissionGuard)
   async deleteConnectedAccount(

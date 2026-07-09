@@ -994,6 +994,26 @@ export enum CommandMenuItemAvailabilityType {
 
 export type CommandMenuItemPayload = ObjectMetadataCommandMenuItemPayload | PathCommandMenuItemPayload;
 
+export type ConnectedAccountDto = {
+  __typename?: 'ConnectedAccountDTO';
+  applicationId?: Maybe<Scalars['UUID']['output']>;
+  archivedAt?: Maybe<Scalars['DateTime']['output']>;
+  authFailedAt?: Maybe<Scalars['DateTime']['output']>;
+  connectionProviderId?: Maybe<Scalars['UUID']['output']>;
+  createdAt: Scalars['DateTime']['output'];
+  handle: Scalars['String']['output'];
+  handleAliases?: Maybe<Array<Scalars['String']['output']>>;
+  id: Scalars['UUID']['output'];
+  lastCredentialsRefreshedAt?: Maybe<Scalars['DateTime']['output']>;
+  lastSignedInAt?: Maybe<Scalars['DateTime']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
+  provider: Scalars['String']['output'];
+  scopes?: Maybe<Array<Scalars['String']['output']>>;
+  updatedAt: Scalars['DateTime']['output'];
+  userWorkspaceId: Scalars['UUID']['output'];
+  visibility: Scalars['String']['output'];
+};
+
 export type ConnectedAccountPublicDto = {
   __typename?: 'ConnectedAccountPublicDTO';
   applicationId?: Maybe<Scalars['UUID']['output']>;
@@ -4442,6 +4462,7 @@ export type Query = {
   getViewSort?: Maybe<ViewSort>;
   getViewSorts: Array<ViewSort>;
   getViews: Array<View>;
+  getWorkspaceConnectedAccounts: Array<ConnectedAccountDto>;
   getWorkspaceCreationDefaults: WorkspaceCreationDefaultsDto;
   index: Index;
   indexMetadatas: IndexConnection;
