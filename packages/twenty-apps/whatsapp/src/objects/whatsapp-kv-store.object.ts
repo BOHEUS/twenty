@@ -7,11 +7,11 @@ import {
 
 export default defineObject({
   universalIdentifier: KV_STORE_UNIVERSAL_IDENTIFIER,
-  nameSingular: 'kvStore',
-  namePlural: 'kvStores',
-  labelSingular: 'KV Store',
-  labelPlural: 'KV Store',
-  description: 'Key-value storage for logic functions',
+  nameSingular: 'whatsappKVStore',
+  namePlural: 'whatsappKVStores',
+  labelSingular: 'WhatsApp KV Store',
+  labelPlural: 'WhatsApp KV Store',
+  description: 'Key-value storage for logic functions used by WhatsApp integration',
   icon: 'IconDatabase',
   fields: [
     {

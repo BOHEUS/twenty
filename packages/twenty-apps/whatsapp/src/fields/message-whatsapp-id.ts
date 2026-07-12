@@ -1,9 +1,11 @@
 import { defineField, FieldType, STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS } from 'twenty-sdk/define';
+import { WHATSAPP_ID_MESSAGE_FIELD_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
 
 export default defineField({
-  universalIdentifier: '17726d08-1523-429c-9bf0-654b1691a451',
+  universalIdentifier: WHATSAPP_ID_MESSAGE_FIELD_UNIVERSAL_IDENTIFIER,
   name: 'whatsapp-id',
   label: 'WhatsApp ID',
+  description: 'Message ID from WhatsApp',
   type: FieldType.TEXT,
   objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.message.universalIdentifier,
 });

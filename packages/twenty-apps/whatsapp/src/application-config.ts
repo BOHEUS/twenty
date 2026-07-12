@@ -17,6 +17,11 @@ export default defineApplication({
       isSecret: true,
       isRequired: true,
       description: 'Secret required to validate webhooks from WhatsApp',
+    },
+    ACCESS_TOKEN: {
+      isSecret: true,
+      isRequired: true,
+      description: 'Access token required to download files sent in chats',
     }
   },
   category: 'Messaging',

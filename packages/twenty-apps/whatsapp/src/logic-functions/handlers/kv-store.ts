@@ -24,7 +24,7 @@ export const getAll = async () => {
     },
   });
 
-  return kvStores?.edges.map((edge) => {
+  return kvStores?.edges.map((edge: any) => {
     return edge.node.key?.trim();
   });
 }
