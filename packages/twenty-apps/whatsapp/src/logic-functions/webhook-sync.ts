@@ -13,6 +13,8 @@ import { findMessageParticipant } from 'src/logic-functions/data/find-message-pa
 import { createPerson } from 'src/logic-functions/data/create-person.util';
 import { updatePerson } from 'src/logic-functions/data/update-person.util';
 import { WhatsappFile } from 'src/logic-functions/types/whatsapp-file.type';
+import { updateMessage } from "src/logic-functions/data/update-message.util";
+import { findMessageById } from "src/logic-functions/data/find-message-by-id.util";
 
 const handler = async (
   params: RoutePayload<WhatsAppWebhookMessage>,
@@ -130,7 +132,7 @@ const parseMessage = async (coreClient: CoreApiClient, metadataClient: MetadataA
       break;
     }
     case 'edit': {
-      // how to handle edit messages?
+      await updateMessage(coreClient, messages.edit.original_message_id, messages.edit.message.image.caption);
       break;
     }
     case 'image': {
@@ -160,7 +162,8 @@ const parseMessage = async (coreClient: CoreApiClient, metadataClient: MetadataA
       break;
     }
     case "revoke": {
-      // TODO: how to handle revoked messages? Add "(deleted at ...)"
+      const message = await findMessageById(coreClient, messages.revoke.original_message_id);
+      await updateMessage(coreClient, messages.revoke.original_message_id, message.edges[0].node.text.concat(` (deleted at ${messages.timestamp})`,));
       break;
     }
     case 'sticker': {
