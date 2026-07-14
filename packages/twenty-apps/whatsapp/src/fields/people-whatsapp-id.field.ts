@@ -8,4 +8,6 @@ export default defineField({
   description: 'WhatsApp ID used to find people in group conversations',
   type: FieldType.NUMBER,
   objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.person.universalIdentifier,
+  isNullable: true,
+  isUnique: true,
 });

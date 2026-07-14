@@ -7,7 +7,8 @@ export const createMessage = async (client: CoreApiClient) => {
         data: {
 
         }
-      }
+      },
+      id: true,
     }
   })
 }

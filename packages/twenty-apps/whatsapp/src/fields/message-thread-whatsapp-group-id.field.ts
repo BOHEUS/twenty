@@ -8,4 +8,5 @@ export default defineField({
   description: 'Group ID from WhatsApp',
   type: FieldType.TEXT,
   objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.messageThread.universalIdentifier,
+  isNullable: true,
 });

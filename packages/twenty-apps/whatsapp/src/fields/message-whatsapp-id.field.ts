@@ -8,4 +8,6 @@ export default defineField({
   description: 'Message ID from WhatsApp',
   type: FieldType.TEXT,
   objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.message.universalIdentifier,
+  isNullable: true,
+  isUnique: true,
 });

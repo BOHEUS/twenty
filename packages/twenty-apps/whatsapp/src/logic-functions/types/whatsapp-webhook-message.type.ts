@@ -281,5 +281,3 @@ export type WhatsAppWebhookMessageContent =
   | TextMessage
   | UnsupportedMessage
   | VideoMessage;
-
-export type WhatsAppWebhookMessageType = WhatsAppWebhookMessageContent['type'];
