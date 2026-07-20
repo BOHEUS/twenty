@@ -2,8 +2,14 @@ import {
   type ApplicationManifest,
   type FieldManifest,
   type Manifest,
+  type PageLayoutTabManifest,
+  type PageLayoutWidgetManifest,
 } from 'twenty-shared/application';
-import { FieldMetadataType, RelationType } from 'twenty-shared/types';
+import {
+  AggregateOperations,
+  FieldMetadataType,
+  RelationType,
+} from 'twenty-shared/types';
 import { manifestValidate } from '@/cli/utilities/build/manifest/manifest-validate';
 
 const validApplication: ApplicationManifest = {
@@ -360,54 +366,6 @@ describe('manifestValidate', () => {
     });
   });
 
-  describe('agent responseFormat validation', () => {
-    it('should warn for each agent without a responseFormat', () => {
-      const result = manifestValidate({
-        ...validManifest,
-        agents: [
-          {
-            universalIdentifier: '550e8400-e29b-41d4-a716-446655440040',
-            name: 'agentWithoutFormat',
-            label: 'Agent Without Format',
-            prompt: 'Do something',
-          },
-          {
-            universalIdentifier: '550e8400-e29b-41d4-a716-446655440041',
-            name: 'anotherAgentWithoutFormat',
-            label: 'Another Agent Without Format',
-            prompt: 'Do something else',
-          },
-        ],
-      });
-
-      expect(result.warnings).toContain(
-        'Agent "agentWithoutFormat" has no responseFormat defined',
-      );
-      expect(result.warnings).toContain(
-        'Agent "anotherAgentWithoutFormat" has no responseFormat defined',
-      );
-    });
-
-    it('should not warn for an agent that has a responseFormat', () => {
-      const result = manifestValidate({
-        ...validManifest,
-        agents: [
-          {
-            universalIdentifier: '550e8400-e29b-41d4-a716-446655440042',
-            name: 'agentWithFormat',
-            label: 'Agent With Format',
-            prompt: 'Do something',
-            responseFormat: { type: 'text' },
-          },
-        ],
-      });
-
-      expect(result.warnings).not.toContain(
-        'Agent "agentWithFormat" has no responseFormat defined',
-      );
-    });
-  });
-
   describe('UUID version validation', () => {
     it('should pass with UUID v4 identifiers', () => {
       const result = manifestValidate({
@@ -540,6 +498,105 @@ describe('manifestValidate', () => {
       );
 
       expect(versionErrors).toHaveLength(1);
+    });
+  });
+
+  describe('graph widget validation', () => {
+    const makeGraphWidgetTab = (
+      configuration: PageLayoutWidgetManifest['configuration'],
+    ): PageLayoutTabManifest => ({
+      universalIdentifier: 'b0a5f0f2-6c2e-4d1c-9d0b-2f8a4c3e1a01',
+      title: 'Dashboard',
+      position: 0,
+      widgets: [
+        {
+          universalIdentifier: 'b0a5f0f2-6c2e-4d1c-9d0b-2f8a4c3e1a02',
+          title: 'Total opportunities',
+          type: 'GRAPH',
+          configuration,
+        },
+      ],
+    });
+
+    it('should pass when a graph widget has aggregateFieldMetadataUniversalIdentifier', () => {
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [
+          makeGraphWidgetTab({
+            configurationType: 'AGGREGATE_CHART',
+            aggregateFieldMetadataUniversalIdentifier:
+              'b0a5f0f2-6c2e-4d1c-9d0b-2f8a4c3e1a03',
+            aggregateOperation: AggregateOperations.COUNT,
+          }),
+        ],
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should error when a graph widget is missing the aggregate field identifier', () => {
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [
+          makeGraphWidgetTab({
+            configurationType: 'AGGREGATE_CHART',
+            aggregateFieldMetadataUniversalIdentifier: null,
+            aggregateOperation: AggregateOperations.COUNT,
+          }),
+        ],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining(
+          'is missing aggregateFieldMetadataUniversalIdentifier',
+        ),
+      );
+    });
+
+    it('should hint at the correct key when the raw aggregateFieldMetadataId was used', () => {
+      const configurationWithRawKey = {
+        configurationType: 'AGGREGATE_CHART',
+        aggregateFieldMetadataId: 'b0a5f0f2-6c2e-4d1c-9d0b-2f8a4c3e1a03',
+        aggregateOperation: AggregateOperations.COUNT,
+      } as unknown as PageLayoutWidgetManifest['configuration'];
+
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [makeGraphWidgetTab(configurationWithRawKey)],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining(
+          'not "aggregateFieldMetadataId"',
+        ),
+      );
+    });
+
+    it('should ignore non-graph widgets that have no aggregate field', () => {
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [
+          makeGraphWidgetTab({ configurationType: 'TIMELINE' }),
+        ],
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should not crash on a widget with a missing configuration', () => {
+      const nullConfiguration =
+        null as unknown as PageLayoutWidgetManifest['configuration'];
+
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [makeGraphWidgetTab(nullConfiguration)],
+      });
+
+      expect(result.isValid).toBe(true);
     });
   });
 });

@@ -26,9 +26,11 @@ import { DeleteJobsResponseDTO } from 'src/engine/core-modules/admin-panel/dtos/
 import { QueueJobsResponseDTO } from 'src/engine/core-modules/admin-panel/dtos/queue-jobs-response.dto';
 import { RetryJobsResponseDTO } from 'src/engine/core-modules/admin-panel/dtos/retry-jobs-response.dto';
 import { RevokeSigningKeyInput } from 'src/engine/core-modules/admin-panel/dtos/revoke-signing-key.input';
+import { ServerAdminDTO } from 'src/engine/core-modules/admin-panel/dtos/server-admin.dto';
 import { SigningKeyDTO } from 'src/engine/core-modules/admin-panel/dtos/signing-key.dto';
 import { SigningKeysAdminPanelDTO } from 'src/engine/core-modules/admin-panel/dtos/signing-keys-admin-panel.dto';
 import { SystemHealthDTO } from 'src/engine/core-modules/admin-panel/dtos/system-health.dto';
+import { UpdateServerAdminAccessInput } from 'src/engine/core-modules/admin-panel/dtos/update-server-admin-access.input';
 import { UpdateWorkspaceFeatureFlagInput } from 'src/engine/core-modules/admin-panel/dtos/update-workspace-feature-flag.input';
 import { UserLookup } from 'src/engine/core-modules/admin-panel/dtos/user-lookup.dto';
 import { UserLookupInput } from 'src/engine/core-modules/admin-panel/dtos/user-lookup.input';
@@ -41,6 +43,7 @@ import { AdminPanelBillingService } from 'src/engine/core-modules/admin-panel/se
 import { AdminPanelChatService } from 'src/engine/core-modules/admin-panel/services/admin-panel-chat.service';
 import { AdminPanelConfigService } from 'src/engine/core-modules/admin-panel/services/admin-panel-config.service';
 import { AdminPanelSigningKeyService } from 'src/engine/core-modules/admin-panel/services/admin-panel-signing-key.service';
+import { AdminPanelServerAdminService } from 'src/engine/core-modules/admin-panel/services/admin-panel-server-admin.service';
 import { AdminPanelStatisticsService } from 'src/engine/core-modules/admin-panel/services/admin-panel-statistics.service';
 import { AdminPanelUserLookupService } from 'src/engine/core-modules/admin-panel/services/admin-panel-user-lookup.service';
 import { AdminPanelVersionService } from 'src/engine/core-modules/admin-panel/services/admin-panel-version.service';
@@ -49,21 +52,39 @@ import { ApplicationRegistrationVariableService } from 'src/engine/core-modules/
 import { UpdateApplicationRegistrationVariableInput } from 'src/engine/core-modules/application/application-registration-variable/dtos/update-application-registration-variable.input';
 import { ApplicationRegistrationEntity } from 'src/engine/core-modules/application/application-registration/application-registration.entity';
 import { ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
+import { ApplicationRegistrationInstalledWorkspacesDTO } from 'src/engine/core-modules/application/application-registration/dtos/application-registration-installed-workspaces.dto';
+import { ApplicationRegistrationStatsDTO } from 'src/engine/core-modules/application/application-registration/dtos/application-registration-stats.dto';
+import { FindApplicationRegistrationInstalledWorkspacesInput } from 'src/engine/core-modules/application/application-registration/dtos/find-application-registration-installed-workspaces.input';
+import { PaginatedApplicationRegistrationsDTO } from 'src/engine/core-modules/application/application-registration/dtos/paginated-application-registrations.dto';
+import { UpdateApplicationRegistrationInput } from 'src/engine/core-modules/application/application-registration/dtos/update-application-registration.input';
+import {
+  BACKFILL_APPLICATION_INSTALLATION_JOB_NAME,
+  type BackfillApplicationInstallationJobData,
+} from 'src/engine/core-modules/application/jobs/backfill-application-installation.job-constants';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
+import { type AuthContextUser } from 'src/engine/core-modules/auth/types/auth-context.type';
 import { AdminAiModelsDTO } from 'src/engine/core-modules/client-config/client-config.entity';
 import { FeatureFlagException } from 'src/engine/core-modules/feature-flag/feature-flag.exception';
 import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
 import { PreventNestToAutoLogGraphqlErrorsFilter } from 'src/engine/core-modules/graphql/filters/prevent-nest-to-auto-log-graphql-errors.filter';
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
 import { UserInputError } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
-import { type MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
+import { MarketplaceCatalogSyncCronJob } from 'src/engine/core-modules/application/application-marketplace/crons/marketplace-catalog-sync.cron.job';
+import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
+import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
+import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
 import { type ConfigVariables } from 'src/engine/core-modules/twenty-config/config-variables';
 import { ConfigVariableGraphqlApiExceptionFilter } from 'src/engine/core-modules/twenty-config/filters/config-variable-graphql-api-exception.filter';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+import { TwoFactorAuthenticationExceptionFilter } from 'src/engine/core-modules/two-factor-authentication/two-factor-authentication-exception.filter';
 import { UsageBreakdownItemDTO } from 'src/engine/core-modules/usage/dtos/usage-breakdown-item.dto';
 import { UsageAnalyticsService } from 'src/engine/core-modules/usage/services/usage-analytics.service';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
+import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { AdminPanelGuard } from 'src/engine/guards/admin-panel-guard';
+import { AdminPanelOrImpersonateGuard } from 'src/engine/guards/admin-panel-or-impersonate.guard';
+import { NoImpersonationGuard } from 'src/engine/guards/no-impersonation.guard';
 import { ServerLevelImpersonateGuard } from 'src/engine/guards/server-level-impersonate.guard';
 import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
 import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
@@ -89,6 +110,7 @@ import { SetMaintenanceModeInput } from './dtos/set-maintenance-mode.input';
 @AdminResolver()
 @UseFilters(
   AuthGraphqlApiExceptionFilter,
+  TwoFactorAuthenticationExceptionFilter,
   PreventNestToAutoLogGraphqlErrorsFilter,
   ConfigVariableGraphqlApiExceptionFilter,
 )
@@ -100,6 +122,7 @@ import { SetMaintenanceModeInput } from './dtos/set-maintenance-mode.input';
 export class AdminPanelResolver {
   constructor(
     private readonly adminUserLookupService: AdminPanelUserLookupService,
+    private readonly adminServerAdminService: AdminPanelServerAdminService,
     private readonly adminStatisticsService: AdminPanelStatisticsService,
     private readonly adminBillingService: AdminPanelBillingService,
     private readonly adminChatService: AdminPanelChatService,
@@ -121,9 +144,13 @@ export class AdminPanelResolver {
     private readonly upgradeStatusService: UpgradeStatusService,
     @InjectRepository(WorkspaceEntity)
     private readonly workspaceRepository: Repository<WorkspaceEntity>,
+    @InjectMessageQueue(MessageQueue.cronQueue)
+    private readonly cronQueueService: MessageQueueService,
+    @InjectMessageQueue(MessageQueue.workspaceQueue)
+    private readonly workspaceQueueService: MessageQueueService,
   ) {}
 
-  @UseGuards(ServerLevelImpersonateGuard)
+  @UseGuards(AdminPanelOrImpersonateGuard)
   @Query(() => UserLookup)
   async userLookupAdminPanel(
     @Args() userLookupInput: UserLookupInput,
@@ -133,7 +160,7 @@ export class AdminPanelResolver {
     );
   }
 
-  @UseGuards(ServerLevelImpersonateGuard)
+  @UseGuards(AdminPanelOrImpersonateGuard)
   @Query(() => [AdminPanelRecentUserDTO])
   async adminPanelRecentUsers(
     @Args('searchTerm', {
@@ -157,6 +184,29 @@ export class AdminPanelResolver {
     searchTerm: string,
   ): Promise<AdminPanelTopWorkspaceDTO[]> {
     return this.adminStatisticsService.getTopWorkspaces(searchTerm);
+  }
+
+  @UseGuards(AdminPanelGuard, NoImpersonationGuard)
+  @Query(() => [ServerAdminDTO])
+  async getServerAdmins(): Promise<ServerAdminDTO[]> {
+    return this.adminServerAdminService.getServerAdmins();
+  }
+
+  @UseGuards(AdminPanelGuard, NoImpersonationGuard)
+  @Mutation(() => ServerAdminDTO)
+  async updateServerAdminAccess(
+    @Args() input: UpdateServerAdminAccessInput,
+    @AuthUser() actor: AuthContextUser,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<ServerAdminDTO> {
+    return this.adminServerAdminService.updateServerAdminAccess({
+      actor,
+      actorWorkspaceId: workspace.id,
+      targetUserId: input.userId,
+      canAccessFullAdminPanel: input.canAccessFullAdminPanel,
+      canImpersonate: input.canImpersonate,
+      otp: input.otp,
+    });
   }
 
   @UseGuards(AdminPanelGuard)
@@ -429,11 +479,70 @@ export class AdminPanelResolver {
   }
 
   @UseGuards(AdminPanelGuard)
-  @Query(() => [ApplicationRegistrationEntity])
-  async findAllApplicationRegistrations(): Promise<
-    ApplicationRegistrationEntity[]
-  > {
-    return this.applicationRegistrationService.findAll();
+  @Query(() => PaginatedApplicationRegistrationsDTO)
+  async findAllApplicationRegistrations(
+    @Args('limit', { type: () => Int, nullable: true, defaultValue: 25 })
+    limit: number,
+    @Args('offset', { type: () => Int, nullable: true, defaultValue: 0 })
+    offset: number,
+    @Args('searchTerm', { type: () => String, nullable: true })
+    searchTerm?: string,
+    @Args('isPreInstalledOnly', { type: () => Boolean, nullable: true })
+    isPreInstalledOnly?: boolean,
+  ): Promise<PaginatedApplicationRegistrationsDTO> {
+    return this.applicationRegistrationService.findAll({
+      limit,
+      offset,
+      searchTerm,
+      isPreInstalledOnly,
+    });
+  }
+
+  @UseGuards(AdminPanelGuard)
+  @Mutation(() => Boolean)
+  async syncMarketplaceCatalog(): Promise<boolean> {
+    await this.cronQueueService.add(
+      MarketplaceCatalogSyncCronJob.name,
+      {},
+      { id: 'marketplace-catalog-sync' }, // Avoids triggering multiple pending jobs
+    );
+
+    return true;
+  }
+
+  @UseGuards(AdminPanelGuard)
+  @Mutation(() => ApplicationRegistrationEntity)
+  async updateAdminApplicationRegistration(
+    @Args('input') input: UpdateApplicationRegistrationInput,
+  ): Promise<ApplicationRegistrationEntity> {
+    return this.applicationRegistrationService.updateGlobal(input);
+  }
+
+  @UseGuards(AdminPanelGuard)
+  @Mutation(() => Boolean)
+  async backfillApplicationInstallation(
+    @Args('applicationRegistrationId') applicationRegistrationId: string,
+  ): Promise<boolean> {
+    const registration =
+      await this.applicationRegistrationService.findOneByIdGlobal(
+        applicationRegistrationId,
+      );
+
+    if (!registration.isPreInstalled) {
+      throw new UserInputError(
+        'Only pre-installed apps can be backfilled. Enable pre-install first.',
+      );
+    }
+
+    await this.workspaceQueueService.add<BackfillApplicationInstallationJobData>(
+      BACKFILL_APPLICATION_INSTALLATION_JOB_NAME,
+      { applicationRegistrationId },
+      {
+        id: `${BACKFILL_APPLICATION_INSTALLATION_JOB_NAME}-${applicationRegistrationId}`,
+      }, // Avoids triggering multiple pending jobs for the same app
+    );
+
+    return true;
   }
 
   @UseGuards(AdminPanelGuard)
@@ -723,6 +832,33 @@ export class AdminPanelResolver {
   ): Promise<ApplicationRegistrationVariableDTO[]> {
     return this.applicationRegistrationVariableService.findVariablesWithObfuscatedValuesGlobal(
       applicationRegistrationId,
+    );
+  }
+
+  @UseGuards(AdminPanelGuard)
+  @Query(() => ApplicationRegistrationStatsDTO)
+  async findAdminApplicationRegistrationStats(
+    @Args('id') id: string,
+  ): Promise<ApplicationRegistrationStatsDTO> {
+    return this.applicationRegistrationService.getStatsGlobal(id);
+  }
+
+  @UseGuards(AdminPanelGuard)
+  @Query(() => ApplicationRegistrationInstalledWorkspacesDTO)
+  async findAdminApplicationRegistrationInstalledWorkspaces(
+    @Args('input')
+    {
+      id,
+      limit,
+      offset,
+      searchTerm,
+    }: FindApplicationRegistrationInstalledWorkspacesInput,
+  ): Promise<ApplicationRegistrationInstalledWorkspacesDTO> {
+    return this.applicationRegistrationService.getInstalledWorkspacesGlobal(
+      id,
+      limit,
+      offset,
+      searchTerm,
     );
   }
 

@@ -209,6 +209,61 @@ export class ApplicationApi {
     }
   }
 
+  async generateApplicationToken(applicationId: string): Promise<
+    ApiResponse<{
+      applicationAccessToken: { token: string; expiresAt: string };
+      applicationRefreshToken: { token: string; expiresAt: string };
+    }>
+  > {
+    try {
+      const mutation = `
+        mutation GenerateApplicationToken($applicationId: UUID!) {
+          generateApplicationToken(applicationId: $applicationId) {
+            applicationAccessToken {
+              token
+              expiresAt
+            }
+            applicationRefreshToken {
+              token
+              expiresAt
+            }
+          }
+        }
+      `;
+
+      const response = await this.client.post(
+        '/metadata',
+        {
+          query: mutation,
+          variables: { applicationId },
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: '*/*',
+          },
+        },
+      );
+
+      if (response.data.errors) {
+        return {
+          success: false,
+          error: response.data.errors[0],
+        };
+      }
+
+      return {
+        success: true,
+        data: response.data.data.generateApplicationToken,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error,
+      };
+    }
+  }
+
   async createDevelopmentApplication(input: {
     universalIdentifier: string;
     name: string;
@@ -269,16 +324,27 @@ export class ApplicationApi {
     >
   > {
     try {
-      const mutation = `
+      const isDryRun = options?.dryRun ?? false;
+
+      const mutation = isDryRun
+        ? `
         mutation SyncApplication($manifest: JSON!, $dryRun: Boolean) {
           syncApplication(manifest: $manifest, dryRun: $dryRun) {
             applicationUniversalIdentifier
             actions
           }
         }
+      `
+        : `
+        mutation SyncApplication($manifest: JSON!) {
+          syncApplication(manifest: $manifest) {
+            applicationUniversalIdentifier
+            actions
+          }
+        }
       `;
 
-      const variables = { manifest, dryRun: options?.dryRun ?? false };
+      const variables = isDryRun ? { manifest, dryRun: true } : { manifest };
 
       const response = await this.client.post(
         '/metadata',

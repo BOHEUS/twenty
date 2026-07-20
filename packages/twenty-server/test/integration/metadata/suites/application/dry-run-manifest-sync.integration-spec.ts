@@ -14,12 +14,9 @@ const buildManifest = (
   overrides?: Partial<Pick<Manifest, 'objects' | 'fields'>>,
 ) => buildBaseManifest({ appId: TEST_APP_ID, roleId: TEST_ROLE_ID, overrides });
 
-const findCustomObjectNames = async (): Promise<string[]> => {
+const findObjectNames = async (): Promise<string[]> => {
   const { objects } = await findManyObjectMetadata({
-    input: {
-      filter: { isCustom: { is: true } },
-      paging: { first: 100 },
-    },
+    input: { filter: {}, paging: { first: 100 } },
     gqlFields: 'id nameSingular',
     expectToFail: false,
   });
@@ -45,6 +42,7 @@ describe('Manifest sync - dry run', () => {
 
   it('returns the planned actions without applying them', async () => {
     const ticketObject = buildDefaultObjectManifest({
+      applicationUniversalIdentifier: TEST_APP_ID,
       nameSingular: 'dryRunTicket',
       namePlural: 'dryRunTickets',
       labelSingular: 'Dry Run Ticket',
@@ -58,6 +56,7 @@ describe('Manifest sync - dry run', () => {
     });
 
     const invoiceObject = buildDefaultObjectManifest({
+      applicationUniversalIdentifier: TEST_APP_ID,
       nameSingular: 'dryRunInvoice',
       namePlural: 'dryRunInvoices',
       labelSingular: 'Dry Run Invoice',
@@ -76,9 +75,9 @@ describe('Manifest sync - dry run', () => {
       0,
     );
 
-    const customObjectNames = await findCustomObjectNames();
+    const objectNames = await findObjectNames();
 
-    expect(customObjectNames).toContain('dryRunTicket');
-    expect(customObjectNames).not.toContain('dryRunInvoice');
+    expect(objectNames).toContain('dryRunTicket');
+    expect(objectNames).not.toContain('dryRunInvoice');
   }, 60000);
 });

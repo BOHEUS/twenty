@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { isNonEmptyString } from '@sniptt/guards';
 import { isDefined } from 'twenty-shared/utils';
 
-import { StorageDriverType } from 'src/engine/core-modules/file-storage/interfaces/file-storage.interface';
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
 import { SupportDriver } from 'src/engine/core-modules/twenty-config/interfaces/support.interface';
 
@@ -13,11 +12,14 @@ import {
   type ClientConfig,
 } from 'src/engine/core-modules/client-config/client-config.entity';
 import { DomainServerConfigService } from 'src/engine/core-modules/domain/domain-server-config/services/domain-server-config.service';
+import { EmailingDomainDriver } from 'src/engine/core-modules/emailing-domain/drivers/types/emailing-domain-driver.type';
 import { PUBLIC_FEATURE_FLAGS } from 'src/engine/core-modules/feature-flag/constants/public-feature-flag.const';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+import { toDisplayCredits } from 'src/engine/core-modules/usage/utils/to-display-credits.util';
 import {
   AUTO_SELECT_FAST_MODEL_ID,
   AUTO_SELECT_SMART_MODEL_ID,
+  ENTERPRISE_INSTANCE_TYPE,
 } from 'twenty-shared/constants';
 import { MODEL_FAMILY_LABELS } from 'src/engine/metadata-modules/ai/ai-models/constants/model-family-labels.const';
 import { getNativeModelCapabilities } from 'src/engine/metadata-modules/ai/ai-models/utils/get-native-model-capabilities.util';
@@ -45,6 +47,10 @@ export class ClientConfigService {
     const calendarBookingPageId = this.twentyConfigService.get(
       'CALENDAR_BOOKING_PAGE_ID',
     );
+
+    const isEmailingDomainInDemoMode =
+      this.twentyConfigService.get('EMAILING_DOMAIN_DRIVER') ===
+      EmailingDomainDriver.LOG;
 
     const availableModels =
       this.aiModelRegistryService.getAdminFilteredModels();
@@ -156,6 +162,9 @@ export class ClientConfigService {
       billing: {
         isBillingEnabled: this.twentyConfigService.get('IS_BILLING_ENABLED'),
         billingUrl: this.twentyConfigService.get('BILLING_PLAN_REQUIRED_LINK'),
+        stripePublishableKey: this.twentyConfigService.get(
+          'BILLING_STRIPE_PUBLISHABLE_KEY',
+        ),
         trialPeriods: [
           {
             duration: this.twentyConfigService.get(
@@ -188,6 +197,9 @@ export class ClientConfigService {
       ),
       defaultSubdomain: this.twentyConfigService.get('DEFAULT_SUBDOMAIN'),
       frontDomain: this.domainServerConfigService.getFrontUrl().hostname,
+      publicFunctionDomain:
+        this.domainServerConfigService.getPublicBaseHostnameOrUndefined() ??
+        null,
       support: {
         supportDriver: supportDriver ? supportDriver : SupportDriver.NONE,
         supportFrontChatId: this.twentyConfigService.get(
@@ -206,6 +218,28 @@ export class ClientConfigService {
       api: {
         mutationMaximumAffectedRecords: this.twentyConfigService.get(
           'MUTATION_MAXIMUM_AFFECTED_RECORDS',
+        ),
+      },
+      onboarding: {
+        importContactsCreditsReward: toDisplayCredits(
+          this.twentyConfigService.get(
+            'ONBOARDING_IMPORT_CONTACTS_CREDITS_REWARD',
+          ),
+        ),
+        inviteTeamCreditsRewardPerUser: toDisplayCredits(
+          this.twentyConfigService.get(
+            'ONBOARDING_INVITE_TEAM_CREDITS_REWARD_PER_USER',
+          ),
+        ),
+        upgradeCreditsReward: toDisplayCredits(
+          this.twentyConfigService.get(
+            'BILLING_FREE_WORKFLOW_CREDITS_FOR_TRIAL_PERIOD_WITH_CREDIT_CARD',
+          ),
+        ),
+        installAppsCreditsRewardPerApp: toDisplayCredits(
+          this.twentyConfigService.get(
+            'ONBOARDING_INSTALL_APPS_CREDITS_REWARD_PER_APP',
+          ),
         ),
       },
       isAttachmentPreviewEnabled: this.twentyConfigService.get(
@@ -235,10 +269,7 @@ export class ClientConfigService {
       isImapSmtpCaldavEnabled: this.twentyConfigService.get(
         'IS_IMAP_SMTP_CALDAV_ENABLED',
       ),
-      isEmailGroupEnabled:
-        this.twentyConfigService.get('STORAGE_TYPE') ===
-          StorageDriverType.S_3 &&
-        isNonEmptyString(this.twentyConfigService.get('INBOUND_EMAIL_DOMAIN')),
+      isEmailingDomainInDemoMode,
       allowRequestsToTwentyIcons: this.twentyConfigService.get(
         'ALLOW_REQUESTS_TO_TWENTY_ICONS',
       ),
@@ -250,6 +281,9 @@ export class ClientConfigService {
       isWorkspaceSchemaDDLLocked: this.twentyConfigService.get(
         'WORKSPACE_SCHEMA_DDL_LOCKED',
       ),
+      enterpriseInstanceType:
+        this.twentyConfigService.get('ENTERPRISE_INSTANCE_TYPE') ??
+        ENTERPRISE_INSTANCE_TYPE.PRODUCTION,
     };
 
     const maintenanceMode =

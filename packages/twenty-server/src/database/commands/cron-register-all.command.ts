@@ -6,13 +6,16 @@ import { isDefined } from 'twenty-shared/utils';
 import { MarketplaceCatalogSyncCronCommand } from 'src/engine/core-modules/application/application-marketplace/crons/commands/marketplace-catalog-sync.cron.command';
 import { StaleRegistrationCleanupCronCommand } from 'src/engine/core-modules/application/application-oauth/stale-registration-cleanup/commands/stale-registration-cleanup.cron.command';
 import { ApplicationVersionCheckCronCommand } from 'src/engine/core-modules/application/application-upgrade/crons/commands/application-version-check.cron.command';
+import { BillingReminderCronCommand } from 'src/engine/core-modules/billing/reminders/crons/commands/billing-reminder.cron.command';
 import { EnterpriseKeyValidationCronCommand } from 'src/engine/core-modules/enterprise/cron/command/enterprise-key-validation.cron.command';
 import { EventLogCleanupCronCommand } from 'src/engine/core-modules/event-logs/cleanup/commands/event-log-cleanup.cron.command';
+import { PendingFileCleanupCronCommand } from 'src/engine/core-modules/file/file-upload/crons/commands/pending-file-cleanup.cron.command';
 import { RotateSigningKeysCronCommand } from 'src/engine/core-modules/jwt/crons/commands/rotate-signing-keys.cron.command';
 import { CronTriggerCronCommand } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/cron/cron-trigger.cron.command';
 import { CheckPublicDomainsValidRecordsCronCommand } from 'src/engine/core-modules/public-domain/crons/commands/check-public-domains-valid-records.cron.command';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { CheckCustomDomainValidRecordsCronCommand } from 'src/engine/core-modules/workspace/crons/commands/check-custom-domain-valid-records.cron.command';
+import { WebhookSubscriptionRenewalCronCommand } from 'src/modules/connected-account/webhook-subscription-manager/crons/commands/webhook-subscription-renewal.cron.command';
 import { TrashCleanupCronCommand } from 'src/engine/trash-cleanup/commands/trash-cleanup.cron.command';
 import { CleanOnboardingWorkspacesCronCommand } from 'src/engine/workspace-manager/workspace-cleaner/commands/clean-onboarding-workspaces.cron.command';
 import { CleanSuspendedWorkspacesCronCommand } from 'src/engine/workspace-manager/workspace-cleaner/commands/clean-suspended-workspaces.cron.command';
@@ -47,6 +50,8 @@ export class CronRegisterAllCommand extends CommandRunner {
     private readonly calendarOngoingStaleCronCommand: CalendarOngoingStaleCronCommand,
     private readonly calendarRelaunchFailedCalendarChannelsCronCommand: CalendarRelaunchFailedCalendarChannelsCronCommand,
 
+    private readonly webhookSubscriptionRenewalCronCommand: WebhookSubscriptionRenewalCronCommand,
+
     private readonly workflowCronTriggerCronCommand: WorkflowCronTriggerCronCommand,
     private readonly workflowRunEnqueueCronCommand: WorkflowRunEnqueueCronCommand,
     private readonly workflowHandleStaledRunsCronCommand: WorkflowHandleStaledRunsCronCommand,
@@ -64,6 +69,8 @@ export class CronRegisterAllCommand extends CommandRunner {
     private readonly marketplaceCatalogSyncCronCommand: MarketplaceCatalogSyncCronCommand,
     private readonly applicationVersionCheckCronCommand: ApplicationVersionCheckCronCommand,
     private readonly staleRegistrationCleanupCronCommand: StaleRegistrationCleanupCronCommand,
+    private readonly pendingFileCleanupCronCommand: PendingFileCleanupCronCommand,
+    private readonly billingReminderCronCommand: BillingReminderCronCommand,
     private readonly twentyConfigService: TwentyConfigService,
   ) {
     super();
@@ -75,6 +82,12 @@ export class CronRegisterAllCommand extends CommandRunner {
     const isSigningKeyAutoRotationEnabled = isDefined(
       this.twentyConfigService.get('SIGNING_KEY_ROTATION_DAYS'),
     );
+
+    const isMarketplaceCatalogSyncEnabled = this.twentyConfigService.get(
+      'MARKETPLACE_CATALOG_SYNC_CRON_ENABLED',
+    );
+
+    const isBillingEnabled = this.twentyConfigService.get('IS_BILLING_ENABLED');
 
     const allCommands = [
       {
@@ -108,6 +121,10 @@ export class CronRegisterAllCommand extends CommandRunner {
       {
         name: 'CalendarRelaunchFailedCalendarChannels',
         command: this.calendarRelaunchFailedCalendarChannelsCronCommand,
+      },
+      {
+        name: 'WebhookSubscriptionRenewal',
+        command: this.webhookSubscriptionRenewalCronCommand,
       },
       {
         name: 'CheckCustomDomainValidRecords',
@@ -156,6 +173,7 @@ export class CronRegisterAllCommand extends CommandRunner {
       {
         name: 'MarketplaceCatalogSync',
         command: this.marketplaceCatalogSyncCronCommand,
+        isEnabled: isMarketplaceCatalogSyncEnabled,
       },
       {
         name: 'ApplicationVersionCheck',
@@ -173,6 +191,15 @@ export class CronRegisterAllCommand extends CommandRunner {
       {
         name: 'StaleRegistrationCleanup',
         command: this.staleRegistrationCleanupCronCommand,
+      },
+      {
+        name: 'PendingFileCleanup',
+        command: this.pendingFileCleanupCronCommand,
+      },
+      {
+        name: 'BillingReminder',
+        command: this.billingReminderCronCommand,
+        isEnabled: isBillingEnabled,
       },
     ];
 

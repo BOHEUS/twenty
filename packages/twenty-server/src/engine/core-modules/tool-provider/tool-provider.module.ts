@@ -85,7 +85,6 @@ import { ToolRegistryService } from './services/tool-registry.service';
       provide: TOOL_PROVIDERS,
       useFactory: (
         actionProvider: ActionToolProvider,
-        dashboardProvider: DashboardToolProvider,
         databaseProvider: DatabaseToolProvider,
         metadataProvider: MetadataToolProvider,
         logicFunctionProvider: LogicFunctionToolProvider,
@@ -93,9 +92,9 @@ import { ToolRegistryService } from './services/tool-registry.service';
         viewProvider: ViewToolProvider,
         webhookProvider: WebhookToolProvider,
         workflowProvider: WorkflowToolProvider,
+        dashboardProvider: DashboardToolProvider,
       ) => [
         actionProvider,
-        dashboardProvider,
         databaseProvider,
         metadataProvider,
         logicFunctionProvider,
@@ -103,10 +102,10 @@ import { ToolRegistryService } from './services/tool-registry.service';
         viewProvider,
         webhookProvider,
         workflowProvider,
+        dashboardProvider,
       ],
       inject: [
         ActionToolProvider,
-        DashboardToolProvider,
         DatabaseToolProvider,
         MetadataToolProvider,
         LogicFunctionToolProvider,
@@ -114,6 +113,7 @@ import { ToolRegistryService } from './services/tool-registry.service';
         ViewToolProvider,
         WebhookToolProvider,
         WorkflowToolProvider,
+        DashboardToolProvider,
       ],
     },
     ToolRegistryService,
