@@ -1,4 +1,4 @@
-import { UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, UseGuards, UseInterceptors } from '@nestjs/common';
 import { Args, Mutation, Query } from '@nestjs/graphql';
 
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
@@ -13,6 +13,13 @@ import { ConnectedAccountPublicDTO } from 'src/engine/metadata-modules/connected
 import { ConnectedAccountDTO } from 'src/engine/metadata-modules/connected-account/dtos/connected-account.dto';
 import { ConnectedAccountGraphqlApiExceptionInterceptor } from 'src/engine/metadata-modules/connected-account/interceptors/connected-account-graphql-api-exception.interceptor';
 import { buildPublicConnectedAccount } from 'src/engine/metadata-modules/connected-account/utils/build-public-connected-account.util';
+import { ConnectedAccountProvider } from "twenty-shared/types";
+import {
+  CreateWorkspaceConnectedAccountInput
+} from "src/engine/metadata-modules/connected-account/dtos/create-workspace-connected-account.input";
+import {
+  UpdateWorkspaceConnectedAccountInput
+} from "src/engine/metadata-modules/connected-account/dtos/update-workspace-connected-account.input";
 
 @UseGuards(WorkspaceAuthGuard)
 @UseInterceptors(ConnectedAccountGraphqlApiExceptionInterceptor)
@@ -47,6 +54,38 @@ export class ConnectedAccountResolver {
         workspaceId: workspace.id,
       },
     );
+  }
+
+  @Mutation(() => ConnectedAccountDTO)
+  @UseGuards(NoPermissionGuard)
+  async createWorkspaceConnectedAccount(
+    @Args('applicationId', {type: () => UUIDScalarType}) applicationId: string,
+    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @Body() input: CreateWorkspaceConnectedAccountInput
+  ) {
+    return await this.connectedAccountMetadataService.create({
+      workspaceId,
+      handle: input.handle,
+      provider: ConnectedAccountProvider.APP,
+      handleAliases: input.aliases,
+      applicationId,
+    })
+  }
+
+  @Mutation(() => ConnectedAccountDTO)
+  @UseGuards(NoPermissionGuard)
+  async updateWorkspaceConnectedAccount(
+    @Args('id', { type: () => UUIDScalarType }) id: string,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Body() input: UpdateWorkspaceConnectedAccountInput,
+  ): Promise<ConnectedAccountDTO> {
+    return await this.connectedAccountMetadataService.update({
+      id: id,
+      workspaceId: workspace.id,
+      data: {
+        handleAliases: input.aliases,
+      }
+    });
   }
 
   @Mutation(() => ConnectedAccountPublicDTO)

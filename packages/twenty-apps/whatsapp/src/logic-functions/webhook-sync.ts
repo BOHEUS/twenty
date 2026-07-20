@@ -1,6 +1,7 @@
 import { defineLogicFunction, RoutePayload } from 'twenty-sdk/define';
 import {
-  WhatsAppWebhookMessage, WhatsappWebhookMessageBusinessData,
+  WhatsAppWebhookMessage,
+  WhatsappWebhookMessageBusinessData,
   WhatsAppWebhookMessageContacts,
   WhatsAppWebhookMessageContent
 } from 'src/logic-functions/types/whatsapp-webhook-message.type';
@@ -26,8 +27,8 @@ const handler = async (
     };
   }
 
-  const { body, headers } = params;
-  if (body === null || body?.entry === undefined || body.object !== 'whatsapp_business_account') {
+  const { rawBody, body, headers } = params;
+  if (rawBody === undefined || body === null || body?.entry === undefined || body.object !== 'whatsapp_business_account') {
     return {
       success: false,
     };
@@ -43,7 +44,7 @@ const handler = async (
   if (
     !validateWebhookPayload(
       signature,
-      JSON.stringify(body),
+      rawBody,
       process.env.WEBHOOK_VALIDATION_SECRET,
     )
   ) {
@@ -104,7 +105,12 @@ const parseMessage = async (coreClient: CoreApiClient, metadataClient: MetadataA
   let messageThread: string = '';
 
   const participants: MessageParticipantType[] = [];
-  participants.push({role: "TO", handle: businessData.display_phone_number, displayName: ''/* relatedConnectedAccount */, personId: null})
+  participants.push({
+    role: "TO",
+    handle: businessData.display_phone_number,
+    displayName: ''/* relatedConnectedAccount */,
+    personId: null
+  })
   let whatsAppPerson = await findPersonByFilter(coreClient, contacts.wa_id);
   if (!whatsAppPerson.people?.totalCount || whatsAppPerson.people?.totalCount === 0) {
     await createPerson(coreClient, contacts.wa_id, messages.from, contacts.profile.name);
@@ -113,7 +119,12 @@ const parseMessage = async (coreClient: CoreApiClient, metadataClient: MetadataA
   if (!whatsAppPerson.people?.edges[0].node) {
     return;
   }
-  participants.push({role: "FROM", handle: messages.from, displayName: contacts.profile.name, personId: whatsAppPerson.people.edges[0].node.id})
+  participants.push({
+    role: "FROM",
+    handle: messages.from,
+    displayName: contacts.profile.name,
+    personId: whatsAppPerson.people.edges[0].node.id
+  })
   if (messages.group_id) {
     const groupParticipants = await getGroupMessageParticipants(messages.group_id);
     for (const groupParticipant of groupParticipants) {
@@ -182,7 +193,7 @@ const parseMessage = async (coreClient: CoreApiClient, metadataClient: MetadataA
       break;
     }
     case "revoke": {
-      const {message} = await findMessageById(coreClient, messages.revoke.original_message_id);
+      const { message } = await findMessageById(coreClient, messages.revoke.original_message_id);
       if (!message?.text) return;
       await updateMessage(coreClient, messages.revoke.original_message_id, message.text.concat(` (deleted at ${messages.timestamp})`,));
       break;
@@ -227,7 +238,7 @@ export default defineLogicFunction({
   httpRouteTriggerSettings: {
     path: '/whatsapp',
     httpMethod: 'POST',
-    isAuthRequired: true,
+    isAuthRequired: false,
     forwardedRequestHeaders: ['x-hub-signature-256']
   },
 });

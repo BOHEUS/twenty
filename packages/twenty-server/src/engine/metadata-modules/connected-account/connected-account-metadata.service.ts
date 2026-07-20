@@ -146,7 +146,6 @@ export class ConnectedAccountMetadataService {
       workspaceId: string;
       handle: string;
       provider: string;
-      userWorkspaceId: string;
     },
   ): Promise<ConnectedAccountEntity> {
     const entity = this.repository.create(data);

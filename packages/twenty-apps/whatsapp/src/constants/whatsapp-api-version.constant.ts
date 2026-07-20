@@ -1,1 +1,1 @@
-export const WHATSAPP_API_VERSION = '24.0';
+export const WHATSAPP_API_VERSION = '23.0'; // always lowest version available for all endpoints

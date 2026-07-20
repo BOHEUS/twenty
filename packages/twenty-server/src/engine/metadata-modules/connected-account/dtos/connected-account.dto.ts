@@ -74,9 +74,9 @@ export class ConnectedAccountDTO {
   oidcTokenClaims: Record<string, unknown> | null;
 
   @IsUUID()
-  @IsNotEmpty()
-  @Field(() => UUIDScalarType)
-  userWorkspaceId: string;
+  @IsOptional()
+  @Field(() => UUIDScalarType, { nullable: true })
+  userWorkspaceId: string | null;
 
   @IsUUID()
   @IsOptional()

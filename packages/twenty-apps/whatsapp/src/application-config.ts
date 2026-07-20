@@ -13,6 +13,11 @@ export default defineApplication({
   logoUrl: 'public/logo.svg',
   author: 'Twenty',
   serverVariables: {
+    VERIFY_TOKEN: {
+      isSecret: true,
+      isRequired: true,
+      description: 'Secret token used to validate webhooks',
+    },
     WEBHOOK_VALIDATION_SECRET: {
       isSecret: true,
       isRequired: true,
