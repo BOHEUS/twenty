@@ -101,9 +101,9 @@ const handler = async () => {
                 assigneeId: connection.userWorkspaceId,
                 id: task.id,
                 bodyV2: {
-                  markdown: task.notes,
+                  markdown: task.notes ?? null,
                 },
-                dueAt: task.due,
+                dueAt: task.due ?? null,
                 title: task.title,
                 status: task.completed ? 'DONE' : "TODO",
               },
@@ -122,8 +122,8 @@ const handler = async () => {
         } else {
           if (
             task.title !== checkTask.tasks?.edges[0].node.title ||
-            task.notes !== checkTask.tasks?.edges[0].node.bodyV2?.markdown ||
-            task.due !== checkTask.tasks?.edges[0].node.dueAt ||
+            (task.notes ?? null) !== checkTask.tasks?.edges[0].node.bodyV2?.markdown ||
+            (task.due ?? null) !== checkTask.tasks?.edges[0].node.dueAt ||
             ((task.completed && checkTask.tasks?.edges[0].node.status !== 'DONE') ||
               (!task.completed) && checkTask.tasks?.edges[0].node.status === 'TODO')
           ) {
@@ -133,9 +133,9 @@ const handler = async () => {
                   data: {
                     title: task.title,
                     bodyV2: {
-                      markdown: task.notes,
+                      markdown: task.notes ?? null,
                     },
-                    dueAt: task.due,
+                    dueAt: task.due ?? null,
                     status: task.completed ? 'DONE' : 'TODO',
                   },
                   id: task.id,
@@ -157,7 +157,7 @@ export default defineLogicFunction({
   universalIdentifier: 'e35d95c3-655b-46e6-ab58-f985ea429717',
   name: 'sync-tasks',
   description: 'Syncs tasks from Google',
-  timeoutSeconds: 5,
+  timeoutSeconds: 600,
   handler,
   cronTriggerSettings: {
     pattern: '*/15 * * * *',

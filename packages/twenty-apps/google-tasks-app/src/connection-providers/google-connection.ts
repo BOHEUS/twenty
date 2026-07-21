@@ -1,7 +1,5 @@
 import { defineConnectionProvider } from 'twenty-sdk/define';
-
-export const GOOGLE_TASKS_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER =
-  '0a1d8b35-3da6-470f-9128-5c7a58f975d2';
+import { GOOGLE_TASKS_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
 
 export default defineConnectionProvider({
   universalIdentifier: GOOGLE_TASKS_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER,

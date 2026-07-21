@@ -6,7 +6,7 @@ export default defineApplication({
   universalIdentifier: APPLICATION_UNIVERSAL_IDENTIFIER,
   displayName: 'Google tasks',
   description: 'App synchronizing tasks from Google tasks',
-  logoUrl: 'public/google-tasks-logo.png',
+  logo: 'public/google-tasks-logo.png',
   author: 'Twenty',
   category: 'Product management',
   emailSupport: 'contact@twenty.com',
