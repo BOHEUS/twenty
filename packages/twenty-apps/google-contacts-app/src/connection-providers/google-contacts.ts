@@ -1,7 +1,5 @@
 import { defineConnectionProvider } from 'twenty-sdk/define';
-
-export const GOOGLE_CONTACTS_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER =
-  '314ce67e-8a58-4a49-8b78-03e92905ca96';
+import { GOOGLE_CONTACTS_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
 
 export default defineConnectionProvider({
   universalIdentifier: GOOGLE_CONTACTS_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER,
