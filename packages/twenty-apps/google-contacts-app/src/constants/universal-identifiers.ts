@@ -1,5 +1,5 @@
 export const APP_DISPLAY_NAME = 'Google contacts app';
-export const APP_DESCRIPTION = '';
+export const APP_DESCRIPTION = 'App synchronizing Google contacts with Twenty';
 export const APPLICATION_UNIVERSAL_IDENTIFIER = 'ac472b92-ef6c-45e5-8094-a4146300a877';
 export const DEFAULT_ROLE_UNIVERSAL_IDENTIFIER = 'ad29c595-8dea-4f48-8313-7bcd0913a9fd';
 export const NAME_FIELD_UNIVERSAL_IDENTIFIER =
