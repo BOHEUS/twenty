@@ -1,56 +1,49 @@
-import { useHasAccessTokenPair } from '@/auth/hooks/useHasAccessTokenPair';
+import { useIsLogged } from '@/auth/hooks/useIsLogged';
+import { useIsOnAuthOrOnboardingPage } from '@/auth/hooks/useIsOnAuthOrOnboardingPage';
+import { currentUserState } from '@/auth/states/currentUserState';
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { isCurrentUserLoadedState } from '@/auth/states/isCurrentUserLoadedState';
 import { useLoadMinimalMetadata } from '@/metadata-store/hooks/useLoadMinimalMetadata';
-import { useLoadMockedMinimalMetadata } from '@/metadata-store/hooks/useLoadMockedMinimalMetadata';
 import { useLoadStaleMetadataEntities } from '@/metadata-store/hooks/useLoadStaleMetadataEntities';
+import { metadataLoadedVersionState } from '@/metadata-store/states/metadataLoadedVersionState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useEffect, useState } from 'react';
-import { isWorkspaceActiveOrSuspended } from 'twenty-shared/workspace';
-
-type LoadedState = 'none' | 'mocked' | 'real';
-
-const computeDesiredLoadState = (
-  hasAccessTokenPair: boolean,
-  isActiveWorkspace: boolean,
-): LoadedState => {
-  if (hasAccessTokenPair && isActiveWorkspace) {
-    return 'real';
-  }
-
-  return 'mocked';
-};
+import { isDefined } from 'twenty-shared/utils';
+import { isWorkspaceProvisioned } from 'twenty-shared/workspace';
 
 export const MinimalMetadataLoadEffect = () => {
-  const hasAccessTokenPair = useHasAccessTokenPair();
+  const isLogged = useIsLogged();
   const isCurrentUserLoaded = useAtomStateValue(isCurrentUserLoadedState);
+  const currentUser = useAtomStateValue(currentUserState);
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
-  const [loadedState, setLoadedState] = useState<LoadedState>('none');
+  const metadataLoadedVersion = useAtomStateValue(metadataLoadedVersionState);
+  const [lastLoadedVersion, setLastLoadedVersion] = useState<number>(-1);
 
   const { loadMinimalMetadata } = useLoadMinimalMetadata();
-  const { loadMockedMinimalMetadata } = useLoadMockedMinimalMetadata();
   const { loadStaleMetadataEntities } = useLoadStaleMetadataEntities();
 
-  const isActiveWorkspace = isWorkspaceActiveOrSuspended(currentWorkspace);
+  const isOnAuthOrOnboardingPage = useIsOnAuthOrOnboardingPage();
 
-  const desiredLoadState = computeDesiredLoadState(
-    hasAccessTokenPair,
-    isActiveWorkspace,
-  );
+  const isProvisionedWorkspace = isWorkspaceProvisioned(currentWorkspace);
+  const shouldLoadRealMetadata =
+    isLogged && isProvisionedWorkspace && !isOnAuthOrOnboardingPage;
 
   useEffect(() => {
-    if (!isCurrentUserLoaded || loadedState === desiredLoadState) {
+    if (!isCurrentUserLoaded && !isDefined(currentUser)) {
       return;
     }
 
-    setLoadedState(desiredLoadState);
+    if (!shouldLoadRealMetadata) {
+      return;
+    }
+
+    if (metadataLoadedVersion === lastLoadedVersion) {
+      return;
+    }
+
+    setLastLoadedVersion(metadataLoadedVersion);
 
     const performLoad = async () => {
-      if (desiredLoadState === 'mocked') {
-        await loadMockedMinimalMetadata();
-        return;
-      }
-
       const result = await loadMinimalMetadata();
 
       if (result?.staleEntityKeys && result.staleEntityKeys.length > 0) {
@@ -61,12 +54,11 @@ export const MinimalMetadataLoadEffect = () => {
     performLoad();
   }, [
     isCurrentUserLoaded,
-    hasAccessTokenPair,
-    isActiveWorkspace,
-    desiredLoadState,
-    loadedState,
+    currentUser,
+    shouldLoadRealMetadata,
+    lastLoadedVersion,
+    metadataLoadedVersion,
     loadMinimalMetadata,
-    loadMockedMinimalMetadata,
     loadStaleMetadataEntities,
   ]);
 

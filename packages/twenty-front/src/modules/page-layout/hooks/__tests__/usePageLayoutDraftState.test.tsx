@@ -87,20 +87,26 @@ describe('usePageLayoutDraftState', () => {
         objectMetadataId: null,
         tabs: [
           {
+            isSystemSideEffect: false,
+            universalIdentifier: 'universal-identifier-mock',
             id: 'tab-1',
             applicationId: '',
             title: 'Tab 1',
+            isActive: true,
             position: 0,
             pageLayoutId: '',
-            isOverridden: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             deletedAt: null,
             widgets: [
               {
+                isSystemSideEffect: false,
+                universalIdentifier: 'universal-identifier-mock',
                 id: 'widget-1',
+                applicationId: '',
                 pageLayoutTabId: 'tab-1',
                 title: 'New Widget',
+                isActive: true,
                 type: WidgetType.GRAPH,
                 gridPosition: { row: 2, column: 2, rowSpan: 2, columnSpan: 2 },
                 configuration: {
@@ -113,7 +119,6 @@ describe('usePageLayoutDraftState', () => {
                   displayDataLabel: false,
                 },
                 objectMetadataId: null,
-                isOverridden: false,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 deletedAt: null,

@@ -10,8 +10,12 @@ describe('filterVisibleWidgets', () => {
     id: string,
     conditionalDisplay?: any,
   ): PageLayoutTab['widgets'][0] => ({
+    isSystemSideEffect: false,
+    universalIdentifier: 'universal-identifier-mock',
     __typename: 'PageLayoutWidget',
     id,
+    applicationId: '',
+    isActive: true,
     pageLayoutTabId: 'tab-1',
     title: `Widget ${id}`,
     type: WidgetType.FIELDS,
@@ -28,7 +32,6 @@ describe('filterVisibleWidgets', () => {
       configurationType: WidgetConfigurationType.FIELDS,
       viewId: null,
     },
-    isOverridden: false,
     createdAt: '2024-01-01T00:00:00.000Z',
     updatedAt: '2024-01-01T00:00:00.000Z',
     deletedAt: null,
@@ -44,7 +47,7 @@ describe('filterVisibleWidgets', () => {
 
     const result = filterVisibleWidgets({
       widgets,
-      context: { device: 'DESKTOP' },
+      context: { device: 'DESKTOP', selectedRecords: [] },
     });
 
     expect(result).toHaveLength(3);
@@ -64,7 +67,7 @@ describe('filterVisibleWidgets', () => {
 
     const result = filterVisibleWidgets({
       widgets,
-      context: { device: 'MOBILE' },
+      context: { device: 'MOBILE', selectedRecords: [] },
     });
 
     expect(result).toHaveLength(2);
@@ -84,7 +87,7 @@ describe('filterVisibleWidgets', () => {
 
     const result = filterVisibleWidgets({
       widgets,
-      context: { device: 'DESKTOP' },
+      context: { device: 'DESKTOP', selectedRecords: [] },
     });
 
     expect(result).toHaveLength(2);
@@ -94,7 +97,7 @@ describe('filterVisibleWidgets', () => {
   it('should handle empty widgets array', () => {
     const result = filterVisibleWidgets({
       widgets: [],
-      context: { device: 'DESKTOP' },
+      context: { device: 'DESKTOP', selectedRecords: [] },
     });
 
     expect(result).toHaveLength(0);
@@ -112,7 +115,7 @@ describe('filterVisibleWidgets', () => {
 
     filterVisibleWidgets({
       widgets,
-      context: { device: 'DESKTOP' },
+      context: { device: 'DESKTOP', selectedRecords: [] },
     });
 
     expect(widgets).toHaveLength(originalLength);

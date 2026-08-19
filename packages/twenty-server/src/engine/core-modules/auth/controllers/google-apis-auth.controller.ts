@@ -9,7 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Response } from 'express';
-import { SettingsPath } from 'twenty-shared/types';
+import { ApiPath, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
 import { Repository } from 'typeorm';
 
@@ -31,7 +31,7 @@ import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.ent
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
 
-@Controller('auth/google-apis')
+@Controller(`${ApiPath.Auth}/google-apis`)
 @UseFilters(AuthRestApiExceptionFilter)
 export class GoogleAPIsAuthController {
   constructor(
@@ -96,13 +96,14 @@ export class GoogleAPIsAuthController {
         id: workspaceId,
       });
 
-      const handle = emails[0].value;
+      const handle = emails[0].value.toLowerCase();
 
       const connectedAccountId =
         await this.googleAPIsService.refreshGoogleRefreshToken({
           handle,
-          workspaceMemberId: workspaceMemberId,
-          workspaceId: workspaceId,
+          userId,
+          workspaceMemberId,
+          workspaceId,
           accessToken,
           refreshToken,
           calendarVisibility,
@@ -111,10 +112,9 @@ export class GoogleAPIsAuthController {
         });
 
       if (userId) {
-        await this.onboardingService.setOnboardingConnectAccountPending({
+        await this.onboardingService.completeOnboardingConnectAccountStep({
           userId,
           workspaceId,
-          value: false,
         });
       }
 

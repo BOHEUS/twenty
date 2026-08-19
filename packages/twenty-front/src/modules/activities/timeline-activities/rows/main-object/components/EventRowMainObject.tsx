@@ -1,12 +1,10 @@
-import {
-  type EventRowDynamicComponentProps,
-  StyledEventRowItemAction,
-  StyledEventRowItemColumn,
-} from '@/activities/timeline-activities/rows/components/EventRowDynamicComponent';
+import { EventRowDate } from '@/activities/timeline-activities/rows/components/EventRowDate';
+import { type EventRowDynamicComponentProps } from '@/activities/timeline-activities/rows/components/EventRowDynamicComponent.types';
+import { EventRowItem } from '@/activities/timeline-activities/rows/components/EventRowItem';
 import { EventRowMainObjectUpdated } from '@/activities/timeline-activities/rows/main-object/components/EventRowMainObjectUpdated';
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
-import { MOBILE_VIEWPORT, themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 type EventRowMainObjectProps = EventRowDynamicComponentProps;
 
@@ -22,14 +20,6 @@ const StyledRowContainer = styled.div`
   display: flex;
   gap: ${themeCssVariables.spacing[1]};
   justify-content: space-between;
-`;
-
-const StyledItemTitleDate = styled.div`
-  @media (max-width: ${MOBILE_VIEWPORT}px) {
-    display: none;
-  }
-  color: ${themeCssVariables.font.color.tertiary};
-  padding: 0 ${themeCssVariables.spacing[1]};
 `;
 
 const StyledRow = styled.div`
@@ -54,17 +44,11 @@ export const EventRowMainObject = ({
         <StyledMainContainer>
           <StyledRowContainer>
             <StyledRow>
-              <StyledEventRowItemColumn>
-                {labelIdentifierValue}
-              </StyledEventRowItemColumn>
-              <StyledEventRowItemAction>
-                {t`was created by`}
-              </StyledEventRowItemAction>
-              <StyledEventRowItemColumn>
-                {authorFullName}
-              </StyledEventRowItemColumn>
+              <EventRowItem>{labelIdentifierValue}</EventRowItem>
+              <EventRowItem variant="action">{t`was created by`}</EventRowItem>
+              <EventRowItem>{authorFullName}</EventRowItem>
             </StyledRow>
-            <StyledItemTitleDate>{createdAt}</StyledItemTitleDate>
+            <EventRowDate createdAt={createdAt} />
           </StyledRowContainer>
         </StyledMainContainer>
       );
@@ -85,17 +69,11 @@ export const EventRowMainObject = ({
         <StyledMainContainer>
           <StyledRowContainer>
             <StyledRow>
-              <StyledEventRowItemColumn>
-                {labelIdentifierValue}
-              </StyledEventRowItemColumn>
-              <StyledEventRowItemAction>
-                {t`was deleted by`}
-              </StyledEventRowItemAction>
-              <StyledEventRowItemColumn>
-                {authorFullName}
-              </StyledEventRowItemColumn>
+              <EventRowItem>{labelIdentifierValue}</EventRowItem>
+              <EventRowItem variant="action">{t`was deleted by`}</EventRowItem>
+              <EventRowItem>{authorFullName}</EventRowItem>
             </StyledRow>
-            <StyledItemTitleDate>{createdAt}</StyledItemTitleDate>
+            <EventRowDate createdAt={createdAt} />
           </StyledRowContainer>
         </StyledMainContainer>
       );
@@ -105,17 +83,11 @@ export const EventRowMainObject = ({
         <StyledMainContainer>
           <StyledRowContainer>
             <StyledRow>
-              <StyledEventRowItemColumn>
-                {labelIdentifierValue}
-              </StyledEventRowItemColumn>
-              <StyledEventRowItemAction>
-                {t`was restored by`}
-              </StyledEventRowItemAction>
-              <StyledEventRowItemColumn>
-                {authorFullName}
-              </StyledEventRowItemColumn>
+              <EventRowItem>{labelIdentifierValue}</EventRowItem>
+              <EventRowItem variant="action">{t`was restored by`}</EventRowItem>
+              <EventRowItem>{authorFullName}</EventRowItem>
             </StyledRow>
-            <StyledItemTitleDate>{createdAt}</StyledItemTitleDate>
+            <EventRowDate createdAt={createdAt} />
           </StyledRowContainer>
         </StyledMainContainer>
       );

@@ -1,7 +1,8 @@
 import { styled } from '@linaria/react';
 import { type ReactNode, useContext, useState } from 'react';
 import { TableBody } from './TableBody';
-import { IconChevronDown, IconChevronUp, Label } from 'twenty-ui/display';
+import { IconChevronDown, IconChevronUp } from 'twenty-ui/icon';
+import { Label } from 'twenty-ui/typography';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
 type TableSectionProps = {
@@ -57,11 +58,13 @@ export const TableSection = ({
           <IconChevronUp
             size={theme.icon.size.md}
             stroke={theme.icon.stroke.sm}
+            color={theme.font.color.light}
           />
         ) : (
           <IconChevronDown
             size={theme.icon.size.md}
             stroke={theme.icon.stroke.sm}
+            color={theme.font.color.light}
           />
         )}
       </StyledSectionHeader>

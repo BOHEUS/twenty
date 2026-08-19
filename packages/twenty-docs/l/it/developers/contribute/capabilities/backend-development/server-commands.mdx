@@ -1,5 +1,6 @@
 ---
 title: Comandi Backend
+icon: terminal
 ---
 
 ## Comandi utili
@@ -10,7 +11,7 @@ Da qualsiasi altra cartella puoi eseguire `npx nx {command} twenty-server` (oppu
 ### Impostazione iniziale
 
 ```
-npx nx database:reset twenty-server # configura il database con dati di esempio per lo sviluppo
+npx nx database:reset twenty-server # setup the database with dev seeds
 ```
 
 ### Avvio del server
@@ -22,14 +23,14 @@ npx nx run twenty-server:start
 ### Lint
 
 ```
-npx nx run twenty-server:lint # passa --fix per correggere gli errori di lint
+npx nx run twenty-server:lint # pass --fix to fix lint errors
 ```
 
 ### Test
 
 ```
-npx nx run twenty-server:test:unit          # esegui test unitari
-npx nx run twenty-server:test:integration   # esegui test di integrazione
+npx nx run twenty-server:test:unit          # run unit tests
+npx nx run twenty-server:test:integration   # run integration tests
 ```
 
 Nota: puoi eseguire `npx nx run twenty-server:test:integration:with-db-reset` nel caso in cui sia necessario resettare il database prima di eseguire i test di integrazione.
@@ -47,24 +48,8 @@ npx nx run twenty-server:database:reset
 #### Per oggetti negli schemi Core/Metadata (TypeORM)
 
 ```bash
-npx nx run twenty-server:typeorm migration:generate src/database/typeorm/core/migrations/nameOfYourMigration -d src/database/typeorm/core/core.datasource.ts
+npx nx run twenty-server:database:migrate:generate
 ```
-
-#### Per gli oggetti del Workspace
-
-Non ci sono file di migrazioni; le migrazioni sono generate automaticamente per ogni workspace, memorizzate nel database e applicate con questo comando
-
-```bash
-npx nx run twenty-server:command workspace:sync-metadata -f
-```
-
-<Warning>
-
-Questo eliminerà il database e rieseguirà le migrazioni e il popolamento dei dati.
-
-Assicurati di eseguire il backup dei dati che vuoi mantenere prima di eseguire questo comando.
-
-</Warning>
 
 ## Tech Stack
 

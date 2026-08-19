@@ -1,62 +1,73 @@
-import { WidgetActionRenderer } from '@/page-layout/widgets/components/WidgetActionRenderer';
+import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
 import { widgetCardHoveredComponentFamilyState } from '@/page-layout/widgets/states/widgetCardHoveredComponentFamilyState';
-import { type WidgetAction } from '@/page-layout/widgets/types/WidgetAction';
+import { widgetHeaderCountComponentFamilyState } from '@/page-layout/widgets/states/widgetHeaderCountComponentFamilyState';
+import { WidgetCardHeaderActionsRenderer } from '@/page-layout/widgets/widget-card/components/WidgetCardHeaderActionsRenderer';
 import { useAtomComponentFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentFamilyStateValue';
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
 import { type ReactNode, useContext } from 'react';
-import { IconTrash, OverflowingTextWithTooltip } from 'twenty-ui/display';
+import { IconTrash } from 'twenty-ui/icon';
+import { OverflowingTextWithTooltip } from 'twenty-ui/surfaces';
 import { IconButton } from 'twenty-ui/input';
 
 import { type WidgetCardVariant } from '@/page-layout/widgets/types/WidgetCardVariant';
 import { WidgetGrip } from '@/page-layout/widgets/widget-card/components/WidgetGrip';
 import { AnimatePresence, motion } from 'framer-motion';
-import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
+import { isDefined } from 'twenty-shared/utils';
 import { themeCssVariables, ThemeContext } from 'twenty-ui/theme-constants';
 export type WidgetCardHeaderProps = {
   variant: WidgetCardVariant;
   widgetId: string;
   isInEditMode: boolean;
   isEmpty?: boolean;
+  hasAccess?: boolean;
   title: string;
   onRemove?: (e?: React.MouseEvent) => void;
   forbiddenDisplay?: ReactNode;
-  actions?: WidgetAction[];
   className?: string;
   isResizing?: boolean;
   isReorderEnabled?: boolean;
   isDeletingWidgetEnabled?: boolean;
 };
 
-const StyledWidgetCardHeader = styled.div`
+const StyledWidgetCardHeader = styled.div<{ variant: WidgetCardVariant }>`
   align-items: center;
   display: flex;
   flex-shrink: 0;
   height: ${themeCssVariables.spacing[6]};
+  padding: ${({ variant }) =>
+    variant === 'solo'
+      ? `${themeCssVariables.spacing[4]} ${themeCssVariables.spacing[6]} 0`
+      : '0'};
 `;
 
 const StyledTitleContainer = styled.div<{ variant: WidgetCardVariant }>`
+  align-items: center;
   color: ${themeCssVariables.font.color.primary};
+  display: flex;
   flex: 1;
   font-size: ${themeCssVariables.font.size.md};
   font-weight: ${themeCssVariables.font.weight.medium};
+  gap: ${themeCssVariables.spacing[1]};
   overflow: hidden;
   padding-inline: ${({ variant }) =>
-    variant === 'side-column' ? '0' : themeCssVariables.spacing[1]};
+    variant === 'side-column' || variant === 'solo'
+      ? '0'
+      : themeCssVariables.spacing[1]};
 
   user-select: none;
+`;
+
+const StyledCount = styled.span`
+  color: ${themeCssVariables.font.color.light};
+  flex-shrink: 0;
+  font-weight: ${themeCssVariables.font.weight.regular};
 `;
 
 const StyledRightContainer = styled.div`
   align-items: center;
   display: flex;
   gap: ${themeCssVariables.spacing[0.5]};
-`;
-
-const StyledActionsContainer = styled.div`
-  align-items: center;
-  display: flex;
-  gap: ${themeCssVariables.spacing[1]};
 `;
 
 const StyledIconButtonContainerBase = styled.div`
@@ -71,23 +82,29 @@ export const WidgetCardHeader = ({
   variant,
   isEmpty = false,
   isInEditMode = false,
+  hasAccess = true,
   isResizing = false,
   isReorderEnabled = true,
   isDeletingWidgetEnabled = true,
   title,
   onRemove,
   forbiddenDisplay,
-  actions,
   className,
 }: WidgetCardHeaderProps) => {
   const { theme } = useContext(ThemeContext);
+  const { formatNumber } = useNumberFormat();
   const widgetCardHovered = useAtomComponentFamilyStateValue(
     widgetCardHoveredComponentFamilyState,
     widgetId,
   );
 
+  const widgetHeaderCount = useAtomComponentFamilyStateValue(
+    widgetHeaderCountComponentFamilyState,
+    widgetId,
+  );
+
   return (
-    <StyledWidgetCardHeader className={className}>
+    <StyledWidgetCardHeader variant={variant} className={className}>
       <AnimatePresence initial={false}>
         {!isEmpty && isInEditMode && isReorderEnabled && (
           <WidgetGrip
@@ -98,15 +115,12 @@ export const WidgetCardHeader = ({
       </AnimatePresence>
       <StyledTitleContainer variant={variant}>
         <OverflowingTextWithTooltip text={isEmpty ? t`Add Widget` : title} />
+        {isDefined(widgetHeaderCount) && (
+          <StyledCount>{formatNumber(widgetHeaderCount)}</StyledCount>
+        )}
       </StyledTitleContainer>
       <StyledRightContainer>
-        {isNonEmptyArray(actions) && (
-          <StyledActionsContainer>
-            {actions.map((action) => (
-              <WidgetActionRenderer key={action.id} action={action} />
-            ))}
-          </StyledActionsContainer>
-        )}
+        {hasAccess && <WidgetCardHeaderActionsRenderer />}
         {isDefined(forbiddenDisplay) && forbiddenDisplay}
         <AnimatePresence initial={false}>
           {!isResizing &&

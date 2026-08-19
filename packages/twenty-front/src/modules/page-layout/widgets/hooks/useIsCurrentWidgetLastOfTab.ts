@@ -1,16 +1,15 @@
 import { useCurrentPageLayout } from '@/page-layout/hooks/useCurrentPageLayout';
 import { useIsPageLayoutInEditMode } from '@/page-layout/hooks/useIsPageLayoutInEditMode';
-import { buildWidgetVisibilityContext } from '@/page-layout/utils/buildWidgetVisibilityContext';
+import { useWidgetVisibilityContext } from '@/page-layout/hooks/useWidgetVisibilityContext';
 import { filterVisibleWidgets } from '@/page-layout/utils/filterVisibleWidgets';
-import { useLayoutRenderingContext } from '@/ui/layout/contexts/LayoutRenderingContext';
-import { useIsMobile } from '@/ui/utilities/responsive/hooks/useIsMobile';
+import { sortWidgetsByVerticalListPosition } from '@/page-layout/utils/sortWidgetsByVerticalListPosition';
 import { isDefined } from 'twenty-shared/utils';
+import { PageLayoutTabLayoutMode } from '~/generated-metadata/graphql';
 
 export const useIsCurrentWidgetLastOfTab = (widgetId: string): boolean => {
   const { currentPageLayout } = useCurrentPageLayout();
-  const isMobile = useIsMobile();
-  const { isInSidePanel } = useLayoutRenderingContext();
   const isPageLayoutInEditMode = useIsPageLayoutInEditMode();
+  const widgetVisibilityContext = useWidgetVisibilityContext();
 
   if (!isDefined(currentPageLayout)) {
     return false;
@@ -24,12 +23,17 @@ export const useIsCurrentWidgetLastOfTab = (widgetId: string): boolean => {
     return false;
   }
 
-  const visibleWidgets = isPageLayoutInEditMode
+  const filteredWidgets = isPageLayoutInEditMode
     ? tab.widgets
     : filterVisibleWidgets({
         widgets: tab.widgets,
-        context: buildWidgetVisibilityContext({ isMobile, isInSidePanel }),
+        context: widgetVisibilityContext,
       });
+
+  const visibleWidgets =
+    tab.layoutMode === PageLayoutTabLayoutMode.VERTICAL_LIST
+      ? sortWidgetsByVerticalListPosition(filteredWidgets)
+      : filteredWidgets;
 
   if (visibleWidgets.length === 0) {
     return false;

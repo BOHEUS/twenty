@@ -9,7 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { Response } from 'express';
-import { AppPath, SettingsPath } from 'twenty-shared/types';
+import { ApiPath, AppPath, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
 import { Repository } from 'typeorm';
 
@@ -31,7 +31,7 @@ import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.ent
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
 
-@Controller('auth/microsoft-apis')
+@Controller(`${ApiPath.Auth}/microsoft-apis`)
 @UseFilters(AuthRestApiExceptionFilter)
 export class MicrosoftAPIsAuthController {
   constructor(
@@ -103,12 +103,13 @@ export class MicrosoftAPIsAuthController {
         );
       }
 
-      const handle = emails[0].value;
+      const handle = emails[0].value.toLowerCase();
 
       const connectedAccountId =
         await this.microsoftAPIsService.refreshMicrosoftRefreshToken({
           handle,
-          workspaceMemberId: workspaceMemberId,
+          userId,
+          workspaceMemberId,
           workspaceId: workspaceId,
           accessToken,
           refreshToken,
@@ -118,10 +119,9 @@ export class MicrosoftAPIsAuthController {
         });
 
       if (userId) {
-        await this.onboardingService.setOnboardingConnectAccountPending({
+        await this.onboardingService.completeOnboardingConnectAccountStep({
           userId,
           workspaceId,
-          value: false,
         });
       }
 

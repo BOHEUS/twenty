@@ -1,6 +1,6 @@
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
-import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
+import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
 import { formatFieldMetadataItemAsColumnDefinition } from '@/object-metadata/utils/formatFieldMetadataItemAsColumnDefinition';
 import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
 import { useUpdateOneRecord } from '@/object-record/hooks/useUpdateOneRecord';
@@ -10,7 +10,7 @@ import {
   type RecordUpdateHook,
   type RecordUpdateHookParams,
 } from '@/object-record/record-field/ui/contexts/FieldContext';
-import { FieldFocusContextProvider } from '@/object-record/record-field/ui/contexts/FieldFocusContextProvider';
+import { FieldFocusStaticFocusedProvider } from '@/object-record/record-field/ui/contexts/FieldFocusContextProvider';
 import { RecordFieldComponentInstanceContext } from '@/object-record/record-field/ui/states/contexts/RecordFieldComponentInstanceContext';
 import { isJunctionRelationForbidden } from '@/object-record/record-field/ui/utils/junction/isJunctionRelationForbidden';
 import { RecordInlineCellAnchoredPortalContext } from '@/object-record/record-inline-cell/components/RecordInlineCellAnchoredPortalContext';
@@ -53,9 +53,7 @@ export const RecordInlineCellAnchoredPortal = ({
     prefix: instanceIdPrefix,
   });
 
-  const anchorElement = document.body.querySelector<HTMLAnchorElement>(
-    `#${fieldInstanceId}`,
-  );
+  const anchorElement = document.getElementById(fieldInstanceId);
 
   const isRecordFieldReadOnly = useIsRecordFieldReadOnly({
     fieldMetadataId: fieldMetadataItem.id,
@@ -92,7 +90,7 @@ export const RecordInlineCellAnchoredPortal = ({
   }
 
   return (
-    <FieldFocusContextProvider isFocused={true}>
+    <FieldFocusStaticFocusedProvider>
       <FieldContext.Provider
         key={recordId + fieldMetadataItem.id}
         value={{
@@ -130,6 +128,6 @@ export const RecordInlineCellAnchoredPortal = ({
           )}
         </>
       </FieldContext.Provider>
-    </FieldFocusContextProvider>
+    </FieldFocusStaticFocusedProvider>
   );
 };

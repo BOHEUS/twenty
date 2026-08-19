@@ -13,6 +13,15 @@ import {
 
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 
+export type ClickHouseInsertOptions = {
+  clientId?: string;
+  asyncInsertBusyTimeoutMaxMs?: number;
+};
+
+export type ClickHouseInsertResult =
+  | { success: true }
+  | { success: false; error: Error };
+
 @Injectable()
 export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
   private mainClient: ClickHouseClient | undefined;
@@ -27,10 +36,6 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
         compression: {
           response: true,
           request: true,
-        },
-        clickhouse_settings: {
-          async_insert: 1,
-          wait_for_async_insert: 1,
         },
         application: 'twenty',
         log: { level: ClickHouseLogLevel.OFF },
@@ -50,7 +55,6 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
       return undefined;
     }
 
-    // Wait for a bit before trying again if another initialization is in progress
     while (this.isClientInitializing.get(clientId)) {
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
@@ -88,15 +92,10 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
         response: true,
         request: true,
       },
-      clickhouse_settings: {
-        async_insert: 1,
-        wait_for_async_insert: 1,
-      },
       application: 'twenty',
       log: { level: ClickHouseLogLevel.OFF },
     });
 
-    // Ping to check connection
     await client.ping();
 
     return client;
@@ -118,7 +117,6 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
 
   async onModuleInit() {
     if (this.mainClient) {
-      // Just ping to verify the connection
       try {
         await this.mainClient.ping();
       } catch (err) {
@@ -128,49 +126,58 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    // Close main client
     if (this.mainClient) {
       await this.mainClient.close();
     }
 
-    // Close all other clients
     for (const [, client] of this.clients) {
       await client.close();
     }
   }
 
-  // oxlint-disable-next-line @typescripttypescript/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any
   public async insert<T extends Record<string, any>>(
     table: string,
     values: T[],
-    clientId?: string,
-  ): Promise<{ success: boolean }> {
+    options: ClickHouseInsertOptions = {},
+  ): Promise<ClickHouseInsertResult> {
     try {
-      const client = clientId
-        ? await this.connectToClient(clientId)
+      const client = options.clientId
+        ? await this.connectToClient(options.clientId)
         : this.mainClient;
 
       if (!client) {
-        return { success: false };
+        return {
+          success: false,
+          error: new Error(
+            `No ClickHouse client available${options.clientId ? ` for client ${options.clientId}` : ''}`,
+          ),
+        };
       }
 
       await this.insertInChunks(client, table, values, {
         chunkSize: 1000,
         maxMemoryMB: 4,
+        asyncInsertBusyTimeoutMaxMs: options.asyncInsertBusyTimeoutMaxMs,
       });
 
       return { success: true };
     } catch (err) {
       this.logger.error('Error inserting data into ClickHouse', err);
 
-      return { success: false };
+      return {
+        success: false,
+        error:
+          err instanceof Error
+            ? err
+            : Object.assign(new Error(String(err)), { cause: err }),
+      };
     }
   }
 
-  // Method to execute a select query
   public async select<T>(
     query: string,
-    // oxlint-disable-next-line @typescripttypescript/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     params?: Record<string, any>,
     clientId?: string,
   ): Promise<T[]> {
@@ -237,7 +244,7 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
 
   public async executeCommand(
     query: string,
-    // oxlint-disable-next-line @typescripttypescript/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     params?: Record<string, any>,
     clientId?: string,
   ): Promise<boolean> {
@@ -263,12 +270,16 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // oxlint-disable-next-line @typescripttypescript/no-explicit-any
+  // oxlint-disable-next-line typescript/no-explicit-any
   private async insertInChunks<T extends Record<string, any>>(
     client: ClickHouseClient,
     table: string,
     values: T[],
-    options: { chunkSize?: number; maxMemoryMB?: number } = {},
+    options: {
+      chunkSize?: number;
+      maxMemoryMB?: number;
+      asyncInsertBusyTimeoutMaxMs?: number;
+    } = {},
   ): Promise<void> {
     const chunkSize = options.chunkSize ?? 1000;
     const maxMemoryMB = options.maxMemoryMB;
@@ -282,6 +293,16 @@ export class ClickHouseService implements OnModuleInit, OnModuleDestroy {
         table,
         values: chunk,
         format: 'JSONEachRow',
+        clickhouse_settings: {
+          async_insert: 1,
+          ...(options.asyncInsertBusyTimeoutMaxMs !== undefined
+            ? {
+                async_insert_busy_timeout_max_ms:
+                  options.asyncInsertBusyTimeoutMaxMs,
+              }
+            : {}),
+          wait_for_async_insert: 1,
+        },
       });
       chunk = [];
       currentSizeBytes = 0;

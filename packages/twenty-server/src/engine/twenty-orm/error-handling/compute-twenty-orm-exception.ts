@@ -1,10 +1,14 @@
-import { msg } from '@lingui/core/macro';
 import { isDefined } from 'twenty-shared/utils';
 import { QueryFailedError } from 'typeorm';
 
 import { type WorkspaceInternalContext } from 'src/engine/twenty-orm/interfaces/workspace-internal-context.interface';
 
 import { POSTGRESQL_ERROR_CODES } from 'src/engine/api/graphql/workspace-query-runner/constants/postgres-error-codes.constants';
+import {
+  CONSTRAINT_VIOLATION_USER_FRIENDLY_MESSAGES,
+  QUERY_READ_TIMEOUT_MESSAGE,
+  QUERY_READ_TIMEOUT_USER_FRIENDLY_MESSAGE,
+} from 'src/engine/api/graphql/workspace-query-runner/constants/postgres-error-messages.constants';
 import { handleDuplicateKeyError } from 'src/engine/api/graphql/workspace-query-runner/utils/handle-duplicate-key-error.util';
 import { PostgresException } from 'src/engine/api/graphql/workspace-query-runner/utils/postgres-exception';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
@@ -25,12 +29,12 @@ export const computeTwentyORMException = async (
   internalContext?: WorkspaceInternalContext,
 ): Promise<Error | TwentyORMException> => {
   if (error instanceof QueryFailedError) {
-    if (error.message.includes('Query read timeout')) {
+    if (error.message.includes(QUERY_READ_TIMEOUT_MESSAGE)) {
       return new TwentyORMException(
-        'Query read timeout',
+        QUERY_READ_TIMEOUT_MESSAGE,
         TwentyORMExceptionCode.QUERY_READ_TIMEOUT,
         {
-          userFriendlyMessage: msg`We are experiencing a temporary issue with our database. Please try again later.`,
+          userFriendlyMessage: QUERY_READ_TIMEOUT_USER_FRIENDLY_MESSAGE,
         },
       );
     }
@@ -53,8 +57,22 @@ export const computeTwentyORMException = async (
 
     if (errorCode === POSTGRESQL_ERROR_CODES.INVALID_TEXT_REPRESENTATION) {
       return new TwentyORMException(
-        error.message, // safe and useful
+        error.message,
         TwentyORMExceptionCode.INVALID_INPUT,
+      );
+    }
+
+    if (
+      isDefined(errorCode) &&
+      errorCode in CONSTRAINT_VIOLATION_USER_FRIENDLY_MESSAGES
+    ) {
+      return new TwentyORMException(
+        error.message,
+        TwentyORMExceptionCode.INVALID_INPUT,
+        {
+          userFriendlyMessage:
+            CONSTRAINT_VIOLATION_USER_FRIENDLY_MESSAGES[errorCode],
+        },
       );
     }
 

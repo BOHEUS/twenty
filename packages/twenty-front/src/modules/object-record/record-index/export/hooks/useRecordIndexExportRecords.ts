@@ -89,11 +89,9 @@ export const generateCsv: GenerateExport = ({
     const sanitizedRow: Record<string, any> = {};
 
     for (const [key, value] of Object.entries(row)) {
-      // Apply ZWJ sanitization to all string values
       if (typeof value === 'string') {
         sanitizedRow[key] = sanitizeValueForCSVExport(value);
       } else if (isDefined(value) && typeof value === 'object') {
-        // Handle nested objects (like composite fields)
         sanitizedRow[key] = {};
         for (const [nestedKey, nestedValue] of Object.entries(value)) {
           if (typeof nestedValue === 'string') {
@@ -114,6 +112,7 @@ export const generateCsv: GenerateExport = ({
   return json2csv(sanitizedRows, {
     keys,
     emptyFieldValue: '',
+    excelBOM: true,
     // Note: We handle CSV injection prevention manually with ZWJ approach above
     // This preserves original which the csvSecurity option does not do
   });

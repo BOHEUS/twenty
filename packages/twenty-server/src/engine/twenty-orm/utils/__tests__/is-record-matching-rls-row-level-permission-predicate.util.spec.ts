@@ -1,4 +1,9 @@
-import { FieldMetadataType, type ObjectRecord } from 'twenty-shared/types';
+import {
+  FieldMetadataType,
+  MetadataWritability,
+  ObjectOpenRecordIn,
+  type ObjectRecord,
+} from 'twenty-shared/types';
 
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
@@ -17,7 +22,6 @@ describe('isRecordMatchingRLSRowLevelPermissionPredicate', () => {
     icon: 'IconTest',
     color: null,
     targetTableName: 'test',
-    isCustom: false,
     isRemote: false,
     isActive: true,
     isSystem: false,
@@ -26,7 +30,9 @@ describe('isRecordMatchingRLSRowLevelPermissionPredicate', () => {
     workspaceId: 'test-workspace-id',
     universalIdentifier: 'test-object-id',
     indexMetadataIds: [],
+    searchFieldMetadataIds: [],
     objectPermissionIds: [],
+    fieldPermissionIds: [],
     fieldIds,
     viewIds: [],
     applicationId: 'test-application-id',
@@ -35,16 +41,21 @@ describe('isRecordMatchingRLSRowLevelPermissionPredicate', () => {
     updatedAt: new Date().toISOString(),
     shortcut: null,
     description: null,
-    standardOverrides: null,
-    isUIReadOnly: false,
+    overrides: null,
+    isUIEditable: true,
+    isUICreatable: true,
+    writability: MetadataWritability.OPEN,
+    openRecordIn: ObjectOpenRecordIn.USER_CHOICE,
     labelIdentifierFieldMetadataId: null,
     imageIdentifierFieldMetadataId: null,
     duplicateCriteria: null,
     applicationUniversalIdentifier: 'test-application-id',
     fieldUniversalIdentifiers: fieldIds,
     objectPermissionUniversalIdentifiers: [],
+    fieldPermissionUniversalIdentifiers: [],
     viewUniversalIdentifiers: [],
     indexMetadataUniversalIdentifiers: [],
+    searchFieldMetadataUniversalIdentifiers: [],
     labelIdentifierFieldMetadataUniversalIdentifier: null,
     imageIdentifierFieldMetadataUniversalIdentifier: null,
   });
@@ -284,5 +295,45 @@ describe('isRecordMatchingRLSRowLevelPermissionPredicate', () => {
     });
 
     expect(result).toBe(true);
+  });
+
+  it('matches "is not empty" on a relation field by its related record id', () => {
+    expect(
+      isRecordMatchingRLSRowLevelPermissionPredicate({
+        record: { ...baseRecord, company: { id: 'company-1' } } as ObjectRecord,
+        filter: { company: { is: 'NOT_NULL' } },
+        flatObjectMetadata,
+        flatFieldMetadataMaps,
+      }),
+    ).toBe(true);
+
+    expect(
+      isRecordMatchingRLSRowLevelPermissionPredicate({
+        record: { ...baseRecord, company: null } as ObjectRecord,
+        filter: { company: { is: 'NOT_NULL' } },
+        flatObjectMetadata,
+        flatFieldMetadataMaps,
+      }),
+    ).toBe(false);
+  });
+
+  it('matches "is empty" on a relation field by its related record id', () => {
+    expect(
+      isRecordMatchingRLSRowLevelPermissionPredicate({
+        record: { ...baseRecord, company: null } as ObjectRecord,
+        filter: { company: { is: 'NULL' } },
+        flatObjectMetadata,
+        flatFieldMetadataMaps,
+      }),
+    ).toBe(true);
+
+    expect(
+      isRecordMatchingRLSRowLevelPermissionPredicate({
+        record: { ...baseRecord, company: { id: 'company-1' } } as ObjectRecord,
+        filter: { company: { is: 'NULL' } },
+        flatObjectMetadata,
+        flatFieldMetadataMaps,
+      }),
+    ).toBe(false);
   });
 });

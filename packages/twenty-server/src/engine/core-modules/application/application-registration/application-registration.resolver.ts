@@ -1,30 +1,37 @@
 import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
-import { Args, Mutation, Query } from '@nestjs/graphql';
+import {
+  Args,
+  Context,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+} from '@nestjs/graphql';
 
 import GraphQLUpload from 'graphql-upload/GraphQLUpload.mjs';
 import { PermissionFlagType } from 'twenty-shared/constants';
-import { FeatureFlagKey, FileFolder } from 'twenty-shared/types';
+import { FileFolder } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+
+import { type IDataloaders } from 'src/engine/dataloaders/dataloader.interface';
 
 import type { FileUpload } from 'graphql-upload/processRequest.mjs';
 
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
-import { ApplicationRegistrationVariableEntity } from 'src/engine/core-modules/application/application-registration-variable/application-registration-variable.entity';
 import { ApplicationRegistrationVariableService } from 'src/engine/core-modules/application/application-registration-variable/application-registration-variable.service';
 import { CreateApplicationRegistrationVariableInput } from 'src/engine/core-modules/application/application-registration-variable/dtos/create-application-registration-variable.input';
 import { UpdateApplicationRegistrationVariableInput } from 'src/engine/core-modules/application/application-registration-variable/dtos/update-application-registration-variable.input';
 import { ApplicationRegistrationExceptionFilter } from 'src/engine/core-modules/application/application-registration/application-registration-exception-filter';
+import { ApplicationRegistrationAssetUrlService } from 'src/engine/core-modules/application/application-registration/application-registration-asset-url.service';
 import { ApplicationRegistrationEntity } from 'src/engine/core-modules/application/application-registration/application-registration.entity';
-import {
-  ApplicationRegistrationException,
-  ApplicationRegistrationExceptionCode,
-} from 'src/engine/core-modules/application/application-registration/application-registration.exception';
 import { ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
-import {
-  ApplicationTarballService,
-  MAX_TARBALL_UPLOAD_SIZE_BYTES,
-} from 'src/engine/core-modules/application/application-registration/application-tarball.service';
+import { ApplicationTarballService } from 'src/engine/core-modules/application/application-registration/application-tarball.service';
+import { ApplicationRegistrationClaimService } from 'src/engine/core-modules/application/application-registration/application-registration-claim.service';
+import { ApplicationRegistrationClaimInput } from 'src/engine/core-modules/application/application-registration/dtos/application-registration-claim.input';
 import { ApplicationRegistrationStatsDTO } from 'src/engine/core-modules/application/application-registration/dtos/application-registration-stats.dto';
+import { ClaimApplicationRegistrationOwnershipInput } from 'src/engine/core-modules/application/application-registration/dtos/claim-application-registration-ownership.input';
+import { ClaimableApplicationRegistrationDTO } from 'src/engine/core-modules/application/application-registration/dtos/claimable-application-registration.dto';
+import { FindClaimableApplicationRegistrationInput } from 'src/engine/core-modules/application/application-registration/dtos/find-claimable-application-registration.input';
 import { CreateApplicationRegistrationDTO } from 'src/engine/core-modules/application/application-registration/dtos/create-application-registration.dto';
 import { CreateApplicationRegistrationInput } from 'src/engine/core-modules/application/application-registration/dtos/create-application-registration.input';
 import { PublicApplicationRegistrationDTO } from 'src/engine/core-modules/application/application-registration/dtos/public-application-registration.dto';
@@ -40,18 +47,21 @@ import { UserEntity } from 'src/engine/core-modules/user/user.entity';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import {
-  FeatureFlagGuard,
-  RequireFeatureFlag,
-} from 'src/engine/guards/feature-flag.guard';
+import { AdminPanelGuard } from 'src/engine/guards/admin-panel-guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
 import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { streamToBuffer } from 'src/utils/stream-to-buffer';
+import { ApplicationRegistrationVariableDTO } from 'src/engine/core-modules/application/application-registration-variable/dtos/application-registration-variable.dto';
+import {
+  ApplicationRegistrationException,
+  ApplicationRegistrationExceptionCode,
+} from 'src/engine/core-modules/application/application-registration/application-registration.exception';
 
 @UsePipes(ResolverValidationPipe)
-@MetadataResolver()
+@MetadataResolver(() => ApplicationRegistrationEntity)
 @UseFilters(
   ApplicationRegistrationExceptionFilter,
   AuthGraphqlApiExceptionFilter,
@@ -60,9 +70,12 @@ import { streamToBuffer } from 'src/utils/stream-to-buffer';
 export class ApplicationRegistrationResolver {
   constructor(
     private readonly applicationRegistrationService: ApplicationRegistrationService,
+    private readonly applicationRegistrationClaimService: ApplicationRegistrationClaimService,
     private readonly applicationRegistrationVariableService: ApplicationRegistrationVariableService,
     private readonly applicationTarballService: ApplicationTarballService,
+    private readonly applicationRegistrationAssetUrlService: ApplicationRegistrationAssetUrlService,
     private readonly fileUrlService: FileUrlService,
+    private readonly twentyConfigService: TwentyConfigService,
   ) {}
 
   @UseGuards(PublicEndpointGuard, NoPermissionGuard)
@@ -73,8 +86,7 @@ export class ApplicationRegistrationResolver {
     return this.applicationRegistrationService.findPublicByClientId(clientId);
   }
 
-  @UseGuards(WorkspaceAuthGuard, FeatureFlagGuard, NoPermissionGuard)
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
+  @UseGuards(WorkspaceAuthGuard, NoPermissionGuard)
   @Query(() => ApplicationRegistrationEntity, { nullable: true })
   async findApplicationRegistrationByUniversalIdentifier(
     @Args('universalIdentifier') universalIdentifier: string,
@@ -86,10 +98,8 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Query(() => [ApplicationRegistrationEntity])
   async findManyApplicationRegistrations(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
@@ -99,10 +109,8 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Query(() => ApplicationRegistrationEntity)
   async findOneApplicationRegistration(
     @Args('id') id: string,
@@ -113,10 +121,8 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Query(() => ApplicationRegistrationStatsDTO)
   async findApplicationRegistrationStats(
     @Args('id') id: string,
@@ -127,10 +133,8 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Mutation(() => CreateApplicationRegistrationDTO)
   async createApplicationRegistration(
     @Args('input') input: CreateApplicationRegistrationInput,
@@ -146,10 +150,8 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Mutation(() => ApplicationRegistrationEntity)
   async updateApplicationRegistration(
     @Args('input') input: UpdateApplicationRegistrationInput,
@@ -160,10 +162,8 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Mutation(() => Boolean)
   async deleteApplicationRegistration(
     @Args('id') id: string,
@@ -174,10 +174,8 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Mutation(() => RotateClientSecretDTO)
   async rotateApplicationRegistrationClientSecret(
     @Args('id') id: string,
@@ -194,16 +192,14 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
-  @Query(() => [ApplicationRegistrationVariableEntity])
+  @Query(() => [ApplicationRegistrationVariableDTO])
   async findApplicationRegistrationVariables(
     @Args('applicationRegistrationId') applicationRegistrationId: string,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ): Promise<ApplicationRegistrationVariableEntity[]> {
-    return this.applicationRegistrationVariableService.findVariables(
+  ): Promise<ApplicationRegistrationVariableDTO[]> {
+    return this.applicationRegistrationVariableService.findVariablesWithObfuscatedValues(
       applicationRegistrationId,
       workspaceId,
     );
@@ -211,15 +207,13 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
-  @Mutation(() => ApplicationRegistrationVariableEntity)
+  @Mutation(() => ApplicationRegistrationVariableDTO)
   async createApplicationRegistrationVariable(
     @Args('input') input: CreateApplicationRegistrationVariableInput,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ): Promise<ApplicationRegistrationVariableEntity> {
+  ): Promise<ApplicationRegistrationVariableDTO> {
     return this.applicationRegistrationVariableService.createVariable(
       input,
       workspaceId,
@@ -228,15 +222,13 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
-  @Mutation(() => ApplicationRegistrationVariableEntity)
+  @Mutation(() => ApplicationRegistrationVariableDTO)
   async updateApplicationRegistrationVariable(
     @Args('input') input: UpdateApplicationRegistrationVariableInput,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ): Promise<ApplicationRegistrationVariableEntity> {
+  ): Promise<ApplicationRegistrationVariableDTO> {
     return this.applicationRegistrationVariableService.updateVariable(
       input,
       workspaceId,
@@ -245,10 +237,8 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Mutation(() => Boolean)
   async deleteApplicationRegistrationVariable(
     @Args('id') id: string,
@@ -262,10 +252,8 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.MARKETPLACE_APPS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Mutation(() => ApplicationRegistrationEntity)
   async uploadAppTarball(
     @Args({ name: 'file', type: () => GraphQLUpload })
@@ -274,29 +262,38 @@ export class ApplicationRegistrationResolver {
     universalIdentifier: string | undefined,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
   ): Promise<ApplicationRegistrationEntity> {
+    const maxSize = this.twentyConfigService.get(
+      'MAX_TARBALL_UPLOAD_SIZE_BYTES',
+    );
+
     const stream = createReadStream();
-    const tarballBuffer = await streamToBuffer(stream);
 
-    if (tarballBuffer.length > MAX_TARBALL_UPLOAD_SIZE_BYTES) {
-      throw new ApplicationRegistrationException(
-        `Tarball exceeds maximum size of ${MAX_TARBALL_UPLOAD_SIZE_BYTES} bytes`,
-        ApplicationRegistrationExceptionCode.INVALID_INPUT,
-      );
+    try {
+      const tarballBuffer = await streamToBuffer(stream, maxSize);
+
+      return this.applicationTarballService.uploadTarball({
+        tarballBuffer,
+        universalIdentifier,
+        ownerWorkspaceId: workspaceId,
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes('maximum allowed size')
+      ) {
+        throw new ApplicationRegistrationException(
+          `Tarball exceeds maximum size of ${maxSize} bytes`,
+          ApplicationRegistrationExceptionCode.INVALID_INPUT,
+        );
+      }
+      throw error;
     }
-
-    return this.applicationTarballService.uploadTarball({
-      tarballBuffer,
-      universalIdentifier,
-      ownerWorkspaceId: workspaceId,
-    });
   }
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.API_KEYS_AND_WEBHOOKS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
   @Query(() => String, { nullable: true })
   async applicationRegistrationTarballUrl(
     @Args('id') id: string,
@@ -314,7 +311,7 @@ export class ApplicationRegistrationResolver {
       return null;
     }
 
-    return this.fileUrlService.signFileByIdUrl({
+    return await this.fileUrlService.signFileByIdUrl({
       fileId: registration.tarballFileId,
       workspaceId,
       fileFolder: FileFolder.AppTarball,
@@ -323,10 +320,62 @@ export class ApplicationRegistrationResolver {
 
   @UseGuards(
     WorkspaceAuthGuard,
-    FeatureFlagGuard,
     SettingsPermissionGuard(PermissionFlagType.APPLICATIONS),
   )
-  @RequireFeatureFlag(FeatureFlagKey.IS_APPLICATION_ENABLED)
+  @Query(() => ClaimableApplicationRegistrationDTO, { nullable: true })
+  async findClaimableApplicationRegistration(
+    @Args()
+    {
+      sourcePackage,
+      universalIdentifier,
+    }: FindClaimableApplicationRegistrationInput,
+  ): Promise<ClaimableApplicationRegistrationDTO | null> {
+    return this.applicationRegistrationService.findClaimable({
+      sourcePackage,
+      universalIdentifier,
+    });
+  }
+
+  @UseGuards(
+    WorkspaceAuthGuard,
+    AdminPanelGuard,
+    SettingsPermissionGuard(PermissionFlagType.APPLICATIONS),
+  )
+  @Mutation(() => ApplicationRegistrationEntity)
+  async claimApplicationRegistrationOwnership(
+    @Args()
+    { applicationRegistrationId }: ClaimApplicationRegistrationOwnershipInput,
+    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+  ): Promise<ApplicationRegistrationEntity> {
+    return this.applicationRegistrationService.claimOwnership({
+      applicationRegistrationId,
+      claimingWorkspaceId: workspaceId,
+    });
+  }
+
+  @UseGuards(
+    WorkspaceAuthGuard,
+    SettingsPermissionGuard(PermissionFlagType.APPLICATIONS),
+  )
+  @Query(() => String)
+  async githubClaimAuthorizationUrl(
+    @Args() { applicationRegistrationId }: ApplicationRegistrationClaimInput,
+    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUser({ allowUndefined: true }) user: UserEntity | undefined,
+  ): Promise<string> {
+    return this.applicationRegistrationClaimService.buildGithubAuthorizationUrl(
+      {
+        applicationRegistrationId,
+        workspaceId,
+        userId: user?.id ?? null,
+      },
+    );
+  }
+
+  @UseGuards(
+    WorkspaceAuthGuard,
+    SettingsPermissionGuard(PermissionFlagType.APPLICATIONS),
+  )
   @Mutation(() => ApplicationRegistrationEntity)
   async transferApplicationRegistrationOwnership(
     @Args()
@@ -341,5 +390,33 @@ export class ApplicationRegistrationResolver {
       targetWorkspaceSubdomain,
       currentOwnerWorkspaceId: workspaceId,
     });
+  }
+
+  @ResolveField(() => Boolean)
+  async isConfigured(
+    @Parent() registration: ApplicationRegistrationEntity,
+    @Context() context: { loaders: IDataloaders },
+  ): Promise<boolean> {
+    return context.loaders.isConfiguredLoader.load({
+      applicationRegistrationId: registration.id,
+    });
+  }
+
+  @ResolveField(() => String, { nullable: true })
+  logoUrl(
+    @Parent() registration: ApplicationRegistrationEntity,
+  ): string | null {
+    return this.applicationRegistrationAssetUrlService.buildLogoUrl(
+      registration,
+    );
+  }
+
+  @ResolveField(() => [String])
+  galleryImagesUrls(
+    @Parent() registration: ApplicationRegistrationEntity,
+  ): string[] {
+    return this.applicationRegistrationAssetUrlService.buildGalleryImageUrls(
+      registration,
+    );
   }
 }

@@ -1,30 +1,74 @@
+import { t } from '@lingui/core/macro';
+import { isAutoSelectModelId } from 'twenty-shared/utils';
 import { type SelectOption } from 'twenty-ui/input';
 
-import { DEFAULT_FAST_MODEL } from '@/ai/constants/DefaultFastModel';
-import { DEFAULT_SMART_MODEL } from '@/ai/constants/DefaultSmartModel';
+import { useIsWorkspaceSetupChat } from '@/ai/hooks/useIsWorkspaceSetupChat';
 import { useWorkspaceAiModelAvailability } from '@/ai/hooks/useWorkspaceAiModelAvailability';
+import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { aiModelsState } from '@/client-config/states/aiModelsState';
+import { getModelIcon } from '@/settings/ai/utils/getModelIcon';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 
-export const useAiModelOptions = (): SelectOption<string>[] => {
-  const aiModels = useAtomStateValue(aiModelsState);
-  const { isModelEnabled } = useWorkspaceAiModelAvailability();
+type UseAiModelOptionsVariant = 'all' | 'pinned-default';
 
-  return aiModels
-    .filter(
-      (model) => !model.isDeprecated && isModelEnabled(model.modelId, model),
-    )
+type UseAiModelOptionsOptions = {
+  variant?: UseAiModelOptionsVariant;
+};
+
+export const useAiModelOptions = ({
+  variant = 'all',
+}: UseAiModelOptionsOptions = {}): {
+  options: SelectOption<string>[];
+  pinnedOption?: SelectOption<string>;
+} => {
+  const aiModels = useAtomStateValue(aiModelsState);
+  const currentWorkspace = useAtomStateValue(currentWorkspaceState);
+  const { enabledModels } = useWorkspaceAiModelAvailability();
+  const isWorkspaceSetupChat = useIsWorkspaceSetupChat();
+
+  const workspaceDefaultModelId = isWorkspaceSetupChat
+    ? currentWorkspace?.fastModel
+    : currentWorkspace?.smartModel;
+
+  const workspaceDefaultModel = aiModels.find(
+    (model) => model.modelId === workspaceDefaultModelId,
+  );
+
+  const resolvedDefaultModelId = enabledModels.find(
+    (model) =>
+      model.label === workspaceDefaultModel?.label &&
+      model.providerName === workspaceDefaultModel?.providerName,
+  )?.modelId;
+
+  const allOptions = enabledModels
     .map((model) => ({
       value: model.modelId,
-      label:
-        model.modelId === DEFAULT_FAST_MODEL ||
-        model.modelId === DEFAULT_SMART_MODEL
-          ? model.label
-          : model.modelFamilyLabel
-            ? `${model.label} (${model.modelFamilyLabel})`
-            : model.label,
+      label: model.label,
+      Icon: getModelIcon(model.modelFamily, model.providerName),
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
+
+  const pinnedOption = workspaceDefaultModel
+    ? {
+        value: resolvedDefaultModelId ?? workspaceDefaultModel.modelId,
+        label: workspaceDefaultModel.label,
+        Icon: getModelIcon(
+          workspaceDefaultModel.modelFamily,
+          workspaceDefaultModel.providerName,
+        ),
+        contextualText: t`default`,
+      }
+    : undefined;
+
+  const options =
+    variant === 'pinned-default' && resolvedDefaultModelId
+      ? allOptions.filter((model) => model.value !== resolvedDefaultModelId)
+      : allOptions;
+
+  return {
+    options,
+    pinnedOption: variant === 'pinned-default' ? pinnedOption : undefined,
+  };
 };
 
 export const useAiModelLabel = (
@@ -43,11 +87,7 @@ export const useAiModelLabel = (
     return modelId;
   }
 
-  if (
-    model.modelId === DEFAULT_FAST_MODEL ||
-    model.modelId === DEFAULT_SMART_MODEL ||
-    !includeProvider
-  ) {
+  if (isAutoSelectModelId(model.modelId) || !includeProvider) {
     return model.label;
   }
 

@@ -1,10 +1,12 @@
-import { FormFieldInputContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputContainer';
+import { FormFieldInputContainer } from '@/ui/input/components/FormFieldInputContainer';
 import { FormFieldInputInnerContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputInnerContainer';
 import { FormFieldInputRowContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputRowContainer';
 import { FormFieldPlaceholder } from '@/object-record/record-field/ui/form-types/components/FormFieldPlaceholder';
-import { InputLabel } from '@/ui/input/components/InputLabel';
+import { InputLabel, LightIconButton } from 'twenty-ui/input';
 import { DraggableItem } from '@/ui/layout/draggable-list/components/DraggableItem';
 import { DraggableList } from '@/ui/layout/draggable-list/components/DraggableList';
+import { DragDropItemSortableHandle } from '@/ui/utilities/drag-and-drop/components/DragDropItemSortableHandle';
+import { type DraggableListDropResult } from '@/ui/layout/draggable-list/types/DraggableListDropResult';
 import {
   type WorkflowFormAction,
   type WorkflowTriggerType,
@@ -15,24 +17,22 @@ import { WorkflowEditActionFormFieldSettings } from '@/workflow/workflow-steps/w
 import { type WorkflowFormActionField } from '@/workflow/workflow-steps/workflow-actions/form-action/types/WorkflowFormActionField';
 import { getDefaultFormFieldSettings } from '@/workflow/workflow-steps/workflow-actions/form-action/utils/getDefaultFormFieldSettings';
 import { styled } from '@linaria/react';
-import { type OnDragEndResponder } from '@hello-pangea/dnd';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useContext, useEffect, useState } from 'react';
 import { FieldMetadataType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { Callout } from 'twenty-ui/feedback';
 import {
-  Callout,
   IconAlertTriangle,
   IconChevronDown,
   IconGripVertical,
   IconPlus,
   IconTrash,
-} from 'twenty-ui/display';
-import { LightIconButton } from 'twenty-ui/input';
+} from 'twenty-ui/icon';
+import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 import { useDebouncedCallback } from 'use-debounce';
 import { v4 } from 'uuid';
-import { themeCssVariables, ThemeContext } from 'twenty-ui/theme-constants';
 
 export type WorkflowEditActionFormBuilderProps = {
   triggerType: WorkflowTriggerType | undefined;
@@ -57,6 +57,7 @@ const StyledFormFieldContainer = styled.div`
     'grip input delete'
     '. settings .';
   grid-template-columns: 24px 1fr 24px;
+  margin-bottom: ${themeCssVariables.spacing[4]};
   position: relative;
 `;
 
@@ -98,9 +99,10 @@ const StyledFieldContainer = styled.div<{
   cursor: ${({ readonly }) => (readonly ? 'default' : 'pointer')};
   display: flex;
   font-family: inherit;
+  height: 100%;
   padding-left: ${themeCssVariables.spacing[2]};
-  padding-right: ${themeCssVariables.spacing[2]};
 
+  padding-right: ${themeCssVariables.spacing[2]};
   width: 100%;
 
   &:hover,
@@ -190,7 +192,7 @@ export const WorkflowEditActionFormBuilder = ({
     saveAction(updatedFormData);
   };
 
-  const handleDragEnd: OnDragEndResponder = ({ source, destination }) => {
+  const handleDragEnd = ({ source, destination }: DraggableListDropResult) => {
     if (actionOptions.readonly === true) {
       return;
     }
@@ -278,11 +280,7 @@ export const WorkflowEditActionFormBuilder = ({
                   draggableId={field.id}
                   index={index}
                   isDragDisabled={actionOptions.readonly}
-                  isInsideScrollableContainer
                   disableDraggingBackground
-                  draggableComponentStyles={{
-                    marginBottom: themeCssVariables.spacing[4],
-                  }}
                   itemComponent={({ isDragging }) => {
                     const showButtons =
                       !actionOptions.readonly &&
@@ -300,10 +298,12 @@ export const WorkflowEditActionFormBuilder = ({
 
                         {showButtons && (
                           <StyledGripButtonContainer>
-                            <LightIconButton
-                              Icon={IconGripVertical}
-                              aria-label={t`Reorder field`}
-                            />
+                            <DragDropItemSortableHandle>
+                              <LightIconButton
+                                Icon={IconGripVertical}
+                                aria-label={t`Reorder field`}
+                              />
+                            </DragDropItemSortableHandle>
                           </StyledGripButtonContainer>
                         )}
 
@@ -330,7 +330,9 @@ export const WorkflowEditActionFormBuilder = ({
                                           .placeholder}
                                   </FormFieldPlaceholder>
                                 </StyledPlaceholderContainer>
-                                {field.type === 'RECORD' && (
+                                {(field.type === 'RECORD' ||
+                                  field.type === 'SELECT' ||
+                                  field.type === 'MULTI_SELECT') && (
                                   <IconChevronDown
                                     size={theme.icon.size.md}
                                     color={

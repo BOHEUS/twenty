@@ -1,49 +1,32 @@
-import { useParams } from 'react-router-dom';
-
-import { useWorkspaceNavigationMenuItems } from '@/navigation-menu-item/display/hooks/useWorkspaceNavigationMenuItems';
+import { useIdentifyActiveNavigationMenuItems } from '@/navigation-menu-item/display/hooks/useIdentifyActiveNavigationMenuItems';
 import { NavigationDrawerSectionForObjectMetadataItems } from '@/object-metadata/components/NavigationDrawerSectionForObjectMetadataItems';
 import { useFilteredObjectMetadataItems } from '@/object-metadata/hooks/useFilteredObjectMetadataItems';
 import { useLingui } from '@lingui/react/macro';
+import { isDefined } from 'twenty-shared/utils';
+import { AnimatedExpandableContainer } from 'twenty-ui/layout';
 
 export const NavigationDrawerOpenedSection = () => {
   const { t } = useLingui();
 
   const { activeObjectMetadataItems } = useFilteredObjectMetadataItems();
-  const filteredActiveNonSystemObjectMetadataItems =
-    activeObjectMetadataItems.filter((item) => !item.isRemote);
 
-  const { objectMetadataIdsInWorkspaceNav } = useWorkspaceNavigationMenuItems();
+  const { objectMetadataIdForOpenedSection } =
+    useIdentifyActiveNavigationMenuItems();
 
-  const {
-    objectNamePlural: currentObjectNamePlural,
-    objectNameSingular: currentObjectNameSingular,
-  } = useParams();
-
-  if (!currentObjectNamePlural && !currentObjectNameSingular) {
-    return;
-  }
-
-  const objectMetadataItem = filteredActiveNonSystemObjectMetadataItems.find(
-    (item) =>
-      item.namePlural === currentObjectNamePlural ||
-      item.nameSingular === currentObjectNameSingular,
+  const objectMetadataItem = activeObjectMetadataItems.find(
+    (item) => item.id === objectMetadataIdForOpenedSection,
   );
 
-  if (!objectMetadataItem) {
-    return;
+  if (!isDefined(objectMetadataItem)) {
+    return null;
   }
-
-  const isObjectAlreadyInNavbar = objectMetadataIdsInWorkspaceNav.has(
-    objectMetadataItem.id,
-  );
 
   return (
-    !isObjectAlreadyInNavbar && (
+    <AnimatedExpandableContainer isExpanded>
       <NavigationDrawerSectionForObjectMetadataItems
         sectionTitle={t`Opened`}
         objectMetadataItems={[objectMetadataItem]}
-        isRemote={false}
       />
-    )
+    </AnimatedExpandableContainer>
   );
 };

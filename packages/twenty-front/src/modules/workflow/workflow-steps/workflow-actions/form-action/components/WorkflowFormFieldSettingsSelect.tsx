@@ -1,15 +1,14 @@
 import { useFilteredObjectMetadataItems } from '@/object-metadata/hooks/useFilteredObjectMetadataItems';
 import { isHiddenSystemField } from '@/object-metadata/utils/isHiddenSystemField';
-import { FormFieldInputContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputContainer';
+import { FormFieldInputContainer } from '@/ui/input/components/FormFieldInputContainer';
 import { FormSelectFieldInput } from '@/object-record/record-field/ui/form-types/components/FormSelectFieldInput';
 import { FormTextFieldInput } from '@/object-record/record-field/ui/form-types/components/FormTextFieldInput';
-import { InputLabel } from '@/ui/input/components/InputLabel';
+import { InputLabel } from 'twenty-ui/input';
 import { type WorkflowFormActionField } from '@/workflow/workflow-steps/workflow-actions/form-action/types/WorkflowFormActionField';
 import { getDefaultFormFieldSettings } from '@/workflow/workflow-steps/workflow-actions/form-action/utils/getDefaultFormFieldSettings';
 import { t } from '@lingui/core/macro';
 import { styled } from '@linaria/react';
 import camelCase from 'lodash.camelcase';
-import { FieldMetadataType } from 'twenty-shared/types';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
 type WorkflowFormFieldSettingsSelectProps = {
@@ -50,14 +49,14 @@ export const WorkflowFormFieldSettingsSelect = ({
       return acc.concat(
         objectMetadataItem.fields
           .filter(
-            (field) =>
-              field.isActive &&
-              !isHiddenSystemField(field) &&
-              field.type === FieldMetadataType.SELECT,
+            (objectField) =>
+              objectField.isActive &&
+              !isHiddenSystemField(objectField) &&
+              objectField.type === field.type,
           )
-          .map((field) => ({
-            label: `${objectMetadataItem.labelSingular} > ${field.label}`,
-            value: field.id,
+          .map((objectField) => ({
+            label: `${objectMetadataItem.labelSingular} > ${objectField.label}`,
+            value: objectField.id,
           })),
       );
     },
@@ -78,9 +77,7 @@ export const WorkflowFormFieldSettingsSelect = ({
               });
             }}
             defaultValue={field.label}
-            placeholder={
-              getDefaultFormFieldSettings(FieldMetadataType.SELECT).label
-            }
+            placeholder={getDefaultFormFieldSettings(field.type).label}
           />
         </FormFieldInputContainer>
         <FormFieldInputContainer>

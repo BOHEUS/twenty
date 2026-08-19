@@ -27,6 +27,7 @@ export class RestApiCreateOneHandler extends RestApiBaseHandler {
         flatObjectMetadata,
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
+        flatIndexMaps,
         objectIdByNameSingular,
       } = await this.buildCommonOptions(request);
 
@@ -38,16 +39,18 @@ export class RestApiCreateOneHandler extends RestApiBaseHandler {
         authContext,
       });
 
-      const record = await this.commonCreateOneQueryRunnerService.execute(
-        { data, selectedFields, upsert },
-        {
-          authContext,
-          flatObjectMetadata,
-          flatObjectMetadataMaps,
-          flatFieldMetadataMaps,
-          objectIdByNameSingular,
-        },
-      );
+      const { results: record } =
+        await this.commonCreateOneQueryRunnerService.execute(
+          { data, selectedFields, upsert },
+          {
+            authContext,
+            flatObjectMetadata,
+            flatObjectMetadataMaps,
+            flatFieldMetadataMaps,
+            flatIndexMaps,
+            objectIdByNameSingular,
+          },
+        );
 
       return this.formatRestResponse(record, flatObjectMetadata.nameSingular);
     } catch (error) {

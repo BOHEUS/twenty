@@ -1,6 +1,7 @@
 import { type FieldManifest } from 'twenty-shared/application';
 import {
   FieldMetadataType,
+  MetadataWritability,
   type RelationAndMorphRelationFieldMetadataType,
 } from 'twenty-shared/types';
 
@@ -8,8 +9,10 @@ import {
   ApplicationException,
   ApplicationExceptionCode,
 } from 'src/engine/core-modules/application/application.exception';
+import { type CompositeFieldMetadataType } from 'src/engine/metadata-modules/field-metadata/types/composite-field-metadata-type.type';
 import { generateDefaultValue } from 'src/engine/metadata-modules/field-metadata/utils/generate-default-value';
-import { PARTIAL_SYSTEM_FLAT_FIELD_METADATAS } from 'src/engine/metadata-modules/object-metadata/constants/partial-system-flat-field-metadatas.constant';
+import { isCompositeFieldMetadataType } from 'src/engine/metadata-modules/field-metadata/utils/is-composite-field-metadata-type.util';
+import { nullifyEmptyCompositeDefaultValue } from 'src/engine/metadata-modules/flat-field-metadata/utils/nullify-empty-composite-default-value.util';
 import { isMorphOrRelationFieldMetadataType } from 'src/engine/utils/is-morph-or-relation-field-metadata-type.util';
 import { type UniversalFlatFieldMetadata } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-field-metadata.type';
 
@@ -65,6 +68,15 @@ export const fromFieldManifestToUniversalFlatFieldMetadata = ({
     relationTargetObjectMetadataUniversalIdentifier,
   } = getRelationTargetUniversalIdentifiers(fieldManifest);
 
+  const rawDefaultValue =
+    fieldManifest.defaultValue ?? generateDefaultValue(fieldManifest.type);
+  const defaultValue = isCompositeFieldMetadataType(fieldManifest.type)
+    ? nullifyEmptyCompositeDefaultValue({
+        defaultValue: rawDefaultValue,
+        fieldType: fieldManifest.type as CompositeFieldMetadataType,
+      })
+    : rawDefaultValue;
+
   return {
     universalIdentifier: fieldManifest.universalIdentifier,
     applicationUniversalIdentifier,
@@ -73,17 +85,17 @@ export const fromFieldManifestToUniversalFlatFieldMetadata = ({
     label: fieldManifest.label,
     description: fieldManifest.description ?? null,
     icon: fieldManifest.icon ?? null,
-    standardOverrides: null,
+    overrides: null,
     options: fieldManifest.options ?? null,
-    defaultValue:
-      fieldManifest.defaultValue ?? generateDefaultValue(fieldManifest.type),
+    defaultValue,
     universalSettings: fieldManifest.universalSettings ?? null,
-    isCustom: true,
     isActive: true,
-    isSystem: fieldManifest.name in PARTIAL_SYSTEM_FLAT_FIELD_METADATAS,
-    isUIReadOnly: false,
+    isSystem: false,
+    isSystemSideEffect: false,
+    isUIEditable: fieldManifest.isUIEditable ?? true,
+    writability: fieldManifest.writability ?? MetadataWritability.OPEN,
     isNullable: fieldManifest.isNullable ?? true,
-    isUnique: false,
+    isUnique: fieldManifest.isUnique ?? false,
     isLabelSyncedWithName: false,
     morphId:
       fieldManifest.type === FieldMetadataType.MORPH_RELATION
@@ -94,10 +106,13 @@ export const fromFieldManifestToUniversalFlatFieldMetadata = ({
     relationTargetObjectMetadataUniversalIdentifier,
     viewFieldUniversalIdentifiers: [],
     viewFilterUniversalIdentifiers: [],
+    fieldPermissionUniversalIdentifiers: [],
     kanbanAggregateOperationViewUniversalIdentifiers: [],
     calendarViewUniversalIdentifiers: [],
+    calendarEndViewUniversalIdentifiers: [],
     mainGroupByFieldMetadataViewUniversalIdentifiers: [],
     viewSortUniversalIdentifiers: [],
+    searchFieldMetadataUniversalIdentifiers: [],
     createdAt: now,
     updatedAt: now,
   };

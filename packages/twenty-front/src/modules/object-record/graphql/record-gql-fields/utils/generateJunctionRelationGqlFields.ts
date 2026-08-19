@@ -6,7 +6,10 @@ import {
   type JunctionObjectMetadataItem,
 } from '@/object-record/record-field/ui/utils/junction/getJunctionConfig';
 import { FieldMetadataType } from 'twenty-shared/types';
-import { computeMorphRelationFieldName, isDefined } from 'twenty-shared/utils';
+import {
+  computeMorphRelationGqlFieldName,
+  isDefined,
+} from 'twenty-shared/utils';
 
 type JunctionFieldMetadataItem = Pick<
   FieldMetadataItem,
@@ -56,7 +59,7 @@ const buildMorphTargetFieldGqlFields = (
       continue;
     }
 
-    const computedFieldName = computeMorphRelationFieldName({
+    const computedFieldName = computeMorphRelationGqlFieldName({
       fieldName: morphRelation.sourceFieldMetadata.name,
       relationType: morphRelation.type,
       targetObjectMetadataNameSingular: targetObjectMetadata.nameSingular,
@@ -79,7 +82,6 @@ const buildTargetFieldGqlFields = (
   return buildRegularTargetFieldGqlFields(targetField, objectMetadataItems);
 };
 
-// Generates GraphQL fields for a junction relation, including the nested target objects
 export const generateJunctionRelationGqlFields = ({
   fieldMetadataItem,
   objectMetadataItems,

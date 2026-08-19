@@ -100,16 +100,6 @@ export class ObjectPermissionService {
           },
         );
       }
-
-      if (objectMetadata.isSystem === true) {
-        throw new PermissionsException(
-          PermissionsExceptionMessage.CANNOT_ADD_OBJECT_PERMISSION_ON_SYSTEM_OBJECT,
-          PermissionsExceptionCode.CANNOT_ADD_OBJECT_PERMISSION_ON_SYSTEM_OBJECT,
-          {
-            userFriendlyMessage: msg`You cannot set permissions on system objects as they are managed by the platform.`,
-          },
-        );
-      }
     }
 
     const flatEntityToCreate: (UniversalFlatObjectPermission & {
@@ -143,14 +133,21 @@ export class ObjectPermissionService {
         );
       } else {
         const effectiveCanRead =
-          desired.canReadObjectRecords ?? current.canReadObjectRecords;
+          desired.canReadObjectRecords !== undefined
+            ? desired.canReadObjectRecords
+            : current.canReadObjectRecords;
         const effectiveCanUpdate =
-          desired.canUpdateObjectRecords ?? current.canUpdateObjectRecords;
+          desired.canUpdateObjectRecords !== undefined
+            ? desired.canUpdateObjectRecords
+            : current.canUpdateObjectRecords;
         const effectiveCanSoftDelete =
-          desired.canSoftDeleteObjectRecords ??
-          current.canSoftDeleteObjectRecords;
+          desired.canSoftDeleteObjectRecords !== undefined
+            ? desired.canSoftDeleteObjectRecords
+            : current.canSoftDeleteObjectRecords;
         const effectiveCanDestroy =
-          desired.canDestroyObjectRecords ?? current.canDestroyObjectRecords;
+          desired.canDestroyObjectRecords !== undefined
+            ? desired.canDestroyObjectRecords
+            : current.canDestroyObjectRecords;
 
         const canChanged =
           effectiveCanRead !== current.canReadObjectRecords ||
@@ -279,26 +276,34 @@ export class ObjectPermissionService {
             newObjectPermission.objectMetadataId,
         );
 
+      const resolvedCanRead =
+        newObjectPermission.canReadObjectRecords !== undefined
+          ? newObjectPermission.canReadObjectRecords
+          : existingObjectRecordPermission?.canReadObjectRecords;
       const hasReadPermissionAfterUpdate =
-        newObjectPermission.canReadObjectRecords ??
-        existingObjectRecordPermission?.canReadObjectRecords ??
-        flatRole.canReadAllObjectRecords;
+        resolvedCanRead ?? flatRole.canReadAllObjectRecords;
 
       if (hasReadPermissionAfterUpdate === false) {
+        const resolvedCanUpdate =
+          newObjectPermission.canUpdateObjectRecords !== undefined
+            ? newObjectPermission.canUpdateObjectRecords
+            : existingObjectRecordPermission?.canUpdateObjectRecords;
         const hasUpdatePermissionAfterUpdate =
-          newObjectPermission.canUpdateObjectRecords ??
-          existingObjectRecordPermission?.canUpdateObjectRecords ??
-          flatRole.canUpdateAllObjectRecords;
+          resolvedCanUpdate ?? flatRole.canUpdateAllObjectRecords;
 
+        const resolvedCanSoftDelete =
+          newObjectPermission.canSoftDeleteObjectRecords !== undefined
+            ? newObjectPermission.canSoftDeleteObjectRecords
+            : existingObjectRecordPermission?.canSoftDeleteObjectRecords;
         const hasSoftDeletePermissionAfterUpdate =
-          newObjectPermission.canSoftDeleteObjectRecords ??
-          existingObjectRecordPermission?.canSoftDeleteObjectRecords ??
-          flatRole.canSoftDeleteAllObjectRecords;
+          resolvedCanSoftDelete ?? flatRole.canSoftDeleteAllObjectRecords;
 
+        const resolvedCanDestroy =
+          newObjectPermission.canDestroyObjectRecords !== undefined
+            ? newObjectPermission.canDestroyObjectRecords
+            : existingObjectRecordPermission?.canDestroyObjectRecords;
         const hasDestroyPermissionAfterUpdate =
-          newObjectPermission.canDestroyObjectRecords ??
-          existingObjectRecordPermission?.canDestroyObjectRecords ??
-          flatRole.canDestroyAllObjectRecords;
+          resolvedCanDestroy ?? flatRole.canDestroyAllObjectRecords;
 
         if (
           hasUpdatePermissionAfterUpdate ||

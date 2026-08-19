@@ -5,10 +5,10 @@ import { useInView } from 'react-intersection-observer';
 import { SKELETON_LOADER_HEIGHT_SIZES } from '@/activities/components/SkeletonLoader';
 import { RECORD_BOARD_COLUMN_PADDING_AND_BORDER_WIDTH } from '@/object-record/record-board/constants/RecordBoardColumnPaddingAndBorderWidth';
 
-import { RECORD_BOARD_COLUMN_WIDTH } from '@/object-record/record-board/constants/RecordBoardColumnWidth';
+import { recordIndexKanbanColumnWidthComponentState } from '@/object-record/record-index/states/recordIndexKanbanColumnWidthComponentState';
 import { RECORD_BOARD_QUERY_PAGE_SIZE } from '@/object-record/record-board/constants/RecordBoardQueryPageSize';
-import { recordBoardIsFetchingMoreComponentState } from '@/object-record/record-board/states/recordBoardIsFetchingMoreComponentState';
 import { recordBoardShouldFetchMoreComponentState } from '@/object-record/record-board/states/recordBoardShouldFetchMoreComponentState';
+import { isDraggingRecordComponentState } from '@/object-record/record-drag/states/isDraggingRecordComponentState';
 import { visibleRecordFieldsComponentSelector } from '@/object-record/record-field/states/visibleRecordFieldsComponentSelector';
 import { visibleRecordGroupIdsComponentFamilySelector } from '@/object-record/record-group/states/selectors/visibleRecordGroupIdsComponentFamilySelector';
 import { recordIndexRecordGroupsAreInInitialLoadingComponentState } from '@/object-record/record-index/states/recordIndexRecordGroupsAreInInitialLoadingComponentState';
@@ -24,8 +24,8 @@ const StyledFetchMoreTriggerDiv = styled.div<{ width: number }>`
   min-width: ${({ width }) => width}px;
 `;
 
-// RecordCardHeaderContainer: height (24px) + padding top spacing(2) + padding bottom spacing(1)
-const BOARD_CARD_HEADER_HEIGHT = 24 + 8 + 4;
+// RecordCardHeaderContainer: height (32px) + padding top spacing(2) + padding bottom spacing(1)
+const BOARD_CARD_HEADER_HEIGHT = 32 + 8 + 4;
 
 // Per field row: skeleton height + RecordCardBodyContainer padding-bottom spacing(2) + StyledBodyContainer gap spacing(0.5)
 const BOARD_CARD_FIELD_ROW_HEIGHT =
@@ -38,12 +38,12 @@ export const RecordBoardFetchMoreInViewTriggerComponent = () => {
   const [recordBoardShouldFetchMore, setRecordBoardShouldFetchMore] =
     useAtomComponentState(recordBoardShouldFetchMoreComponentState);
 
-  const recordIndexRecordGroupsAreInInitialLoading = useAtomComponentStateValue(
-    recordIndexRecordGroupsAreInInitialLoadingComponentState,
+  const isDraggingRecord = useAtomComponentStateValue(
+    isDraggingRecordComponentState,
   );
 
-  const recordBoardIsFetchingMore = useAtomComponentStateValue(
-    recordBoardIsFetchingMoreComponentState,
+  const recordIndexRecordGroupsAreInInitialLoading = useAtomComponentStateValue(
+    recordIndexRecordGroupsAreInInitialLoadingComponentState,
   );
 
   const visibleRecordFields = useAtomComponentSelectorValue(
@@ -69,29 +69,32 @@ export const RecordBoardFetchMoreInViewTriggerComponent = () => {
     ViewType.KANBAN,
   );
 
+  const recordIndexKanbanColumnWidth = useAtomComponentStateValue(
+    recordIndexKanbanColumnWidthComponentState,
+  );
+
   const componentWidth =
-    visibleRecordGroupIds.length * RECORD_BOARD_COLUMN_WIDTH +
+    visibleRecordGroupIds.length * recordIndexKanbanColumnWidth +
     visibleRecordGroupIds.length *
       RECORD_BOARD_COLUMN_PADDING_AND_BORDER_WIDTH -
     1;
 
   useEffect(() => {
-    if (
-      !recordIndexRecordGroupsAreInInitialLoading &&
-      !recordBoardIsFetchingMore
-    ) {
-      const newShouldFetchMore = inView;
+    if (recordIndexRecordGroupsAreInInitialLoading || isDraggingRecord) {
+      return;
+    }
 
-      if (recordBoardShouldFetchMore !== newShouldFetchMore) {
-        setRecordBoardShouldFetchMore(newShouldFetchMore);
-      }
+    const newShouldFetchMore = inView;
+
+    if (recordBoardShouldFetchMore !== newShouldFetchMore) {
+      setRecordBoardShouldFetchMore(newShouldFetchMore);
     }
   }, [
     recordBoardShouldFetchMore,
     setRecordBoardShouldFetchMore,
     inView,
     recordIndexRecordGroupsAreInInitialLoading,
-    recordBoardIsFetchingMore,
+    isDraggingRecord,
   ]);
 
   return (

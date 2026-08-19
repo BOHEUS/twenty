@@ -3,14 +3,18 @@ import { gql } from '@apollo/client';
 export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
   fragment PageLayoutWidgetFragment on PageLayoutWidget {
     id
+    applicationId
+    universalIdentifier
+    isSystemSideEffect
     title
     type
     objectMetadataId
-    isOverridden
     createdAt
     updatedAt
+    isActive
     deletedAt
     conditionalDisplay
+    conditionalAvailabilityExpression
     gridPosition {
       column
       columnSpan
@@ -52,6 +56,7 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
         axisNameDisplay
         displayDataLabel
         displayLegend
+        numberFormat
         rangeMin
         rangeMax
         color
@@ -82,6 +87,7 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
         axisNameDisplay
         displayDataLabel
         displayLegend
+        numberFormat
         rangeMin
         rangeMax
         color
@@ -105,6 +111,7 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
         displayDataLabel
         showCenterMetric
         displayLegend
+        numberFormat
         hideEmptyCategory
         splitMultiValueFields
         color
@@ -119,7 +126,7 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
         aggregateOperation
         label
         displayDataLabel
-        format
+        numberFormat
         description
         filter
         prefix
@@ -130,17 +137,6 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
           fieldMetadataId
           optionValue
         }
-      }
-      ... on GaugeChartConfiguration {
-        configurationType
-        aggregateFieldMetadataId
-        aggregateOperation
-        displayDataLabel
-        color
-        description
-        filter
-        timezone
-        firstDayOfTheWeek
       }
       ... on IframeConfiguration {
         configurationType
@@ -159,10 +155,27 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
       ... on EmailsConfiguration {
         configurationType
       }
+      ... on EmailThreadConfiguration {
+        configurationType
+      }
+      ... on CallRecordingSummaryConfiguration {
+        configurationType
+      }
+      ... on CallRecordingTranscriptConfiguration {
+        configurationType
+      }
+      ... on MessageCampaignBodyConfiguration {
+        configurationType
+      }
+      ... on MessageCampaignDetailsConfiguration {
+        configurationType
+      }
       ... on FieldConfiguration {
         configurationType
         fieldDisplayMode
         fieldMetadataId
+        viewId
+        nestedRelationFieldMetadataId
       }
       ... on FieldRichTextConfiguration {
         configurationType
@@ -187,6 +200,10 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
       }
       ... on ViewConfiguration {
         configurationType
+      }
+      ... on RecordTableConfiguration {
+        configurationType
+        viewId
       }
       ... on WorkflowConfiguration {
         configurationType

@@ -1,102 +1,58 @@
+import { isNonEmptyString } from '@sniptt/guards';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
-import { isDefined } from 'twenty-shared/utils';
-import { useDebounce } from 'use-debounce';
 
-import { MAX_SEARCH_RESULTS } from '@/command-menu/constants/MaxSearchResults';
-import { useDraftNavigationMenuItems } from '@/navigation-menu-item/edit/hooks/useDraftNavigationMenuItems';
-import { addMenuItemInsertionContextState } from '@/navigation-menu-item/common/states/addMenuItemInsertionContextState';
-import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
-import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
-import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
-import { getObjectPermissionsFromMapByObjectMetadataId } from '@/settings/roles/role-permissions/objects-permissions/utils/getObjectPermissionsFromMapByObjectMetadataId';
+import { useAvailableNavigationMenuItemSearchRecords } from '@/navigation-menu-item/edit/side-panel/hooks/useAvailableNavigationMenuItemSearchRecords';
 import { SidePanelAddToNavigationDroppable } from '@/side-panel/components/SidePanelAddToNavigationDroppable';
 import { SidePanelGroup } from '@/side-panel/components/SidePanelGroup';
 import { SidePanelList } from '@/side-panel/components/SidePanelList';
+import { SidePanelObjectFilterDropdown } from '@/side-panel/components/SidePanelObjectFilterDropdown';
 import { SidePanelSubViewWithSearch } from '@/side-panel/components/SidePanelSubViewWithSearch';
 import { SidePanelNewSidebarItemRecordItem } from '@/navigation-menu-item/edit/side-panel/components/SidePanelNewSidebarItemRecordItem';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { useQuery } from '@apollo/client/react';
-import { SearchDocument } from '~/generated/graphql';
-
-type SearchRecordBase = {
-  recordId: string;
-  objectNameSingular: string;
-  label: string;
-  imageUrl?: string | null;
-};
 
 export const SidePanelNewSidebarItemRecordSubPage = () => {
   const { t } = useLingui();
-  const addMenuItemInsertionContext = useAtomStateValue(
-    addMenuItemInsertionContextState,
-  );
-  const disableDrag = addMenuItemInsertionContext?.disableDrag === true;
-  const { currentDraft } = useDraftNavigationMenuItems();
-  const { objectMetadataItems } = useObjectMetadataItems();
   const [recordSearchInput, setRecordSearchInput] = useState('');
-  const [deferredRecordSearchInput] = useDebounce(recordSearchInput, 300);
-  const coreClient = useApolloCoreClient();
-  const { objectPermissionsByObjectMetadataId } = useObjectPermissions();
+  const [selectedObjectNameSingular, setSelectedObjectNameSingular] = useState<
+    string | null
+  >(null);
+  const {
+    availableSearchRecords,
+    isSearchDebouncing,
+    recordSearchLoading,
+    trimmedSearchInput,
+  } = useAvailableNavigationMenuItemSearchRecords({
+    searchInput: recordSearchInput,
+    selectedObjectNameSingular,
+    skip: !isNonEmptyString(recordSearchInput.trim()),
+  });
 
-  const nonReadableObjectMetadataItemsNameSingular = objectMetadataItems
-    .filter(
-      (objectMetadataItem) =>
-        !getObjectPermissionsFromMapByObjectMetadataId({
-          objectPermissionsByObjectMetadataId,
-          objectMetadataId: objectMetadataItem.id,
-        })?.canReadObjectRecords,
-    )
-    .map((objectMetadataItem) => objectMetadataItem.nameSingular);
-
-  const { data: searchData, loading: recordSearchLoading } = useQuery(
-    SearchDocument,
-    {
-      client: coreClient,
-      variables: {
-        searchInput: deferredRecordSearchInput ?? '',
-        limit: MAX_SEARCH_RESULTS,
-        excludedObjectNameSingulars: [
-          'workspaceMember',
-          ...nonReadableObjectMetadataItemsNameSingular,
-        ],
-      },
-    },
-  );
-
-  const workspaceRecordIds = new Set(
-    currentDraft.flatMap((item) =>
-      isDefined(item.targetRecordId) ? [item.targetRecordId] : [],
-    ),
-  );
-
-  const searchRecords =
-    searchData?.search?.edges?.map((edge) => edge.node) ?? [];
-  const availableSearchRecords = searchRecords.filter(
-    (record) => !workspaceRecordIds.has(record.recordId),
-  ) as SearchRecordBase[];
-
-  const isEmpty = availableSearchRecords.length === 0 && !recordSearchLoading;
+  const isRecordSearchLoading = recordSearchLoading || isSearchDebouncing;
+  const isEmpty = availableSearchRecords.length === 0 && !isRecordSearchLoading;
   const selectableItemIds = isEmpty
     ? []
     : availableSearchRecords.map((record) => record.recordId);
-  const noResultsText =
-    deferredRecordSearchInput.length > 0
-      ? t`No results found`
-      : t`Type to search records`;
+  const noResultsText = isNonEmptyString(trimmedSearchInput)
+    ? t`No results found`
+    : t`Type to search records`;
 
   return (
     <SidePanelSubViewWithSearch
       searchPlaceholder={t`Search records...`}
       searchValue={recordSearchInput}
       onSearchChange={setRecordSearchInput}
+      rightElement={
+        <SidePanelObjectFilterDropdown
+          selectedObjectNameSingular={selectedObjectNameSingular}
+          onSelectObject={setSelectedObjectNameSingular}
+        />
+      }
     >
       <SidePanelAddToNavigationDroppable>
         {({ innerRef, droppableProps, placeholder }) => (
           <SidePanelList
-            commandGroups={[]}
             selectableItemIds={selectableItemIds}
-            loading={recordSearchLoading}
+            loading={isRecordSearchLoading}
             noResults={isEmpty}
             noResultsText={noResultsText}
           >
@@ -107,8 +63,7 @@ export const SidePanelNewSidebarItemRecordSubPage = () => {
                   <SidePanelNewSidebarItemRecordItem
                     key={record.recordId}
                     record={record}
-                    dragIndex={disableDrag ? undefined : index}
-                    disableDrag={disableDrag}
+                    dragIndex={index}
                   />
                 ))}
               </SidePanelGroup>

@@ -1,21 +1,28 @@
-import { isNonEmptyString } from '@sniptt/guards';
-
-import { NavigationMenuItemStyleIcon } from '@/navigation-menu-item/display/components/NavigationMenuItemStyleIcon';
-import { getStandardObjectIconColor } from '@/navigation-menu-item/common/utils/getStandardObjectIconColor';
+import { allowRequestsToTwentyIconsState } from '@/client-config/states/allowRequestsToTwentyIcons';
+import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
+import { ObjectMetadataIcon } from '@/object-metadata/components/ObjectMetadataIcon';
 import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
 import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
 import { useFindOneRecord } from '@/object-record/hooks/useFindOneRecord';
 import { useIsRecordFieldReadOnly } from '@/object-record/read-only/hooks/useIsRecordFieldReadOnly';
 import { FieldContext } from '@/object-record/record-field/ui/contexts/FieldContext';
 import { useRecordShowContainerActions } from '@/object-record/record-show/hooks/useRecordShowContainerActions';
-import { useRecordShowPage } from '@/object-record/record-show/hooks/useRecordShowPage';
+import { useRecordShowPageGroupByBreadcrumbInfo } from '@/object-record/record-show/hooks/useRecordShowPageGroupByBreadcrumbInfo';
 import { useRecordShowPagePagination } from '@/object-record/record-show/hooks/useRecordShowPagePagination';
+import { getRecordShowPageBreadcrumbPaginationLabel } from '@/object-record/record-show/utils/getRecordShowPageBreadcrumbPaginationLabel';
+import { recordStoreIdentifierFamilySelector } from '@/object-record/record-store/states/selectors/recordStoreIdentifierFamilySelector';
 import { RecordTitleCell } from '@/object-record/record-title-cell/components/RecordTitleCell';
 import { RecordTitleCellContainerType } from '@/object-record/record-title-cell/types/RecordTitleCellContainerType';
+import { useIsMobile } from '@/ui/utilities/responsive/hooks/useIsMobile';
+import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
+import { useState } from 'react';
 import { FieldMetadataType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { Avatar } from 'twenty-ui/data-display';
 import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 
 const StyledEditableTitleContainer = styled.div`
   align-items: center;
@@ -34,10 +41,31 @@ const StyledEditableTitlePrefix = styled.div`
   gap: ${themeCssVariables.spacing[1]};
 `;
 
-const StyledTitle = styled.div`
+const StyledBreadcrumbPrefixObjectIcon = styled.div`
+  display: flex;
+  flex-shrink: 0;
+  opacity: 0.64;
+`;
+
+const StyledTitle = styled.div<{ isEmphasized: boolean }>`
+  font-size: ${({ isEmphasized }) =>
+    isEmphasized ? themeCssVariables.font.size.md : 'inherit'};
+  font-weight: ${({ isEmphasized }) =>
+    isEmphasized ? themeCssVariables.font.weight.semiBold : 'inherit'};
   max-width: 100%;
   overflow: hidden;
   width: fit-content;
+`;
+
+const StyledAvatarContainer = styled.div`
+  align-items: center;
+  background: ${themeCssVariables.background.transparent.light};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  display: flex;
+  flex-shrink: 0;
+  justify-content: center;
+  margin-right: ${themeCssVariables.spacing[0.5]};
+  padding: ${themeCssVariables.spacing[1]};
 `;
 
 const StyledPaginationInformation = styled.span`
@@ -55,6 +83,10 @@ export const ObjectRecordShowPageBreadcrumb = ({
   objectLabel: string;
   labelIdentifierFieldMetadataItem?: FieldMetadataItem;
 }) => {
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  const isMobile = useIsMobile();
+
   const { loading } = useFindOneRecord({
     objectNameSingular,
     objectRecordId,
@@ -66,6 +98,18 @@ export const ObjectRecordShowPageBreadcrumb = ({
   const { objectMetadataItem } = useObjectMetadataItem({
     objectNameSingular,
   });
+
+  const allowRequestsToTwentyIcons = useAtomStateValue(
+    allowRequestsToTwentyIconsState,
+  );
+
+  const recordIdentifier = useAtomFamilySelectorValue(
+    recordStoreIdentifierFamilySelector,
+    {
+      recordId: objectRecordId,
+      allowRequestsToTwentyIcons,
+    },
+  );
 
   const { useUpdateOneObjectRecordMutation } = useRecordShowContainerActions({
     objectNameSingular,
@@ -80,36 +124,59 @@ export const ObjectRecordShowPageBreadcrumb = ({
   const { navigateToIndexView, rankInView, totalCount } =
     useRecordShowPagePagination(objectNameSingular, objectRecordId);
 
-  const { headerIcon: HeaderIcon } = useRecordShowPage(
-    objectNameSingular,
-    objectRecordId,
-  );
+  const { viewName, groupValueLabel, isGroupByActive, isGroupValueLoading } =
+    useRecordShowPageGroupByBreadcrumbInfo({
+      objectNameSingular,
+      objectRecordId,
+    });
 
-  const iconColor = isNonEmptyString(objectMetadataItem?.color)
-    ? objectMetadataItem.color
-    : getStandardObjectIconColor(objectNameSingular);
+  const { formatNumber } = useNumberFormat();
 
-  if (loading) {
+  const paginationInformation = getRecordShowPageBreadcrumbPaginationLabel({
+    rank: formatNumber(rankInView + 1),
+    total: formatNumber(totalCount),
+    isGroupByActive,
+    viewName,
+    isGroupValueLoading,
+    groupValueLabel,
+  });
+
+  if (!loading && isInitialLoad) {
+    setIsInitialLoad(false);
+  }
+
+  if (isInitialLoad && loading) {
     return null;
   }
 
   return (
-    <StyledEditableTitleContainer>
-      <StyledEditableTitlePrefix
-        onClick={() => {
-          navigateToIndexView();
-        }}
-      >
-        {isDefined(HeaderIcon) && (
-          <NavigationMenuItemStyleIcon
-            Icon={HeaderIcon}
-            color={iconColor ?? undefined}
-          />
-        )}
-        {objectLabel}
-        <span>{' / '}</span>
-      </StyledEditableTitlePrefix>
-      <StyledTitle>
+    <StyledEditableTitleContainer data-testid="top-bar-title">
+      {isMobile ? (
+        isDefined(recordIdentifier) && (
+          <StyledAvatarContainer>
+            <Avatar
+              avatarUrl={getAbsoluteImageUrl(recordIdentifier.avatarUrl)}
+              placeholder={recordIdentifier.name}
+              placeholderColorSeed={objectRecordId}
+              size="md"
+              type={recordIdentifier.avatarType}
+            />
+          </StyledAvatarContainer>
+        )
+      ) : (
+        <StyledEditableTitlePrefix
+          onClick={() => {
+            navigateToIndexView();
+          }}
+        >
+          <StyledBreadcrumbPrefixObjectIcon>
+            <ObjectMetadataIcon objectMetadataItem={objectMetadataItem} />
+          </StyledBreadcrumbPrefixObjectIcon>
+          {objectLabel}
+          <span>{' / '}</span>
+        </StyledEditableTitlePrefix>
+      )}
+      <StyledTitle isEmphasized={isMobile}>
         <FieldContext.Provider
           value={{
             recordId: objectRecordId,
@@ -134,14 +201,16 @@ export const ObjectRecordShowPageBreadcrumb = ({
           }}
         >
           <RecordTitleCell
-            sizeVariant="xs"
+            sizeVariant={isMobile ? 'sm' : 'xs'}
             containerType={RecordTitleCellContainerType.PageHeader}
           />
         </FieldContext.Provider>
       </StyledTitle>
-      <StyledPaginationInformation>
-        {`(${rankInView + 1}/${totalCount})`}
-      </StyledPaginationInformation>
+      {!isMobile && (
+        <StyledPaginationInformation>
+          {paginationInformation}
+        </StyledPaginationInformation>
+      )}
     </StyledEditableTitleContainer>
   );
 };

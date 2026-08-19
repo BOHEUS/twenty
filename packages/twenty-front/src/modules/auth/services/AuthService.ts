@@ -14,16 +14,18 @@ import {
 } from '~/generated-metadata/graphql';
 import { isUndefinedOrNull } from '~/utils/isUndefinedOrNull';
 
+const isDebugMode = process.env.IS_DEBUG_MODE === 'true';
+
 const logger = loggerLink(() => 'Twenty-Refresh');
 
 const renewTokenMutation = async (
   uri: string | undefined,
   refreshToken: string,
 ) => {
-  const httpLink = new HttpLink({ uri });
+  const httpLink = new HttpLink({ uri, credentials: 'include' });
 
   const client = new ApolloClient({
-    link: ApolloLink.from([logger, httpLink]),
+    link: ApolloLink.from([...(isDebugMode ? [logger] : []), httpLink]),
     cache: new InMemoryCache({}),
   });
 

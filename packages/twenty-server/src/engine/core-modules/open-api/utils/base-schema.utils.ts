@@ -1,4 +1,5 @@
 import { type OpenAPIV3_1 } from 'openapi-types';
+import { ApiPath } from 'twenty-shared/types';
 
 import { computeOpenApiPath } from 'src/engine/core-modules/open-api/utils/path.utils';
 
@@ -7,7 +8,6 @@ export const API_Version = 'v0.1';
 export const baseSchema = (
   schemaName: 'core' | 'metadata',
   serverUrl: string,
-  token?: string,
 ): OpenAPIV3_1.Document => {
   return {
     openapi: '3.1.1',
@@ -30,6 +30,10 @@ curl -H 'Authorization: Bearer <token>' <server>/rest/core/companies
 \`\`\`
 
 Tokens can be generated in Settings → Playground and are workspace-scoped.
+
+> **Never put your token in a URL.** Tokens passed as query parameters end up in
+> server access logs, browser history, and \`Referer\` headers, which is why the
+> API only accepts tokens from the \`Authorization\` header.
 
 
 ## Filters
@@ -65,10 +69,10 @@ Notes: Strings and dates are quoted; numbers are not.
 
 All list endpoints use cursor-based pagination.
 
-- Use **limit** to cap page size (default: 60, max: 60).
+- Use **limit** to cap page size (default: 60, max: 200).
 - Use **starting_after** to fetch the next page (forward).
 - Use **ending_before** to fetch the previous page (backward).
-- Responses include **pageInfo** with \`hasNextPage\`, \`startCursor\`, and \`endCursor\`.
+- Responses include **pageInfo** with \`hasNextPage\`, \`hasPreviousPage\`, \`startCursor\`, and \`endCursor\`.
 
 Examples:
 
@@ -101,24 +105,25 @@ order_by=id[AscNullsFirst],createdAt[DescNullsLast]
 
 ## Usage with LLMs
 
-You can use AI to generate code based on the OpenAPI schema with the following URLs:
+The recommended way to give an LLM agent (Claude Desktop, Cursor, Windsurf, …)
+access to your workspace is the **Twenty MCP server**, not this OpenAPI schema.
+The MCP server exposes typed tools the agent can call directly with proper
+header-based auth (OAuth or API key), no tokens in URLs.
+
+Configure it from **Settings → AI → MCP** in your workspace. The endpoint is:
 
 \`\`\`text
-Core: ${serverUrl}/rest/open-api/core?token=${token ?? '<your_token>'}
-Metadata: ${serverUrl}/rest/open-api/metadata?token=${token ?? '<your_token>'}
+${serverUrl}/mcp
 \`\`\`
 
-Quick prompt example (Cursor or any agent):
+If you specifically need the raw OpenAPI document (for code generation, type
+generation, etc.), download it locally with a header-authenticated request and
+hand the file to your tool — never paste a tokenized URL into a chat:
 
-\`\`\`text
-Here is an OpenAPI schema for the Twenty REST API:\n${serverUrl}/rest/open-api/core?token=${token ?? '<your_token>'}
-
-Use it to list companies created after 2024-01-01, ordered by createdAt desc, and include only 20 results.
+\`\`\`bash
+curl -H 'Authorization: Bearer <token>' \\
+  ${serverUrl}/${ApiPath.Rest}/open-api/${schemaName} > twenty-${schemaName}.json
 \`\`\`
-
-Notes:
-- Treat the token like a secret; prefer a short-lived Playground token.
-- Most editors can fetch and process the schema even if it's large.
 `,
       termsOfService:
         'https://github.com/twentyhq/twenty?tab=coc-ov-file#readme',
@@ -131,10 +136,9 @@ Notes:
       },
       version: API_Version,
     },
-    // Testing purposes
     servers: [
       {
-        url: `${serverUrl}/rest/${schemaName !== 'core' ? schemaName : ''}`,
+        url: `${serverUrl}/${ApiPath.Rest}/${schemaName !== 'core' ? schemaName : ''}`,
         description: 'Production Development',
       },
     ],

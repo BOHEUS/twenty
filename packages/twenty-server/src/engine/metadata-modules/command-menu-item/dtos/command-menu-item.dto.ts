@@ -13,6 +13,11 @@ import {
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 import { CommandMenuItemAvailabilityType } from 'src/engine/metadata-modules/command-menu-item/enums/command-menu-item-availability-type.enum';
+import { type CommandMenuItemOverrides } from 'src/engine/metadata-modules/command-menu-item/entities/command-menu-item.entity';
+import {
+  type CommandMenuItemPayload,
+  CommandMenuItemPayloadUnion,
+} from 'src/engine/metadata-modules/command-menu-item/dtos/command-menu-item-payload.union';
 import { EngineComponentKey } from 'src/engine/metadata-modules/command-menu-item/enums/engine-component-key.enum';
 import { FrontComponentDTO } from 'src/engine/metadata-modules/front-component/dtos/front-component.dto';
 
@@ -37,9 +42,9 @@ export class CommandMenuItemDTO {
   frontComponent?: FrontComponentDTO | null;
 
   @IsEnum(EngineComponentKey)
-  @IsOptional()
-  @Field(() => EngineComponentKey, { nullable: true })
-  engineComponentKey?: EngineComponentKey;
+  @IsNotEmpty()
+  @Field(() => EngineComponentKey)
+  engineComponentKey: EngineComponentKey;
 
   @IsString()
   @IsNotEmpty()
@@ -68,6 +73,10 @@ export class CommandMenuItemDTO {
   @Field(() => CommandMenuItemAvailabilityType)
   availabilityType: CommandMenuItemAvailabilityType;
 
+  @IsOptional()
+  @Field(() => CommandMenuItemPayloadUnion, { nullable: true })
+  payload?: CommandMenuItemPayload;
+
   @IsString({ each: true })
   @IsOptional()
   @Field(() => [String], { nullable: true })
@@ -83,11 +92,28 @@ export class CommandMenuItemDTO {
   @Field(() => UUIDScalarType, { nullable: true })
   availabilityObjectMetadataId?: string;
 
+  @IsUUID()
+  @IsOptional()
+  @Field(() => UUIDScalarType, { nullable: true })
+  pageLayoutId?: string;
+
   @HideField()
   workspaceId: string;
 
+  // Kept out of the schema but needed by the field resolvers: without it they
+  // cannot tell a standard label from one a workspace renamed, and would match
+  // the workspace's own copy against the standard catalog.
+  @HideField()
+  overrides?: CommandMenuItemOverrides | null;
+
+  @Field(() => UUIDScalarType, { nullable: true })
+  universalIdentifier?: string;
+
   @Field(() => UUIDScalarType, { nullable: true })
   applicationId?: string;
+
+  @Field(() => Boolean, { nullable: false })
+  isActive: boolean;
 
   @IsDateString()
   @Field()

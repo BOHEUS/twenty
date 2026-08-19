@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import {
+  GraphQLEnumType,
   GraphQLInputFieldConfigMap,
   GraphQLInputObjectType,
   isObjectType,
@@ -59,7 +60,6 @@ export class CompositeFieldMetadataUpdateGqlInputTypeGenerator {
         throw new Error('Relation fields are not supported in composite types');
       }
 
-      // Skip hidden fields
       if (property.hidden === true || property.hidden === 'input') {
         continue;
       }
@@ -72,7 +72,7 @@ export class CompositeFieldMetadataUpdateGqlInputTypeGenerator {
       const typeOptions = computeCompositeFieldTypeOptions(property);
 
       const type = isEnumFieldMetadataType(property.type)
-        ? this.gqlTypesStorage.getGqlTypeByKey(key)
+        ? this.gqlTypesStorage.getGqlTypeByKey<GraphQLEnumType>(key)
         : this.typeMapperService.mapToPreBuiltGraphQLInputType({
             fieldMetadataType: property.type,
             typeOptions,

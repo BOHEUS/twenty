@@ -19,14 +19,10 @@ type BaseChartConfiguration = {
 export type AggregateChartConfiguration = BaseChartConfiguration & {
   configurationType: 'AGGREGATE_CHART';
   label?: string;
-  format?: string;
+  numberFormat?: string;
   prefix?: string;
   suffix?: string;
   ratioAggregateConfig?: RatioAggregateConfig;
-};
-
-export type GaugeChartConfiguration = BaseChartConfiguration & {
-  configurationType: 'GAUGE_CHART';
 };
 
 export type PieChartConfiguration = BaseChartConfiguration & {
@@ -39,6 +35,7 @@ export type PieChartConfiguration = BaseChartConfiguration & {
   showCenterMetric?: boolean;
   displayLegend?: boolean;
   hideEmptyCategory?: boolean;
+  numberFormat?: string;
   splitMultiValueFields?: boolean;
 };
 
@@ -58,6 +55,7 @@ export type BarChartConfiguration = BaseChartConfiguration & {
   splitMultiValueFields?: boolean;
   axisNameDisplay?: string;
   displayLegend?: boolean;
+  numberFormat?: string;
   rangeMin?: number;
   rangeMax?: number;
   groupMode?: string;
@@ -81,6 +79,7 @@ export type LineChartConfiguration = BaseChartConfiguration & {
   splitMultiValueFields?: boolean;
   axisNameDisplay?: string;
   displayLegend?: boolean;
+  numberFormat?: string;
   rangeMin?: number;
   rangeMax?: number;
   isStacked?: boolean;
@@ -91,15 +90,25 @@ export type ViewConfiguration = {
   configurationType: 'VIEW';
 };
 
+export type RecordTableConfiguration = {
+  configurationType: 'RECORD_TABLE';
+  viewId?: SerializedRelation | null;
+  recordLimit?: number;
+};
+
 export type FieldConfiguration = {
   configurationType: 'FIELD';
   fieldMetadataId: string;
-  fieldDisplayMode: 'CARD' | 'FIELD' | 'VIEW';
+  fieldDisplayMode: 'CARD' | 'EDITOR' | 'FIELD' | 'VIEW' | 'TABLE';
+  viewId?: string;
+  // One-to-many relation field on the relation target object, to list records
+  // two relation hops away (e.g. Company -> People -> Owned opportunities)
+  nestedRelationFieldMetadataId?: string | null;
 };
 
 export type FieldsConfiguration = {
   configurationType: 'FIELDS';
-  viewId?: string | null;
+  viewId?: SerializedRelation | null;
   newFieldDefaultVisibility?: boolean | null;
   shouldAllowUserToSeeHiddenFields?: boolean;
 };
@@ -146,6 +155,26 @@ export type EmailsConfiguration = {
   configurationType: 'EMAILS';
 };
 
+export type EmailThreadConfiguration = {
+  configurationType: 'EMAIL_THREAD';
+};
+
+export type MessageCampaignBodyConfiguration = {
+  configurationType: 'MESSAGE_CAMPAIGN_BODY';
+};
+
+export type MessageCampaignDetailsConfiguration = {
+  configurationType: 'MESSAGE_CAMPAIGN_DETAILS';
+};
+
+export type CallRecordingSummaryConfiguration = {
+  configurationType: 'CALL_RECORDING_SUMMARY';
+};
+
+export type CallRecordingTranscriptConfiguration = {
+  configurationType: 'CALL_RECORDING_TRANSCRIPT';
+};
+
 export type CalendarConfiguration = {
   configurationType: 'CALENDAR';
 };
@@ -164,11 +193,11 @@ export type WorkflowRunConfiguration = {
 
 export type PageLayoutWidgetConfiguration =
   | AggregateChartConfiguration
-  | GaugeChartConfiguration
   | PieChartConfiguration
   | BarChartConfiguration
   | LineChartConfiguration
   | ViewConfiguration
+  | RecordTableConfiguration
   | FieldConfiguration
   | FieldsConfiguration
   | FieldRichTextConfiguration
@@ -183,4 +212,9 @@ export type PageLayoutWidgetConfiguration =
   | CalendarConfiguration
   | WorkflowConfiguration
   | WorkflowVersionConfiguration
-  | WorkflowRunConfiguration;
+  | WorkflowRunConfiguration
+  | EmailThreadConfiguration
+  | MessageCampaignBodyConfiguration
+  | MessageCampaignDetailsConfiguration
+  | CallRecordingSummaryConfiguration
+  | CallRecordingTranscriptConfiguration;

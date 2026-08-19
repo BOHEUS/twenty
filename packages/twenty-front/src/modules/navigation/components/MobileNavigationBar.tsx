@@ -1,111 +1,58 @@
-import { useSwitchToNewAIChat } from '@/ai/hooks/useSwitchToNewAIChat';
-import { MAIN_CONTEXT_STORE_INSTANCE_ID } from '@/context-store/constants/MainContextStoreInstanceId';
-import { contextStoreCurrentObjectMetadataItemIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataItemIdComponentState';
-import { useDefaultHomePagePath } from '@/navigation/hooks/useDefaultHomePagePath';
-import { useIsSettingsPage } from '@/navigation/hooks/useIsSettingsPage';
-import { currentMobileNavigationDrawerState } from '@/navigation/states/currentMobileNavigationDrawerState';
-import { useFilteredObjectMetadataItems } from '@/object-metadata/hooks/useFilteredObjectMetadataItems';
-import { useOpenRecordsSearchPageInSidePanel } from '@/side-panel/hooks/useOpenRecordsSearchPageInSidePanel';
-import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
+import { MobileNavigationBarScrollEffect } from '@/navigation/components/MobileNavigationBarScrollEffect';
+import { useMobileNavigationBarItems } from '@/navigation/hooks/useMobileNavigationBarItems';
+import { isMobileNavigationBarVisibleState } from '@/navigation/states/isMobileNavigationBarVisibleState';
 import { isSidePanelOpenedState } from '@/side-panel/states/isSidePanelOpenedState';
-import { isNavigationDrawerExpandedState } from '@/ui/navigation/states/isNavigationDrawerExpanded';
-import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
-import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
+import { RootStackingContextZIndices } from '@/ui/layout/constants/RootStackingContextZIndices';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
-import { useNavigate } from 'react-router-dom';
-import {
-  type IconComponent,
-  IconList,
-  IconMessageCirclePlus,
-  IconSearch,
-} from 'twenty-ui/display';
+import { styled } from '@linaria/react';
 import { NavigationBar } from 'twenty-ui/navigation';
-import { FeatureFlagKey } from '~/generated-metadata/graphql';
+import { themeCssVariables } from 'twenty-ui/theme-constants';
 
-type NavigationBarItemName = 'main' | 'search' | 'newAIChat';
+// The bar floats over the page, so the container has to let taps through to
+// whatever is scrolling underneath it. flex-start rather than left so the bar
+// follows the writing direction in RTL locales.
+const StyledFloatingContainer = styled.div`
+  bottom: 0;
+  display: flex;
+  justify-content: flex-start;
+  left: 0;
+  padding: ${themeCssVariables.spacing[3]};
+  padding-bottom: calc(
+    ${themeCssVariables.spacing[3]} + env(safe-area-inset-bottom, 0px)
+  );
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  z-index: ${RootStackingContextZIndices.MobileNavigationBar};
+
+  > * {
+    pointer-events: auto;
+  }
+
+  @media print {
+    display: none;
+  }
+`;
 
 export const MobileNavigationBar = () => {
-  const navigate = useNavigate();
-  const { defaultHomePagePath } = useDefaultHomePagePath();
   const isSidePanelOpened = useAtomStateValue(isSidePanelOpenedState);
-  const { closeSidePanelMenu } = useSidePanelMenu();
-  const { openRecordsSearchPage } = useOpenRecordsSearchPageInSidePanel();
-  const isSettingsPage = useIsSettingsPage();
-  const [isNavigationDrawerExpanded, setIsNavigationDrawerExpanded] =
-    useAtomState(isNavigationDrawerExpandedState);
-  const [currentMobileNavigationDrawer, setCurrentMobileNavigationDrawer] =
-    useAtomState(currentMobileNavigationDrawerState);
-  const { switchToNewChat } = useSwitchToNewAIChat();
-  const isAiEnabled = useIsFeatureEnabled(FeatureFlagKey.IS_AI_ENABLED);
-  const { alphaSortedActiveNonSystemObjectMetadataItems } =
-    useFilteredObjectMetadataItems();
-
-  const setContextStoreCurrentObjectMetadataItemId = useSetAtomComponentState(
-    contextStoreCurrentObjectMetadataItemIdComponentState,
-    MAIN_CONTEXT_STORE_INSTANCE_ID,
+  const isMobileNavigationBarVisible = useAtomStateValue(
+    isMobileNavigationBarVisibleState,
   );
+  const { items, activeItemName } = useMobileNavigationBarItems();
 
-  const activeItemName = isNavigationDrawerExpanded
-    ? currentMobileNavigationDrawer
-    : isSidePanelOpened
-      ? 'search'
-      : 'main';
+  const isHidden = isSidePanelOpened || !isMobileNavigationBarVisible;
 
-  const items: {
-    name: NavigationBarItemName;
-    Icon: IconComponent;
-    onClick: () => void;
-  }[] = [
-    {
-      name: 'main',
-      Icon: IconList,
-      onClick: () => {
-        closeSidePanelMenu();
-        setIsNavigationDrawerExpanded(
-          (previousIsOpen) => activeItemName !== 'main' || !previousIsOpen,
-        );
-        setCurrentMobileNavigationDrawer('main');
-
-        if (isSettingsPage) {
-          navigate(defaultHomePagePath);
-        }
-      },
-    },
-    {
-      name: 'search',
-      Icon: IconSearch,
-      onClick: () => {
-        setIsNavigationDrawerExpanded(false);
-        closeSidePanelMenu();
-
-        if (isSettingsPage) {
-          const firstObjectMetadataItem =
-            alphaSortedActiveNonSystemObjectMetadataItems[0];
-          if (firstObjectMetadataItem !== undefined) {
-            setContextStoreCurrentObjectMetadataItemId(
-              firstObjectMetadataItem.id,
-            );
-          }
-        }
-
-        openRecordsSearchPage();
-      },
-    },
-    ...(isAiEnabled
-      ? [
-          {
-            name: 'newAIChat' as const,
-            Icon: IconMessageCirclePlus,
-            onClick: () => {
-              setIsNavigationDrawerExpanded(false);
-              closeSidePanelMenu();
-              switchToNewChat();
-            },
-          },
-        ]
-      : []),
-  ];
-
-  return <NavigationBar activeItemName={activeItemName} items={items} />;
+  return (
+    <>
+      <MobileNavigationBarScrollEffect />
+      <StyledFloatingContainer>
+        <NavigationBar
+          activeItemName={activeItemName}
+          isHidden={isHidden}
+          items={items}
+        />
+      </StyledFloatingContainer>
+    </>
+  );
 };

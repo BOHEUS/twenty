@@ -1,11 +1,13 @@
 import { execSync } from 'child_process';
 import path from 'path';
 
+import { applyGeneratedCover } from '@/cli/utilities/build/cover/apply-generated-cover';
 import { buildApplication } from '@/cli/utilities/build/common/build-application';
-import { synchronizeBuiltApplication } from '@/cli/utilities/build/common/synchronize-built-application';
 import { runTypecheck } from '@/cli/utilities/build/common/typecheck-plugin';
 import { buildAndValidateManifest } from '@/cli/utilities/build/manifest/build-and-validate-manifest';
-import { ClientService } from '@/cli/utilities/client/client-service';
+import { manifestUpdateChecksums } from '@/cli/utilities/build/manifest/manifest-update-checksums';
+import { writeManifestToOutput } from '@/cli/utilities/build/manifest/manifest-writer';
+import { compileApplicationTranslations } from '@/cli/utilities/translations/compile-application-translations';
 import { runSafe } from '@/cli/utilities/run-safe';
 import { APP_ERROR_CODES, type CommandResult } from '@/cli/types';
 
@@ -40,37 +42,37 @@ const innerAppBuild = async (
     };
   }
 
-  const { manifest, filePaths } = manifestResult;
+  const { filePaths } = manifestResult;
 
   for (const warning of manifestResult.warnings) {
     onProgress?.(`⚠ ${warning}`);
   }
 
+  const { manifest, generatedAssets } = await applyGeneratedCover({
+    appPath,
+    manifest: manifestResult.manifest,
+  }).catch((error) => {
+    onProgress?.(
+      `⚠ Skipped cover image generation: ${error instanceof Error ? error.message : String(error)}`,
+    );
+
+    return { manifest: manifestResult.manifest, generatedAssets: [] };
+  });
+
+  if (generatedAssets.length > 0) {
+    onProgress?.('Generated cover image from logo');
+  }
+
+  const translations = await compileApplicationTranslations(appPath);
+
   onProgress?.('Building application files...');
 
-  const firstBuildResult = await buildApplication({
+  const buildResult = await buildApplication({
     appPath,
     manifest,
     filePaths,
+    generatedAssets,
   });
-
-  onProgress?.('Syncing application schema...');
-
-  const firstSyncResult = await synchronizeBuiltApplication({
-    appPath,
-    manifest,
-    builtFileInfos: firstBuildResult.builtFileInfos,
-  });
-
-  if (!firstSyncResult.success) {
-    return firstSyncResult;
-  }
-
-  onProgress?.('Generating API client...');
-
-  const clientService = new ClientService();
-
-  await clientService.generateCoreClient({ appPath });
 
   onProgress?.('Running typecheck...');
 
@@ -91,31 +93,21 @@ const innerAppBuild = async (
     };
   }
 
-  onProgress?.('Rebuilding with generated client...');
-
-  const finalBuildResult = await buildApplication({
-    appPath,
+  const updatedManifest = manifestUpdateChecksums({
     manifest,
-    filePaths,
+    builtFileInfos: buildResult.builtFileInfos,
   });
 
-  onProgress?.('Syncing built files...');
-
-  const finalSyncResult = await synchronizeBuiltApplication({
+  await writeManifestToOutput(
     appPath,
-    manifest,
-    builtFileInfos: finalBuildResult.builtFileInfos,
-  });
-
-  if (!finalSyncResult.success) {
-    return finalSyncResult;
-  }
+    translations ? { ...updatedManifest, translations } : updatedManifest,
+  );
 
   const outputDir = path.join(appPath, '.twenty', 'output');
 
   const result: AppBuildResult = {
     outputDir,
-    fileCount: finalBuildResult.builtFileInfos.size,
+    fileCount: buildResult.builtFileInfos.size,
   };
 
   if (options.tarball) {

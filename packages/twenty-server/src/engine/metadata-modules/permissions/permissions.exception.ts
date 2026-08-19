@@ -18,6 +18,8 @@ export enum PermissionsExceptionCode {
   UNKNOWN_OPERATION_NAME = 'UNKNOWN_OPERATION_NAME_PERMISSIONS',
   UNKNOWN_REQUIRED_PERMISSION = 'UNKNOWN_REQUIRED_PERMISSION',
   CANNOT_UPDATE_SELF_ROLE = 'CANNOT_UPDATE_SELF_ROLE',
+  CANNOT_DELETE_OWN_ROLE = 'CANNOT_DELETE_OWN_ROLE',
+  CANNOT_REVOKE_OWN_SETTINGS_ACCESS = 'CANNOT_REVOKE_OWN_SETTINGS_ACCESS',
   NO_ROLE_FOUND_FOR_USER_WORKSPACE = 'NO_ROLE_FOUND_FOR_USER_WORKSPACE',
   API_KEY_ROLE_NOT_FOUND = 'API_KEY_ROLE_NOT_FOUND',
   NO_AUTHENTICATION_CONTEXT = 'NO_AUTHENTICATION_CONTEXT',
@@ -42,12 +44,16 @@ export enum PermissionsExceptionCode {
   UPSERT_FIELD_PERMISSION_FAILED = 'UPSERT_FIELD_PERMISSION_FAILED',
   PERMISSION_NOT_FOUND = 'PERMISSION_NOT_FOUND',
   OBJECT_PERMISSION_NOT_FOUND = 'OBJECT_PERMISSION_NOT_FOUND',
+  FIELD_PERMISSION_NOT_FOUND = 'FIELD_PERMISSION_NOT_FOUND',
   EMPTY_FIELD_PERMISSION_NOT_ALLOWED = 'EMPTY_FIELD_PERMISSION_NOT_ALLOWED',
   JOIN_COLUMN_NAME_REQUIRED = 'JOIN_COLUMN_NAME_REQUIRED',
   COMPOSITE_TYPE_NOT_FOUND = 'COMPOSITE_TYPE_NOT_FOUND',
   ROLE_MUST_HAVE_AT_LEAST_ONE_TARGET = 'ROLE_MUST_HAVE_AT_LEAST_ONE_TARGET',
   ROLE_CANNOT_BE_ASSIGNED_TO_USERS = 'ROLE_CANNOT_BE_ASSIGNED_TO_USERS',
+  ROLE_CANNOT_BE_ASSIGNED_TO_API_KEYS = 'ROLE_CANNOT_BE_ASSIGNED_TO_API_KEYS',
+  ROLE_CANNOT_BE_ASSIGNED_TO_AGENTS = 'ROLE_CANNOT_BE_ASSIGNED_TO_AGENTS',
   APPLICATION_ROLE_NOT_FOUND = 'APPLICATION_ROLE_NOT_FOUND',
+  ROLE_BELONGS_TO_ANOTHER_APPLICATION = 'ROLE_BELONGS_TO_ANOTHER_APPLICATION',
 }
 
 const getPermissionsExceptionUserFriendlyMessage = (
@@ -80,6 +86,10 @@ const getPermissionsExceptionUserFriendlyMessage = (
       return msg`Unknown permission required.`;
     case PermissionsExceptionCode.CANNOT_UPDATE_SELF_ROLE:
       return msg`You cannot update your own role.`;
+    case PermissionsExceptionCode.CANNOT_DELETE_OWN_ROLE:
+      return msg`You cannot delete a role you are assigned to. Ask another administrator to delete it.`;
+    case PermissionsExceptionCode.CANNOT_REVOKE_OWN_SETTINGS_ACCESS:
+      return msg`You cannot remove settings access from your own role. Ask another administrator to make this change.`;
     case PermissionsExceptionCode.NO_ROLE_FOUND_FOR_USER_WORKSPACE:
       return msg`No role found for this user in the workspace.`;
     case PermissionsExceptionCode.API_KEY_ROLE_NOT_FOUND:
@@ -128,6 +138,8 @@ const getPermissionsExceptionUserFriendlyMessage = (
       return msg`Permission not found.`;
     case PermissionsExceptionCode.OBJECT_PERMISSION_NOT_FOUND:
       return msg`Object permission not found.`;
+    case PermissionsExceptionCode.FIELD_PERMISSION_NOT_FOUND:
+      return msg`Field permission not found.`;
     case PermissionsExceptionCode.EMPTY_FIELD_PERMISSION_NOT_ALLOWED:
       return msg`Empty field permissions are not allowed.`;
     case PermissionsExceptionCode.JOIN_COLUMN_NAME_REQUIRED:
@@ -138,8 +150,14 @@ const getPermissionsExceptionUserFriendlyMessage = (
       return msg`Role must have at least one target.`;
     case PermissionsExceptionCode.ROLE_CANNOT_BE_ASSIGNED_TO_USERS:
       return msg`This role cannot be assigned to users.`;
+    case PermissionsExceptionCode.ROLE_CANNOT_BE_ASSIGNED_TO_API_KEYS:
+      return msg`This role cannot be assigned to API keys.`;
+    case PermissionsExceptionCode.ROLE_CANNOT_BE_ASSIGNED_TO_AGENTS:
+      return msg`This role cannot be assigned to agents.`;
     case PermissionsExceptionCode.APPLICATION_ROLE_NOT_FOUND:
       return msg`No role assigned to the application.`;
+    case PermissionsExceptionCode.ROLE_BELONGS_TO_ANOTHER_APPLICATION:
+      return msg`Cannot target a role owned by another application.`;
     default:
       assertUnreachable(code);
   }
@@ -166,6 +184,8 @@ export enum PermissionsExceptionMessage {
   CANNOT_DELETE_LAST_ADMIN_USER = 'Cannot delete account: user is the unique admin of a workspace',
   UNKNOWN_OPERATION_NAME = 'Unknown operation name, cannot determine required permission',
   CANNOT_UPDATE_SELF_ROLE = 'Cannot update self role',
+  CANNOT_DELETE_OWN_ROLE = 'Cannot delete a role assigned to the acting user',
+  CANNOT_REVOKE_OWN_SETTINGS_ACCESS = 'Cannot revoke settings access from the acting user role',
   NO_ROLE_FOUND_FOR_USER_WORKSPACE = 'No role found for userWorkspace',
   API_KEY_ROLE_NOT_FOUND = 'API key has no role assigned',
   NO_AUTHENTICATION_CONTEXT = 'No valid authentication context found',
@@ -184,6 +204,7 @@ export enum PermissionsExceptionMessage {
   FIELD_RESTRICTION_ONLY_ALLOWED_ON_READABLE_OBJECT = 'Field restriction only makes sense on readable object',
   FIELD_RESTRICTION_ON_UPDATE_ONLY_ALLOWED_ON_UPDATABLE_OBJECT = 'Field restriction on update only makes sense on updatable object',
   OBJECT_PERMISSION_NOT_FOUND = 'Object permission not found',
+  FIELD_PERMISSION_NOT_FOUND = 'Field permission not found',
   EMPTY_FIELD_PERMISSION_NOT_ALLOWED = 'Empty field permission not allowed',
   ROLE_MUST_HAVE_AT_LEAST_ONE_TARGET = 'Role must be assignable to at least one target type',
   ROLE_CANNOT_BE_ASSIGNED_TO_USERS = 'Role cannot be assigned to users',

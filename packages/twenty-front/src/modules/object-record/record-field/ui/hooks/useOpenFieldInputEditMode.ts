@@ -66,10 +66,12 @@ export const useOpenFieldInputEditMode = () => {
       fieldDefinition,
       recordId,
       prefix,
+      onFileUploadClose,
     }: {
       fieldDefinition: FieldDefinition<FieldMetadata>;
       recordId: string;
       prefix?: string;
+      onFileUploadClose?: () => void;
     }) => {
       const objectMetadataItems = store.get(objectMetadataItemsSelector.atom);
 
@@ -85,7 +87,6 @@ export const useOpenFieldInputEditMode = () => {
         fieldDefinition.metadata.settings,
       );
 
-      // Handle Files field with custom behavior for empty state
       if (isFieldFiles(fieldDefinition)) {
         const objectMetadataItem = objectMetadataItems.find(
           (item) =>
@@ -106,6 +107,7 @@ export const useOpenFieldInputEditMode = () => {
                 updateOneRecordInput: updateInput,
               });
             },
+            onFileUploadClose,
             fieldDefinition: {
               metadata: {
                 settings: fieldDefinition.metadata.settings ?? undefined,

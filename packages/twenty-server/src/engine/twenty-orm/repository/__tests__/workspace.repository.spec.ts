@@ -1,6 +1,7 @@
 import {
   FeatureFlagKey,
   FieldMetadataType,
+  MetadataWritability,
   type ObjectsPermissions,
 } from 'twenty-shared/types';
 import {
@@ -70,11 +71,12 @@ describe('WorkspaceRepository', () => {
       type: FieldMetadataType.UUID,
       objectMetadataId: 'test-metadata-id',
       isActive: true,
+      isSystemSideEffect: false,
       isNullable: false,
       isUnique: true,
       isSystem: true,
-      isCustom: false,
-      isUIReadOnly: false,
+      isUIEditable: true,
+      writability: MetadataWritability.OPEN,
       isLabelSyncedWithName: false,
       label: 'ID',
       description: 'Record ID',
@@ -87,12 +89,14 @@ describe('WorkspaceRepository', () => {
       options: null,
       settings: null,
       morphId: null,
-      standardOverrides: null,
+      overrides: null,
       applicationId: 'application-id',
       relationTargetFieldMetadataId: null,
       relationTargetObjectMetadataId: null,
       calendarViewIds: [],
+      calendarEndViewIds: [],
       viewFilterIds: [],
+      fieldPermissionIds: [],
       kanbanAggregateOperationViewIds: [],
       viewFieldIds: [],
       mainGroupByFieldMetadataViewIds: [],
@@ -104,9 +108,13 @@ describe('WorkspaceRepository', () => {
       viewFieldUniversalIdentifiers: [],
       kanbanAggregateOperationViewUniversalIdentifiers: [],
       calendarViewUniversalIdentifiers: [],
+      calendarEndViewUniversalIdentifiers: [],
       mainGroupByFieldMetadataViewUniversalIdentifiers: [],
+      fieldPermissionUniversalIdentifiers: [],
       viewSortIds: [],
       viewSortUniversalIdentifiers: [],
+      searchFieldMetadataIds: [],
+      searchFieldMetadataUniversalIdentifiers: [],
       universalSettings: null,
     };
 
@@ -173,7 +181,6 @@ describe('WorkspaceRepository', () => {
       false,
     );
 
-    // Mock the private methods
     jest
       .spyOn(repository as any, 'getObjectMetadataFromTarget')
       .mockResolvedValue({
@@ -403,6 +410,7 @@ describe('WorkspaceRepository', () => {
         'test-entity',
         { id: 'test-id' },
         { name: 'test' },
+        undefined,
         {
           shouldBypassPermissionChecks: false,
           objectRecordsPermissions: mockObjectRecordsPermissions,

@@ -130,9 +130,9 @@ Die Daten entsprechen nicht dem erwarteten Format für diesen Feldtyp.
 **Lösung:** Verwenden Sie das Format `https://domain.com` (empfohlen)
 
 ```
-⚠️ acme.com         (gültig, aber nicht empfohlen)
-⚠️ www.acme.com     (gültig, aber nicht empfohlen)
-✅ https://acme.com  (empfohlen)
+⚠️ acme.com         (valid, but not recommended)
+⚠️ www.acme.com     (valid, but not recommended)
+✅ https://acme.com  (recommended)
 ```
 
 <Note>Alle Formate sind gültig, aber `https://domain.com` wird empfohlen, da es dem von der E-Mail-/Kalendersynchronisierung verwendeten Format entspricht. Die Verwendung anderer Formate kann doppelte Unternehmen erzeugen.</Note>
@@ -140,12 +140,12 @@ Die Daten entsprechen nicht dem erwarteten Format für diesen Feldtyp.
 #### Datum
 
 **Problem:** Nicht erkanntes Datumsformat
-**Lösung:** Verwenden Sie in der gesamten Datei ein einheitliches Format
+**Lösung:** Verwenden Sie in der gesamten Datei durchgängig das Format `YYYY-MM-DD`
 
 ```
-✓ 2024-03-15        (YYYY-MM-DD - empfohlen)
-✓ 03/15/2024        (MM/DD/YYYY)
-✓ 15/03/2024        (DD/MM/YYYY)
+✓ 2024-03-15        (YYYY-MM-DD)
+❌ 03/15/2024        (MM/DD/YYYY)
+❌ 15/03/2024        (DD/MM/YYYY)
 ```
 
 #### Telefon

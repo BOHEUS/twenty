@@ -1,70 +1,107 @@
 import { SKELETON_LOADER_HEIGHT_SIZES } from '@/activities/components/SkeletonLoader';
 import {
-  parseRecordReference,
-  RECORD_REFERENCE_REGEX,
-  RecordLink,
-} from '@/ai/components/RecordLink';
-import {
   StyledMarkdownContainer,
   StyledParagraph,
   StyledSkeletonContainer,
   StyledTableScrollContainer,
 } from '@/ai/components/LazyMarkdownRendererStyledComponents';
-import { lazy, Suspense, useContext } from 'react';
+import { MarkdownCodeBlock } from '@/ai/components/MarkdownCodeBlock';
+import { TextWithChatReferences } from '@/ai/components/TextWithChatReferences';
+import { EMPTY_MARKDOWN_BLOCK_SPLIT_CACHE } from '@/ai/constants/EmptyMarkdownBlockSplitCache';
+import { getMarkdownBlocksIncrementally } from '@/ai/utils/getMarkdownBlocksIncrementally';
+import { protectChatReferencesForMarkdown } from '@/ai/utils/protectChatReferencesForMarkdown';
+import {
+  cloneElement,
+  isValidElement,
+  lazy,
+  memo,
+  Suspense,
+  useContext,
+  useRef,
+} from 'react';
 import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
-import { isDefined } from 'twenty-shared/utils';
+import { getSafeUrl, isDefined } from 'twenty-shared/utils';
 import { ThemeContext } from 'twenty-ui/theme-constants';
 
-const TextWithRecordLinks = ({ text }: { text: string }) => {
-  const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-
-  RECORD_REFERENCE_REGEX.lastIndex = 0;
-
-  let match;
-
-  while ((match = RECORD_REFERENCE_REGEX.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
-    }
-
-    const parsed = parseRecordReference(match[0]);
-
-    if (isDefined(parsed)) {
-      parts.push(
-        <RecordLink
-          key={match.index}
-          objectNameSingular={parsed.objectNameSingular}
-          recordId={parsed.recordId}
-          displayName={parsed.displayName}
-        />,
-      );
-    }
-
-    lastIndex = match.index + match[0].length;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
-  return <>{parts}</>;
-};
-
-const processChildrenForRecordLinks = (
+const processChildrenForChatReferences = (
   children: React.ReactNode,
 ): React.ReactNode => {
   if (typeof children === 'string') {
-    return <TextWithRecordLinks text={children} />;
+    return <TextWithChatReferences text={children} />;
   }
 
   if (Array.isArray(children)) {
     return children.map((child, index) => (
-      <span key={index}>{processChildrenForRecordLinks(child)}</span>
+      <span key={index}>{processChildrenForChatReferences(child)}</span>
     ));
   }
 
+  if (isValidElement<{ children?: React.ReactNode }>(children)) {
+    const childProps = children.props;
+
+    if (isDefined(childProps.children)) {
+      return cloneElement(children, {
+        children: processChildrenForChatReferences(childProps.children),
+      });
+    }
+  }
+
   return children;
+};
+
+const createChatReferenceElement =
+  (Element: React.ElementType) =>
+  ({ children }: { children?: React.ReactNode }) => (
+    <Element>{processChildrenForChatReferences(children)}</Element>
+  );
+
+// react-markdown uses each entry as the JSX element type, so rebuilding this map
+// per render would remount every node on every streamed chunk.
+const MARKDOWN_COMPONENTS = {
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <StyledTableScrollContainer>
+      <table>{children}</table>
+    </StyledTableScrollContainer>
+  ),
+  p: createChatReferenceElement(StyledParagraph),
+  td: createChatReferenceElement('td'),
+  th: createChatReferenceElement('th'),
+  li: createChatReferenceElement('li'),
+  h1: createChatReferenceElement('h1'),
+  h2: createChatReferenceElement('h2'),
+  h3: createChatReferenceElement('h3'),
+  h4: createChatReferenceElement('h4'),
+  h5: createChatReferenceElement('h5'),
+  h6: createChatReferenceElement('h6'),
+  a: ({
+    children,
+    href,
+    title,
+  }: {
+    children?: React.ReactNode;
+    href?: string;
+    title?: string;
+  }) => (
+    <a
+      className="markdown-link"
+      href={getSafeUrl(href)}
+      title={title}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {processChildrenForChatReferences(children)}
+    </a>
+  ),
+  code: ({
+    className,
+    children,
+  }: {
+    className?: string;
+    children?: React.ReactNode;
+  }) => <code className={className}>{children}</code>,
+  pre: ({ children }: { children?: React.ReactNode }) => (
+    <MarkdownCodeBlock>{children}</MarkdownCodeBlock>
+  ),
 };
 
 const MarkdownRenderer = lazy(async () => {
@@ -73,57 +110,11 @@ const MarkdownRenderer = lazy(async () => {
     import('remark-gfm'),
   ]);
 
+  const remarkPlugins = [remarkGfm];
+
   return {
-    default: ({
-      children,
-      TableScrollContainer,
-      ParagraphComponent,
-    }: {
-      children: string;
-      TableScrollContainer: React.ComponentType<{ children: React.ReactNode }>;
-      ParagraphComponent: React.ComponentType<{ children: React.ReactNode }>;
-    }) => (
-      <Markdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          table: ({ children }) => (
-            <TableScrollContainer>
-              <table>{children}</table>
-            </TableScrollContainer>
-          ),
-          p: ({ children }) => (
-            <ParagraphComponent>
-              {processChildrenForRecordLinks(children)}
-            </ParagraphComponent>
-          ),
-          li: ({ children }) => (
-            <li>{processChildrenForRecordLinks(children)}</li>
-          ),
-          a: ({ children, href, title, target, rel, node: _node }) => (
-            <a
-              className="markdown-link"
-              href={href}
-              title={title}
-              target={target}
-              rel={rel}
-            >
-              {processChildrenForRecordLinks(children)}
-            </a>
-          ),
-          code: ({
-            className,
-            children,
-          }: {
-            className?: string;
-            children?: React.ReactNode;
-          }) => <code className={className}>{children}</code>,
-          pre: ({ children }) => (
-            <div className="markdown-code-outer-container">
-              <pre className="markdown-block-code">{children}</pre>
-            </div>
-          ),
-        }}
-      >
+    default: ({ children }: { children: string }) => (
+      <Markdown remarkPlugins={remarkPlugins} components={MARKDOWN_COMPONENTS}>
         {children}
       </Markdown>
     ),
@@ -164,16 +155,39 @@ const LoadingSkeleton = () => {
   );
 };
 
+// Protecting per block behind the memo means only the streaming tail blocks
+// pay the reference-parsing cost on each flush; settled blocks never re-run it.
+const MemoizedMarkdownBlock = memo(
+  ({ blockText }: { blockText: string }) => (
+    <MarkdownRenderer>
+      {protectChatReferencesForMarkdown(blockText)}
+    </MarkdownRenderer>
+  ),
+  (previousProps, nextProps) => previousProps.blockText === nextProps.blockText,
+);
+
 export const LazyMarkdownRenderer = ({ text }: { text: string }) => {
+  // Not state: the blocks are a pure function of `text`, the ref only caches
+  // the previous split so streaming appends skip re-tokenizing settled blocks.
+  // oxlint-disable-next-line twenty/no-state-useref
+  const blockSplitCacheRef = useRef(EMPTY_MARKDOWN_BLOCK_SPLIT_CACHE);
+
+  const { blocks: markdownBlocks, cache } = getMarkdownBlocksIncrementally({
+    text,
+    cache: blockSplitCacheRef.current,
+  });
+
+  blockSplitCacheRef.current = cache;
+
   return (
-    <StyledMarkdownContainer className="markdown-section">
+    <StyledMarkdownContainer
+      className="markdown-section"
+      data-replay-ignore-mutations="true"
+    >
       <Suspense fallback={<LoadingSkeleton />}>
-        <MarkdownRenderer
-          TableScrollContainer={StyledTableScrollContainer}
-          ParagraphComponent={StyledParagraph}
-        >
-          {text}
-        </MarkdownRenderer>
+        {markdownBlocks.map((blockText, blockIndex) => (
+          <MemoizedMarkdownBlock key={blockIndex} blockText={blockText} />
+        ))}
       </Suspense>
     </StyledMarkdownContainer>
   );

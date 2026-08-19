@@ -18,7 +18,7 @@ import {
   type FieldPhonesValue,
   type PhoneRecord,
 } from '@/object-record/record-field/ui/types/FieldMetadata';
-import { phonesSchema } from '@/object-record/record-field/ui/types/guards/isFieldPhonesValue';
+import { phonesFieldValueSchema } from '@/object-record/record-field/ui/validation-schemas/phonesFieldValueSchema';
 import { PhoneCountryPickerDropdownButton } from '@/ui/input/components/internal/phone/components/PhoneCountryPickerDropdownButton';
 import { useContext } from 'react';
 import { MULTI_ITEM_FIELD_DEFAULT_MAX_VALUES } from 'twenty-shared/constants';
@@ -80,7 +80,7 @@ const StyledCustomPhoneInputWrapper = styled.div`
 export const PhonesFieldInput = () => {
   const { fieldDefinition, setDraftValue, draftValue } = usePhonesField();
 
-  const { onEscape, onClickOutside, onEnter } = useContext(
+  const { onEscape, onClickOutside, onEnter, onSubmit } = useContext(
     FieldInputEventContext,
   );
 
@@ -103,7 +103,7 @@ export const PhonesFieldInput = () => {
       primaryPhoneCallingCode: nextPrimaryPhone?.callingCode ?? '',
       additionalPhones: nextAdditionalPhones,
     };
-    const parseResponse = phonesSchema.safeParse(nextValue);
+    const parseResponse = phonesFieldValueSchema.safeParse(nextValue);
     if (parseResponse.success) {
       return parseResponse.data;
     }
@@ -152,6 +152,13 @@ export const PhonesFieldInput = () => {
     onEnter?.({ newValue: parseArrayToPhonesValue(updatedPhones) });
   };
 
+  const handleSubmit = (updatedPhones: PhoneRecord[]) => {
+    onSubmit?.({
+      newValue: parseArrayToPhonesValue(updatedPhones),
+      skipClose: true,
+    });
+  };
+
   return (
     <MultiItemFieldInput
       items={phones}
@@ -159,6 +166,7 @@ export const PhonesFieldInput = () => {
       onClickOutside={handleClickOutside}
       onEscape={handleEscape}
       onEnter={handleEnter}
+      onSubmit={handleSubmit}
       placeholder={t`Phone`}
       fieldMetadataType={FieldMetadataType.PHONES}
       validateInput={validateInput}

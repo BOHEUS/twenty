@@ -10,6 +10,7 @@ export const APPLICATION_GQL_FIELDS = `
   id
   name
   description
+  logoUrl
   version
   universalIdentifier
   canBeUninstalled

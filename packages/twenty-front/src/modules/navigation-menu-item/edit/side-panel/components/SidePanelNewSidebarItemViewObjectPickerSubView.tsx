@@ -1,9 +1,9 @@
 import { useLingui } from '@lingui/react/macro';
-import { IconSettings, useIcons } from 'twenty-ui/display';
+import { TintedIconTile } from 'twenty-ui/data-display';
+import { IconSettings } from 'twenty-ui/icon';
 
 import { CommandMenuItem } from '@/command-menu/components/CommandMenuItem';
-import { NavigationMenuItemStyleIcon } from '@/navigation-menu-item/display/components/NavigationMenuItemStyleIcon';
-import { getStandardObjectIconColor } from '@/navigation-menu-item/common/utils/getStandardObjectIconColor';
+import { ObjectMetadataIcon } from '@/object-metadata/components/ObjectMetadataIcon';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { SidePanelGroup } from '@/side-panel/components/SidePanelGroup';
 import { SidePanelList } from '@/side-panel/components/SidePanelList';
@@ -29,7 +29,6 @@ export const SidePanelNewSidebarItemViewObjectPickerSubView = ({
   showSystemObjectsOption = true,
 }: SidePanelNewSidebarItemViewObjectPickerSubViewProps) => {
   const { t } = useLingui();
-  const { getIcon } = useIcons();
   const { filteredItems, selectableItemIds, isEmpty, hasSearchQuery } =
     useSidePanelFilteredPickerItems({
       items: objects,
@@ -48,7 +47,6 @@ export const SidePanelNewSidebarItemViewObjectPickerSubView = ({
       onSearchChange={onSearchChange}
     >
       <SidePanelList
-        commandGroups={[]}
         selectableItemIds={selectableItemIds}
         noResults={isEmpty}
         noResultsText={noResultsText}
@@ -62,12 +60,7 @@ export const SidePanelNewSidebarItemViewObjectPickerSubView = ({
             >
               <CommandMenuItem
                 Icon={() => (
-                  <NavigationMenuItemStyleIcon
-                    Icon={getIcon(objectMetadataItem.icon)}
-                    color={getStandardObjectIconColor(
-                      objectMetadataItem.nameSingular,
-                    )}
-                  />
+                  <ObjectMetadataIcon objectMetadataItem={objectMetadataItem} />
                 )}
                 label={objectMetadataItem.labelPlural}
                 id={objectMetadataItem.id}
@@ -79,7 +72,7 @@ export const SidePanelNewSidebarItemViewObjectPickerSubView = ({
           {showSystemObjectsOption && (
             <SelectableListItem itemId="system" onEnter={onOpenSystemPicker}>
               <CommandMenuItem
-                Icon={() => <NavigationMenuItemStyleIcon Icon={IconSettings} />}
+                Icon={() => <TintedIconTile Icon={IconSettings} />}
                 label={t`System objects`}
                 id="system"
                 hasSubMenu={true}

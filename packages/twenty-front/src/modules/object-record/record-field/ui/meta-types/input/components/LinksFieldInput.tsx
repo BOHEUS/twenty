@@ -5,7 +5,7 @@ import { MULTI_ITEM_FIELD_INPUT_DROPDOWN_ID_PREFIX } from '@/object-record/recor
 import { getFieldLinkDefinedLinks } from '@/object-record/record-field/ui/meta-types/input/utils/getFieldLinkDefinedLinks';
 import { recordFieldInputIsFieldInErrorComponentState } from '@/object-record/record-field/ui/states/recordFieldInputIsFieldInErrorComponentState';
 import { type FieldLinksValue } from '@/object-record/record-field/ui/types/FieldMetadata';
-import { linksSchema } from '@/object-record/record-field/ui/types/guards/isFieldLinksValue';
+import { linksFieldValueSchema } from '@/object-record/record-field/ui/validation-schemas/linksFieldValueSchema';
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
 import { useContext, useMemo } from 'react';
 import { MULTI_ITEM_FIELD_DEFAULT_MAX_VALUES } from 'twenty-shared/constants';
@@ -21,7 +21,7 @@ type LinkRecord = {
 export const LinksFieldInput = () => {
   const { draftValue, fieldDefinition, setDraftValue } = useLinksField();
 
-  const { onEscape, onClickOutside, onEnter } = useContext(
+  const { onEscape, onClickOutside, onEnter, onSubmit } = useContext(
     FieldInputEventContext,
   );
 
@@ -38,7 +38,7 @@ export const LinksFieldInput = () => {
       primaryLinkLabel: nextPrimaryLink?.label ?? null,
       secondaryLinks: nextSecondaryLinks,
     };
-    const parseResponse = linksSchema.safeParse(nextValue);
+    const parseResponse = linksFieldValueSchema.safeParse(nextValue);
     if (parseResponse.success) {
       return parseResponse.data;
     }
@@ -80,6 +80,13 @@ export const LinksFieldInput = () => {
     onEnter?.({ newValue: parseArrayToLinksValue(updatedLinks) });
   };
 
+  const handleSubmit = (updatedLinks: LinkRecord[]) => {
+    onSubmit?.({
+      newValue: parseArrayToLinksValue(updatedLinks),
+      skipClose: true,
+    });
+  };
+
   const maxNumberOfValues =
     fieldDefinition.metadata.settings?.maxNumberOfValues ??
     MULTI_ITEM_FIELD_DEFAULT_MAX_VALUES;
@@ -90,6 +97,7 @@ export const LinksFieldInput = () => {
       onChange={handleChange}
       onEscape={handleEscape}
       onEnter={handleEnter}
+      onSubmit={handleSubmit}
       onClickOutside={handleClickOutside}
       placeholder="URL"
       fieldMetadataType={FieldMetadataType.LINKS}

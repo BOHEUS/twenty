@@ -17,7 +17,7 @@ Questo flusso di lavoro usa un **Attivatore manuale** così gli utenti possono g
 
 Prima di configurare il flusso di lavoro:
 
-1. **Crea una chiave API**: vai su **Impostazioni → API** e crea una nuova chiave API. Ti servirà questo token per la funzione logica.
+1. **Crea una chiave API**: vai su **Impostazioni → API** e crea una nuova chiave API. Avrai bisogno di questo token per la Funzione Logica.
 2. **Configura un servizio di generazione PDF** (opzionale): se vuoi generare dinamicamente PDF (ad es. preventivi), usa un servizio come Carbone, PDFMonkey o DocuSeal per creare il PDF e ottenere un URL di download.
 
 ## Configurazione passo-passo
@@ -29,12 +29,12 @@ Prima di configurare il flusso di lavoro:
 3. Scegli l'oggetto a cui vuoi allegare i PDF (ad es. **Company** o **Opportunity**)
 
 <Tip>
-Con un **Attivatore manuale**, gli utenti possono eseguire questo flusso di lavoro utilizzando un pulsante che appare in alto a destra una volta selezionato un record, per generare e allegare un PDF.
+Con un Trigger manuale, gli utenti possono eseguire questo flusso di lavoro utilizzando un pulsante che appare in alto a destra una volta selezionato un record: questo esegue il flusso di lavoro per generare e allegare un PDF.
 </Tip>
 
 ### Passaggio 2: aggiungi una Funzione logica
 
-1. Aggiungi un'azione **Code** (funzione logica)
+1. Aggiungi un'azione **Codice** (Funzione logica)
 2. Crea una nuova funzione con il codice seguente
 3. Configura i parametri di input
 
@@ -55,11 +55,12 @@ export const main = async (
   params: { companyId: string },
 ) => {
   const { companyId } = params;
-
-  // Replace with your Twenty GraphQL endpoint
+  // Replace with your Twenty GraphQL endpoints (/metadata for metadata and files or /graphql for your records)
   // Cloud: https://api.twenty.com/graphql
   // Self-hosted: https://your-domain.com/graphql
-  const graphqlEndpoint = 'https://api.twenty.com/graphql';
+
+  const metadataGraphqlEndpoint = 'https://api.twenty.com/metadata';
+  const dataGraphqlEndpoint = 'https://api.twenty.com/graphql';
 
   // Replace with your API key from Settings → APIs
   const authToken = 'YOUR_API_KEY';
@@ -79,11 +80,40 @@ export const main = async (
   const pdfBlob = await pdfResponse.blob();
   const pdfFile = new File([pdfBlob], filename, { type: 'application/pdf' });
 
-  // Step 2: Upload the file via GraphQL multipart upload
+  const fieldMetadataIdQuery = `
+    query FindUploadFileFieldMetadataId {
+      objects {
+        edges {
+          node {
+            nameSingular
+            fieldsList {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  // Step 2: Find a fieldMetadataId of "Attachment file" field in Attachments object with GraphQL API
+  const response = await fetch(metadataGraphqlEndpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      },
+      body: {
+        query: fieldMetadataIdQuery,
+      }
+    });
+  const result = await response.json();
+  const uploadFileFieldMetadataId = result.data.objects.edges.find(object => object.node.nameSingular === 'attachment').node.fieldsList.find(field => field.name === 'file').id;
+
+  // Step 3: Upload the file via GraphQL multipart upload
   const uploadMutation = `
-    mutation UploadFile($file: Upload!, $fileFolder: FileFolder) {
-      uploadFile(file: $file, fileFolder: $fileFolder) {
-        path
+    mutation UploadFilesFieldFile($file: Upload!, $fieldMetadataId: String!) {
+      uploadFilesFieldFile(file: $file, fieldMetadataId: $fieldMetadataId) {
+        id
       }
     }
   `;
@@ -91,12 +121,12 @@ export const main = async (
   const uploadForm = new FormData();
   uploadForm.append('operations', JSON.stringify({
     query: uploadMutation,
-    variables: { file: null, fileFolder: 'Attachment' },
+    variables: { file: null, fieldMetadataId: uploadFileFieldMetadataId },
   }));
   uploadForm.append('map', JSON.stringify({ '0': ['variables.file'] }));
   uploadForm.append('0', pdfFile);
 
-  const uploadResponse = await fetch(graphqlEndpoint, {
+  const uploadResponse = await fetch(metadataGraphqlEndpoint, {
     method: 'POST',
     headers: { Authorization: `Bearer ${authToken}` },
     body: uploadForm,
@@ -108,15 +138,15 @@ export const main = async (
     throw new Error(`Upload failed: ${uploadResult.errors[0].message}`);
   }
 
-  const filePath = uploadResult.data?.uploadFile?.path;
+  const fileId = uploadResult.data?.uploadFilesFieldFile?.id;
 
-  if (!filePath) {
-    throw new Error('No file path returned from upload');
+  if (!fileId) {
+    throw new Error('No file id returned from upload');
   }
 
-  // Step 3: Create the attachment linked to the company
+  // Step 4: Create the attachment linked to the company
   const attachmentMutation = `
-    mutation CreateAttachment($data: AttachmentCreateInput!) {
+    mutation CreateOneAttachment($data: AttachmentCreateInput!) {
       createAttachment(data: $data) {
         id
         name
@@ -124,7 +154,7 @@ export const main = async (
     }
   `;
 
-  const attachmentResponse = await fetch(graphqlEndpoint, {
+  const attachmentResponse = await fetch(dataGraphqlEndpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${authToken}`,
@@ -135,8 +165,13 @@ export const main = async (
       variables: {
         data: {
           name: filename,
-          fullPath: filePath,
-          companyId,
+          targetCompanyId: companyId,
+          file: [
+            {
+              fileId: fileId,
+              label: filename
+            }
+          ]
         },
       },
     }),
@@ -156,14 +191,14 @@ export const main = async (
 
 #### Per allegare a un oggetto diverso
 
-Sostituisci `companyId` con il campo appropriato:
+Sostituisci `targetCompanyId` con il campo appropriato:
 
-| Oggetto                | Nome del campo       |
-| ---------------------- | -------------------- |
-| Azienda                | `companyId`          |
-| Persona                | `personId`           |
-| Opportunità            | `opportunityId`      |
-| Oggetto personalizzato | `yourCustomObjectId` |
+| Oggetto                | Nome del campo             |
+| ---------------------- | -------------------------- |
+| Azienda                | `targetCompanyId`          |
+| Persona                | `targetPersonId`           |
+| Opportunità            | `targetOpportunityId`      |
+| Oggetto personalizzato | `targetYourCustomObjectId` |
 
 Aggiorna sia il parametro della funzione sia l'oggetto `variables.data` nella mutation dell'allegato.
 
@@ -202,7 +237,7 @@ Per creare preventivi o fatture dinamici:
 | 1         | Attivatore manuale (Company) | L'utente avvia l'operazione su un record                 |
 | 2         | Cerca record                 | Ottieni i dettagli di Opportunity o delle righe articolo |
 | 3         | Richiesta HTTP               | Chiama l'API di generazione PDF con i dati del record    |
-| 4         | Funzione serverless          | Scarica e allega il PDF generato                         |
+| 4         | Funzione logica              | Scarica e allega il PDF generato                         |
 
 ### Servizi di generazione PDF più diffusi
 
@@ -211,7 +246,7 @@ Per creare preventivi o fatture dinamici:
 * **DocuSeal** - Piattaforma di automazione dei documenti
 * **Documint** - Generazione di documenti API-first
 
-Ogni servizio fornisce un'API che restituisce un URL PDF, che puoi quindi passare alla funzione logica.
+Ogni servizio fornisce un'API che restituisce un URL PDF, che puoi poi passare alla Funzione Logica.
 
 ## Risoluzione dei problemi
 

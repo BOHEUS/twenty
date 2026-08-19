@@ -1,5 +1,6 @@
 import { type PageLayoutTab } from '@/page-layout/types/PageLayoutTab';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
+import { getTabPresentation } from '@/page-layout/utils/getTabPresentation';
 import { GRAPH_TYPE_INFORMATION } from '@/side-panel/pages/page-layout/constants/GraphTypeInformation';
 import { getCurrentGraphTypeFromConfig } from '@/side-panel/pages/page-layout/utils/getCurrentGraphTypeFromConfig';
 import { isWidgetConfigurationOfTypeGraph } from '@/side-panel/pages/page-layout/utils/isWidgetConfigurationOfTypeGraph';
@@ -12,9 +13,12 @@ import {
   IconFrame,
   IconList,
   IconPlus,
+  IconTable,
   type IconComponent,
-} from 'twenty-ui/display';
+  useIcons,
+} from 'twenty-ui/icon';
 import { ThemeContext } from 'twenty-ui/theme-constants';
+import { PageLayoutTabLayoutMode } from '~/generated-metadata/graphql';
 
 type PageLayoutHeaderInfo = {
   headerIcon: IconComponent | undefined;
@@ -24,6 +28,8 @@ type PageLayoutHeaderInfo = {
   isReadonly: boolean;
   tab: PageLayoutTab | undefined;
   widgetInEditMode: PageLayoutWidget | undefined;
+  isIconEditable: boolean;
+  selectedIconKey: string | null;
 };
 
 type UsePageLayoutHeaderInfoParams = {
@@ -44,6 +50,7 @@ export const usePageLayoutHeaderInfo = ({
   editedTitle,
 }: UsePageLayoutHeaderInfoParams): PageLayoutHeaderInfo | null => {
   const { theme } = useContext(ThemeContext);
+  const { getIcon } = useIcons();
   const iconColor = theme.font.color.tertiary;
 
   switch (sidePanelPage) {
@@ -64,18 +71,30 @@ export const usePageLayoutHeaderInfo = ({
           ? tab.title
           : '';
 
+      const isSoloTab =
+        getTabPresentation({
+          widgets: tab.widgets.filter((widget) => widget.isActive),
+          layoutMode: tab.layoutMode ?? PageLayoutTabLayoutMode.VERTICAL_LIST,
+        }) === 'solo';
+
+      const resolvedTabIcon = isDefined(tab.icon)
+        ? getIcon(tab.icon)
+        : IconAppWindow;
+
       return {
-        headerIcon: IconAppWindow,
+        headerIcon: resolvedTabIcon ?? IconAppWindow,
         headerIconColor: iconColor,
-        headerType: t`Tab`,
+        headerType: isSoloTab ? t`Full tab widget` : t`Tab`,
         title,
         isReadonly: false,
         tab,
         widgetInEditMode: undefined,
+        isIconEditable: true,
+        selectedIconKey: tab.icon ?? null,
       };
     }
 
-    case SidePanelPages.PageLayoutIframeSettings: {
+    case SidePanelPages.DashboardIframeSettings: {
       if (!isDefined(pageLayoutEditingWidgetId)) {
         return null;
       }
@@ -102,10 +121,12 @@ export const usePageLayoutHeaderInfo = ({
         isReadonly: false,
         tab: undefined,
         widgetInEditMode,
+        isIconEditable: false,
+        selectedIconKey: null,
       };
     }
 
-    case SidePanelPages.PageLayoutGraphTypeSelect: {
+    case SidePanelPages.DashboardChartSettings: {
       if (!isDefined(pageLayoutEditingWidgetId)) {
         return null;
       }
@@ -141,10 +162,12 @@ export const usePageLayoutHeaderInfo = ({
         isReadonly: false,
         tab: undefined,
         widgetInEditMode,
+        isIconEditable: false,
+        selectedIconKey: null,
       };
     }
 
-    case SidePanelPages.PageLayoutFieldsSettings: {
+    case SidePanelPages.RecordPageFieldsSettings: {
       if (!isDefined(pageLayoutEditingWidgetId)) {
         return null;
       }
@@ -171,10 +194,76 @@ export const usePageLayoutHeaderInfo = ({
         isReadonly: false,
         tab: undefined,
         widgetInEditMode,
+        isIconEditable: false,
+        selectedIconKey: null,
       };
     }
 
-    case SidePanelPages.PageLayoutWidgetTypeSelect: {
+    case SidePanelPages.RecordPageFieldSettings: {
+      if (!isDefined(pageLayoutEditingWidgetId)) {
+        return null;
+      }
+
+      const widgetInEditMode = draftPageLayout.tabs
+        .flatMap((tab) => tab.widgets)
+        .find((widget) => widget.id === pageLayoutEditingWidgetId);
+
+      if (!isDefined(widgetInEditMode)) {
+        return null;
+      }
+
+      const title = isDefined(editedTitle)
+        ? editedTitle
+        : isDefined(widgetInEditMode.title) && widgetInEditMode.title !== ''
+          ? widgetInEditMode.title
+          : '';
+
+      return {
+        headerIcon: IconList,
+        headerIconColor: iconColor,
+        headerType: t`Field Widget`,
+        title,
+        isReadonly: false,
+        tab: undefined,
+        widgetInEditMode,
+        isIconEditable: false,
+        selectedIconKey: null,
+      };
+    }
+
+    case SidePanelPages.DashboardRecordTableSettings: {
+      if (!isDefined(pageLayoutEditingWidgetId)) {
+        return null;
+      }
+
+      const widgetInEditMode = draftPageLayout.tabs
+        .flatMap((tab) => tab.widgets)
+        .find((widget) => widget.id === pageLayoutEditingWidgetId);
+
+      if (!isDefined(widgetInEditMode)) {
+        return null;
+      }
+
+      const title = isDefined(editedTitle)
+        ? editedTitle
+        : isDefined(widgetInEditMode.title) && widgetInEditMode.title !== ''
+          ? widgetInEditMode.title
+          : '';
+
+      return {
+        headerIcon: IconTable,
+        headerIconColor: iconColor,
+        headerType: t`View`,
+        title,
+        isReadonly: false,
+        tab: undefined,
+        widgetInEditMode,
+        isIconEditable: false,
+        selectedIconKey: null,
+      };
+    }
+
+    case SidePanelPages.PageLayoutDashboardWidgetTypeSelect: {
       return {
         headerIcon: IconPlus,
         headerIconColor: iconColor,
@@ -183,6 +272,22 @@ export const usePageLayoutHeaderInfo = ({
         isReadonly: true,
         tab: undefined,
         widgetInEditMode: undefined,
+        isIconEditable: false,
+        selectedIconKey: null,
+      };
+    }
+
+    case SidePanelPages.PageLayoutRecordPageWidgetTypeSelect: {
+      return {
+        headerIcon: IconPlus,
+        headerIconColor: iconColor,
+        headerType: '',
+        title: t`New widget`,
+        isReadonly: true,
+        tab: undefined,
+        widgetInEditMode: undefined,
+        isIconEditable: false,
+        selectedIconKey: null,
       };
     }
     default:

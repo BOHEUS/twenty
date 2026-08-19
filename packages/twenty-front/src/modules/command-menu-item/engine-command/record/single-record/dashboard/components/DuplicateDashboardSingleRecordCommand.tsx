@@ -1,5 +1,5 @@
 import { HeadlessEngineCommandWrapperEffect } from '@/command-menu-item/engine-command/components/HeadlessEngineCommandWrapperEffect';
-import { useMountedEngineCommandContext } from '@/command-menu-item/engine-command/hooks/useMountedEngineCommandContext';
+import { useHeadlessCommandContextApi } from '@/command-menu-item/engine-command/hooks/useHeadlessCommandContextApi';
 import { useDuplicateDashboard } from '@/dashboards/hooks/useDuplicateDashboard';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { useLingui } from '@lingui/react/macro';
@@ -9,12 +9,12 @@ import { isDefined } from 'twenty-shared/utils';
 import { useNavigateApp } from '~/hooks/useNavigateApp';
 
 export const DuplicateDashboardSingleRecordCommand = () => {
-  const { selectedRecords } = useMountedEngineCommandContext();
+  const { selectedRecords } = useHeadlessCommandContextApi();
 
   const recordId = selectedRecords[0]?.id;
   const { duplicateDashboard } = useDuplicateDashboard();
   const navigate = useNavigateApp();
-  const { enqueueSuccessSnackBar, enqueueErrorSnackBar } = useSnackBar();
+  const { enqueueSuccessSnackBar } = useSnackBar();
   const { t } = useLingui();
 
   if (!isDefined(recordId)) {
@@ -32,10 +32,6 @@ export const DuplicateDashboardSingleRecordCommand = () => {
       navigate(AppPath.RecordShowPage, {
         objectNameSingular: CoreObjectNameSingular.Dashboard,
         objectRecordId: result.id,
-      });
-    } else {
-      enqueueErrorSnackBar({
-        message: t`Failed to duplicate dashboard`,
       });
     }
   };

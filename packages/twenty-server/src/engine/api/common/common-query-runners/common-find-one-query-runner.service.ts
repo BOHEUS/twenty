@@ -40,7 +40,6 @@ export class CommonFindOneQueryRunnerService extends CommonBaseQueryRunnerServic
     queryRunnerContext: CommonExtendedQueryRunnerContext,
   ): Promise<ObjectRecord> {
     const {
-      repository,
       authContext,
       rolePermissionConfig,
       workspaceDataSource,
@@ -50,7 +49,9 @@ export class CommonFindOneQueryRunnerService extends CommonBaseQueryRunnerServic
       commonQueryParser,
     } = queryRunnerContext;
 
-    const queryBuilder = repository.createQueryBuilder(
+    const readRepository = this.getReadRepository(queryRunnerContext);
+
+    const queryBuilder = readRepository.createQueryBuilder(
       flatObjectMetadata.nameSingular,
     );
 
@@ -106,6 +107,7 @@ export class CommonFindOneQueryRunnerService extends CommonBaseQueryRunnerServic
         workspaceDataSource,
         rolePermissionConfig,
         selectedFields: args.selectedFieldsResult.select,
+        ...this.getNestedRelationsReadPathOptions(queryRunnerContext),
       });
     }
 
@@ -116,13 +118,18 @@ export class CommonFindOneQueryRunnerService extends CommonBaseQueryRunnerServic
     args: CommonInput<FindOneQueryArgs>,
     queryRunnerContext: CommonBaseQueryRunnerContext,
   ): Promise<CommonInput<FindOneQueryArgs>> {
-    const { flatObjectMetadata, flatFieldMetadataMaps } = queryRunnerContext;
+    const {
+      flatObjectMetadata,
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
+    } = queryRunnerContext;
 
     return {
       ...args,
       filter: this.filterArgProcessor.process({
         filter: args.filter,
         flatObjectMetadata,
+        flatObjectMetadataMaps,
         flatFieldMetadataMaps,
       }),
     };

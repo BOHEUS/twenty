@@ -1,4 +1,8 @@
-import { FieldMetadataType } from 'twenty-shared/types';
+import {
+  FieldMetadataType,
+  MetadataWritability,
+  ObjectOpenRecordIn,
+} from 'twenty-shared/types';
 
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
@@ -17,7 +21,6 @@ describe('getColumnNameToFieldMetadataIdMap', () => {
     icon: 'IconTest',
     color: null,
     targetTableName: 'test',
-    isCustom: false,
     isRemote: false,
     isActive: true,
     isSystem: false,
@@ -26,7 +29,9 @@ describe('getColumnNameToFieldMetadataIdMap', () => {
     workspaceId: 'test-workspace-id',
     universalIdentifier: 'test-object-id',
     indexMetadataIds: [],
+    searchFieldMetadataIds: [],
     objectPermissionIds: [],
+    fieldPermissionIds: [],
     fieldIds,
     viewIds: [],
     applicationId: 'test-application-id',
@@ -35,16 +40,21 @@ describe('getColumnNameToFieldMetadataIdMap', () => {
     updatedAt: new Date().toISOString(),
     shortcut: null,
     description: null,
-    standardOverrides: null,
-    isUIReadOnly: false,
+    overrides: null,
+    isUIEditable: true,
+    isUICreatable: true,
+    writability: MetadataWritability.OPEN,
+    openRecordIn: ObjectOpenRecordIn.USER_CHOICE,
     labelIdentifierFieldMetadataId: null,
     imageIdentifierFieldMetadataId: null,
     duplicateCriteria: null,
     applicationUniversalIdentifier: 'test-application-id',
     fieldUniversalIdentifiers: fieldIds,
     objectPermissionUniversalIdentifiers: [],
+    fieldPermissionUniversalIdentifiers: [],
     viewUniversalIdentifiers: [],
     indexMetadataUniversalIdentifiers: [],
+    searchFieldMetadataUniversalIdentifiers: [],
     labelIdentifierFieldMetadataUniversalIdentifier: null,
     imageIdentifierFieldMetadataUniversalIdentifier: null,
   });

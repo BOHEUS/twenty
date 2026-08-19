@@ -1,3 +1,5 @@
+import { dispatchBrowserEvent } from '@/browser-event/utils/dispatchBrowserEvent';
+import { SSE_CLIENT_RECONNECTED_EVENT_NAME } from '@/sse-db-event/constants/SseClientReconnectedEventName';
 import { ON_EVENT_SUBSCRIPTION } from '@/sse-db-event/graphql/subscriptions/OnEventSubscription';
 import { useDispatchMetadataEventsFromSseToBrowserEvents } from '@/sse-db-event/hooks/useDispatchMetadataEventsFromSseToBrowserEvents';
 import { useDispatchObjectRecordEventsFromSseToBrowserEvents } from '@/sse-db-event/hooks/useDispatchObjectRecordEventsFromSseToBrowserEvents';
@@ -5,10 +7,12 @@ import { useTriggerOptimisticEffectFromSseEvents } from '@/sse-db-event/hooks/us
 import { disposeFunctionForEventStreamState } from '@/sse-db-event/states/disposeFunctionByEventStreamMapState';
 import { isCreatingSseEventStreamState } from '@/sse-db-event/states/isCreatingSseEventStreamState';
 import { isDestroyingEventStreamState } from '@/sse-db-event/states/isDestroyingEventStreamState';
+import { lastSseEventReceivedTimestampState } from '@/sse-db-event/states/lastSseEventReceivedTimestampState';
 import { shouldDestroyEventStreamState } from '@/sse-db-event/states/shouldDestroyEventStreamState';
 import { sseClientState } from '@/sse-db-event/states/sseClientState';
 import { sseEventStreamIdState } from '@/sse-db-event/states/sseEventStreamIdState';
 import { sseEventStreamReadyState } from '@/sse-db-event/states/sseEventStreamReadyState';
+import { isGracefullyHandledEventStreamError } from '@/sse-db-event/utils/isGracefullyHandledEventStreamError';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { captureException } from '@sentry/react';
 import { isNonEmptyString } from '@sniptt/guards';
@@ -19,6 +23,7 @@ import { useCallback } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 import { v4 } from 'uuid';
 import { type EventSubscription } from '~/generated-metadata/graphql';
+import { getGraphqlErrorExtensionsFromError } from '~/utils/get-graphql-error-extensions-from-error.util';
 
 export const useTriggerEventStreamCreation = () => {
   const store = useStore();
@@ -64,7 +69,24 @@ export const useTriggerEventStreamCreation = () => {
     store.set(sseEventStreamIdState.atom, newSseEventStreamId);
     store.set(sseEventStreamReadyState.atom, false);
 
+    const isRecreatedEventStream = isDefined(
+      store.get(lastSseEventReceivedTimestampState.atom),
+    );
+
     let hasReceivedFirstEvent = false;
+
+    const handleFirstEventReceived = () => {
+      if (hasReceivedFirstEvent) {
+        return;
+      }
+
+      hasReceivedFirstEvent = true;
+      store.set(sseEventStreamReadyState.atom, true);
+
+      if (isRecreatedEventStream) {
+        dispatchBrowserEvent(SSE_CLIENT_RECONNECTED_EVENT_NAME);
+      }
+    };
 
     const dispose = sseClient.subscribe(
       {
@@ -79,19 +101,32 @@ export const useTriggerEventStreamCreation = () => {
             onEventSubscription: EventSubscription;
           }>,
         ) => {
+          store.set(lastSseEventReceivedTimestampState.atom, Date.now());
+
           if (isDefined(value?.errors) && Array.isArray(value.errors)) {
-            captureException(
-              new Error(`SSE subscription error: ${value.errors[0]?.message}`),
+            const extensions = getGraphqlErrorExtensionsFromError(
+              value.errors[0],
             );
+
+            if (
+              !isGracefullyHandledEventStreamError({
+                subCode: extensions?.subCode,
+                code: extensions?.code,
+              })
+            ) {
+              captureException(
+                new Error(
+                  `SSE subscription error: ${value.errors[0]?.message}`,
+                ),
+              );
+            }
+
             store.set(shouldDestroyEventStreamState.atom, true);
 
             return;
           }
 
-          if (!hasReceivedFirstEvent) {
-            hasReceivedFirstEvent = true;
-            store.set(sseEventStreamReadyState.atom, true);
-          }
+          handleFirstEventReceived();
 
           const eventSubscription = value?.data?.onEventSubscription;
 
@@ -104,6 +139,8 @@ export const useTriggerEventStreamCreation = () => {
             (item) => item.objectRecordEvent,
           );
 
+          dispatchMetadataEventsFromSseToBrowserEvents(metadataEvents);
+
           triggerOptimisticEffectFromSseEvents({
             objectRecordEvents,
           });
@@ -111,13 +148,14 @@ export const useTriggerEventStreamCreation = () => {
           dispatchObjectRecordEventsFromSseToBrowserEvents(
             objectRecordEventsWithQueryIds,
           );
-
-          dispatchMetadataEventsFromSseToBrowserEvents(metadataEvents);
         },
         error: (error) => {
           captureException(error);
+          store.set(shouldDestroyEventStreamState.atom, true);
         },
-        complete: () => {},
+        complete: () => {
+          store.set(shouldDestroyEventStreamState.atom, true);
+        },
       },
       {
         message: ({ data, event }) => {
@@ -127,27 +165,27 @@ export const useTriggerEventStreamCreation = () => {
 
           try {
             if (event === 'next') {
-              if (isDefined(result?.errors)) {
-                const subCode = result.errors[0]?.extensions?.subCode;
+              store.set(lastSseEventReceivedTimestampState.atom, Date.now());
 
-                switch (subCode) {
-                  case 'EVENT_STREAM_ALREADY_EXISTS': {
-                    store.set(shouldDestroyEventStreamState.atom, true);
-                    break;
-                  }
-                  default: {
-                    for (const error of result.errors) {
-                      captureException(error);
-                    }
+              if (isDefined(result?.errors)) {
+                const extensions = getGraphqlErrorExtensionsFromError(
+                  result.errors[0],
+                );
+
+                if (
+                  !isGracefullyHandledEventStreamError({
+                    subCode: extensions?.subCode,
+                    code: extensions?.code,
+                  })
+                ) {
+                  for (const error of result.errors) {
+                    captureException(error);
                   }
                 }
 
                 store.set(shouldDestroyEventStreamState.atom, true);
               } else {
-                if (!hasReceivedFirstEvent) {
-                  hasReceivedFirstEvent = true;
-                  store.set(sseEventStreamReadyState.atom, true);
-                }
+                handleFirstEventReceived();
 
                 const objectRecordEventsWithQueryIds =
                   result?.data?.onEventSubscription
@@ -159,6 +197,11 @@ export const useTriggerEventStreamCreation = () => {
                   },
                 );
 
+                const metadataEvents =
+                  result?.data?.onEventSubscription?.metadataEvents ?? [];
+
+                dispatchMetadataEventsFromSseToBrowserEvents(metadataEvents);
+
                 triggerOptimisticEffectFromSseEvents({
                   objectRecordEvents,
                 });
@@ -166,11 +209,6 @@ export const useTriggerEventStreamCreation = () => {
                 dispatchObjectRecordEventsFromSseToBrowserEvents(
                   objectRecordEventsWithQueryIds,
                 );
-
-                const metadataEvents =
-                  result?.data?.onEventSubscription?.metadataEvents ?? [];
-
-                dispatchMetadataEventsFromSseToBrowserEvents(metadataEvents);
               }
             }
           } catch (error) {

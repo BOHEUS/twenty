@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { SidePanelPages } from 'twenty-shared/types';
 
 type SidePanelTopBarInputFocusEffectProps = {
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
 };
 
 export const SidePanelTopBarInputFocusEffect = ({
@@ -14,7 +14,7 @@ export const SidePanelTopBarInputFocusEffect = ({
 
   useEffect(() => {
     if (
-      sidePanelPage === SidePanelPages.Root ||
+      sidePanelPage === SidePanelPages.CommandMenuDisplay ||
       sidePanelPage === SidePanelPages.SearchRecords
     ) {
       inputRef.current?.focus();

@@ -28,7 +28,7 @@ export class DataSeedWorkspaceCommand extends CommandRunner {
   @Option({
     flags: '--light',
     description:
-      'Light seed: skip demo custom objects (Pet, Survey, etc.) and limit records to 5 per object',
+      'Light seed: only seed the Apple workspace (skip YCombinator), skip demo custom objects (Pet, Survey, etc.) and limit records to 5 per object',
   })
   parseLight(): boolean {
     return true;

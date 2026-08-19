@@ -166,7 +166,6 @@ describe('Agent creation should succeed', () => {
   });
 
   it('should create agent with role assignment', async () => {
-    // First, create a role that can be assigned to agents
     const { data: roleData } = await createOneRole({
       expectToFail: false,
       input: {
@@ -186,7 +185,6 @@ describe('Agent creation should succeed', () => {
 
     const createdRoleId = roleData?.createOneRole?.id;
 
-    // Create agent with role assignment
     const { data } = await createOneAgent({
       expectToFail: false,
       input: {
@@ -208,7 +206,15 @@ describe('Agent creation should succeed', () => {
       isCustom: true,
     });
 
-    // Clean up the role
+    // Delete the agent first so its role_target is removed; otherwise
+    // deleting the role would refuse to orphan the agent (the workspace
+    // default role isn't agent-assignable).
+    await deleteOneAgent({
+      expectToFail: false,
+      input: { id: createdAgentId },
+    });
+    createdAgentId = '';
+
     await deleteOneRole({
       expectToFail: false,
       input: { idToDelete: createdRoleId },

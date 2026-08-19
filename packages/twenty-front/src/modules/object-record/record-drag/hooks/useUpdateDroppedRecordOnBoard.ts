@@ -1,13 +1,14 @@
 import { useStore } from 'jotai';
 
-import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { RecordBoardContext } from '@/object-record/record-board/contexts/RecordBoardContext';
 import { extractRecordPositions } from '@/object-record/record-drag/utils/extractRecordPositions';
 import { recordGroupDefinitionsComponentSelector } from '@/object-record/record-group/states/selectors/recordGroupDefinitionsComponentSelector';
 import { type RecordGroupDefinition } from '@/object-record/record-group/types/RecordGroupDefinition';
+import { getFieldMetadataItemGqlFieldName } from '@/object-metadata/utils/getFieldMetadataItemGqlFieldName';
 import { recordIndexRecordIdsByGroupComponentFamilyState } from '@/object-record/record-index/states/recordIndexRecordIdsByGroupComponentFamilyState';
 import { useUpsertRecordsInStore } from '@/object-record/record-store/hooks/useUpsertRecordsInStore';
 import { recordStoreFamilyState } from '@/object-record/record-store/states/recordStoreFamilyState';
+import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { useAtomComponentFamilyStateCallbackState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentFamilyStateCallbackState';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { useCallback, useContext } from 'react';
@@ -35,32 +36,45 @@ export const useUpdateDroppedRecordOnBoard = () => {
       {
         recordId,
         position: newPosition,
-      }: { recordId: string; position?: number },
+      }: {
+        recordId: string;
+        position?: number;
+      },
       targetRecordGroupValue: RecordGroupDefinition['value'],
     ) => {
       const initialRecord = store.get(
         recordStoreFamilyState.atomFamily(recordId),
       ) as Record<string, unknown> | null | undefined;
 
-      if (!isDefined(newPosition)) {
-        return;
-      }
-
       if (!isDefined(initialRecord)) {
         return;
       }
 
-      const initialRecordGroupValue = initialRecord[
-        selectFieldMetadataItem.name
-      ] as string | undefined;
+      let currentRecordIdsInInitialRecordGroup: string[] = [];
 
       const initialRecordGroup = recordGroupDefinitions.find(
-        findByProperty('value', initialRecordGroupValue),
+        (recordGroupDefinition) => {
+          const recordIdsInGroup = store.get(
+            recordIndexRecordIdsByGroupCallbackFamilyState(
+              recordGroupDefinition.id,
+            ),
+          );
+
+          const recordIsInGroup = recordIdsInGroup.includes(recordId);
+
+          if (recordIsInGroup) {
+            currentRecordIdsInInitialRecordGroup = recordIdsInGroup;
+          }
+
+          return recordIsInGroup;
+        },
       );
 
       if (!isDefined(initialRecordGroup)) {
         return;
       }
+
+      const initialRecordGroupId = initialRecordGroup.id;
 
       const targetRecordGroup = recordGroupDefinitions.find(
         findByProperty('value', targetRecordGroupValue),
@@ -70,38 +84,40 @@ export const useUpdateDroppedRecordOnBoard = () => {
         return;
       }
 
-      const initialRecordGroupId = initialRecordGroup.id;
       const targetRecordGroupId = targetRecordGroup.id;
+
+      const recordGroupColumnName = getFieldMetadataItemGqlFieldName(
+        selectFieldMetadataItem,
+      );
 
       const movingInsideSameRecordGroup =
         initialRecordGroupId === targetRecordGroupId;
 
       const isSamePosition = initialRecord.position === newPosition;
 
-      if (movingInsideSameRecordGroup && isSamePosition) {
+      if (
+        movingInsideSameRecordGroup &&
+        (!isDefined(newPosition) || isSamePosition)
+      ) {
         return;
       }
 
-      const currentRecordIdsInInitialRecordGroup = store.get(
-        recordIndexRecordIdsByGroupCallbackFamilyState(initialRecordGroupId),
-      ) as string[];
-
-      const positionOfDroppedRecordInInitialRecordIds =
+      const indexOfDroppedRecordInInitialRecordGroup =
         currentRecordIdsInInitialRecordGroup.findIndex((id) => id === recordId);
 
       let currentRecordIdsInTargetRecordGroup = store.get(
         recordIndexRecordIdsByGroupCallbackFamilyState(targetRecordGroupId),
       ) as string[];
 
-      if (positionOfDroppedRecordInInitialRecordIds === -1) {
+      if (indexOfDroppedRecordInInitialRecordGroup === -1) {
         throw new Error(
-          `Cannot find record id in initial record group ids on drop, this should not happen`,
+          `Cannot find record id in initial record group ids on drop, this should not happen, recordId: ${recordId}, initialRecordGroupId: ${initialRecordGroupId}`,
         );
       }
 
       const newInitialGroupRecordIds =
         currentRecordIdsInInitialRecordGroup.toSpliced(
-          positionOfDroppedRecordInInitialRecordIds,
+          indexOfDroppedRecordInInitialRecordGroup,
           1,
         );
 
@@ -114,25 +130,32 @@ export const useUpdateDroppedRecordOnBoard = () => {
         );
       }
 
-      const targetGroupRecordsWithIds = extractRecordPositions(
-        currentRecordIdsInTargetRecordGroup,
-        store,
-      );
+      if (isDefined(newPosition)) {
+        const targetGroupRecordsWithIds = extractRecordPositions(
+          currentRecordIdsInTargetRecordGroup,
+          store,
+        );
 
-      const newTargetRecordGroupWithIds = [
-        ...targetGroupRecordsWithIds,
-        {
-          id: recordId,
-          position: newPosition,
-        },
-      ];
+        const newTargetRecordGroupWithIds = [
+          ...targetGroupRecordsWithIds,
+          {
+            id: recordId,
+            position: newPosition,
+          },
+        ];
 
-      newTargetRecordGroupWithIds.sort(sortByProperty('position', 'asc'));
+        newTargetRecordGroupWithIds.sort(sortByProperty('position', 'asc'));
 
-      store.set(
-        recordIndexRecordIdsByGroupCallbackFamilyState(targetRecordGroupId),
-        newTargetRecordGroupWithIds.map((record) => record.id),
-      );
+        store.set(
+          recordIndexRecordIdsByGroupCallbackFamilyState(targetRecordGroupId),
+          newTargetRecordGroupWithIds.map((record) => record.id),
+        );
+      } else {
+        store.set(
+          recordIndexRecordIdsByGroupCallbackFamilyState(targetRecordGroupId),
+          [...currentRecordIdsInTargetRecordGroup, recordId],
+        );
+      }
 
       upsertRecordsInStore({
         partialRecords: [
@@ -142,8 +165,8 @@ export const useUpdateDroppedRecordOnBoard = () => {
             __typename:
               (initialRecord as { __typename?: string })?.__typename ??
               'Record',
-            [selectFieldMetadataItem.name]: targetRecordGroupValue,
-            position: newPosition,
+            [recordGroupColumnName]: targetRecordGroupValue,
+            ...(isDefined(newPosition) && { position: newPosition }),
           } as ObjectRecord,
         ],
       });
@@ -151,8 +174,8 @@ export const useUpdateDroppedRecordOnBoard = () => {
       updateOneRecord({
         idToUpdate: recordId,
         updateOneRecordInput: {
-          [selectFieldMetadataItem.name]: targetRecordGroupValue,
-          position: newPosition,
+          [recordGroupColumnName]: targetRecordGroupValue,
+          ...(isDefined(newPosition) && { position: newPosition }),
         },
       });
     },

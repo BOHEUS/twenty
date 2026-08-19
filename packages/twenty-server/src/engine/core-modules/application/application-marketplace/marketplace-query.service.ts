@@ -1,72 +1,65 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
-import { isDefined } from 'twenty-shared/utils';
+import { type RoleManifest } from 'twenty-shared/application';
+import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 
+import { CoreEntityCacheService } from 'src/engine/core-entity-cache/services/core-entity-cache.service';
+import { MARKETPLACE_CATALOG_CACHE_ENTITY_ID } from 'src/engine/core-modules/application/application-marketplace/constants/marketplace-apps-cache.constant';
+import { MarketplaceAppDTO } from 'src/engine/core-modules/application/application-marketplace/dtos/marketplace-app.dto';
+import { MarketplaceAppDetailDTO } from 'src/engine/core-modules/application/application-marketplace/dtos/marketplace-app-detail.dto';
+import { MarketplaceAppRoleDTO } from 'src/engine/core-modules/application/application-marketplace/dtos/marketplace-app-role.dto';
+import { ApplicationRegistrationAssetUrlService } from 'src/engine/core-modules/application/application-registration/application-registration-asset-url.service';
 import { type ApplicationRegistrationEntity } from 'src/engine/core-modules/application/application-registration/application-registration.entity';
 import {
   ApplicationRegistrationException,
   ApplicationRegistrationExceptionCode,
 } from 'src/engine/core-modules/application/application-registration/application-registration.exception';
 import { ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
-import { MarketplaceCatalogSyncCronJob } from 'src/engine/core-modules/application/application-marketplace/crons/marketplace-catalog-sync.cron.job';
-import { MarketplaceAppDTO } from 'src/engine/core-modules/application/application-marketplace/dtos/marketplace-app.dto';
-import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
-import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
-import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
-
-const MARKETPLACE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 @Injectable()
 export class MarketplaceQueryService {
-  private readonly logger = new Logger(MarketplaceQueryService.name);
-  private cachedApps: MarketplaceAppDTO[] | null = null;
-  private cacheExpiresAt = 0;
-  private hasSyncBeenEnqueued = false;
-
   constructor(
     private readonly applicationRegistrationService: ApplicationRegistrationService,
-    @InjectMessageQueue(MessageQueue.cronQueue)
-    private readonly messageQueueService: MessageQueueService,
+    private readonly applicationRegistrationAssetUrlService: ApplicationRegistrationAssetUrlService,
+    private readonly coreEntityCacheService: CoreEntityCacheService,
   ) {}
 
-  async findManyMarketplaceApps(): Promise<MarketplaceAppDTO[]> {
-    if (this.cachedApps !== null && Date.now() < this.cacheExpiresAt) {
-      return this.cachedApps;
+  async findManyMarketplaceApps({
+    universalIdentifiers,
+    isVetted,
+  }: {
+    universalIdentifiers?: string[];
+    isVetted?: boolean;
+  } = {}): Promise<MarketplaceAppDTO[]> {
+    const appsByUniversalIdentifier =
+      (await this.coreEntityCacheService.get(
+        'marketplaceCatalog',
+        MARKETPLACE_CATALOG_CACHE_ENTITY_ID,
+      )) ?? {};
+
+    const apps = isNonEmptyArray(universalIdentifiers)
+      ? universalIdentifiers
+          .map(
+            (universalIdentifier) =>
+              appsByUniversalIdentifier[universalIdentifier],
+          )
+          .filter(isDefined)
+      : Object.values(appsByUniversalIdentifier);
+
+    if (!isDefined(isVetted)) {
+      return apps;
     }
 
-    const registrations =
-      await this.applicationRegistrationService.findManyListed();
-
-    if (registrations.length === 0) {
-      if (!this.hasSyncBeenEnqueued) {
-        this.hasSyncBeenEnqueued = true;
-        this.logger.log(
-          'No marketplace registrations found, enqueuing one-time sync job',
-        );
-        await this.messageQueueService.add(
-          MarketplaceCatalogSyncCronJob.name,
-          {},
-        );
-      }
-
-      return [];
-    }
-
-    this.cachedApps = registrations.map((registration) =>
-      this.toMarketplaceAppDTO(registration),
-    );
-    this.cacheExpiresAt = Date.now() + MARKETPLACE_CACHE_TTL_MS;
-
-    return this.cachedApps;
+    return apps.filter((app) => app.isVetted === isVetted);
   }
 
-  async findOneMarketplaceApp(
+  async findMarketplaceAppDetail(
     universalIdentifier: string,
-  ): Promise<MarketplaceAppDTO> {
+  ): Promise<MarketplaceAppDetailDTO> {
     const registration =
       await this.findRegistrationByUniversalIdentifier(universalIdentifier);
 
-    return this.toMarketplaceAppDTO(registration);
+    return this.toMarketplaceAppDetailDTO(registration);
   }
 
   async findRegistrationByUniversalIdentifier(
@@ -87,34 +80,99 @@ export class MarketplaceQueryService {
     return registration;
   }
 
-  toMarketplaceAppDTO(
+  private toMarketplaceAppDetailDTO(
     registration: ApplicationRegistrationEntity,
-  ): MarketplaceAppDTO {
-    const displayData = registration.marketplaceDisplayData;
+  ): MarketplaceAppDetailDTO {
+    const galleryImageUrls =
+      this.applicationRegistrationAssetUrlService.buildGalleryImageUrls(
+        registration,
+      );
 
     return {
-      id: registration.universalIdentifier,
+      id: registration.id,
+      universalIdentifier: registration.universalIdentifier,
       name: registration.name,
-      description: registration.description ?? '',
-      icon: displayData?.icon ?? 'IconApps',
-      version:
-        displayData?.version ?? registration.latestAvailableVersion ?? '0.0.0',
-      author: registration.author ?? 'Unknown',
-      category: displayData?.category ?? '',
-      logo: displayData?.logo,
-      screenshots: displayData?.screenshots ?? [],
-      aboutDescription:
-        displayData?.aboutDescription ?? registration.description ?? '',
-      providers: displayData?.providers ?? [],
-      websiteUrl: registration.websiteUrl ?? undefined,
-      termsUrl: registration.termsUrl ?? undefined,
-      objects: displayData?.objects ?? [],
-      fields: displayData?.fields ?? [],
-      logicFunctions: displayData?.logicFunctions ?? [],
-      frontComponents: displayData?.frontComponents ?? [],
+      sourceType: registration.sourceType,
       sourcePackage: registration.sourcePackage ?? undefined,
-      defaultRole: displayData?.defaultRole,
-      isFeatured: registration.isFeatured,
+      latestAvailableVersion: registration.latestAvailableVersion ?? undefined,
+      isListed: registration.isListed,
+      isVetted: registration.isVetted,
+      description:
+        registration.description ??
+        registration.manifest?.application?.description ??
+        undefined,
+      author:
+        registration.author ??
+        registration.manifest?.application?.author ??
+        undefined,
+      category:
+        registration.category ??
+        registration.manifest?.application?.category ??
+        undefined,
+      logoUrl:
+        this.applicationRegistrationAssetUrlService.buildLogoUrl(
+          registration,
+        ) ?? undefined,
+      websiteUrl:
+        registration.websiteUrl ??
+        registration.manifest?.application?.websiteUrl ??
+        undefined,
+      aboutDescription:
+        registration.aboutDescription ??
+        registration.manifest?.application?.aboutDescription ??
+        undefined,
+      termsUrl:
+        registration.termsUrl ??
+        registration.manifest?.application?.termsUrl ??
+        undefined,
+      emailSupport:
+        registration.emailSupport ??
+        registration.manifest?.application?.emailSupport ??
+        undefined,
+      issueReportUrl:
+        registration.issueReportUrl ??
+        registration.manifest?.application?.issueReportUrl ??
+        undefined,
+      screenshots: galleryImageUrls,
+      galleryImages: galleryImageUrls,
+      defaultRoleUniversalIdentifier:
+        registration.manifest?.application?.defaultRoleUniversalIdentifier,
+      roles: registration.manifest?.roles?.map((role) =>
+        this.toMarketplaceAppRoleDTO(role),
+      ),
+      manifest: registration.manifest ?? undefined,
+    };
+  }
+
+  private toMarketplaceAppRoleDTO(role: RoleManifest): MarketplaceAppRoleDTO {
+    return {
+      universalIdentifier: role.universalIdentifier,
+      label: role.label,
+      description: role.description,
+      icon: role.icon,
+      canUpdateAllSettings: role.canUpdateAllSettings,
+      canAccessAllTools: role.canAccessAllTools,
+      canReadAllObjectRecords: role.canReadAllObjectRecords,
+      canUpdateAllObjectRecords: role.canUpdateAllObjectRecords,
+      canSoftDeleteAllObjectRecords: role.canSoftDeleteAllObjectRecords,
+      canDestroyAllObjectRecords: role.canDestroyAllObjectRecords,
+      permissionFlagUniversalIdentifiers:
+        role.permissionFlagUniversalIdentifiers,
+      objectPermissions: role.objectPermissions?.map((permission) => ({
+        universalIdentifier: permission.universalIdentifier,
+        objectUniversalIdentifier: permission.objectUniversalIdentifier,
+        canReadObjectRecords: permission.canReadObjectRecords,
+        canUpdateObjectRecords: permission.canUpdateObjectRecords,
+        canSoftDeleteObjectRecords: permission.canSoftDeleteObjectRecords,
+        canDestroyObjectRecords: permission.canDestroyObjectRecords,
+      })),
+      fieldPermissions: role.fieldPermissions?.map((permission) => ({
+        universalIdentifier: permission.universalIdentifier,
+        objectUniversalIdentifier: permission.objectUniversalIdentifier,
+        fieldUniversalIdentifier: permission.fieldUniversalIdentifier,
+        canReadFieldValue: permission.canReadFieldValue,
+        canUpdateFieldValue: permission.canUpdateFieldValue,
+      })),
     };
   }
 }

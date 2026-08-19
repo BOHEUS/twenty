@@ -188,7 +188,7 @@ const createWelcomeRichText = ({
             },
             {
               type: 'link',
-              href: 'https://docs.twenty.com/user-guide/introduction',
+              href: 'https://docs.twenty.com/getting-started/introduction',
               content: [
                 {
                   type: 'text',
@@ -242,6 +242,7 @@ const createWelcomeRichText = ({
       universalConfiguration: configuration,
       objectMetadataId: null,
       conditionalDisplay: null,
+      conditionalAvailabilityExpression: null,
     },
   });
 };
@@ -306,6 +307,7 @@ const createDealsByCompany = ({
       },
       objectMetadataId: opportunityObjectId,
       conditionalDisplay: null,
+      conditionalAvailabilityExpression: null,
     },
   });
 };
@@ -383,6 +385,7 @@ const createPipelineValueByStage = ({
       },
       objectMetadataId: opportunityObjectId,
       conditionalDisplay: null,
+      conditionalAvailabilityExpression: null,
     },
   });
 };
@@ -449,6 +452,7 @@ const createRevenueTimeline = ({
       },
       objectMetadataId: opportunityObjectId,
       conditionalDisplay: null,
+      conditionalAvailabilityExpression: null,
     },
   });
 };
@@ -486,11 +490,9 @@ const createOpportunitiesByOwner = ({
         aggregateFieldMetadataId: opportunityFields.id.id,
         aggregateOperation: AggregateOperations.COUNT,
         primaryAxisGroupByFieldMetadataId: opportunityFields.owner.id,
-        primaryAxisGroupBySubFieldName: 'name.firstName',
         primaryAxisDateGranularity: ObjectRecordGroupByDateGranularity.DAY,
         primaryAxisOrderBy: GraphOrderBy.FIELD_ASC,
         secondaryAxisGroupByFieldMetadataId: opportunityFields.owner.id,
-        secondaryAxisGroupBySubFieldName: 'name.firstName',
         secondaryAxisGroupByDateGranularity:
           ObjectRecordGroupByDateGranularity.DAY,
         secondaryAxisOrderBy: GraphOrderBy.FIELD_ASC,
@@ -510,12 +512,10 @@ const createOpportunitiesByOwner = ({
         aggregateOperation: AggregateOperations.COUNT,
         primaryAxisGroupByFieldMetadataUniversalIdentifier:
           STANDARD_OBJECTS.opportunity.fields.owner.universalIdentifier,
-        primaryAxisGroupBySubFieldName: 'name.firstName',
         primaryAxisDateGranularity: ObjectRecordGroupByDateGranularity.DAY,
         primaryAxisOrderBy: GraphOrderBy.FIELD_ASC,
         secondaryAxisGroupByFieldMetadataUniversalIdentifier:
           STANDARD_OBJECTS.opportunity.fields.owner.universalIdentifier,
-        secondaryAxisGroupBySubFieldName: 'name.firstName',
         secondaryAxisGroupByDateGranularity:
           ObjectRecordGroupByDateGranularity.DAY,
         secondaryAxisOrderBy: GraphOrderBy.FIELD_ASC,
@@ -530,6 +530,7 @@ const createOpportunitiesByOwner = ({
       },
       objectMetadataId: opportunityObjectId,
       conditionalDisplay: null,
+      conditionalAvailabilityExpression: null,
     },
   });
 };
@@ -565,6 +566,7 @@ const createStockMarketIframe = ({
       universalConfiguration: configuration,
       objectMetadataId: null,
       conditionalDisplay: null,
+      conditionalAvailabilityExpression: null,
     },
   });
 };
@@ -633,6 +635,7 @@ const createDealsCreatedThisMonth = ({
       },
       objectMetadataId: opportunityObjectId,
       conditionalDisplay: null,
+      conditionalAvailabilityExpression: null,
     },
   });
 };
@@ -701,6 +704,7 @@ const createDealValueCreatedThisMonth = ({
       },
       objectMetadataId: opportunityObjectId,
       conditionalDisplay: null,
+      conditionalAvailabilityExpression: null,
     },
   });
 };

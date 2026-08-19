@@ -12,6 +12,7 @@ import { PAGE_LAYOUT_GRID_ITEM_Z_INDEX } from '@/page-layout/constants/PageLayou
 import { PAGE_LAYOUT_GRID_MARGIN } from '@/page-layout/constants/PageLayoutGridMargin';
 import { PAGE_LAYOUT_GRID_ROW_HEIGHT } from '@/page-layout/constants/PageLayoutGridRowHeight';
 import { useIsPageLayoutInEditMode } from '@/page-layout/hooks/useIsPageLayoutInEditMode';
+import { usePageLayoutGridCrossTabDrop } from '@/page-layout/hooks/usePageLayoutGridCrossTabDrop';
 import { usePageLayoutHandleLayoutChange } from '@/page-layout/hooks/usePageLayoutHandleLayoutChange';
 import { usePageLayoutTabWithVisibleWidgetsOrThrow } from '@/page-layout/hooks/usePageLayoutTabWithVisibleWidgetsOrThrow';
 import { PageLayoutComponentInstanceContext } from '@/page-layout/states/contexts/PageLayoutComponentInstanceContext';
@@ -86,6 +87,34 @@ const StyledGridContainer = styled.div`
   .react-grid-item:hover .widget-card-resize-handle {
     display: block !important;
   }
+
+  @media print {
+    min-height: auto;
+    padding: 0;
+    user-select: auto;
+
+    .react-grid-layout {
+      height: auto !important;
+    }
+
+    // Flow the absolutely-positioned grid items into the page, but keep the
+    // pixel width and height react-grid-layout sets inline: the charts are sized
+    // by a resize observer (Nivo SVG and a custom canvas bar chart), so changing
+    // their box would re-measure mid-print and render them blank.
+    .react-grid-item {
+      break-inside: avoid;
+      margin-bottom: ${themeCssVariables.spacing[4]};
+      page-break-inside: avoid;
+      position: static !important;
+      transform: none !important;
+    }
+
+    .react-grid-placeholder,
+    .react-resizable-handle,
+    .widget-card-resize-handle {
+      display: none !important;
+    }
+  }
 `;
 
 type ExtendedResponsiveProps = ResponsiveProps & {
@@ -127,15 +156,13 @@ export const PageLayoutGridLayout = ({ tabId }: PageLayoutGridLayoutProps) => {
     tabListInstanceId,
   });
 
-  const handleLayoutChangeWithoutPendingPlaceholder = (
-    currentLayout: Layout[],
-    allLayouts: Layouts,
-  ) => {
-    handleLayoutChange(
-      currentLayout,
-      filterPendingPlaceholderFromLayouts(allLayouts),
-    );
-  };
+  const {
+    handleGridDrag,
+    handleGridDragStop,
+    consumeShouldIgnoreNextGridLayoutChange,
+  } = usePageLayoutGridCrossTabDrop({
+    tabId,
+  });
 
   const gridContainerRef = useRef<HTMLDivElement>(null);
 
@@ -160,6 +187,20 @@ export const PageLayoutGridLayout = ({ tabId }: PageLayoutGridLayoutProps) => {
     !isDefined(activeTabWidgets) || activeTabWidgets.length === 0;
 
   const hasPendingPlaceholder = isDefined(pageLayoutDraggedArea);
+
+  const handleLayoutChangeWithoutPendingPlaceholder = (
+    currentLayout: Layout[],
+    allLayouts: Layouts,
+  ) => {
+    if (consumeShouldIgnoreNextGridLayoutChange()) {
+      return;
+    }
+
+    handleLayoutChange(
+      currentLayout,
+      filterPendingPlaceholderFromLayouts(allLayouts),
+    );
+  };
 
   const baseLayouts = isLayoutEmpty
     ? EMPTY_LAYOUT
@@ -205,19 +246,25 @@ export const PageLayoutGridLayout = ({ tabId }: PageLayoutGridLayoutProps) => {
         maxCols={12}
         containerPadding={[0, 0]}
         margin={[PAGE_LAYOUT_GRID_MARGIN, PAGE_LAYOUT_GRID_MARGIN]}
-        isDraggable={isPageLayoutInEditMode}
-        isResizable={isPageLayoutInEditMode}
+        isDraggable={isPageLayoutInEditMode && !isLayoutEmpty}
+        isResizable={isPageLayoutInEditMode && !isLayoutEmpty}
         draggableHandle=".drag-handle"
         compactType="vertical"
         preventCollision={false}
         resizeHandle={
-          isPageLayoutInEditMode ? <PageLayoutGridResizeHandle /> : undefined
+          isPageLayoutInEditMode && !isLayoutEmpty ? (
+            <PageLayoutGridResizeHandle />
+          ) : undefined
         }
         resizeHandles={['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw']}
         onDragStart={(_layout, _oldItem, newItem) => {
           setPageLayoutDraggingWidgetId(newItem.i);
         }}
-        onDragStop={() => {
+        onDrag={(_layout, _oldItem, _newItem, _placeholder, event) => {
+          handleGridDrag(event);
+        }}
+        onDragStop={(_layout, _oldItem, newItem, _placeholder, event) => {
+          handleGridDragStop(newItem.i, event);
           setPageLayoutDraggingWidgetId(null);
         }}
         onResizeStart={(_layout, _oldItem, newItem) => {

@@ -74,9 +74,7 @@ const companyPeopleField = getMockFieldMetadataItemOrThrow({
 const TEST_RECORD_ID = 'test-record-123';
 const TEST_PERSON_RECORD_ID = 'test-person-456';
 
-// Widget ID constants for stories
 const WIDGET_ID_NUMBER_CHART = 'widget-number-chart';
-const WIDGET_ID_GAUGE_CHART = 'widget-gauge-chart';
 const WIDGET_ID_BAR_CHART = 'widget-bar-chart';
 const WIDGET_ID_SMALL = 'widget-small';
 const WIDGET_ID_MEDIUM = 'widget-medium';
@@ -136,20 +134,25 @@ const createPageLayoutWithWidget = (
   widget: PageLayoutWidget,
   pageLayoutType: PageLayoutType = PageLayoutType.DASHBOARD,
 ): PageLayout => ({
+  applicationId: 'application-id-mock',
   id: PAGE_LAYOUT_TEST_INSTANCE_ID,
   name: 'Mock Page Layout',
   type: pageLayoutType,
+  isSystemSideEffect: false,
   objectMetadataId: companyObjectMetadataItem.id,
+  universalIdentifier: '20202020-0000-0000-0000-000000000001',
   tabs: [
     {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutTab',
+      isActive: true,
       applicationId: '',
       id: TAB_ID_OVERVIEW,
       title: 'Overview',
       position: 0,
       pageLayoutId: PAGE_LAYOUT_TEST_INSTANCE_ID,
       widgets: [widget],
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -252,7 +255,11 @@ type Story = StoryObj<typeof WidgetRenderer>;
 export const WithNumberChart: Story = {
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_NUMBER_CHART,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.GRAPH,
@@ -272,7 +279,6 @@ export const WithNumberChart: Story = {
         aggregateFieldMetadataId: idField.id,
         displayDataLabel: true,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -316,6 +322,7 @@ export const WithNumberChart: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.GRID,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -336,97 +343,14 @@ export const WithNumberChart: Story = {
   },
 };
 
-export const WithGaugeChart: Story = {
-  render: () => {
-    const widget: PageLayoutWidget = {
-      __typename: 'PageLayoutWidget',
-      id: WIDGET_ID_GAUGE_CHART,
-      pageLayoutTabId: TAB_ID_OVERVIEW,
-      type: WidgetType.GRAPH,
-      title: 'Conversion Rate',
-      objectMetadataId: companyObjectMetadataItem.id,
-      gridPosition: {
-        __typename: 'GridPosition',
-        row: 0,
-        column: 0,
-        rowSpan: 5,
-        columnSpan: 3,
-      },
-      configuration: {
-        __typename: 'GaugeChartConfiguration',
-        configurationType: WidgetConfigurationType.GAUGE_CHART,
-        aggregateOperation: AggregateOperations.COUNT,
-        aggregateFieldMetadataId: idField.id,
-        displayDataLabel: false,
-      },
-      isOverridden: false,
-      createdAt: '2024-01-01T00:00:00Z',
-      updatedAt: '2024-01-01T00:00:00Z',
-      deletedAt: null,
-    };
-
-    setTestObjectMetadataItemsInMetadataStore(
-      jotaiStore,
-      getTestEnrichedObjectMetadataItemsMock(),
-    );
-    jotaiStore.set(isMinimalMetadataReadyState.atom, true);
-    const pageLayoutData = createPageLayoutWithWidget(widget);
-    jotaiStore.set(
-      pageLayoutPersistedComponentState.atomFamily({
-        instanceId: PAGE_LAYOUT_TEST_INSTANCE_ID,
-      }),
-      pageLayoutData,
-    );
-    jotaiStore.set(
-      pageLayoutDraftComponentState.atomFamily({
-        instanceId: PAGE_LAYOUT_TEST_INSTANCE_ID,
-      }),
-      pageLayoutData,
-    );
-
-    return (
-      <div style={{ width: '300px', height: '400px' }}>
-        <JestMetadataAndApolloMocksWrapper>
-          <CoreClientProviderWrapper>
-            <PageLayoutTestWrapper store={jotaiStore}>
-              <LayoutRenderingProvider
-                value={{
-                  isInSidePanel: false,
-                  layoutType: PageLayoutType.DASHBOARD,
-                  targetRecordIdentifier: {
-                    id: companyObjectMetadataItem.id,
-                    targetObjectNameSingular:
-                      companyObjectMetadataItem.nameSingular,
-                  },
-                }}
-              >
-                <PageLayoutContentProvider
-                  value={{
-                    layoutMode: PageLayoutTabLayoutMode.GRID,
-                    tabId: TAB_ID_OVERVIEW,
-                  }}
-                >
-                  <WidgetComponentInstanceContext.Provider
-                    value={{
-                      instanceId: WIDGET_ID_GAUGE_CHART,
-                    }}
-                  >
-                    <WidgetRenderer widget={widget} />
-                  </WidgetComponentInstanceContext.Provider>
-                </PageLayoutContentProvider>
-              </LayoutRenderingProvider>
-            </PageLayoutTestWrapper>
-          </CoreClientProviderWrapper>
-        </JestMetadataAndApolloMocksWrapper>
-      </div>
-    );
-  },
-};
-
 export const WithBarChart: Story = {
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_BAR_CHART,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.GRAPH,
@@ -450,7 +374,6 @@ export const WithBarChart: Story = {
         axisNameDisplay: AxisNameDisplay.BOTH,
         displayDataLabel: false,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -494,6 +417,7 @@ export const WithBarChart: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.GRID,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -524,7 +448,11 @@ export const SmallWidget: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_SMALL,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.GRAPH,
@@ -544,7 +472,6 @@ export const SmallWidget: Story = {
         aggregateFieldMetadataId: idField.id,
         displayDataLabel: true,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -588,6 +515,7 @@ export const SmallWidget: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.GRID,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -618,7 +546,11 @@ export const MediumWidget: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_MEDIUM,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.GRAPH,
@@ -642,7 +574,6 @@ export const MediumWidget: Story = {
         axisNameDisplay: AxisNameDisplay.BOTH,
         displayDataLabel: false,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -686,6 +617,7 @@ export const MediumWidget: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.GRID,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -716,7 +648,11 @@ export const LargeWidget: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_LARGE,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.GRAPH,
@@ -740,7 +676,6 @@ export const LargeWidget: Story = {
         axisNameDisplay: AxisNameDisplay.BOTH,
         displayDataLabel: false,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -784,6 +719,7 @@ export const LargeWidget: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.GRID,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -814,7 +750,11 @@ export const WideWidget: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_WIDE,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.GRAPH,
@@ -834,7 +774,6 @@ export const WideWidget: Story = {
         aggregateFieldMetadataId: idField.id,
         displayDataLabel: true,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -878,6 +817,7 @@ export const WideWidget: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.GRID,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -908,7 +848,11 @@ export const TallWidget: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_TALL,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.GRAPH,
@@ -932,7 +876,6 @@ export const TallWidget: Story = {
         axisNameDisplay: AxisNameDisplay.BOTH,
         displayDataLabel: false,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -976,6 +919,7 @@ export const TallWidget: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.GRID,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -1007,7 +951,11 @@ export const WithManyToOneRelationFieldWidget: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_MANY_TO_ONE_RELATION,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.FIELD,
@@ -1026,7 +974,6 @@ export const WithManyToOneRelationFieldWidget: Story = {
         fieldMetadataId: accountOwnerField.id,
         fieldDisplayMode: FieldDisplayMode.FIELD,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -1063,7 +1010,6 @@ export const WithManyToOneRelationFieldWidget: Story = {
       recordStoreFamilyState.atomFamily(TEST_RECORD_ID),
       mockCompanyRecord,
     );
-    // Set the related WorkspaceMember record for relation field display
     if (
       mockCompanyRecord.accountOwner !== null &&
       mockCompanyRecord.accountOwner !== undefined
@@ -1095,6 +1041,7 @@ export const WithManyToOneRelationFieldWidget: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -1126,7 +1073,11 @@ export const WithOneToManyRelationFieldWidget: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_ONE_TO_MANY_RELATION,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.FIELD,
@@ -1145,7 +1096,6 @@ export const WithOneToManyRelationFieldWidget: Story = {
         fieldMetadataId: companyPeopleField.id,
         fieldDisplayMode: FieldDisplayMode.FIELD,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -1206,6 +1156,7 @@ export const WithOneToManyRelationFieldWidget: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -1237,7 +1188,11 @@ export const OneToManyRelationFieldWidgetWithSeeAllButton: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_ONE_TO_MANY_RELATION,
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.FIELD,
@@ -1256,7 +1211,6 @@ export const OneToManyRelationFieldWidgetWithSeeAllButton: Story = {
         fieldMetadataId: companyPeopleField.id,
         fieldDisplayMode: FieldDisplayMode.FIELD,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -1297,7 +1251,6 @@ export const OneToManyRelationFieldWidgetWithSeeAllButton: Story = {
       recordStoreFamilyState.atomFamily(TEST_PERSON_RECORD_ID),
       mockPersonRecord,
     );
-    // Set hover state to make the "See all" button visible
     jotaiStore.set(
       widgetCardHoveredComponentFamilyState.atomFamily({
         instanceId: PAGE_LAYOUT_TEST_INSTANCE_ID,
@@ -1325,6 +1278,7 @@ export const OneToManyRelationFieldWidgetWithSeeAllButton: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -1346,13 +1300,10 @@ export const OneToManyRelationFieldWidgetWithSeeAllButton: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    // Find the "See all" link button by its test id
     const seeAllLink = await canvas.findByTestId('widget-see-all-link');
 
-    // Verify the button is visible
     expect(seeAllLink).toBeVisible();
 
-    // Verify it has a well-formed link (should contain the filter query params)
     expect(seeAllLink).toHaveAttribute('href');
     const href = seeAllLink.getAttribute('href');
     expect(href).toContain('/objects/people');
@@ -1374,7 +1325,11 @@ export const OnMobile: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: 'widget-mobile',
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.GRAPH,
@@ -1394,7 +1349,6 @@ export const OnMobile: Story = {
         aggregateFieldMetadataId: idField.id,
         displayDataLabel: true,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -1441,6 +1395,7 @@ export const OnMobile: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.GRID,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -1472,7 +1427,11 @@ export const InSidePanel: Story = {
   },
   render: () => {
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: 'widget-side-panel',
       pageLayoutTabId: TAB_ID_OVERVIEW,
       type: WidgetType.GRAPH,
@@ -1492,7 +1451,6 @@ export const InSidePanel: Story = {
         aggregateFieldMetadataId: idField.id,
         displayDataLabel: true,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -1539,6 +1497,7 @@ export const InSidePanel: Story = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode: PageLayoutTabLayoutMode.GRID,
+                    presentation: 'stack',
                     tabId: TAB_ID_OVERVIEW,
                   }}
                 >
@@ -1625,12 +1584,18 @@ export const Catalog: CatalogStory<Story, typeof WidgetRenderer> = {
         : PageLayoutType.RECORD_PAGE;
 
     const layoutMode =
-      variant === 'canvas'
+      variant === 'solo'
         ? PageLayoutTabLayoutMode.CANVAS
         : PageLayoutTabLayoutMode.GRID;
 
+    const presentation = variant === 'solo' ? 'solo' : 'stack';
+
     const widget: PageLayoutWidget = {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       __typename: 'PageLayoutWidget',
+      applicationId: '',
+      isActive: true,
       id: WIDGET_ID_CATALOG,
       pageLayoutTabId:
         variant === 'side-column' ? 'pinned-tab' : TAB_ID_OVERVIEW,
@@ -1651,7 +1616,6 @@ export const Catalog: CatalogStory<Story, typeof WidgetRenderer> = {
         aggregateFieldMetadataId: idField.id,
         displayDataLabel: true,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -1691,7 +1655,6 @@ export const Catalog: CatalogStory<Story, typeof WidgetRenderer> = {
       );
     }
 
-    // currentUserWorkspaceState is now a Jotai state, set it directly
     if (isRestricted === true) {
       jotaiStore.set(currentUserWorkspaceState.atom, {
         permissionFlags: [],
@@ -1730,34 +1693,41 @@ export const Catalog: CatalogStory<Story, typeof WidgetRenderer> = {
 
     const pageLayoutData: PageLayout = {
       id: PAGE_LAYOUT_TEST_INSTANCE_ID,
+      applicationId: 'application-id-mock',
       name: 'Mock Page Layout',
       type: pageLayoutType,
+      isSystemSideEffect: false,
       objectMetadataId: companyObjectMetadataItem.id,
+      universalIdentifier: '20202020-0000-0000-0000-000000000001',
       tabs:
         variant === 'side-column'
           ? [
               {
+                isSystemSideEffect: false,
+                universalIdentifier: 'universal-identifier-mock',
                 __typename: 'PageLayoutTab',
+                isActive: true,
                 applicationId: '',
                 id: 'pinned-tab',
                 title: 'Pinned Tab',
                 position: 0,
                 pageLayoutId: PAGE_LAYOUT_TEST_INSTANCE_ID,
                 widgets: [widget],
-                isOverridden: false,
                 createdAt: '2024-01-01T00:00:00Z',
                 updatedAt: '2024-01-01T00:00:00Z',
                 deletedAt: null,
               },
               {
                 __typename: 'PageLayoutTab',
+                isActive: true,
                 applicationId: '',
+                universalIdentifier: 'universal-identifier-mock',
+                isSystemSideEffect: false,
                 id: 'other-tab',
                 title: 'Other Tab',
                 position: 1,
                 pageLayoutId: PAGE_LAYOUT_TEST_INSTANCE_ID,
                 widgets: [],
-                isOverridden: false,
                 createdAt: '2024-01-01T00:00:00Z',
                 updatedAt: '2024-01-01T00:00:00Z',
                 deletedAt: null,
@@ -1766,13 +1736,15 @@ export const Catalog: CatalogStory<Story, typeof WidgetRenderer> = {
           : [
               {
                 __typename: 'PageLayoutTab',
+                isActive: true,
                 applicationId: '',
+                universalIdentifier: 'universal-identifier-mock',
+                isSystemSideEffect: false,
                 id: TAB_ID_OVERVIEW,
                 title: 'Overview',
                 position: 0,
                 pageLayoutId: PAGE_LAYOUT_TEST_INSTANCE_ID,
                 widgets: [widget],
-                isOverridden: false,
                 createdAt: '2024-01-01T00:00:00Z',
                 updatedAt: '2024-01-01T00:00:00Z',
                 deletedAt: null,
@@ -1826,6 +1798,7 @@ export const Catalog: CatalogStory<Story, typeof WidgetRenderer> = {
                 <PageLayoutContentProvider
                   value={{
                     layoutMode,
+                    presentation,
                     tabId:
                       variant === 'side-column'
                         ? 'pinned-tab'

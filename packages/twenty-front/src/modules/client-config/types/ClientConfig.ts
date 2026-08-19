@@ -4,10 +4,13 @@ import {
   type Billing,
   type Captcha,
   type ClientAiModelConfig,
+  type ClientConfigMaintenanceMode,
   type PublicFeatureFlag,
   type Sentry,
   type Support,
 } from '~/generated-metadata/graphql';
+import { type EnterpriseInstanceType } from 'twenty-shared/constants';
+import { type OnboardingConfig } from '@/client-config/types/OnboardingConfig';
 
 export type ClientConfig = {
   appVersion?: string;
@@ -17,10 +20,13 @@ export type ClientConfig = {
   authProviders: AuthProviders;
   billing: Billing;
   calendarBookingPageId?: string;
+  isBookCallOnboardingStepEnabled: boolean;
+  isCompanyEnrichmentEnabled: boolean;
   canManageFeatureFlags: boolean;
   captcha: Captcha;
   defaultSubdomain?: string;
   frontDomain: string;
+  publicFunctionDomain?: string | null;
   isAttachmentPreviewEnabled: boolean;
   isConfigVariablesInDbEnabled: boolean;
   isEmailVerificationRequired: boolean;
@@ -30,13 +36,18 @@ export type ClientConfig = {
   isMicrosoftMessagingEnabled: boolean;
   isMultiWorkspaceEnabled: boolean;
   isImapSmtpCaldavEnabled: boolean;
-  isEmailingDomainsEnabled: boolean;
+  isEmailingDomainInDemoMode: boolean;
   isCloudflareIntegrationEnabled: boolean;
   isClickHouseConfigured: boolean;
+  isWorkspaceSchemaDDLLocked: boolean;
+  isOnboardingAiChatEnabled: boolean;
+  onboarding: OnboardingConfig | null;
   publicFeatureFlags: Array<PublicFeatureFlag>;
   sentry: Sentry;
   signInPrefilled: boolean;
   support: Support;
   isTwoFactorAuthenticationEnabled: boolean;
   allowRequestsToTwentyIcons: boolean;
+  maintenance?: ClientConfigMaintenanceMode;
+  enterpriseInstanceType?: EnterpriseInstanceType;
 };

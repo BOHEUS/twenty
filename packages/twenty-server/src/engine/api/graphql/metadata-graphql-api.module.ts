@@ -7,6 +7,7 @@ import { GraphQLConfigModule } from 'src/engine/api/graphql/graphql-config/graph
 import { metadataModuleFactory } from 'src/engine/api/graphql/metadata.module-factory';
 import { CacheStorageNamespace } from 'src/engine/core-modules/cache-storage/types/cache-storage-namespace.enum';
 import { ExceptionHandlerService } from 'src/engine/core-modules/exception-handler/exception-handler.service';
+import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
 import { I18nModule } from 'src/engine/core-modules/i18n/i18n.module';
 import { I18nService } from 'src/engine/core-modules/i18n/i18n.service';
 import { MetricsModule } from 'src/engine/core-modules/metrics/metrics.module';
@@ -15,6 +16,8 @@ import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twent
 import { DataloaderModule } from 'src/engine/dataloaders/dataloader.module';
 import { DataloaderService } from 'src/engine/dataloaders/dataloader.service';
 import { MetadataEngineModule } from 'src/engine/metadata-modules/metadata-engine.module';
+import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
+import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
 
 @Module({
   imports: [
@@ -26,6 +29,7 @@ import { MetadataEngineModule } from 'src/engine/metadata-modules/metadata-engin
         DataloaderModule,
         MetricsModule,
         I18nModule,
+        WorkspaceCacheModule,
       ],
       inject: [
         TwentyConfigService,
@@ -34,6 +38,8 @@ import { MetadataEngineModule } from 'src/engine/metadata-modules/metadata-engin
         CacheStorageNamespace.EngineWorkspace,
         MetricsService,
         I18nService,
+        FeatureFlagService,
+        WorkspaceCacheService,
       ],
     }),
     MetadataEngineModule,

@@ -1,13 +1,18 @@
 import { type YogaDriverConfig } from '@graphql-yoga/nestjs';
+import * as Sentry from '@sentry/node';
 import GraphQLJSON from 'graphql-type-json';
+import { ApiPath } from 'twenty-shared/types';
 
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
 
+import { METADATA_GRAPHQL_OPERATIONS_TO_CACHE } from 'src/engine/api/graphql/graphql-config/constants/metadata-graphql-operations-to-cache.constant';
 import { useCachedMetadata } from 'src/engine/api/graphql/graphql-config/hooks/use-cached-metadata';
 import { MetadataGraphQLApiModule } from 'src/engine/api/graphql/metadata-graphql-api.module';
-import { ClientConfig } from 'src/engine/core-modules/client-config/client-config.entity';
 import { type CacheStorageService } from 'src/engine/core-modules/cache-storage/services/cache-storage.service';
+import { ClientConfig } from 'src/engine/core-modules/client-config/client-config.entity';
 import { type ExceptionHandlerService } from 'src/engine/core-modules/exception-handler/exception-handler.service';
+import { useSentryTracing } from 'src/engine/core-modules/exception-handler/hooks/use-sentry-tracing';
+import { type FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
 import { useDisableIntrospectionAndSuggestionsForUnauthenticatedUsers } from 'src/engine/core-modules/graphql/hooks/use-disable-introspection-and-suggestions-for-unauthenticated-users.hook';
 import { useGraphQLErrorHandlerHook } from 'src/engine/core-modules/graphql/hooks/use-graphql-error-handler.hook';
 import { useValidateGraphqlQueryComplexity } from 'src/engine/core-modules/graphql/hooks/use-validate-graphql-query-complexity.hook';
@@ -16,6 +21,7 @@ import { type MetricsService } from 'src/engine/core-modules/metrics/metrics.ser
 import { type TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { type DataloaderService } from 'src/engine/dataloaders/dataloader.service';
 import { renderApolloPlayground } from 'src/engine/utils/render-apollo-playground.util';
+import { type WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 
 export const metadataModuleFactory = async (
   twentyConfigService: TwentyConfigService,
@@ -24,6 +30,8 @@ export const metadataModuleFactory = async (
   cacheStorageService: CacheStorageService,
   metricsService: MetricsService,
   i18nService: I18nService,
+  _featureFlagService: FeatureFlagService,
+  workspaceCacheService: WorkspaceCacheService,
 ): Promise<YogaDriverConfig> => {
   const config: YogaDriverConfig = {
     autoSchemaFile: true,
@@ -33,10 +41,11 @@ export const metadataModuleFactory = async (
       orphanedTypes: [ClientConfig],
     },
     renderGraphiQL() {
-      return renderApolloPlayground({ path: 'metadata' });
+      return renderApolloPlayground({ path: ApiPath.Metadata });
     },
     resolvers: { JSON: GraphQLJSON },
     plugins: [
+      ...(Sentry.isInitialized() ? [useSentryTracing()] : []),
       useGraphQLErrorHandlerHook({
         metricsService: metricsService,
         exceptionHandlerService,
@@ -46,7 +55,11 @@ export const metadataModuleFactory = async (
       useCachedMetadata({
         cacheGetter: cacheStorageService.get.bind(cacheStorageService),
         cacheSetter: cacheStorageService.set.bind(cacheStorageService),
-        operationsToCache: ['ObjectMetadataItems', 'FindAllViews'],
+        operationsToCache: METADATA_GRAPHQL_OPERATIONS_TO_CACHE,
+        dependencyHashGetter:
+          workspaceCacheService.getOrRecomputeCombinedHash.bind(
+            workspaceCacheService,
+          ),
       }),
       useDisableIntrospectionAndSuggestionsForUnauthenticatedUsers(
         twentyConfigService.get('NODE_ENV') === NodeEnvironment.PRODUCTION,
@@ -58,7 +71,7 @@ export const metadataModuleFactory = async (
         checkDuplicateRootResolvers: true,
       }),
     ],
-    path: '/metadata',
+    path: `/${ApiPath.Metadata}`,
     context: () => ({
       loaders: dataloaderService.createLoaders(),
     }),
@@ -66,7 +79,7 @@ export const metadataModuleFactory = async (
 
   if (twentyConfigService.get('NODE_ENV') === NodeEnvironment.DEVELOPMENT) {
     config.renderGraphiQL = () => {
-      return renderApolloPlayground({ path: 'metadata' });
+      return renderApolloPlayground({ path: ApiPath.Metadata });
     };
   }
 

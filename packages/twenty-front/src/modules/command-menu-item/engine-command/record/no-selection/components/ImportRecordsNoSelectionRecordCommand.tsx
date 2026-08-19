@@ -1,10 +1,11 @@
 import { HeadlessEngineCommandWrapperEffect } from '@/command-menu-item/engine-command/components/HeadlessEngineCommandWrapperEffect';
-import { useMountedEngineCommandContext } from '@/command-menu-item/engine-command/hooks/useMountedEngineCommandContext';
+import { useHeadlessCommandContextApi } from '@/command-menu-item/engine-command/hooks/useHeadlessCommandContextApi';
 import { useOpenObjectRecordsSpreadsheetImportDialog } from '@/object-record/spreadsheet-import/hooks/useOpenObjectRecordsSpreadsheetImportDialog';
+import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
 import { isDefined } from 'twenty-shared/utils';
 
 export const ImportRecordsNoSelectionRecordCommand = () => {
-  const { objectMetadataItem } = useMountedEngineCommandContext();
+  const { objectMetadataItem } = useHeadlessCommandContextApi();
 
   if (!isDefined(objectMetadataItem)) {
     throw new Error('Object metadata item is required to import records');
@@ -14,10 +15,12 @@ export const ImportRecordsNoSelectionRecordCommand = () => {
     useOpenObjectRecordsSpreadsheetImportDialog(
       objectMetadataItem.nameSingular,
     );
+  const { closeSidePanelMenu } = useSidePanelMenu();
 
-  return (
-    <HeadlessEngineCommandWrapperEffect
-      execute={openObjectRecordsSpreadsheetImportDialog}
-    />
-  );
+  const handleExecute = () => {
+    closeSidePanelMenu();
+    openObjectRecordsSpreadsheetImportDialog();
+  };
+
+  return <HeadlessEngineCommandWrapperEffect execute={handleExecute} />;
 };

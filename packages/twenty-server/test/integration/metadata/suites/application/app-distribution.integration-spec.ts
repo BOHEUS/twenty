@@ -8,7 +8,9 @@ import * as tar from 'tar';
 import { type DataSource } from 'typeorm';
 import { uploadAppTarball } from 'test/integration/metadata/suites/application/utils/upload-app-tarball.util';
 
-const TEST_WORKSPACE_ID = '20202020-1c25-4d02-bf25-6aeccf7ea419';
+import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
+
+const TEST_WORKSPACE_ID = SEED_APPLE_WORKSPACE_ID;
 
 const createTestTarball = async (
   files: Record<string, string>,
@@ -57,7 +59,6 @@ const createValidManifest = (universalIdentifier: string) =>
       applicationVariables: {},
       packageJsonChecksum: null,
       yarnLockChecksum: null,
-      apiClientChecksum: null,
     },
     roles: [],
     skills: [],
@@ -69,6 +70,7 @@ const createValidManifest = (universalIdentifier: string) =>
     views: [],
     navigationMenuItems: [],
     pageLayouts: [],
+    pageLayoutTabs: [],
   });
 
 const insertRegistrationWithSource = async (
@@ -174,7 +176,7 @@ describe('App Distribution (integration)', () => {
       expect(rows[0].sourceType).toBe('tarball');
     });
 
-    it('should update existing tarball registration on re-upload', async () => {
+    it('should fail to update existing version', async () => {
       const uid = crypto.randomUUID();
       const manifest = createValidManifest(uid);
 
@@ -193,8 +195,52 @@ describe('App Distribution (integration)', () => {
 
       createdRegistrationIds.push(firstResult.data!.uploadAppTarball.id);
 
-      const secondResult = await uploadAppTarball({
+      const { errors } = await uploadAppTarball({
         tarballBuffer: tarball,
+        universalIdentifier: uid,
+        expectToFail: true,
+      });
+
+      expect(errors).toBeDefined();
+
+      expect(
+        errors?.some((error: { message: string }) =>
+          error.message.includes(
+            'version must be higher than the currently deployed version',
+          ),
+        ),
+      ).toBe(true);
+    });
+
+    it('should update existing tarball registration on re-upload', async () => {
+      const uid = crypto.randomUUID();
+      const manifest = createValidManifest(uid);
+
+      const firstTarball = await createTestTarball({
+        'manifest.json': manifest,
+        'package.json': JSON.stringify({
+          name: 'test-app',
+          version: '1.1.0',
+        }),
+      });
+
+      const firstResult = await uploadAppTarball({
+        tarballBuffer: firstTarball,
+        universalIdentifier: uid,
+      });
+
+      createdRegistrationIds.push(firstResult.data!.uploadAppTarball.id);
+
+      const secondTarball = await createTestTarball({
+        'manifest.json': manifest,
+        'package.json': JSON.stringify({
+          name: 'test-app',
+          version: '1.2.0',
+        }),
+      });
+
+      const secondResult = await uploadAppTarball({
+        tarballBuffer: secondTarball,
         universalIdentifier: uid,
       });
 

@@ -1,14 +1,16 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
 import { ConnectedAccountProvider } from 'twenty-shared/types';
 import { assertUnreachable } from 'twenty-shared/utils';
+import { Repository } from 'typeorm';
 
-import { ConnectedAccountDataAccessService } from 'src/engine/metadata-modules/connected-account/data-access/services/connected-account-data-access.service';
+import { ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
+import { MessageChannelEntity } from 'src/engine/metadata-modules/message-channel/entities/message-channel.entity';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { GoogleEmailAliasManagerService } from 'src/modules/connected-account/email-alias-manager/drivers/google/services/google-email-alias-manager.service';
 import { MicrosoftEmailAliasManagerService } from 'src/modules/connected-account/email-alias-manager/drivers/microsoft/services/microsoft-email-alias-manager.service';
-import { type ConnectedAccountWorkspaceEntity } from 'src/modules/connected-account/standard-objects/connected-account.workspace-entity';
 
 @Injectable()
 export class EmailAliasManagerService {
@@ -16,50 +18,64 @@ export class EmailAliasManagerService {
     private readonly googleEmailAliasManagerService: GoogleEmailAliasManagerService,
     private readonly microsoftEmailAliasManagerService: MicrosoftEmailAliasManagerService,
     private readonly globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
-    private readonly connectedAccountDataAccessService: ConnectedAccountDataAccessService,
+    @InjectRepository(ConnectedAccountEntity)
+    private readonly connectedAccountRepository: Repository<ConnectedAccountEntity>,
+    @InjectRepository(MessageChannelEntity)
+    private readonly messageChannelRepository: Repository<MessageChannelEntity>,
   ) {}
 
   public async refreshHandleAliases(
-    connectedAccount: ConnectedAccountWorkspaceEntity,
+    connectedAccount: ConnectedAccountEntity,
     workspaceId: string,
-  ) {
-    let handleAliases: string[];
+  ): Promise<string[]> {
+    const accountHasMailbox = await this.messageChannelRepository.exists({
+      where: { connectedAccountId: connectedAccount.id, workspaceId },
+    });
 
-    switch (connectedAccount.provider) {
-      case ConnectedAccountProvider.MICROSOFT:
-        handleAliases =
-          await this.microsoftEmailAliasManagerService.getHandleAliases(
-            connectedAccount,
-          );
-        break;
-      case ConnectedAccountProvider.GOOGLE:
-        handleAliases =
-          await this.googleEmailAliasManagerService.getHandleAliases(
-            connectedAccount,
-          );
-        break;
-      case ConnectedAccountProvider.IMAP_SMTP_CALDAV:
-      case ConnectedAccountProvider.OIDC:
-      case ConnectedAccountProvider.SAML:
-        handleAliases = [];
-        break;
-      default:
-        assertUnreachable(
-          connectedAccount.provider,
-          `Email alias manager for provider ${connectedAccount.provider} is not implemented`,
-        );
+    if (!accountHasMailbox) {
+      return connectedAccount.handleAliases ?? [];
     }
+
+    const handleAliases =
+      await this.getHandleAliasesFromProvider(connectedAccount);
 
     const authContext = buildSystemAuthContext(workspaceId);
 
     await this.globalWorkspaceOrmManager.executeInWorkspaceContext(async () => {
-      await this.connectedAccountDataAccessService.update(
-        workspaceId,
-        { id: connectedAccount.id },
+      await this.connectedAccountRepository.update(
+        { id: connectedAccount.id, workspaceId },
         {
-          handleAliases: handleAliases.join(','), // TODO: modify handleAliases to be of fieldmetadatatype array
+          handleAliases,
         },
       );
     }, authContext);
+
+    return handleAliases;
+  }
+
+  private async getHandleAliasesFromProvider(
+    connectedAccount: ConnectedAccountEntity,
+  ): Promise<string[]> {
+    switch (connectedAccount.provider) {
+      case ConnectedAccountProvider.MICROSOFT:
+        return this.microsoftEmailAliasManagerService.getHandleAliases(
+          connectedAccount,
+        );
+      case ConnectedAccountProvider.GOOGLE:
+        return this.googleEmailAliasManagerService.getHandleAliases(
+          connectedAccount,
+        );
+      case ConnectedAccountProvider.IMAP_SMTP_CALDAV:
+      case ConnectedAccountProvider.OIDC:
+      case ConnectedAccountProvider.SAML:
+      case ConnectedAccountProvider.EMAIL_GROUP:
+      case ConnectedAccountProvider.APP:
+        return [];
+      default:
+        return assertUnreachable(
+          connectedAccount.provider,
+          `Email alias manager for provider ${connectedAccount.provider} is not implemented`,
+        );
+    }
   }
 }

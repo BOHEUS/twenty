@@ -39,25 +39,13 @@ export class CommonDeleteManyQueryRunnerService extends CommonBaseQueryRunnerSer
     queryRunnerContext: CommonExtendedQueryRunnerContext,
   ): Promise<ObjectRecord[]> {
     const {
-      repository,
       authContext,
       rolePermissionConfig,
       workspaceDataSource,
       flatObjectMetadataMaps,
       flatFieldMetadataMaps,
       flatObjectMetadata,
-      commonQueryParser,
     } = queryRunnerContext;
-
-    const queryBuilder = repository.createQueryBuilder(
-      flatObjectMetadata.nameSingular,
-    );
-
-    commonQueryParser.applyFilterToBuilder(
-      queryBuilder,
-      flatObjectMetadata.nameSingular,
-      args.filter,
-    );
 
     const columnsToReturn = buildColumnsToReturn({
       select: args.selectedFieldsResult.select,
@@ -67,12 +55,12 @@ export class CommonDeleteManyQueryRunnerService extends CommonBaseQueryRunnerSer
       flatFieldMetadataMaps,
     });
 
-    const deletedObjectRecords = await queryBuilder
-      .softDelete()
-      .returning(columnsToReturn)
-      .execute();
-
-    const deletedRecords = deletedObjectRecords.generatedMaps as ObjectRecord[];
+    const deletedRecords = await this.runFilteredMutation({
+      queryRunnerContext,
+      filter: args.filter,
+      columnsToReturn,
+      kind: 'soft-delete',
+    });
 
     if (isDefined(args.selectedFieldsResult.relations)) {
       await this.processNestedRelationsHelper.processNestedRelations({
@@ -89,6 +77,7 @@ export class CommonDeleteManyQueryRunnerService extends CommonBaseQueryRunnerSer
         workspaceDataSource,
         rolePermissionConfig,
         selectedFields: args.selectedFieldsResult.select,
+        ...this.getNestedRelationsReadPathOptions(queryRunnerContext),
       });
     }
 
@@ -99,13 +88,18 @@ export class CommonDeleteManyQueryRunnerService extends CommonBaseQueryRunnerSer
     args: CommonInput<DeleteManyQueryArgs>,
     queryRunnerContext: CommonBaseQueryRunnerContext,
   ): Promise<CommonInput<DeleteManyQueryArgs>> {
-    const { flatObjectMetadata, flatFieldMetadataMaps } = queryRunnerContext;
+    const {
+      flatObjectMetadata,
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
+    } = queryRunnerContext;
 
     return {
       ...args,
       filter: this.filterArgProcessor.process({
         filter: args.filter,
         flatObjectMetadata,
+        flatObjectMetadataMaps,
         flatFieldMetadataMaps,
       }),
     };

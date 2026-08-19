@@ -11,7 +11,11 @@ import { convertLayoutsToWidgets } from '@/page-layout/utils/convertLayoutsToWid
 describe('convertLayoutsToWidgets', () => {
   const mockWidgets: PageLayoutWidget[] = [
     {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       id: 'widget-1',
+      applicationId: '',
+      isActive: true,
       pageLayoutTabId: 'tab-1',
       title: 'Widget 1',
       type: WidgetType.GRAPH,
@@ -28,13 +32,16 @@ describe('convertLayoutsToWidgets', () => {
         aggregateFieldMetadataId: 'id',
         displayDataLabel: false,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
     },
     {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       id: 'widget-2',
+      applicationId: '',
+      isActive: true,
       pageLayoutTabId: 'tab-1',
       title: 'Widget 2',
       type: WidgetType.GRAPH,
@@ -53,7 +60,6 @@ describe('convertLayoutsToWidgets', () => {
         orderBy: GraphOrderBy.VALUE_DESC,
         displayDataLabel: false,
       },
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,

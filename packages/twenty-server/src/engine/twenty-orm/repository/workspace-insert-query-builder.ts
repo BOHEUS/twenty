@@ -1,4 +1,4 @@
-import { FeatureFlagKey, type ObjectsPermissions } from 'twenty-shared/types';
+import { type ObjectsPermissions } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import {
   type EntityTarget,
@@ -115,16 +115,21 @@ export class WorkspaceInsertQueryBuilder<
     return super.values(formattedValues);
   }
 
+  private validateQueryPermissionsOrThrow(): void {
+    validateQueryIsPermittedOrThrow({
+      expressionMap: this.expressionMap,
+      objectsPermissions: this.objectRecordsPermissions,
+      flatObjectMetadataMaps: this.internalContext.flatObjectMetadataMaps,
+      flatFieldMetadataMaps: this.internalContext.flatFieldMetadataMaps,
+      objectIdByNameSingular: this.internalContext.objectIdByNameSingular,
+      shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
+      authContext: this.authContext,
+    });
+  }
+
   override async execute(): Promise<InsertResult> {
     try {
-      validateQueryIsPermittedOrThrow({
-        expressionMap: this.expressionMap,
-        objectsPermissions: this.objectRecordsPermissions,
-        flatObjectMetadataMaps: this.internalContext.flatObjectMetadataMaps,
-        flatFieldMetadataMaps: this.internalContext.flatFieldMetadataMaps,
-        objectIdByNameSingular: this.internalContext.objectIdByNameSingular,
-        shouldBypassPermissionChecks: this.shouldBypassPermissionChecks,
-      });
+      this.validateQueryPermissionsOrThrow();
 
       // Fix overwrites for composite fields - valuesSet contains formatted/flattened column names
       // but overwrites was computed before formatData, missing composite field columns
@@ -217,6 +222,8 @@ export class WorkspaceInsertQueryBuilder<
           });
 
         this.expressionMap.valuesSet = updatedValues;
+
+        this.validateQueryPermissionsOrThrow();
       }
 
       this.validateRLSPredicatesForInsert();
@@ -241,7 +248,9 @@ export class WorkspaceInsertQueryBuilder<
         result.identifiers.map((identifier) => identifier.id),
       );
 
-      const afterResult = await eventSelectQueryBuilder.getMany();
+      const afterResult = await eventSelectQueryBuilder.getMany({
+        noFormatting: true,
+      });
 
       const formattedResultForEvent = formatResult<T[]>(
         afterResult,
@@ -317,14 +326,6 @@ export class WorkspaceInsertQueryBuilder<
   }
 
   private validateRLSPredicatesForInsert(): void {
-    if (
-      this.featureFlagMap[
-        FeatureFlagKey.IS_ROW_LEVEL_PERMISSION_PREDICATES_ENABLED
-      ] !== true
-    ) {
-      return;
-    }
-
     const mainAliasTarget = this.getMainAliasTarget();
     const objectMetadata = getObjectMetadataFromEntityTarget(
       mainAliasTarget,

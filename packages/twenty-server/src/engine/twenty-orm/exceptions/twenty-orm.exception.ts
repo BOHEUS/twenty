@@ -3,10 +3,10 @@ import { msg } from '@lingui/core/macro';
 import { assertUnreachable } from 'twenty-shared/utils';
 
 import { STANDARD_ERROR_MESSAGE } from 'src/engine/api/common/common-query-runners/errors/standard-error-message.constant';
+import { INVALID_INPUT_USER_FRIENDLY_MESSAGE } from 'src/engine/api/graphql/workspace-query-runner/constants/postgres-error-messages.constants';
 import { CustomException } from 'src/utils/custom-exception';
 
 export enum TwentyORMExceptionCode {
-  METADATA_VERSION_MISMATCH = 'METADATA_VERSION_MISMATCH',
   WORKSPACE_SCHEMA_NOT_FOUND = 'WORKSPACE_SCHEMA_NOT_FOUND',
   ROLES_PERMISSIONS_VERSION_NOT_FOUND = 'ROLES_PERMISSIONS_VERSION_NOT_FOUND',
   FEATURE_FLAG_MAP_VERSION_NOT_FOUND = 'FEATURE_FLAG_MAP_VERSION_NOT_FOUND',
@@ -33,8 +33,6 @@ const getTwentyORMExceptionUserFriendlyMessage = (
   code: TwentyORMExceptionCode,
 ) => {
   switch (code) {
-    case TwentyORMExceptionCode.METADATA_VERSION_MISMATCH:
-      return msg`Data version mismatch. Please refresh and try again.`;
     case TwentyORMExceptionCode.WORKSPACE_SCHEMA_NOT_FOUND:
       return msg`Workspace schema not found.`;
     case TwentyORMExceptionCode.ROLES_PERMISSIONS_VERSION_NOT_FOUND:
@@ -66,7 +64,7 @@ const getTwentyORMExceptionUserFriendlyMessage = (
     case TwentyORMExceptionCode.TOO_MANY_RECORDS_TO_UPDATE:
       return msg`Too many records to update at once.`;
     case TwentyORMExceptionCode.INVALID_INPUT:
-      return msg`Invalid input provided.`;
+      return INVALID_INPUT_USER_FRIENDLY_MESSAGE;
     case TwentyORMExceptionCode.RLS_VALIDATION_FAILED:
       return msg`Record does not satisfy security constraints.`;
     case TwentyORMExceptionCode.ENUM_TYPE_NAME_NOT_FOUND:

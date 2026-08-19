@@ -11,13 +11,14 @@ import { getFileCategoryFromExtension } from '@/object-record/record-field/ui/ut
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { styled } from '@linaria/react';
 import { useState, useContext } from 'react';
-import { isDefined } from 'twenty-shared/utils';
+import { getSafeUrl, isDefined } from 'twenty-shared/utils';
 
 import { type AttachmentWithFile } from '@/activities/files/utils/filterAttachmentsWithFile';
 import { FileIcon } from '@/file/components/FileIcon';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { CoreObjectNameSingular } from 'twenty-shared/types';
-import { IconCalendar, OverflowingTextWithTooltip } from 'twenty-ui/display';
+import { IconCalendar } from 'twenty-ui/icon';
+import { OverflowingTextWithTooltip } from 'twenty-ui/surfaces';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 import { isNavigationModifierPressed } from 'twenty-ui/utilities';
 import { PermissionFlagType } from '~/generated-metadata/graphql';
@@ -140,6 +141,9 @@ export const AttachmentRow = ({
   };
 
   const handleOnKeyDown = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent.isComposing || e.keyCode === 229) {
+      return;
+    }
     if (e.key === 'Enter') {
       saveAttachmentName();
     }
@@ -155,7 +159,6 @@ export const AttachmentRow = ({
       return;
     }
 
-    // Only prevent default and use preview if onPreview is provided
     if (isDefined(onPreview)) {
       e.preventDefault();
       onPreview(attachment);
@@ -172,7 +175,7 @@ export const AttachmentRow = ({
     >
       <ActivityRow disabled>
         <StyledLeftContent>
-          <FileIcon fileCategory={fileCategory} />
+          <FileIcon fileCategory={fileCategory} thumbnailUrl={fileUrl} />
           {isEditing ? (
             <SettingsTextInput
               instanceId={`attachment-${attachment.id}-name`}
@@ -186,7 +189,7 @@ export const AttachmentRow = ({
             <StyledLinkContainer>
               <StyledLink
                 onClick={handleOpenDocument}
-                href={fileUrl}
+                href={getSafeUrl(fileUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
               >

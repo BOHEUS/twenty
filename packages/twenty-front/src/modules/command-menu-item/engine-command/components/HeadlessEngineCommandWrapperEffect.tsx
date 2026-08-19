@@ -1,6 +1,8 @@
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
+
 import { useIsHeadlessEngineCommandEffectInitialized } from '@/command-menu-item/engine-command/hooks/useIsHeadlessEngineCommandEffectInitialized';
-import { useUnmountEngineCommand } from '@/command-menu-item/engine-command/hooks/useUnmountEngineCommand';
-import { EngineCommandComponentInstanceContext } from '@/command-menu-item/engine-command/states/contexts/EngineCommandComponentInstanceContext';
+import { useUnmountCommand } from '@/command-menu-item/engine-command/hooks/useUnmountEngineCommand';
+import { CommandComponentInstanceContext } from '@/command-menu-item/engine-command/states/contexts/CommandComponentInstanceContext';
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
 import { useEffect } from 'react';
@@ -17,11 +19,11 @@ export const HeadlessEngineCommandWrapperEffect = ({
   const { isInitializedRef, setIsInitialized } =
     useIsHeadlessEngineCommandEffectInitialized();
 
-  const engineCommandId = useAvailableComponentInstanceIdOrThrow(
-    EngineCommandComponentInstanceContext,
+  const commandMenuItemId = useAvailableComponentInstanceIdOrThrow(
+    CommandComponentInstanceContext,
   );
 
-  const unmountEngineCommand = useUnmountEngineCommand();
+  const unmountCommand = useUnmountCommand();
 
   const { enqueueErrorSnackBar } = useSnackBar();
 
@@ -33,9 +35,17 @@ export const HeadlessEngineCommandWrapperEffect = ({
     setIsInitialized(true);
 
     const run = async () => {
-      await execute();
-
-      unmountEngineCommand(engineCommandId);
+      try {
+        await execute();
+      } catch (error) {
+        enqueueErrorSnackBar({
+          ...(CombinedGraphQLErrors.is(error) ? { apolloError: error } : {}),
+        });
+      } finally {
+        // Unmount even on failure, otherwise the headless command stays mounted
+        // and can never be triggered again.
+        unmountCommand(commandMenuItemId);
+      }
     };
 
     run();
@@ -44,8 +54,8 @@ export const HeadlessEngineCommandWrapperEffect = ({
     ready,
     isInitializedRef,
     setIsInitialized,
-    engineCommandId,
-    unmountEngineCommand,
+    commandMenuItemId,
+    unmountCommand,
     enqueueErrorSnackBar,
   ]);
 

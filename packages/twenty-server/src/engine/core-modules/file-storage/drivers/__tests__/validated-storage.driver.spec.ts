@@ -8,6 +8,9 @@ import { ValidatedStorageDriver } from 'src/engine/core-modules/file-storage/dri
 const createMockDriver = (): jest.Mocked<StorageDriver> => ({
   readFile: jest.fn().mockResolvedValue(Readable.from([])),
   writeFile: jest.fn().mockResolvedValue(undefined),
+  writeFileStream: jest.fn().mockResolvedValue(undefined),
+  getFileMetadata: jest.fn().mockResolvedValue(null),
+  getPresignedUploadUrl: jest.fn().mockResolvedValue(null),
   downloadFolder: jest.fn().mockResolvedValue(undefined),
   uploadFolder: jest.fn().mockResolvedValue(undefined),
   downloadFile: jest.fn().mockResolvedValue(undefined),
@@ -16,6 +19,7 @@ const createMockDriver = (): jest.Mocked<StorageDriver> => ({
   copy: jest.fn().mockResolvedValue(undefined),
   checkFileExists: jest.fn().mockResolvedValue(true),
   checkFolderExists: jest.fn().mockResolvedValue(true),
+  getPresignedUrl: jest.fn().mockResolvedValue(null),
 });
 
 describe('ValidatedStorageDriver', () => {
@@ -118,6 +122,71 @@ describe('ValidatedStorageDriver', () => {
         folderPath: 'folder',
       });
     });
+
+    it('should delegate getPresignedUrl', async () => {
+      mockDelegate.getPresignedUrl.mockResolvedValue(
+        'https://s3.example.com/signed',
+      );
+
+      const result = await driver.getPresignedUrl({
+        filePath: 'folder/file.txt',
+        responseContentType: 'image/png',
+        responseContentDisposition: 'inline',
+      });
+
+      expect(result).toBe('https://s3.example.com/signed');
+      expect(mockDelegate.getPresignedUrl).toHaveBeenCalledWith({
+        filePath: 'folder/file.txt',
+        responseContentType: 'image/png',
+        responseContentDisposition: 'inline',
+      });
+    });
+
+    it('should delegate writeFileStream', async () => {
+      const params = {
+        filePath: 'folder/file.txt',
+        stream: Readable.from([Buffer.from('data')]),
+        mimeType: 'text/plain' as string | undefined,
+      };
+
+      await driver.writeFileStream(params);
+
+      expect(mockDelegate.writeFileStream).toHaveBeenCalledWith(params);
+    });
+
+    it('should delegate getFileMetadata', async () => {
+      mockDelegate.getFileMetadata.mockResolvedValue({ size: 1024 });
+
+      const result = await driver.getFileMetadata({
+        filePath: 'folder/file.txt',
+      });
+
+      expect(result).toEqual({ size: 1024 });
+      expect(mockDelegate.getFileMetadata).toHaveBeenCalledWith({
+        filePath: 'folder/file.txt',
+      });
+    });
+
+    it('should delegate getPresignedUploadUrl', async () => {
+      mockDelegate.getPresignedUploadUrl.mockResolvedValue(
+        'https://s3.example.com/signed-put',
+      );
+
+      const result = await driver.getPresignedUploadUrl({
+        filePath: 'folder/file.txt',
+        contentType: 'application/pdf',
+        contentLength: 1024,
+        expiresInSeconds: 900,
+      });
+
+      expect(result).toBe('https://s3.example.com/signed-put');
+      expect(mockDelegate.getPresignedUploadUrl).toHaveBeenCalledWith({
+        filePath: 'folder/file.txt',
+        contentType: 'application/pdf',
+        contentLength: 1024,
+        expiresInSeconds: 900,
+      });
+    });
   });
 
   describe('rejects path traversal attempts', () => {
@@ -143,6 +212,44 @@ describe('ValidatedStorageDriver', () => {
       });
 
       expect(mockDelegate.writeFile).not.toHaveBeenCalled();
+    });
+
+    it('should reject writeFileStream with traversal', async () => {
+      await expect(
+        driver.writeFileStream({
+          filePath: '../../evil',
+          stream: Readable.from([Buffer.from('x')]),
+          mimeType: undefined,
+        }),
+      ).rejects.toMatchObject({
+        code: FileStorageExceptionCode.ACCESS_DENIED,
+      });
+
+      expect(mockDelegate.writeFileStream).not.toHaveBeenCalled();
+    });
+
+    it('should reject getFileMetadata with traversal', async () => {
+      await expect(
+        driver.getFileMetadata({ filePath: '../etc/passwd' }),
+      ).rejects.toMatchObject({
+        code: FileStorageExceptionCode.ACCESS_DENIED,
+      });
+
+      expect(mockDelegate.getFileMetadata).not.toHaveBeenCalled();
+    });
+
+    it('should reject getPresignedUploadUrl with traversal', async () => {
+      await expect(
+        driver.getPresignedUploadUrl({
+          filePath: '../etc/passwd',
+          contentType: 'application/pdf',
+          contentLength: 1024,
+        }),
+      ).rejects.toMatchObject({
+        code: FileStorageExceptionCode.ACCESS_DENIED,
+      });
+
+      expect(mockDelegate.getPresignedUploadUrl).not.toHaveBeenCalled();
     });
 
     it('should reject delete with traversal in folderPath', async () => {
@@ -202,6 +309,16 @@ describe('ValidatedStorageDriver', () => {
       });
 
       expect(mockDelegate.downloadFolder).not.toHaveBeenCalled();
+    });
+
+    it('should reject getPresignedUrl with traversal', async () => {
+      await expect(
+        driver.getPresignedUrl({ filePath: '../../../etc/passwd' }),
+      ).rejects.toMatchObject({
+        code: FileStorageExceptionCode.ACCESS_DENIED,
+      });
+
+      expect(mockDelegate.getPresignedUrl).not.toHaveBeenCalled();
     });
   });
 

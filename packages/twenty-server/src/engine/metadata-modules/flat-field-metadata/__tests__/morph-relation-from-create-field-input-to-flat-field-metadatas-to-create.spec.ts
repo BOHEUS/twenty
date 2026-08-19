@@ -25,6 +25,8 @@ const MOCK_FLAT_APPLICATION: FlatApplication = {
   universalIdentifier: '20202020-81ee-42da-a281-668632f32fe7',
   name: 'Workspace Custom Application',
   description: null,
+  logo: null,
+  logoFileId: null,
   workspaceId: 'workspace-id',
   version: null,
   sourceType: ApplicationRegistrationSourceType.LOCAL,
@@ -38,11 +40,18 @@ const MOCK_FLAT_APPLICATION: FlatApplication = {
   defaultRoleId: null,
   defaultRole: null,
   settingsCustomTabFrontComponentId: null,
+  uninstallLogicFunctionId: null,
   canBeUninstalled: false,
+  autoUpgrade: false,
   applicationRegistrationId: null,
+  primaryPublicDomainId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: null,
+  isSdkLayerStale: true,
+  sdkClientCoreChecksum: null,
+  frontComponentSharedDependenciesChecksum: null,
+  frontComponentSharedDependenciesBuiltPath: null,
 };
 
 const flatObjectMetadataMaps = [

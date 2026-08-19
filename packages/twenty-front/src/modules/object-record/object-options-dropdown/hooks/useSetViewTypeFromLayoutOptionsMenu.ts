@@ -4,13 +4,13 @@ import { contextStoreCurrentViewIdComponentState } from '@/context-store/states/
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { useLoadRecordIndexStates } from '@/object-record/record-index/hooks/useLoadRecordIndexStates';
 import { recordIndexViewTypeState } from '@/object-record/record-index/states/recordIndexViewTypeState';
+import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useUpdateCurrentView } from '@/views/hooks/useUpdateCurrentView';
 import { viewsSelector } from '@/views/states/selectors/viewsSelector';
 import { type GraphQLView } from '@/views/types/GraphQLView';
 import { ViewType, viewTypeIconMapping } from '@/views/types/ViewType';
 import { useGetAvailableFieldsForCalendar } from '@/views/view-picker/hooks/useGetAvailableFieldsForCalendar';
 import { useGetAvailableFieldsToGroupRecordsBy } from '@/views/view-picker/hooks/useGetAvailableFieldsToGroupRecordsBy';
-import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useStore } from 'jotai';
 import { useCallback } from 'react';
 import { assertUnreachable, isDefined } from 'twenty-shared/utils';
@@ -73,7 +73,8 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
           await updateCurrentView(updateCurrentViewParams);
           return;
         }
-        case ViewType.TABLE: {
+        case ViewType.TABLE:
+        case ViewType.LIST: {
           if (shouldChangeIcon(currentView.icon, currentView.type)) {
             updateCurrentViewParams.icon =
               viewTypeIconMapping(viewType).displayName;
@@ -97,6 +98,7 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
               ...currentView,
               type: viewType,
               calendarFieldMetadataId,
+              calendarEndFieldMetadataId: null,
               calendarLayout: ViewCalendarLayout.MONTH,
             },
             objectMetadataItem,
@@ -109,9 +111,14 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
           updateCurrentViewParams.calendarLayout = ViewCalendarLayout.MONTH;
           updateCurrentViewParams.calendarFieldMetadataId =
             calendarFieldMetadataId;
+          updateCurrentViewParams.calendarEndFieldMetadataId = null;
           updateCurrentViewParams.mainGroupByFieldMetadataId = null;
           return await updateCurrentView(updateCurrentViewParams);
         }
+        case ViewType.TABLE_WIDGET:
+        case ViewType.KANBAN_WIDGET:
+        case ViewType.LIST_WIDGET:
+        case ViewType.CALENDAR_WIDGET:
         case ViewType.FIELDS_WIDGET: {
           return;
         }
@@ -150,6 +157,12 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
     if (
       oldViewType === ViewType.CALENDAR &&
       oldIcon === viewTypeIconMapping(ViewType.CALENDAR).displayName
+    ) {
+      return true;
+    }
+    if (
+      oldViewType === ViewType.LIST &&
+      oldIcon === viewTypeIconMapping(ViewType.LIST).displayName
     ) {
       return true;
     }

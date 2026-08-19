@@ -42,7 +42,12 @@ export const ALL_ONE_TO_MANY_METADATA_RELATIONS = {
       metadataName: 'viewSort',
       universalFlatEntityForeignKeyAggregator: 'viewSortUniversalIdentifiers',
     },
-    fieldPermissions: null,
+    fieldPermissions: {
+      metadataName: 'fieldPermission',
+      flatEntityForeignKeyAggregator: 'fieldPermissionIds',
+      universalFlatEntityForeignKeyAggregator:
+        'fieldPermissionUniversalIdentifiers',
+    },
     indexFieldMetadatas: null,
     viewFields: {
       metadataName: 'viewField',
@@ -66,11 +71,23 @@ export const ALL_ONE_TO_MANY_METADATA_RELATIONS = {
       universalFlatEntityForeignKeyAggregator:
         'calendarViewUniversalIdentifiers',
     },
+    calendarEndViews: {
+      metadataName: 'view',
+      flatEntityForeignKeyAggregator: 'calendarEndViewIds',
+      universalFlatEntityForeignKeyAggregator:
+        'calendarEndViewUniversalIdentifiers',
+    },
     mainGroupByFieldMetadataViews: {
       metadataName: 'view',
       flatEntityForeignKeyAggregator: 'mainGroupByFieldMetadataViewIds',
       universalFlatEntityForeignKeyAggregator:
         'mainGroupByFieldMetadataViewUniversalIdentifiers',
+    },
+    searchFieldMetadatas: {
+      metadataName: 'searchFieldMetadata',
+      flatEntityForeignKeyAggregator: 'searchFieldMetadataIds',
+      universalFlatEntityForeignKeyAggregator:
+        'searchFieldMetadataUniversalIdentifiers',
     },
   },
   objectMetadata: {
@@ -91,11 +108,22 @@ export const ALL_ONE_TO_MANY_METADATA_RELATIONS = {
       universalFlatEntityForeignKeyAggregator:
         'objectPermissionUniversalIdentifiers',
     },
-    fieldPermissions: null,
+    fieldPermissions: {
+      metadataName: 'fieldPermission',
+      flatEntityForeignKeyAggregator: 'fieldPermissionIds',
+      universalFlatEntityForeignKeyAggregator:
+        'fieldPermissionUniversalIdentifiers',
+    },
     views: {
       metadataName: 'view',
       flatEntityForeignKeyAggregator: 'viewIds',
       universalFlatEntityForeignKeyAggregator: 'viewUniversalIdentifiers',
+    },
+    searchFieldMetadatas: {
+      metadataName: 'searchFieldMetadata',
+      flatEntityForeignKeyAggregator: 'searchFieldMetadataIds',
+      universalFlatEntityForeignKeyAggregator:
+        'searchFieldMetadataUniversalIdentifiers',
     },
   },
   view: {
@@ -126,8 +154,11 @@ export const ALL_ONE_TO_MANY_METADATA_RELATIONS = {
       universalFlatEntityForeignKeyAggregator:
         'viewFieldGroupUniversalIdentifiers',
     },
-    // @ts-expect-error TODO migrate viewSort to v2
-    viewSorts: null,
+    viewSorts: {
+      metadataName: 'viewSort',
+      flatEntityForeignKeyAggregator: 'viewSortIds',
+      universalFlatEntityForeignKeyAggregator: 'viewSortUniversalIdentifiers',
+    },
   },
   viewField: {},
   viewFieldGroup: {
@@ -155,13 +186,18 @@ export const ALL_ONE_TO_MANY_METADATA_RELATIONS = {
       universalFlatEntityForeignKeyAggregator:
         'objectPermissionUniversalIdentifiers',
     },
-    permissionFlags: {
-      metadataName: 'permissionFlag',
-      flatEntityForeignKeyAggregator: 'permissionFlagIds',
+    rolePermissionFlags: {
+      metadataName: 'rolePermissionFlag',
+      flatEntityForeignKeyAggregator: 'rolePermissionFlagIds',
       universalFlatEntityForeignKeyAggregator:
-        'permissionFlagUniversalIdentifiers',
+        'rolePermissionFlagUniversalIdentifiers',
     },
-    fieldPermissions: null,
+    fieldPermissions: {
+      metadataName: 'fieldPermission',
+      flatEntityForeignKeyAggregator: 'fieldPermissionIds',
+      universalFlatEntityForeignKeyAggregator:
+        'fieldPermissionUniversalIdentifiers',
+    },
     rowLevelPermissionPredicates: {
       metadataName: 'rowLevelPermissionPredicate',
       flatEntityForeignKeyAggregator: 'rowLevelPermissionPredicateIds',
@@ -176,8 +212,17 @@ export const ALL_ONE_TO_MANY_METADATA_RELATIONS = {
     },
   },
   roleTarget: {},
-  permissionFlag: {},
+  rolePermissionFlag: {},
+  permissionFlag: {
+    rolePermissionFlags: {
+      metadataName: 'rolePermissionFlag',
+      flatEntityForeignKeyAggregator: 'rolePermissionFlagIds',
+      universalFlatEntityForeignKeyAggregator:
+        'rolePermissionFlagUniversalIdentifiers',
+    },
+  },
   objectPermission: {},
+  fieldPermission: {},
   pageLayout: {
     tabs: {
       metadataName: 'pageLayoutTab',
@@ -224,7 +269,10 @@ export const ALL_ONE_TO_MANY_METADATA_RELATIONS = {
   },
   frontComponent: {},
   webhook: {},
+  applicationVariable: {},
   viewSort: {},
+  connectionProvider: {},
+  searchFieldMetadata: {},
 } as const satisfies OneToManyMetadataRelationsProperties;
 
 // satisfies with complex mapped types involving nested generics doesn't always catch missing required keys

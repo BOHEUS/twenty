@@ -1,4 +1,5 @@
 import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
+import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { useMutation } from '@apollo/client/react';
 import {
   type CreateWorkflowVersionEdgeMutation,
@@ -6,12 +7,14 @@ import {
   type CreateWorkflowVersionEdgeInput,
 } from '~/generated/graphql';
 import { CREATE_WORKFLOW_VERSION_EDGE } from '@/workflow/graphql/mutations/createWorkflowVersionEdge';
-import { useUpdateWorkflowVersionCache } from '@/workflow/workflow-steps/hooks/useUpdateWorkflowVersionCache';
+import { useApplyWorkflowVersionStepChanges } from '@/workflow/workflow-steps/hooks/useApplyWorkflowVersionStepChanges';
 
 export const useCreateWorkflowVersionEdge = () => {
   const apolloCoreClient = useApolloCoreClient();
 
-  const { updateWorkflowVersionCache } = useUpdateWorkflowVersionCache();
+  const { applyWorkflowVersionStepChanges } =
+    useApplyWorkflowVersionStepChanges();
+  const { enqueueErrorSnackBar } = useSnackBar();
 
   const [mutate] = useMutation<
     CreateWorkflowVersionEdgeMutation,
@@ -21,11 +24,16 @@ export const useCreateWorkflowVersionEdge = () => {
   const createWorkflowVersionEdge = async (
     input: CreateWorkflowVersionEdgeInput,
   ) => {
-    const result = await mutate({ variables: { input } });
+    const result = await mutate({
+      variables: { input },
+      onError: (error) => {
+        enqueueErrorSnackBar({ apolloError: error });
+      },
+    });
 
     const workflowVersionStepChanges = result?.data?.createWorkflowVersionEdge;
 
-    updateWorkflowVersionCache({
+    applyWorkflowVersionStepChanges({
       workflowVersionStepChanges,
       workflowVersionId: input.workflowVersionId,
     });

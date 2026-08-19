@@ -56,12 +56,25 @@ const convertUniversalFilterToChartFilter = ({
   return {
     ...filter,
     recordFilters: filter.recordFilters?.map(
-      ({ fieldMetadataUniversalIdentifier, ...rest }) => ({
+      ({
+        fieldMetadataUniversalIdentifier,
+        relationTargetFieldMetadataUniversalIdentifier,
+        ...rest
+      }) => ({
         ...rest,
         fieldMetadataId: resolveFieldMetadataIdOrThrow({
           fieldMetadataUniversalIdentifier,
           flatFieldMetadataMaps,
         }),
+        ...(isDefined(relationTargetFieldMetadataUniversalIdentifier)
+          ? {
+              relationTargetFieldMetadataId: resolveFieldMetadataIdOrThrow({
+                fieldMetadataUniversalIdentifier:
+                  relationTargetFieldMetadataUniversalIdentifier,
+                flatFieldMetadataMaps,
+              }),
+            }
+          : {}),
       }),
     ),
   };
@@ -110,26 +123,6 @@ export const fromUniversalConfigurationToFlatPageLayoutWidgetConfiguration = ({
         ...rest,
         aggregateFieldMetadataId,
         ratioAggregateConfig,
-        filter: convertUniversalFilterToChartFilter({
-          filter,
-          flatFieldMetadataMaps,
-        }),
-      };
-    }
-
-    case WidgetConfigurationType.GAUGE_CHART: {
-      const { aggregateFieldMetadataUniversalIdentifier, filter, ...rest } =
-        universalConfiguration;
-
-      const aggregateFieldMetadataId = resolveFieldMetadataIdOrThrow({
-        fieldMetadataUniversalIdentifier:
-          aggregateFieldMetadataUniversalIdentifier,
-        flatFieldMetadataMaps,
-      });
-
-      return {
-        ...rest,
-        aggregateFieldMetadataId,
         filter: convertUniversalFilterToChartFilter({
           filter,
           flatFieldMetadataMaps,
@@ -255,11 +248,8 @@ export const fromUniversalConfigurationToFlatPageLayoutWidgetConfiguration = ({
     }
 
     case WidgetConfigurationType.FIELDS: {
-      const {
-        viewId: viewUniversalIdentifier,
-        newFieldDefaultVisibility,
-        ...rest
-      } = universalConfiguration;
+      const { viewUniversalIdentifier, newFieldDefaultVisibility, ...rest } =
+        universalConfiguration;
 
       let viewId: string | null = null;
 
@@ -280,6 +270,30 @@ export const fromUniversalConfigurationToFlatPageLayoutWidgetConfiguration = ({
       }
 
       return { ...rest, viewId, newFieldDefaultVisibility };
+    }
+
+    case WidgetConfigurationType.RECORD_TABLE: {
+      const { viewUniversalIdentifier, ...rest } = universalConfiguration;
+
+      let viewId: string | null = null;
+
+      if (isDefined(viewUniversalIdentifier)) {
+        const flatView = findFlatEntityByUniversalIdentifier({
+          flatEntityMaps: flatViewMaps,
+          universalIdentifier: viewUniversalIdentifier,
+        });
+
+        if (!isDefined(flatView)) {
+          throw new FlatEntityMapsException(
+            `View not found for universal identifier: ${viewUniversalIdentifier}`,
+            FlatEntityMapsExceptionCode.ENTITY_NOT_FOUND,
+          );
+        }
+
+        viewId = flatView.id;
+      }
+
+      return { ...rest, viewId };
     }
 
     case WidgetConfigurationType.FRONT_COMPONENT: {
@@ -312,15 +326,55 @@ export const fromUniversalConfigurationToFlatPageLayoutWidgetConfiguration = ({
     }
 
     case WidgetConfigurationType.FIELD: {
-      const { fieldMetadataId: fieldMetadataUniversalIdentifier, ...rest } =
-        universalConfiguration;
+      const {
+        fieldMetadataId: fieldMetadataUniversalIdentifier,
+        viewId: viewUniversalIdentifier,
+        nestedRelationFieldMetadataId:
+          nestedRelationFieldMetadataUniversalIdentifier,
+        ...rest
+      } = universalConfiguration;
 
       const fieldMetadataId = resolveFieldMetadataIdOrThrow({
         fieldMetadataUniversalIdentifier,
         flatFieldMetadataMaps,
       });
 
-      return { ...rest, fieldMetadataId };
+      const nestedRelationFieldMetadataId = isDefined(
+        nestedRelationFieldMetadataUniversalIdentifier,
+      )
+        ? resolveFieldMetadataIdOrThrow({
+            fieldMetadataUniversalIdentifier:
+              nestedRelationFieldMetadataUniversalIdentifier,
+            flatFieldMetadataMaps,
+          })
+        : undefined;
+
+      let viewId: string | undefined = undefined;
+
+      if (isDefined(viewUniversalIdentifier)) {
+        const flatView = findFlatEntityByUniversalIdentifier({
+          flatEntityMaps: flatViewMaps,
+          universalIdentifier: viewUniversalIdentifier,
+        });
+
+        if (!isDefined(flatView)) {
+          throw new FlatEntityMapsException(
+            `View not found for universal identifier: ${viewUniversalIdentifier}`,
+            FlatEntityMapsExceptionCode.ENTITY_NOT_FOUND,
+          );
+        }
+
+        viewId = flatView.id;
+      }
+
+      return {
+        ...rest,
+        fieldMetadataId,
+        viewId,
+        ...(isDefined(nestedRelationFieldMetadataId)
+          ? { nestedRelationFieldMetadataId }
+          : {}),
+      };
     }
 
     case WidgetConfigurationType.VIEW:
@@ -336,6 +390,11 @@ export const fromUniversalConfigurationToFlatPageLayoutWidgetConfiguration = ({
     case WidgetConfigurationType.WORKFLOW_RUN:
     case WidgetConfigurationType.IFRAME:
     case WidgetConfigurationType.STANDALONE_RICH_TEXT:
+    case WidgetConfigurationType.EMAIL_THREAD:
+    case WidgetConfigurationType.CALL_RECORDING_SUMMARY:
+    case WidgetConfigurationType.CALL_RECORDING_TRANSCRIPT:
+    case WidgetConfigurationType.MESSAGE_CAMPAIGN_BODY:
+    case WidgetConfigurationType.MESSAGE_CAMPAIGN_DETAILS:
       return universalConfiguration;
   }
 };

@@ -21,6 +21,10 @@
         "outDir": "dist/assets"
       },
       {
+        "include": "engine/metadata-modules/front-component/constants/seed-project/**",
+        "outDir": "dist/assets"
+      },
+      {
         "include": "engine/core-modules/application/application-package/constants/seed-dependencies/**",
         "outDir": "dist/assets"
       },
@@ -54,6 +58,10 @@
       },
       {
         "include": "engine/metadata-modules/ai/ai-models/ai-providers.json",
+        "outDir": "dist"
+      },
+      {
+        "include": "engine/core-modules/dpa/constants/subprocessors.json",
         "outDir": "dist"
       }
     ]

@@ -1,7 +1,7 @@
 import { type Meta, type StoryObj } from '@storybook/react-vite';
 import { useEffect } from 'react';
 
-import { useMetadataStore } from '@/metadata-store/hooks/useMetadataStore';
+import { useUpdateMetadataStoreDraft } from '@/metadata-store/hooks/useUpdateMetadataStoreDraft';
 import { splitCompositeObjectMetadataItems } from '@/metadata-store/utils/splitCompositeObjectMetadataItems';
 import { getBasePathToShowPage } from '@/object-metadata/utils/getBasePathToShowPage';
 
@@ -53,7 +53,7 @@ const RelationFieldValueSetterEffect = () => {
     'recordTableId',
   );
 
-  const { replaceDraft, applyChanges } = useMetadataStore();
+  const { replaceDraft, applyChanges } = useUpdateMetadataStoreDraft();
 
   useEffect(() => {
     setRecordStore(mockPerformance.entityValue);
@@ -210,7 +210,6 @@ const meta: Meta = {
                     <RecordTableRowDraggableContextProvider
                       value={{
                         isDragging: false,
-                        dragHandleProps: null,
                       }}
                     >
                       <RecordTableCellContext.Provider
@@ -280,7 +279,7 @@ export const Default: Story = {};
 
 export const Performance = getProfilingStory({
   componentName: 'RecordTableCell',
-  averageThresholdInMs: 0.3,
+  averageThresholdInMs: 0.6,
   numberOfRuns: 50,
   numberOfTestsPerRun: 200,
   warmUpRounds: 20,

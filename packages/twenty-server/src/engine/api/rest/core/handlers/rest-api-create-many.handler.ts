@@ -26,6 +26,7 @@ export class RestApiCreateManyHandler extends RestApiBaseHandler {
         flatObjectMetadata,
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
+        flatIndexMaps,
         objectIdByNameSingular,
       } = await this.buildCommonOptions(request);
 
@@ -37,16 +38,18 @@ export class RestApiCreateManyHandler extends RestApiBaseHandler {
         authContext,
       });
 
-      const records = await this.commonCreateManyQueryRunnerService.execute(
-        { data, selectedFields, upsert },
-        {
-          authContext,
-          flatObjectMetadata,
-          flatObjectMetadataMaps,
-          flatFieldMetadataMaps,
-          objectIdByNameSingular,
-        },
-      );
+      const { results: records } =
+        await this.commonCreateManyQueryRunnerService.execute(
+          { data, selectedFields, upsert },
+          {
+            authContext,
+            flatObjectMetadata,
+            flatObjectMetadataMaps,
+            flatFieldMetadataMaps,
+            flatIndexMaps,
+            objectIdByNameSingular,
+          },
+        );
 
       return this.formatRestResponse(records, flatObjectMetadata.namePlural);
     } catch (error) {

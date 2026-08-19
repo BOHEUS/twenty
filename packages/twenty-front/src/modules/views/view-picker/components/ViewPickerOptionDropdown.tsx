@@ -1,6 +1,6 @@
-import { useCreateNavigationMenuItem } from '@/navigation-menu-item/common/hooks/useCreateNavigationMenuItem';
+import { useCreateManyNavigationMenuItems } from '@/navigation-menu-item/common/hooks/useCreateManyNavigationMenuItems';
+import { useDeleteManyNavigationMenuItems } from '@/navigation-menu-item/common/hooks/useDeleteManyNavigationMenuItems';
 import { useNavigationMenuItemsData } from '@/navigation-menu-item/display/hooks/useNavigationMenuItemsData';
-import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
@@ -11,13 +11,17 @@ import { type View } from '@/views/types/View';
 import { useDestroyViewFromCurrentState } from '@/views/view-picker/hooks/useDestroyViewFromCurrentState';
 import { viewPickerReferenceViewIdComponentState } from '@/views/view-picker/states/viewPickerReferenceViewIdComponentState';
 import { useLingui } from '@lingui/react/macro';
+import { NavigationMenuItemType } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
+import { v4 as uuidv4 } from 'uuid';
 import {
   IconHeart,
+  IconHeartOff,
   IconLock,
   IconPencil,
   IconTrash,
   useIcons,
-} from 'twenty-ui/display';
+} from 'twenty-ui/icon';
 import { MenuItem } from 'twenty-ui/navigation';
 import {
   PermissionFlagType,
@@ -33,6 +37,7 @@ type ViewPickerOptionDropdownProps = {
   >;
   onEdit: (event: React.MouseEvent<HTMLElement>, viewId: string) => void;
   handleViewSelect: (viewId: string) => void;
+  isCurrentView: boolean;
 };
 
 export const ViewPickerOptionDropdown = ({
@@ -41,6 +46,7 @@ export const ViewPickerOptionDropdown = ({
   onEdit,
   view,
   handleViewSelect,
+  isCurrentView,
 }: ViewPickerOptionDropdownProps) => {
   const dropdownId = `view-picker-options-${view.id}`;
 
@@ -53,20 +59,23 @@ export const ViewPickerOptionDropdown = ({
   );
   const hasViewsPermission = useHasPermissionFlag(PermissionFlagType.VIEWS);
 
-  const { createNavigationMenuItem } = useCreateNavigationMenuItem();
-  const { navigationMenuItems, currentWorkspaceMemberId } =
+  const { createManyNavigationMenuItems } = useCreateManyNavigationMenuItems();
+  const { navigationMenuItems, currentUserWorkspaceId } =
     useNavigationMenuItemsData();
+
+  const { deleteManyNavigationMenuItems } = useDeleteManyNavigationMenuItems();
 
   // Users with VIEWS permission can edit all views
   // Users without VIEWS permission can only edit unlisted views (which are always their own, filtered by backend)
   const canEditView =
     hasViewsPermission || view.visibility === ViewVisibility.UNLISTED;
 
-  const isFavorite = navigationMenuItems.some(
+  const currentNavigationMenuItem = navigationMenuItems.find(
     (item) =>
       item.viewId === view.id &&
-      item.userWorkspaceId === currentWorkspaceMemberId,
+      item.userWorkspaceId === currentUserWorkspaceId,
   );
+  const isFavorite = isDefined(currentNavigationMenuItem);
 
   const handleDelete = () => {
     setViewPickerReferenceViewId(view.id);
@@ -74,9 +83,28 @@ export const ViewPickerOptionDropdown = ({
     closeDropdown(dropdownId);
   };
 
-  const handleAddToFavorites = () => {
+  const handleToggleFavorite = () => {
     if (!isFavorite) {
-      createNavigationMenuItem(view as unknown as ObjectRecord, 'view');
+      const relevantItems = navigationMenuItems.filter(
+        (item) => !isDefined(item.folderId) && isDefined(item.userWorkspaceId),
+      );
+
+      const maxPosition = Math.max(
+        ...relevantItems.map((item) => item.position),
+        0,
+      );
+
+      createManyNavigationMenuItems([
+        {
+          id: uuidv4(),
+          type: NavigationMenuItemType.VIEW,
+          viewId: view.id,
+          userWorkspaceId: currentUserWorkspaceId,
+          position: maxPosition + 1,
+        },
+      ]);
+    } else {
+      deleteManyNavigationMenuItems([currentNavigationMenuItem.id]);
     }
     closeDropdown(dropdownId);
   };
@@ -101,42 +129,32 @@ export const ViewPickerOptionDropdown = ({
         RightIcon={getVisibilityIcon()}
         dropdownPlacement="bottom-start"
         dropdownId={`view-picker-options-${view.id}`}
+        selected={isCurrentView}
         dropdownContent={
           <DropdownContent>
             <DropdownMenuItemsContainer>
-              {isIndexView ? (
-                <MenuItem
-                  LeftIcon={IconHeart}
-                  text={isFavorite ? t`Manage favorite` : t`Add to Favorite`}
-                  onClick={handleAddToFavorites}
-                />
-              ) : (
+              <MenuItem
+                LeftIcon={isFavorite ? IconHeartOff : IconHeart}
+                text={isFavorite ? t`Remove Favorite` : t`Add to Favorite`}
+                onClick={handleToggleFavorite}
+              />
+              {!isIndexView && canEditView && (
                 <>
                   <MenuItem
-                    LeftIcon={IconHeart}
-                    text={isFavorite ? t`Manage favorite` : t`Add to Favorite`}
-                    onClick={handleAddToFavorites}
+                    LeftIcon={IconPencil}
+                    text={t`Edit`}
+                    onClick={(event) => {
+                      onEdit(event, view.id);
+                      closeDropdown(dropdownId);
+                    }}
                   />
-
-                  {canEditView && (
-                    <>
-                      <MenuItem
-                        LeftIcon={IconPencil}
-                        text={t`Edit`}
-                        onClick={(event) => {
-                          onEdit(event, view.id);
-                          closeDropdown(dropdownId);
-                        }}
-                      />
-                      {!isLastView && (
-                        <MenuItem
-                          LeftIcon={IconTrash}
-                          text={t`Delete`}
-                          onClick={handleDelete}
-                          accent="danger"
-                        />
-                      )}
-                    </>
+                  {!isLastView && (
+                    <MenuItem
+                      LeftIcon={IconTrash}
+                      text={t`Delete`}
+                      onClick={handleDelete}
+                      accent="danger"
+                    />
                   )}
                 </>
               )}

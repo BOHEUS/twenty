@@ -11,7 +11,7 @@ import { styled } from '@linaria/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { useContext, useEffect, useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { IconDownload } from 'twenty-ui/display';
+import { IconDownload } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/input';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 import { getFileNameAndExtension } from '~/utils/file/getFileNameAndExtension';
@@ -30,7 +30,7 @@ const StyledDocumentViewerContainer = styled.div`
   background: ${themeCssVariables.background.secondary};
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 200px);
+  height: calc(100vh / var(--t-zoom, 1) - 200px);
   min-height: 500px;
   width: 100%;
 
@@ -44,7 +44,10 @@ const StyledDocumentViewerContainer = styled.div`
 
   #react-doc-viewer,
   #proxy-renderer,
-  #msdoc-renderer {
+  #msdoc-renderer,
+  #html-renderer,
+  #html-renderer iframe,
+  iframe {
     background: none;
     display: flex;
     flex-direction: column;

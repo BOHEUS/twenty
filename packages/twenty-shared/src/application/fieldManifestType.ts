@@ -4,10 +4,11 @@ import {
   type FieldMetadataOptions,
   type FieldMetadataType,
   type FieldMetadataUniversalSettings,
+  type MetadataWritability,
   type RelationAndMorphRelationFieldMetadataType,
 } from '@/types';
 
-export type RegularFieldManifest<
+type BaseRegularFieldManifest<
   T extends FieldMetadataType = Exclude<
     FieldMetadataType,
     RelationAndMorphRelationFieldMetadataType
@@ -18,18 +19,38 @@ export type RegularFieldManifest<
   label: string;
   description?: string;
   icon?: string;
-  defaultValue?: FieldMetadataDefaultValue<T>;
   options?: FieldMetadataOptions<T>;
   universalSettings?: FieldMetadataUniversalSettings<T>;
-  isNullable?: boolean;
+  isUIEditable?: boolean;
+  writability?: MetadataWritability;
+  isUnique?: boolean;
   objectUniversalIdentifier: string;
 };
 
+type RegularFieldManifestNullability<T extends FieldMetadataType> =
+  | {
+      defaultValue: FieldMetadataDefaultValue<T>;
+      isNullable?: boolean;
+    }
+  | {
+      defaultValue?: FieldMetadataDefaultValue<T>;
+      isNullable?: true;
+    };
+
+export type RegularFieldManifest<
+  T extends FieldMetadataType = Exclude<
+    FieldMetadataType,
+    RelationAndMorphRelationFieldMetadataType
+  >,
+> = BaseRegularFieldManifest<T> & RegularFieldManifestNullability<T>;
+
 export type RelationFieldManifest<
-  T extends
-    RelationAndMorphRelationFieldMetadataType = RelationAndMorphRelationFieldMetadataType,
-> = Omit<RegularFieldManifest<T>, 'universalSettings' | 'type'> & {
+  T extends RelationAndMorphRelationFieldMetadataType =
+    RelationAndMorphRelationFieldMetadataType,
+> = Omit<BaseRegularFieldManifest<T>, 'universalSettings' | 'type'> & {
   type: T;
+  isNullable?: boolean;
+  defaultValue?: FieldMetadataDefaultValue<T>;
   relationTargetFieldMetadataUniversalIdentifier: string;
   relationTargetObjectMetadataUniversalIdentifier: string;
   universalSettings: FieldMetadataUniversalSettings<T>;

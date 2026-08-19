@@ -1,4 +1,3 @@
-import { type DropResult } from '@hello-pangea/dnd';
 import type { Store } from 'jotai/vanilla/store';
 import { isDefined } from 'twenty-shared/utils';
 
@@ -10,55 +9,54 @@ import { getDragOperationType } from './getDragOperationType';
 import { processMultiDrag } from './processMultiDrag';
 
 type ProcessGroupDropParams = {
-  groupDropResult: DropResult;
+  droppableId: string;
+  draggableId: string;
+  targetIndex: number;
   store: Store;
   selectedRecordIds: string[];
   recordIdsByGroupFamilyState: any;
   onUpdateRecord: (
-    update: { recordId: string; position?: number },
+    update: {
+      recordId: string;
+      position?: number;
+    },
     targetRecordGroupId: RecordGroupDefinition['value'],
   ) => void;
 };
 
 export const processGroupDrop = ({
-  groupDropResult,
+  droppableId,
+  draggableId,
+  targetIndex,
   store,
   selectedRecordIds,
   recordIdsByGroupFamilyState,
   onUpdateRecord,
 }: ProcessGroupDropParams) => {
-  if (!groupDropResult.destination) {
-    return;
-  }
-
-  const destinationGroupId = groupDropResult.destination.droppableId;
-
   const recordGroup = store.get(
-    recordGroupDefinitionFamilyState.atomFamily(destinationGroupId),
+    recordGroupDefinitionFamilyState.atomFamily(droppableId),
   );
 
   if (!isDefined(recordGroup)) {
     throw new Error('Record group is not defined');
   }
 
-  const destinationRecordIds = store.get(
-    recordIdsByGroupFamilyState(destinationGroupId),
+  const targetRecordIds = store.get(
+    recordIdsByGroupFamilyState(droppableId),
   ) as string[];
 
-  const draggedRecordId = groupDropResult.draggableId;
-
   const dragOperationType = getDragOperationType({
-    draggedRecordId,
+    draggedRecordId: draggableId,
     selectedRecordIds,
   });
 
-  const targetGroupIsEmpty = destinationRecordIds.length === 0;
+  const targetGroupIsEmpty = targetRecordIds.length === 0;
 
   if (targetGroupIsEmpty) {
     if (dragOperationType === 'single') {
       onUpdateRecord(
         {
-          recordId: draggedRecordId,
+          recordId: draggableId,
           position: 1,
         },
         recordGroup.value,
@@ -78,18 +76,13 @@ export const processGroupDrop = ({
     return;
   }
 
-  const recordsWithPosition = extractRecordPositions(
-    destinationRecordIds,
-    store,
-  );
+  const recordsWithPosition = extractRecordPositions(targetRecordIds, store);
 
-  const destinationIndex = groupDropResult.destination.index;
-
-  const isDroppedAfterList = destinationIndex >= recordsWithPosition.length;
+  const isDroppedAfterList = targetIndex >= recordsWithPosition.length;
 
   const targetRecord = isDroppedAfterList
     ? recordsWithPosition.at(-1)
-    : recordsWithPosition.at(groupDropResult.destination.index);
+    : recordsWithPosition.at(targetIndex);
 
   if (!isDefined(targetRecord)) {
     throw new Error(
@@ -99,7 +92,7 @@ export const processGroupDrop = ({
 
   if (dragOperationType === 'single') {
     const singleDragResult = processSingleDrag({
-      sourceRecordId: draggedRecordId,
+      sourceRecordId: draggableId,
       targetRecordId: targetRecord.id,
       recordsWithPosition: recordsWithPosition,
       isDroppedAfterList,
@@ -118,7 +111,7 @@ export const processGroupDrop = ({
     );
   } else {
     const multiDragResult = processMultiDrag({
-      draggedRecordId,
+      draggedRecordId: draggableId,
       selectedRecordIds,
       recordsWithPosition,
       targetRecordId: targetRecord.id,

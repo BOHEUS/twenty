@@ -13,10 +13,13 @@ type Assertions = [
       | 'description'
       | 'isActive'
       | 'defaultValue'
-      | 'standardOverrides'
+      | 'overrides'
       | 'options'
       | 'isUnique'
       | 'isLabelSyncedWithName'
+      | 'isUIEditable'
+      | 'writability'
+      | 'isNullable'
       | 'universalSettings'
     >
   >,
@@ -26,15 +29,21 @@ type Assertions = [
       keyof UniversalFlatEntityUpdate<'objectMetadata'>,
       | 'icon'
       | 'color'
+      | 'openRecordIn'
       | 'description'
       | 'isActive'
-      | 'standardOverrides'
+      | 'overrides'
       | 'isLabelSyncedWithName'
       | 'nameSingular'
       | 'namePlural'
       | 'labelSingular'
       | 'labelPlural'
       | 'labelIdentifierFieldMetadataUniversalIdentifier'
+      | 'imageIdentifierFieldMetadataUniversalIdentifier'
+      | 'isSearchable'
+      | 'isUIEditable'
+      | 'isUICreatable'
+      | 'writability'
     >
   >,
 ];

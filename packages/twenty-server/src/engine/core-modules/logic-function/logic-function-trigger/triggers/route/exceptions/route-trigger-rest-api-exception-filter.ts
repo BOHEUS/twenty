@@ -34,12 +34,43 @@ export class RouteTriggerRestApiExceptionFilter implements ExceptionFilter {
           404,
         );
       case RouteTriggerExceptionCode.FORBIDDEN_EXCEPTION:
+      case RouteTriggerExceptionCode.WORKSPACE_SUSPENDED:
         return this.httpExceptionHandlerService.handleError(
           exception as CustomException,
           response,
           403,
         );
-      case RouteTriggerExceptionCode.LOGIC_FUNCTION_EXECUTION_ERROR:
+      case RouteTriggerExceptionCode.RATE_LIMIT_EXCEEDED:
+        return this.httpExceptionHandlerService.handleError(
+          exception as CustomException,
+          response,
+          429,
+        );
+      case RouteTriggerExceptionCode.LEGACY_ROUTE_DEPRECATED:
+        return this.httpExceptionHandlerService.handleError(
+          exception as CustomException,
+          response,
+          410,
+        );
+      case RouteTriggerExceptionCode.LOGIC_FUNCTION_DEPENDENCIES_SIZE_EXCEEDED:
+        return this.httpExceptionHandlerService.handleError(
+          exception as CustomException,
+          response,
+          422,
+          undefined,
+          undefined,
+          { shouldBeCapturedBySentry: false },
+        );
+      case RouteTriggerExceptionCode.ROUTE_TRIGGER_USER_UNCAUGHT_ERROR:
+        return this.httpExceptionHandlerService.handleError(
+          exception as CustomException,
+          response,
+          500,
+          undefined,
+          undefined,
+          { shouldBeCapturedBySentry: false },
+        );
+      case RouteTriggerExceptionCode.ROUTE_TRIGGER_PLATFORM_ERROR:
         return this.httpExceptionHandlerService.handleError(
           exception as CustomException,
           response,

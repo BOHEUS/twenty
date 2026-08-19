@@ -11,11 +11,20 @@ import { generateRecordEventOutputSchema } from '@/workflow/workflow-variables/u
 import { generateRecordOutputSchema } from '@/workflow/workflow-variables/utils/generate/generateRecordOutputSchema';
 import { FieldMetadataType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import {
+  buildManualTriggerMetadataNode,
+  WORKFLOW_TRIGGER_METADATA_KEY,
+  WORKFLOW_TRIGGER_PAYLOAD_KEY,
+  WORKFLOW_TRIGGER_RECORD_LABEL,
+  WORKFLOW_TRIGGER_RECORDS_LABEL,
+} from 'twenty-shared/workflow';
 import { DatabaseEventAction } from '~/generated-metadata/graphql';
 
 const PERSISTED_OUTPUT_SCHEMA_TYPES = [
+  'AI_AGENT',
   'CODE',
   'HTTP_REQUEST',
+  'LOGIC_FUNCTION',
   'WEBHOOK',
   'ITERATOR',
 ];
@@ -99,7 +108,9 @@ export const computeStepOutputSchema = ({
       }
 
       if (availability.type === 'GLOBAL') {
-        return {};
+        return {
+          [WORKFLOW_TRIGGER_METADATA_KEY]: buildManualTriggerMetadataNode(),
+        };
       }
 
       if (
@@ -116,17 +127,33 @@ export const computeStepOutputSchema = ({
         }
 
         if (availability.type === 'SINGLE_RECORD') {
-          return generateRecordOutputSchema(objectMetadataItem);
+          return {
+            [WORKFLOW_TRIGGER_PAYLOAD_KEY]: {
+              isLeaf: false,
+              icon: objectMetadataItem.icon ?? undefined,
+              label: WORKFLOW_TRIGGER_RECORD_LABEL,
+              value: generateRecordOutputSchema(objectMetadataItem),
+            },
+            [WORKFLOW_TRIGGER_METADATA_KEY]: buildManualTriggerMetadataNode(),
+          };
         }
 
-        // BULK_RECORDS - return array indicator
+        // BULK_RECORDS - array indicator nested under payload
         return {
-          [objectMetadataItem.namePlural]: {
-            isLeaf: true,
-            label: objectMetadataItem.labelPlural,
-            type: 'array',
-            value: `Array of ${objectMetadataItem.labelPlural}`,
+          [WORKFLOW_TRIGGER_PAYLOAD_KEY]: {
+            isLeaf: false,
+            type: 'object',
+            label: WORKFLOW_TRIGGER_RECORDS_LABEL,
+            value: {
+              [objectMetadataItem.namePlural]: {
+                isLeaf: true,
+                label: objectMetadataItem.labelPlural,
+                type: 'array',
+                value: `Array of ${objectMetadataItem.labelPlural}`,
+              },
+            },
           },
+          [WORKFLOW_TRIGGER_METADATA_KEY]: buildManualTriggerMetadataNode(),
         };
       }
 
@@ -140,7 +167,8 @@ export const computeStepOutputSchema = ({
     case 'CREATE_RECORD':
     case 'UPDATE_RECORD':
     case 'DELETE_RECORD':
-    case 'UPSERT_RECORD': {
+    case 'UPSERT_RECORD':
+    case 'PICK_RECORD': {
       const objectName = step.settings?.input?.objectName;
 
       if (!isDefined(objectName)) {
@@ -190,18 +218,35 @@ export const computeStepOutputSchema = ({
       return generateFormOutputSchema(formFields, objectMetadataItems);
     }
 
-    case 'AI_AGENT': {
+    case 'SEND_EMAIL': {
       return {
-        response: {
+        success: {
+          isLeaf: true,
+          type: FieldMetadataType.BOOLEAN,
+          label: 'Success',
+          value: true,
+        },
+        headerMessageId: {
           isLeaf: true,
           type: FieldMetadataType.TEXT,
-          label: 'Response',
-          value: null,
+          label: 'Message-ID header',
+          value: '',
+        },
+        messageId: {
+          isLeaf: true,
+          type: FieldMetadataType.TEXT,
+          label: 'Message record ID',
+          value: '',
+        },
+        messageThreadId: {
+          isLeaf: true,
+          type: FieldMetadataType.TEXT,
+          label: 'Message thread ID',
+          value: '',
         },
       };
     }
 
-    case 'SEND_EMAIL':
     case 'DRAFT_EMAIL': {
       return {
         success: {
@@ -209,6 +254,35 @@ export const computeStepOutputSchema = ({
           type: FieldMetadataType.BOOLEAN,
           label: 'Success',
           value: true,
+        },
+      };
+    }
+
+    case 'CREATE_CALENDAR_EVENT': {
+      return {
+        success: {
+          isLeaf: true,
+          type: FieldMetadataType.BOOLEAN,
+          label: 'Success',
+          value: true,
+        },
+        iCalUid: {
+          isLeaf: true,
+          type: FieldMetadataType.TEXT,
+          label: 'iCal UID',
+          value: '',
+        },
+        externalEventId: {
+          isLeaf: true,
+          type: FieldMetadataType.TEXT,
+          label: 'External Event ID',
+          value: '',
+        },
+        conferenceLink: {
+          isLeaf: true,
+          type: FieldMetadataType.TEXT,
+          label: 'Conference Link',
+          value: '',
         },
       };
     }

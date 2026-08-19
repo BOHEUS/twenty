@@ -1,9 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+import { isDefined } from 'twenty-shared/utils';
+
+import { MarketplaceService } from 'src/engine/core-modules/application/application-marketplace/marketplace.service';
+import { ApplicationRegistrationAssetService } from 'src/engine/core-modules/application/application-registration/application-registration-asset.service';
 import { ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
 import { ApplicationRegistrationSourceType } from 'src/engine/core-modules/application/application-registration/enums/application-registration-source-type.enum';
-import { MARKETPLACE_CATALOG_INDEX } from 'src/engine/core-modules/application/application-marketplace/constants/marketplace-catalog-index.constant';
-import { MarketplaceService } from 'src/engine/core-modules/application/application-marketplace/marketplace.service';
+import { areRegistrationAssetsStored } from 'src/engine/core-modules/application/application-registration/utils/are-registration-assets-stored.util';
 
 @Injectable()
 export class MarketplaceCatalogSyncService {
@@ -11,76 +14,91 @@ export class MarketplaceCatalogSyncService {
 
   constructor(
     private readonly applicationRegistrationService: ApplicationRegistrationService,
+    private readonly applicationRegistrationAssetService: ApplicationRegistrationAssetService,
     private readonly marketplaceService: MarketplaceService,
   ) {}
 
   async syncCatalog(): Promise<void> {
-    await this.syncCuratedApps();
-    await this.syncNpmApps();
+    await this.syncRegistryApps();
 
     this.logger.log('Marketplace catalog sync completed');
   }
 
-  private async syncCuratedApps(): Promise<void> {
-    for (const entry of MARKETPLACE_CATALOG_INDEX) {
+  private async syncRegistryApps(): Promise<void> {
+    const packages = await this.marketplaceService.fetchAppsFromRegistry();
+
+    this.logger.log(`${packages.length} packages detected`);
+
+    for (const pkg of packages) {
+      this.logger.log(`Synchronizing ${pkg.name}...`);
       try {
+        const fetchedManifest =
+          await this.marketplaceService.fetchManifestFromRegistryCdn(
+            pkg.name,
+            pkg.version,
+          );
+
+        if (!fetchedManifest) {
+          this.logger.debug(`Skipping ${pkg.name}: no manifest found on CDN`);
+          continue;
+        }
+
+        const universalIdentifier =
+          fetchedManifest.application.universalIdentifier;
+
+        const previousVersion = (
+          await this.applicationRegistrationService.findOneByUniversalIdentifier(
+            universalIdentifier,
+          )
+        )?.latestAvailableVersion;
+
         await this.applicationRegistrationService.upsertFromCatalog({
-          universalIdentifier: entry.universalIdentifier,
-          name: entry.name,
-          description:
-            entry.richDisplayData.aboutDescription ?? entry.description,
-          author: entry.author,
+          universalIdentifier,
+          name: fetchedManifest.application.displayName ?? pkg.name,
           sourceType: ApplicationRegistrationSourceType.NPM,
-          sourcePackage: entry.sourcePackage,
-          logoUrl: entry.logoUrl ?? null,
-          websiteUrl: entry.websiteUrl ?? null,
-          termsUrl: entry.termsUrl ?? null,
-          latestAvailableVersion: entry.richDisplayData.version ?? null,
-          isListed: true,
-          isFeatured: entry.isFeatured,
-          marketplaceDisplayData: entry.richDisplayData,
-          ownerWorkspaceId: null,
+          sourcePackage: pkg.name,
+          latestAvailableVersion: pkg.version ?? null,
+          manifest: fetchedManifest,
         });
+
+        const registration =
+          await this.applicationRegistrationService.findOneByUniversalIdentifier(
+            universalIdentifier,
+          );
+
+        if (!isDefined(registration)) {
+          continue;
+        }
+
+        // Rehost the logo and gallery images from the registry CDN so display
+        // urls are served from fileIds like every other source. Skipped when
+        // the version is unchanged and the files are already stored; the
+        // query-time url builder falls back to CDN urls until they are. On an
+        // unchanged version, only assets missing a stored file are fetched.
+        if (
+          previousVersion !== pkg.version ||
+          !areRegistrationAssetsStored(
+            registration,
+            fetchedManifest.application,
+          )
+        ) {
+          await this.applicationRegistrationAssetService.storeRegistrationAssets(
+            {
+              applicationRegistrationId: registration.id,
+              manifestApplication: fetchedManifest.application,
+              readAsset: (path) =>
+                this.marketplaceService.fetchAssetFromRegistryCdn(
+                  pkg.name,
+                  pkg.version,
+                  path,
+                ),
+              skipAlreadyStoredPaths: previousVersion === pkg.version,
+            },
+          );
+        }
       } catch (error) {
         this.logger.error(
-          `Failed to sync curated app "${entry.name}": ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }
-  }
-
-  private async syncNpmApps(): Promise<void> {
-    const npmApps = await this.marketplaceService.fetchAppsFromNpmRegistry();
-
-    const curatedIdentifiers = new Set(
-      MARKETPLACE_CATALOG_INDEX.map((entry) => entry.universalIdentifier),
-    );
-
-    for (const app of npmApps) {
-      if (curatedIdentifiers.has(app.id)) {
-        continue;
-      }
-
-      try {
-        await this.applicationRegistrationService.upsertFromCatalog({
-          universalIdentifier: app.id,
-          name: app.name,
-          description: app.description,
-          author: app.author,
-          sourceType: ApplicationRegistrationSourceType.NPM,
-          sourcePackage: app.sourcePackage ?? app.name,
-          logoUrl: null,
-          websiteUrl: app.websiteUrl ?? null,
-          termsUrl: null,
-          latestAvailableVersion: app.version ?? null,
-          isListed: true,
-          isFeatured: false,
-          marketplaceDisplayData: null,
-          ownerWorkspaceId: null,
-        });
-      } catch (error) {
-        this.logger.error(
-          `Failed to sync npm app "${app.name}": ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to sync registry app "${pkg.name}": ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }

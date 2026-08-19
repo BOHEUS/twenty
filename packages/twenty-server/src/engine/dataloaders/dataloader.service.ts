@@ -7,25 +7,33 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { type IndexMetadataInterface } from 'src/engine/metadata-modules/index-metadata/interfaces/index-metadata.interface';
 
+import { ApplicationRegistrationVariableService } from 'src/engine/core-modules/application/application-registration-variable/application-registration-variable.service';
+import { ApplicationTranslationCacheService } from 'src/engine/core-modules/application/application-translation/application-translation-cache.service';
 import { I18nService } from 'src/engine/core-modules/i18n/i18n.service';
 import { type IDataloaders } from 'src/engine/dataloaders/dataloader.interface';
+import { FieldMetadataConnectionLoaderFactory } from 'src/engine/dataloaders/factories/field-metadata-connection-loader.factory';
+import { IndexMetadataConnectionLoaderFactory } from 'src/engine/dataloaders/factories/index-metadata-connection-loader.factory';
 import { filterMorphRelationDuplicateFields } from 'src/engine/dataloaders/utils/filter-morph-relation-duplicate-fields.util';
-import { FIELD_METADATA_STANDARD_OVERRIDES_PROPERTIES } from 'src/engine/metadata-modules/field-metadata/constants/field-metadata-standard-overrides-properties.constant';
+import { loadApplicationCatalogsByRegistrationId } from 'src/engine/dataloaders/utils/load-application-catalogs-by-registration-id.util';
 import { type FieldMetadataDTO } from 'src/engine/metadata-modules/field-metadata/dtos/field-metadata.dto';
 import { RelationDTO } from 'src/engine/metadata-modules/field-metadata/dtos/relation.dto';
 import { type FieldMetadataEntity } from 'src/engine/metadata-modules/field-metadata/field-metadata.entity';
-import { resolveFieldMetadataStandardOverride } from 'src/engine/metadata-modules/field-metadata/utils/resolve-field-metadata-standard-override.util';
+import { ALL_OVERRIDABLE_PROPERTIES_BY_METADATA_NAME } from 'src/engine/metadata-modules/flat-entity/constant/all-overridable-properties-by-metadata-name.constant';
+import { resolveEffectiveEntityProperty } from 'src/engine/metadata-modules/utils/resolve-effective-entity-property.util';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
 import { findManyFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-many-flat-entity-by-id-in-flat-entity-maps.util';
 import { findManyFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-many-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
 import { fromFlatFieldMetadataToFieldMetadataDto } from 'src/engine/metadata-modules/flat-field-metadata/utils/from-flat-field-metadata-to-field-metadata-dto.util';
+import { belongsToTwentyStandardApp } from 'src/engine/metadata-modules/utils/belongs-to-twenty-standard-app.util';
+import { getTwentyStandardApplicationIdOrThrow } from 'src/engine/metadata-modules/utils/get-twenty-standard-application-id-or-throw.util';
 import { isFlatFieldMetadataOfType } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-flat-field-metadata-of-type.util';
 import { resolveMorphRelationsFromFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/resolve-morph-relations-from-flat-field-metadata.util';
 import { resolveRelationFromFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/resolve-relation-from-flat-field-metadata.util';
 import { fromFlatObjectMetadataToObjectMetadataDto } from 'src/engine/metadata-modules/flat-object-metadata/utils/from-flat-object-metadata-to-object-metadata-dto.util';
 import { getMorphNameFromMorphFieldMetadataName } from 'src/engine/metadata-modules/flat-object-metadata/utils/get-morph-name-from-morph-field-metadata-name.util';
+import { fromFlatSearchFieldMetadataToSearchFieldMetadataDto } from 'src/engine/metadata-modules/flat-search-field-metadata/utils/from-flat-search-field-metadata-to-search-field-metadata-dto.util';
 import { fromFlatViewFieldGroupToViewFieldGroupDto } from 'src/engine/metadata-modules/view-field-group/utils/from-flat-view-field-group-to-view-field-group-dto.util';
 import { fromFlatViewFieldToViewFieldDto } from 'src/engine/metadata-modules/view-field/utils/from-flat-view-field-to-view-field-dto.util';
 import { fromFlatViewFilterToViewFilterDto } from 'src/engine/metadata-modules/view-filter/utils/from-flat-view-filter-to-view-filter-dto.util';
@@ -36,6 +44,7 @@ import { type IndexFieldMetadataDTO } from 'src/engine/metadata-modules/index-me
 import { type IndexMetadataDTO } from 'src/engine/metadata-modules/index-metadata/dtos/index-metadata.dto';
 import { ObjectMetadataDTO } from 'src/engine/metadata-modules/object-metadata/dtos/object-metadata.dto';
 import { type ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
+import { type SearchFieldMetadataDTO } from 'src/engine/metadata-modules/search-field-metadata/dtos/search-field-metadata.dto';
 
 export type RelationMetadataLoaderPayload = {
   workspaceId: string;
@@ -69,6 +78,11 @@ export type IndexFieldMetadataLoaderPayload = {
   workspaceId: string;
   objectMetadata: Pick<ObjectMetadataEntity, 'id'>;
   indexMetadata: Pick<IndexMetadataInterface, 'id'>;
+};
+
+export type SearchFieldMetadataLoaderPayload = {
+  workspaceId: string;
+  objectMetadata: Pick<ObjectMetadataEntity, 'id'>;
 };
 
 export type ObjectMetadataLoaderPayload = {
@@ -111,19 +125,42 @@ export type ViewFilterGroupsByViewIdLoaderPayload = {
   viewId: string;
 };
 
+export type IsConfiguredLoaderPayload = {
+  applicationRegistrationId: string;
+};
+
+export type StandardApplicationIdLoaderPayload = {
+  workspaceId: string;
+};
+
+export type ApplicationTranslationCatalogLoaderPayload = {
+  applicationId: string;
+  workspaceId: string;
+  locale: keyof typeof APP_LOCALES;
+};
+
 @Injectable()
 export class DataloaderService {
   constructor(
     private readonly i18nService: I18nService,
     private readonly flatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
+    private readonly applicationRegistrationVariableService: ApplicationRegistrationVariableService,
+    private readonly applicationTranslationCacheService: ApplicationTranslationCacheService,
+    private readonly fieldMetadataConnectionLoaderFactory: FieldMetadataConnectionLoaderFactory,
+    private readonly indexMetadataConnectionLoaderFactory: IndexMetadataConnectionLoaderFactory,
   ) {}
 
   createLoaders(): IDataloaders {
     const relationLoader = this.createRelationLoader();
     const morphRelationLoader = this.createMorphRelationLoader();
     const fieldMetadataLoader = this.createFieldMetadataLoader();
+    const fieldMetadataConnectionLoader =
+      this.fieldMetadataConnectionLoaderFactory.create();
     const indexMetadataLoader = this.createIndexMetadataLoader();
+    const indexMetadataConnectionLoader =
+      this.indexMetadataConnectionLoaderFactory.create();
     const indexFieldMetadataLoader = this.createIndexFieldMetadataLoader();
+    const searchFieldMetadataLoader = this.createSearchFieldMetadataLoader();
     const objectMetadataLoader = this.createObjectMetadataLoader();
     const viewFieldGroupsByViewIdLoader =
       this.createViewFieldGroupsByViewIdLoader();
@@ -135,13 +172,21 @@ export class DataloaderService {
     const viewGroupsByViewIdLoader = this.createViewGroupsByViewIdLoader();
     const viewFilterGroupsByViewIdLoader =
       this.createViewFilterGroupsByViewIdLoader();
+    const isConfiguredLoader = this.createIsConfiguredLoader();
+    const standardApplicationIdLoader =
+      this.createStandardApplicationIdLoader();
+    const applicationTranslationCatalogLoader =
+      this.createApplicationTranslationCatalogLoader();
 
     return {
       relationLoader,
       morphRelationLoader,
       fieldMetadataLoader,
+      fieldMetadataConnectionLoader,
       indexMetadataLoader,
+      indexMetadataConnectionLoader,
       indexFieldMetadataLoader,
+      searchFieldMetadataLoader,
       objectMetadataLoader,
       viewFieldGroupsByViewIdLoader,
       viewFieldsByViewFieldGroupIdLoader,
@@ -150,6 +195,9 @@ export class DataloaderService {
       viewSortsByViewIdLoader,
       viewGroupsByViewIdLoader,
       viewFilterGroupsByViewIdLoader,
+      isConfiguredLoader,
+      standardApplicationIdLoader,
+      applicationTranslationCatalogLoader,
     };
   }
 
@@ -277,57 +325,130 @@ export class DataloaderService {
     );
   }
 
+  private createSearchFieldMetadataLoader() {
+    return new DataLoader<
+      SearchFieldMetadataLoaderPayload,
+      SearchFieldMetadataDTO[]
+    >(async (dataLoaderParams: SearchFieldMetadataLoaderPayload[]) => {
+      const workspaceId = dataLoaderParams[0].workspaceId;
+      const objectMetadataIds = dataLoaderParams.map(
+        (dataLoaderParam) => dataLoaderParam.objectMetadata.id,
+      );
+
+      const { flatSearchFieldMetadataMaps, flatObjectMetadataMaps } =
+        await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+          {
+            workspaceId,
+            flatMapsKeys: [
+              'flatSearchFieldMetadataMaps',
+              'flatObjectMetadataMaps',
+            ],
+          },
+        );
+
+      return objectMetadataIds.map((objectMetadataId) => {
+        const flatObjectMetadata = findFlatEntityByIdInFlatEntityMapsOrThrow({
+          flatEntityId: objectMetadataId,
+          flatEntityMaps: flatObjectMetadataMaps,
+        });
+
+        const searchFieldMetadatas =
+          findManyFlatEntityByIdInFlatEntityMapsOrThrow({
+            flatEntityIds: flatObjectMetadata.searchFieldMetadataIds,
+            flatEntityMaps: flatSearchFieldMetadataMaps,
+          });
+
+        return searchFieldMetadatas.map(
+          fromFlatSearchFieldMetadataToSearchFieldMetadataDto,
+        );
+      });
+    });
+  }
+
   private createFieldMetadataLoader() {
     return new DataLoader<FieldMetadataLoaderPayload, FieldMetadataDTO[]>(
       async (dataLoaderParams: FieldMetadataLoaderPayload[]) => {
         const locale = dataLoaderParams[0].locale;
-        const i18nInstance = this.i18nService.getI18nInstance(
-          locale ?? SOURCE_LOCALE,
-        );
+        const safeLocale = locale ?? SOURCE_LOCALE;
+        const i18nInstance = this.i18nService.getI18nInstance(safeLocale);
         const workspaceId = dataLoaderParams[0].workspaceId;
         const objectMetadataIds = dataLoaderParams.map(
           (dataLoaderParam) => dataLoaderParam.objectMetadata.id,
         );
 
-        const { flatFieldMetadataMaps, flatObjectMetadataMaps } =
+        const {
+          flatFieldMetadataMaps,
+          flatObjectMetadataMaps,
+          flatApplicationMaps,
+        } =
           await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
             {
               workspaceId,
-              flatMapsKeys: ['flatFieldMetadataMaps', 'flatObjectMetadataMaps'],
+              flatMapsKeys: [
+                'flatFieldMetadataMaps',
+                'flatObjectMetadataMaps',
+                'flatApplicationMaps',
+              ],
             },
           );
 
-        const fieldMetadataCollection = objectMetadataIds.map(
+        const objectFlatFieldMetadatasList = objectMetadataIds.map(
           (objectMetadataId) => {
             const flatObjectMetadata =
               findFlatEntityByIdInFlatEntityMapsOrThrow({
                 flatEntityId: objectMetadataId,
                 flatEntityMaps: flatObjectMetadataMaps,
               });
-            const objectFlatFieldMetadatas =
-              findManyFlatEntityByIdInFlatEntityMapsOrThrow({
-                flatEntityIds: flatObjectMetadata.fieldIds,
-                flatEntityMaps: flatFieldMetadataMaps,
-              });
 
+            return findManyFlatEntityByIdInFlatEntityMapsOrThrow({
+              flatEntityIds: flatObjectMetadata.fieldIds,
+              flatEntityMaps: flatFieldMetadataMaps,
+            });
+          },
+        );
+
+        const applicationCatalogByRegistrationId =
+          await loadApplicationCatalogsByRegistrationId({
+            applicationIds: objectFlatFieldMetadatasList
+              .flat()
+              .map((flatFieldMetadata) => flatFieldMetadata.applicationId),
+            flatApplicationMaps,
+            locale: safeLocale,
+            applicationTranslationCacheService:
+              this.applicationTranslationCacheService,
+          });
+
+        const fieldMetadataCollection = objectFlatFieldMetadatasList.map(
+          (objectFlatFieldMetadatas) => {
             const overriddenFieldMetadataEntities =
               objectFlatFieldMetadatas.map((flatFieldMetadata) => {
-                return FIELD_METADATA_STANDARD_OVERRIDES_PROPERTIES.reduce(
+                const applicationRegistrationId =
+                  flatApplicationMaps.byId[flatFieldMetadata.applicationId]
+                    ?.applicationRegistrationId;
+                const applicationCatalog = isDefined(applicationRegistrationId)
+                  ? applicationCatalogByRegistrationId.get(
+                      applicationRegistrationId,
+                    )
+                  : undefined;
+
+                const overrides = flatFieldMetadata.overrides ?? undefined;
+                const i18nContext = {
+                  locale,
+                  i18nInstance,
+                  isStandardApp: belongsToTwentyStandardApp(flatFieldMetadata),
+                  applicationCatalog,
+                };
+
+                return ALL_OVERRIDABLE_PROPERTIES_BY_METADATA_NAME.fieldMetadata.reduce(
                   (acc, property) => ({
                     ...acc,
-                    [property]: resolveFieldMetadataStandardOverride(
-                      {
-                        label: flatFieldMetadata.label,
-                        description: flatFieldMetadata.description ?? undefined,
-                        icon: flatFieldMetadata.icon ?? undefined,
-                        isCustom: flatFieldMetadata.isCustom,
-                        standardOverrides:
-                          flatFieldMetadata.standardOverrides ?? undefined,
-                      },
+                    [property]: resolveEffectiveEntityProperty({
+                      metadataName: 'fieldMetadata',
+                      baseValue: flatFieldMetadata[property],
+                      overrides,
                       property,
-                      dataLoaderParams[0].locale,
-                      i18nInstance,
-                    ),
+                      i18nContext,
+                    }),
                   }),
                   flatFieldMetadata,
                 );
@@ -403,19 +524,20 @@ export class DataloaderService {
             return [];
           }
 
-          return indexMetadataEntity.flatIndexFieldMetadatas.map(
-            (indexFieldMetadata) => {
+          return [...indexMetadataEntity.flatIndexFieldMetadatas]
+            .sort((a, b) => a.order - b.order)
+            .map((indexFieldMetadata) => {
               return {
                 id: indexFieldMetadata.id,
                 fieldMetadataId: indexFieldMetadata.fieldMetadataId,
+                subFieldName: indexFieldMetadata.subFieldName ?? undefined,
                 order: indexFieldMetadata.order,
                 createdAt: new Date(indexFieldMetadata.createdAt),
                 updatedAt: new Date(indexFieldMetadata.updatedAt),
                 indexMetadataId,
                 workspaceId,
               };
-            },
-          );
+            });
         },
       );
     });
@@ -480,7 +602,11 @@ export class DataloaderService {
           flatEntityIds: flatView.viewFieldGroupIds,
           flatEntityMaps: flatViewFieldGroupMaps,
         })
-          .filter((flatViewFieldGroup) => flatViewFieldGroup.deletedAt === null)
+          .filter(
+            (flatViewFieldGroup) =>
+              flatViewFieldGroup.deletedAt === null &&
+              flatViewFieldGroup.isActive,
+          )
           .map(fromFlatViewFieldGroupToViewFieldGroupDto);
       });
     });
@@ -509,7 +635,11 @@ export class DataloaderService {
       for (const flatViewField of Object.values(
         flatViewFieldMaps.byUniversalIdentifier,
       )) {
-        if (!isDefined(flatViewField) || flatViewField.deletedAt !== null) {
+        if (
+          !isDefined(flatViewField) ||
+          flatViewField.deletedAt !== null ||
+          !flatViewField.isActive
+        ) {
           continue;
         }
 
@@ -575,7 +705,10 @@ export class DataloaderService {
           flatEntityIds: flatView.viewFieldIds,
           flatEntityMaps: flatViewFieldMaps,
         })
-          .filter((flatViewField) => flatViewField.deletedAt === null)
+          .filter(
+            (flatViewField) =>
+              flatViewField.deletedAt === null && flatViewField.isActive,
+          )
           .map(fromFlatViewFieldToViewFieldDto);
       });
     });
@@ -719,6 +852,88 @@ export class DataloaderService {
             (flatViewFilterGroup) => flatViewFilterGroup.deletedAt === null,
           )
           .map(fromFlatViewFilterGroupToViewFilterGroupDto);
+      });
+    });
+  }
+
+  private createIsConfiguredLoader() {
+    return new DataLoader<IsConfiguredLoaderPayload, boolean>(
+      async (params: IsConfiguredLoaderPayload[]) => {
+        const ids = params.map((p) => p.applicationRegistrationId);
+
+        const resultMap =
+          await this.applicationRegistrationVariableService.isConfiguredBatch(
+            ids,
+          );
+
+        return params.map(
+          (p) => resultMap.get(p.applicationRegistrationId) ?? true,
+        );
+      },
+    );
+  }
+
+  private createStandardApplicationIdLoader() {
+    return new DataLoader<StandardApplicationIdLoaderPayload, string>(
+      async (params: StandardApplicationIdLoaderPayload[]) => {
+        const workspaceId = params[0].workspaceId;
+
+        const { flatApplicationMaps } =
+          await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+            {
+              workspaceId,
+              flatMapsKeys: ['flatApplicationMaps'],
+            },
+          );
+
+        const standardApplicationId =
+          getTwentyStandardApplicationIdOrThrow(flatApplicationMaps);
+
+        return params.map(() => standardApplicationId);
+      },
+    );
+  }
+
+  private createApplicationTranslationCatalogLoader() {
+    return new DataLoader<
+      ApplicationTranslationCatalogLoaderPayload,
+      Record<string, string> | undefined
+    >(async (params: ApplicationTranslationCatalogLoaderPayload[]) => {
+      const workspaceId = params[0].workspaceId;
+      const locale = params[0].locale;
+
+      const { flatApplicationMaps } =
+        await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+          {
+            workspaceId,
+            flatMapsKeys: ['flatApplicationMaps'],
+          },
+        );
+
+      const standardApplicationId =
+        getTwentyStandardApplicationIdOrThrow(flatApplicationMaps);
+
+      const catalogByRegistrationId =
+        await loadApplicationCatalogsByRegistrationId({
+          applicationIds: params.map((param) => param.applicationId),
+          flatApplicationMaps,
+          locale,
+          applicationTranslationCacheService:
+            this.applicationTranslationCacheService,
+        });
+
+      return params.map((param) => {
+        if (param.applicationId === standardApplicationId) {
+          return undefined;
+        }
+
+        const applicationRegistrationId =
+          flatApplicationMaps.byId[param.applicationId]
+            ?.applicationRegistrationId;
+
+        return isDefined(applicationRegistrationId)
+          ? catalogByRegistrationId.get(applicationRegistrationId)
+          : undefined;
       });
     });
   }

@@ -1,5 +1,8 @@
 import { faker } from '@faker-js/faker';
-import { type FieldMetadataType } from 'twenty-shared/types';
+import {
+  MetadataWritability,
+  type FieldMetadataType,
+} from 'twenty-shared/types';
 
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 
@@ -17,13 +20,16 @@ export const getFlatFieldMetadataMock = <T extends FieldMetadataType>(
 
   return {
     calendarViewIds: [],
+    calendarEndViewIds: [],
     viewFilterIds: [],
     kanbanAggregateOperationViewIds: [],
     viewFieldIds: [],
+    fieldPermissionIds: [],
     createdAt,
     mainGroupByFieldMetadataViewIds: [],
     updatedAt: createdAt,
     defaultValue: null,
+    writability: MetadataWritability.OPEN,
     options: null,
     morphId: null,
     settings: null,
@@ -31,15 +37,15 @@ export const getFlatFieldMetadataMock = <T extends FieldMetadataType>(
     icon: 'icon',
     id: faker.string.uuid(),
     isActive: true,
-    isCustom: true,
+    isSystemSideEffect: false,
     name: 'flatFieldMetadataName',
     label: 'flat field metadata label',
     isNullable: true,
     isUnique: false,
-    isUIReadOnly: false,
+    isUIEditable: true,
     isLabelSyncedWithName: false,
     isSystem: false,
-    standardOverrides: null,
+    overrides: null,
     workspaceId: faker.string.uuid(),
     applicationId: faker.string.uuid(),
     relationTargetFieldMetadataId: null,
@@ -50,11 +56,15 @@ export const getFlatFieldMetadataMock = <T extends FieldMetadataType>(
     relationTargetFieldMetadataUniversalIdentifier: null,
     viewFilterUniversalIdentifiers: [],
     viewFieldUniversalIdentifiers: [],
+    fieldPermissionUniversalIdentifiers: [],
     kanbanAggregateOperationViewUniversalIdentifiers: [],
     calendarViewUniversalIdentifiers: [],
+    calendarEndViewUniversalIdentifiers: [],
     mainGroupByFieldMetadataViewUniversalIdentifiers: [],
     viewSortIds: [],
     viewSortUniversalIdentifiers: [],
+    searchFieldMetadataIds: [],
+    searchFieldMetadataUniversalIdentifiers: [],
     universalSettings: null,
     ...overrides,
   };
@@ -64,8 +74,7 @@ export const getStandardFlatFieldMetadataMock = (
   overrides: Omit<FlatFieldMetadataOverrides, 'isCustom' | 'isSystem'>,
 ) => {
   return getFlatFieldMetadataMock({
-    standardOverrides: {},
-    isCustom: false,
+    overrides: {},
     isSystem: true,
     ...overrides,
   });

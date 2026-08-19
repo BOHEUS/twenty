@@ -20,10 +20,20 @@ export const APP_ERROR_CODES = {
   MANIFEST_BUILD_FAILED: 'MANIFEST_BUILD_FAILED',
   BUILD_FAILED: 'BUILD_FAILED',
   PUBLISH_FAILED: 'PUBLISH_FAILED',
+  INSTALL_FAILED: 'INSTALL_FAILED',
   UNINSTALL_FAILED: 'UNINSTALL_FAILED',
   SYNC_FAILED: 'SYNC_FAILED',
+  APPLY_ABORTED: 'APPLY_ABORTED',
   TYPECHECK_FAILED: 'TYPECHECK_FAILED',
   DEPLOY_FAILED: 'DEPLOY_FAILED',
+} as const;
+
+export const SERVER_ERROR_CODES = {
+  DOCKER_NOT_INSTALLED: 'DOCKER_NOT_INSTALLED',
+  DOCKER_NOT_RUNNING: 'DOCKER_NOT_RUNNING',
+  CONTAINER_START_FAILED: 'CONTAINER_START_FAILED',
+  HEALTH_TIMEOUT: 'HEALTH_TIMEOUT',
+  IMAGE_UPGRADE_FAILED: 'IMAGE_UPGRADE_FAILED',
 } as const;
 
 export const FUNCTION_ERROR_CODES = {
@@ -68,3 +78,14 @@ export type FunctionExecutionResult = {
     stackTrace: string;
   };
 };
+
+export type ChokidarFsEvent =
+  | 'add'
+  | 'addDir'
+  | 'change'
+  | 'unlink'
+  | 'unlinkDir'
+  | 'ready'
+  | 'raw'
+  | 'error'
+  | 'all';

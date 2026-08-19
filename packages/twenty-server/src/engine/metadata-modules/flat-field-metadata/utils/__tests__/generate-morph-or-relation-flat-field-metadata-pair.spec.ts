@@ -20,6 +20,8 @@ const MOCK_FLAT_APPLICATION: FlatApplication = {
   universalIdentifier: '20202020-81ee-42da-a281-668632f32fe7',
   name: 'Workspace Custom Application',
   description: null,
+  logo: null,
+  logoFileId: null,
   version: null,
   workspaceId: 'workspace-id',
   sourceType: ApplicationRegistrationSourceType.LOCAL,
@@ -33,11 +35,18 @@ const MOCK_FLAT_APPLICATION: FlatApplication = {
   defaultRoleId: null,
   defaultRole: null,
   settingsCustomTabFrontComponentId: null,
+  uninstallLogicFunctionId: null,
   canBeUninstalled: false,
+  autoUpgrade: false,
   applicationRegistrationId: null,
+  primaryPublicDomainId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: null,
+  isSdkLayerStale: true,
+  sdkClientCoreChecksum: null,
+  frontComponentSharedDependenciesChecksum: null,
+  frontComponentSharedDependenciesBuiltPath: null,
 };
 
 type GenerateMorphOrRelationFlatFieldMetadataPairTestInput = Parameters<
@@ -65,14 +74,14 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
             targetFlatObjectMetadata: PET_FLAT_OBJECT_MOCK,
             targetFlatFieldMetadataType: FieldMetadataType.RELATION,
             sourceFlatObjectMetadataJoinColumnName: 'petId',
-            flatApplication: MOCK_FLAT_APPLICATION,
+            applicationUniversalIdentifier:
+              MOCK_FLAT_APPLICATION.universalIdentifier,
             createFieldInput: {
               name: 'pets',
               label: 'Pets',
               description: 'Company pets',
               icon: 'IconCat',
               type: FieldMetadataType.RELATION,
-              isCustom: true,
               isSystem: false,
               isUnique: false,
               relationCreationPayload: {
@@ -100,14 +109,14 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
             targetFlatObjectMetadata: PET_FLAT_OBJECT_MOCK,
             targetFlatFieldMetadataType: FieldMetadataType.RELATION,
             sourceFlatObjectMetadataJoinColumnName: 'petId',
-            flatApplication: MOCK_FLAT_APPLICATION,
+            applicationUniversalIdentifier:
+              MOCK_FLAT_APPLICATION.universalIdentifier,
             createFieldInput: {
               name: 'pets',
               label: 'Pets',
               description: 'Company pets',
               icon: 'IconCat',
               type: FieldMetadataType.RELATION,
-              isCustom: true,
               isSystem: false,
               isUnique: false,
               relationCreationPayload: {
@@ -135,14 +144,14 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
             targetFlatObjectMetadata: PET_FLAT_OBJECT_MOCK,
             targetFlatFieldMetadataType: FieldMetadataType.RELATION,
             sourceFlatObjectMetadataJoinColumnName: 'petId',
-            flatApplication: MOCK_FLAT_APPLICATION,
+            applicationUniversalIdentifier:
+              MOCK_FLAT_APPLICATION.universalIdentifier,
             createFieldInput: {
               name: 'pets',
               label: 'Pets',
               description: 'Company pets',
               icon: 'IconCat',
               type: FieldMetadataType.RELATION,
-              isCustom: false,
               isSystem: true,
               isUnique: true,
               relationCreationPayload: {
@@ -170,7 +179,8 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
             targetFlatObjectMetadata: PET_FLAT_OBJECT_MOCK,
             targetFlatFieldMetadataType: FieldMetadataType.RELATION,
             sourceFlatObjectMetadataJoinColumnName: 'targetPetId',
-            flatApplication: MOCK_FLAT_APPLICATION,
+            applicationUniversalIdentifier:
+              MOCK_FLAT_APPLICATION.universalIdentifier,
             morphId: '20202020-9a2b-4c3d-a4e5-f6a7b8c9d0e1',
             createFieldInput: {
               name: 'targetPet',
@@ -178,7 +188,6 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
               description: 'Morph relation to pet',
               icon: 'IconCat',
               type: FieldMetadataType.MORPH_RELATION,
-              isCustom: false,
               isSystem: true,
               isUnique: false,
               relationCreationPayload: {
@@ -206,7 +215,8 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
             targetFlatObjectMetadata: PET_FLAT_OBJECT_MOCK,
             targetFlatFieldMetadataType: FieldMetadataType.RELATION,
             sourceFlatObjectMetadataJoinColumnName: 'targetPetId',
-            flatApplication: MOCK_FLAT_APPLICATION,
+            applicationUniversalIdentifier:
+              MOCK_FLAT_APPLICATION.universalIdentifier,
             morphId: '20202020-9a2b-4c3d-a4e5-f6a7b8c9d0e1',
             createFieldInput: {
               name: 'targetPet',
@@ -214,7 +224,6 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
               description: 'Morph relation to pet',
               icon: 'IconCat',
               type: FieldMetadataType.MORPH_RELATION,
-              isCustom: false,
               isSystem: true,
               isUnique: false,
               relationCreationPayload: {
@@ -242,7 +251,8 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
             targetFlatObjectMetadata: PET_FLAT_OBJECT_MOCK,
             targetFlatFieldMetadataType: FieldMetadataType.MORPH_RELATION,
             sourceFlatObjectMetadataJoinColumnName: 'targetPetId',
-            flatApplication: MOCK_FLAT_APPLICATION,
+            applicationUniversalIdentifier:
+              MOCK_FLAT_APPLICATION.universalIdentifier,
             morphId: '20202020-9a2b-4c3d-a4e5-f6a7b8c9d0e1',
             createFieldInput: {
               name: 'targetPet',
@@ -250,7 +260,6 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
               description: 'Morph relation to pet',
               icon: 'IconCat',
               type: FieldMetadataType.RELATION,
-              isCustom: false,
               isSystem: true,
               isUnique: false,
               relationCreationPayload: {
@@ -354,14 +363,14 @@ describe('generate Morph Or Relation Flat Field Metadata Pair test suite', () =>
         targetFlatObjectMetadata: PET_FLAT_OBJECT_MOCK,
         targetFlatFieldMetadataType: FieldMetadataType.RELATION,
         sourceFlatObjectMetadataJoinColumnName: 'petId',
-        flatApplication: MOCK_FLAT_APPLICATION,
+        applicationUniversalIdentifier:
+          MOCK_FLAT_APPLICATION.universalIdentifier,
         createFieldInput: {
           name: 'pets',
           label: 'Pets',
           description: 'Company pets',
           icon: 'IconCat',
           type: FieldMetadataType.RELATION,
-          isCustom: true,
           isSystem: false,
           isUnique: false,
           universalIdentifier: sourceUniversalIdentifier,

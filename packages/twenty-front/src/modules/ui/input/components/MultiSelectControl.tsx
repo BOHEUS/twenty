@@ -5,11 +5,10 @@ import {
 import { styled } from '@linaria/react';
 import React, { useContext } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import {
-  IconChevronDown,
-  type IconComponent,
-  OverflowingTextWithTooltip,
-} from 'twenty-ui/display';
+import { TintedIconTile } from 'twenty-ui/data-display';
+import { IconChevronDown, type IconComponent } from 'twenty-ui/icon';
+import { OverflowingTextWithTooltip } from 'twenty-ui/surfaces';
+import { type ThemeColor } from 'twenty-ui/theme';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
 const StyledIconChevronDownWrapper = styled.div<{
@@ -25,6 +24,7 @@ const StyledIconChevronDownWrapper = styled.div<{
 type MultiSelectOptionType = {
   label: string;
   Icon: IconComponent;
+  iconThemeColor?: ThemeColor | null;
 };
 
 type MultiSelectControlProps = Omit<SelectControlProps, 'selectedOption'> & {
@@ -59,11 +59,22 @@ export const MultiSelectControl = ({
           stroke: theme.icon.stroke.sm,
         })
       ) : isDefined(firstSelectedOption?.Icon) ? (
-        <firstSelectedOption.Icon
-          color={isDisabled ? theme.font.color.light : theme.font.color.primary}
-          size={theme.icon.size.md}
-          stroke={theme.icon.stroke.sm}
-        />
+        isDefined(firstSelectedOption.iconThemeColor) ? (
+          <TintedIconTile
+            Icon={firstSelectedOption.Icon}
+            color={firstSelectedOption.iconThemeColor}
+            size={theme.icon.size.md}
+            stroke={theme.icon.stroke.sm}
+          />
+        ) : (
+          <firstSelectedOption.Icon
+            color={
+              isDisabled ? theme.font.color.light : theme.font.color.primary
+            }
+            size={theme.icon.size.md}
+            stroke={theme.icon.stroke.sm}
+          />
+        )
       ) : null}
       {isDefined(fixedText) ? (
         <OverflowingTextWithTooltip text={fixedText} />

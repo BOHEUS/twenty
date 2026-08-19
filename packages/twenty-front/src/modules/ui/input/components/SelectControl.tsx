@@ -2,7 +2,9 @@ import { type SelectSizeVariant } from '@/ui/input/components/Select';
 import { styled } from '@linaria/react';
 import { useContext } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { IconChevronDown, OverflowingTextWithTooltip } from 'twenty-ui/display';
+import { TintedIconTile } from 'twenty-ui/data-display';
+import { IconChevronDown } from 'twenty-ui/icon';
+import { OverflowingTextWithTooltip } from 'twenty-ui/surfaces';
 import { type SelectOption } from 'twenty-ui/input';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
@@ -19,16 +21,16 @@ export const StyledControlContainer = styled.div<{
   align-items: center;
   background-color: ${themeCssVariables.background.transparent.lighter};
   border: 1px solid ${themeCssVariables.border.color.medium};
-  border-bottom-left-radius: ${themeCssVariables.border.radius.sm};
+  border-bottom-left-radius: ${themeCssVariables.border.radius.md};
   border-bottom-right-radius: ${({ hasRightElement }) =>
-    hasRightElement ? '0' : themeCssVariables.border.radius.sm};
+    hasRightElement ? '0' : themeCssVariables.border.radius.md};
   border-right: ${({ hasRightElement }) =>
     hasRightElement
       ? 'none'
       : `1px solid ${themeCssVariables.border.color.medium}`};
-  border-top-left-radius: ${themeCssVariables.border.radius.sm};
+  border-top-left-radius: ${themeCssVariables.border.radius.md};
   border-top-right-radius: ${({ hasRightElement }) =>
-    hasRightElement ? '0' : themeCssVariables.border.radius.sm};
+    hasRightElement ? '0' : themeCssVariables.border.radius.md};
   box-sizing: border-box;
   color: ${({ disabled, textAccent }) =>
     disabled
@@ -88,13 +90,30 @@ export const SelectControl = ({
       title={selectedOption.fullLabel}
     >
       {isDefined(selectedOption?.Icon) ? (
-        <selectedOption.Icon
-          color={isDisabled ? theme.font.color.light : theme.font.color.primary}
-          size={theme.icon.size.md}
-          stroke={theme.icon.stroke.sm}
-        />
+        isDefined(selectedOption.iconThemeColor) ? (
+          <TintedIconTile
+            Icon={selectedOption.Icon}
+            color={selectedOption.iconThemeColor}
+            size={theme.icon.size.md}
+            stroke={theme.icon.stroke.sm}
+          />
+        ) : (
+          <selectedOption.Icon
+            color={
+              isDisabled ? theme.font.color.light : theme.font.color.primary
+            }
+            size={theme.icon.size.md}
+            stroke={theme.icon.stroke.sm}
+          />
+        )
       ) : null}
-      <OverflowingTextWithTooltip text={selectedOption.label} />
+      <OverflowingTextWithTooltip
+        text={
+          selectedOption.contextualText
+            ? `${selectedOption.label} · ${selectedOption.contextualText}`
+            : selectedOption.label
+        }
+      />
       <StyledIconChevronDownWrapper disabled={isDisabled}>
         <IconChevronDown size={theme.icon.size.md} />
       </StyledIconChevronDownWrapper>

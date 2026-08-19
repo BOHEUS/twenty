@@ -1,11 +1,5 @@
 import { useAuth } from '@/auth/hooks/useAuth';
-import { billingState } from '@/client-config/states/billingState';
-import { isDeveloperDefaultSignInPrefilledState } from '@/client-config/states/isDeveloperDefaultSignInPrefilledState';
-import { supportChatState } from '@/client-config/states/supportChatState';
 
-import { workspaceAuthProvidersState } from '@/workspace/states/workspaceAuthProvidersState';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { useApolloClient } from '@apollo/client/react';
 import { MockedProvider } from '@apollo/client/testing/react';
 import { type ReactNode, act } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -17,10 +11,19 @@ import {
   results,
   token,
 } from '@/auth/hooks/__mocks__/useAuth';
-import { isMultiWorkspaceEnabledState } from '@/client-config/states/isMultiWorkspaceEnabledState';
+import {
+  type CurrentUser,
+  currentUserState,
+} from '@/auth/states/currentUserState';
+import {
+  type CurrentWorkspace,
+  currentWorkspaceState,
+} from '@/auth/states/currentWorkspaceState';
+import { returnToPathState } from '@/auth/states/returnToPathState';
 import { SnackBarComponentInstanceContext } from '@/ui/feedback/snack-bar-manager/contexts/SnackBarComponentInstanceContext';
 import { renderHook } from '@testing-library/react';
-import { SupportDriver } from '~/generated-metadata/graphql';
+import { getDefaultStore } from 'jotai';
+import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 
 const redirectSpy = jest.fn();
 
@@ -93,6 +96,7 @@ const renderHooks = () => {
 describe('useAuth', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    getDefaultStore().set(returnToPathState.atom, '');
   });
 
   it('should return login token object', async () => {
@@ -146,56 +150,66 @@ describe('useAuth', () => {
     );
   });
 
-  it('should handle sign-out', async () => {
-    const { result } = renderHook(
-      () => {
-        const client = useApolloClient();
-        const workspaceAuthProviders = useAtomStateValue(
-          workspaceAuthProvidersState,
-        );
-        const billing = useAtomStateValue(billingState);
-        const isDeveloperDefaultSignInPrefilled = useAtomStateValue(
-          isDeveloperDefaultSignInPrefilledState,
-        );
-        const supportChat = useAtomStateValue(supportChatState);
-        const isMultiWorkspaceEnabled = useAtomStateValue(
-          isMultiWorkspaceEnabledState,
-        );
-        return {
-          ...useAuth(),
-          client,
-          state: {
-            workspaceAuthProviders,
-            billing,
-            isDeveloperDefaultSignInPrefilled,
-            supportChat,
-            isMultiWorkspaceEnabled,
-          },
-        };
-      },
-      {
-        wrapper: Wrapper,
-      },
+  it('should forward returnToPath to /auth/google when set in state', async () => {
+    getDefaultStore().set(
+      returnToPathState.atom,
+      '/authorize?response_type=code&client_id=abc&state=xyz',
     );
 
-    const { signOut, client } = result.current;
+    const { result } = renderHooks();
 
     await act(async () => {
-      await signOut();
+      await result.current.signInWithGoogle({
+        action: 'list-available-workspaces',
+      });
+    });
+
+    const calledWithUrl = redirectSpy.mock.calls[0]?.[0] as string;
+    const parsed = new URL(calledWithUrl);
+
+    expect(parsed.pathname).toBe('/auth/google');
+    expect(parsed.searchParams.get('action')).toBe('list-available-workspaces');
+    expect(parsed.searchParams.get('returnToPath')).toBe(
+      '/authorize?response_type=code&client_id=abc&state=xyz',
+    );
+  });
+
+  it('should not forward an invalid (protocol-relative) returnToPath', async () => {
+    getDefaultStore().set(returnToPathState.atom, '//evil.example.com');
+
+    const { result } = renderHooks();
+
+    await act(async () => {
+      await result.current.signInWithGoogle({
+        action: 'list-available-workspaces',
+      });
+    });
+
+    const calledWithUrl = redirectSpy.mock.calls[0]?.[0] as string;
+    const parsed = new URL(calledWithUrl);
+
+    expect(parsed.searchParams.has('returnToPath')).toBe(false);
+  });
+
+  it('should handle sign-out', async () => {
+    sessionStorage.setItem('lingering-key', 'should-be-cleared');
+    getDefaultStore().set(currentWorkspaceState.atom, {
+      id: 'workspace-id',
+      activationStatus: WorkspaceActivationStatus.SUSPENDED,
+    } as CurrentWorkspace);
+    getDefaultStore().set(currentUserState.atom, {
+      id: 'user-id',
+    } as CurrentUser);
+
+    const { result } = renderHooks();
+
+    await act(async () => {
+      result.current.signOut();
     });
 
     expect(sessionStorage.length).toBe(0);
-    expect(client.cache.extract()).toEqual({});
-
-    const { state } = result.current;
-
-    expect(state.workspaceAuthProviders).toEqual(null);
-    expect(state.billing).toBeNull();
-    expect(state.isDeveloperDefaultSignInPrefilled).toBe(false);
-    expect(state.supportChat).toEqual({
-      supportDriver: SupportDriver.NONE,
-      supportFrontChatId: null,
-    });
+    expect(getDefaultStore().get(currentWorkspaceState.atom)).toBeNull();
+    expect(getDefaultStore().get(currentUserState.atom)).toBeNull();
   });
 
   it('should handle credential sign-up', async () => {

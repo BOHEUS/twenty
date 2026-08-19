@@ -20,6 +20,7 @@ import {
 } from './PageLayoutTestWrapper';
 
 jest.mock('uuid', () => ({
+  ...jest.requireActual('uuid'),
   v4: jest.fn(() => 'mock-uuid'),
 }));
 
@@ -76,13 +77,15 @@ describe('useCreatePageLayoutGraphWidget', () => {
         objectMetadataId: null,
         tabs: [
           {
+            isSystemSideEffect: false,
+            universalIdentifier: 'universal-identifier-mock',
             id: 'tab-1',
             applicationId: '',
             title: 'Tab 1',
+            isActive: true,
             position: 0,
             pageLayoutId: '',
             widgets: [],
-            isOverridden: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             deletedAt: null,
@@ -160,13 +163,15 @@ describe('useCreatePageLayoutGraphWidget', () => {
         objectMetadataId: null,
         tabs: [
           {
+            isSystemSideEffect: false,
+            universalIdentifier: 'universal-identifier-mock',
             id: 'tab-1',
             applicationId: '',
             title: 'Tab 1',
+            isActive: true,
             position: 0,
             pageLayoutId: '',
             widgets: [],
-            isOverridden: false,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             deletedAt: null,
@@ -178,7 +183,6 @@ describe('useCreatePageLayoutGraphWidget', () => {
 
     const widgetConfigurationTypes = [
       WidgetConfigurationType.AGGREGATE_CHART,
-      WidgetConfigurationType.GAUGE_CHART,
       WidgetConfigurationType.PIE_CHART,
       WidgetConfigurationType.BAR_CHART,
     ];
@@ -209,7 +213,7 @@ describe('useCreatePageLayoutGraphWidget', () => {
       });
     });
 
-    expect(result.current.allWidgets).toHaveLength(4);
+    expect(result.current.allWidgets).toHaveLength(3);
 
     widgetConfigurationTypes.forEach((widgetConfigurationType, index) => {
       const widget = result.current.allWidgets[index];
@@ -231,12 +235,12 @@ describe('useCreatePageLayoutGraphWidget', () => {
     expect(result.current.pageLayoutCurrentLayouts['tab-1']).toBeDefined();
     expect(
       result.current.pageLayoutCurrentLayouts['tab-1'].desktop,
-    ).toHaveLength(4);
+    ).toHaveLength(3);
     expect(
       result.current.pageLayoutCurrentLayouts['tab-1'].mobile,
-    ).toHaveLength(4);
+    ).toHaveLength(3);
 
-    expect(result.current.pageLayoutDraft.tabs[0].widgets).toHaveLength(4);
+    expect(result.current.pageLayoutDraft.tabs[0].widgets).toHaveLength(3);
   });
 
   it('should throw an error when activeTabId is null', () => {

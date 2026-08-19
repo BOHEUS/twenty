@@ -1,7 +1,6 @@
 import {
   PageLayoutTabLayoutMode,
   type GridPosition,
-  type PageLayoutWidgetCanvasPosition,
   type PageLayoutWidgetConditionalDisplay,
   type PageLayoutWidgetGridPosition,
   type PageLayoutWidgetVerticalListPosition,
@@ -16,6 +15,12 @@ export const CONDITIONAL_DISPLAY_DEVICE_MOBILE = {
 export const CONDITIONAL_DISPLAY_DEVICE_DESKTOP = {
   and: [{ '===': [{ var: 'device' }, 'DESKTOP'] }],
 } as const satisfies PageLayoutWidgetConditionalDisplay;
+
+export const CONDITIONAL_AVAILABILITY_EXPRESSION_DEVICE_MOBILE =
+  'device == "MOBILE"';
+
+export const CONDITIONAL_AVAILABILITY_EXPRESSION_DEVICE_DESKTOP =
+  'device == "DESKTOP"';
 
 export const GRID_POSITIONS = {
   FULL_WIDTH: {
@@ -79,13 +84,11 @@ export const VERTICAL_LIST_LAYOUT_POSITIONS = {
     layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
     index: 3,
   },
-} as const satisfies Record<string, PageLayoutWidgetVerticalListPosition>;
-
-export const CANVAS_LAYOUT_POSITIONS = {
-  DEFAULT: {
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+  FIFTH: {
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+    index: 4,
   },
-} as const satisfies Record<string, PageLayoutWidgetCanvasPosition>;
+} as const satisfies Record<string, PageLayoutWidgetVerticalListPosition>;
 
 export const TAB_PROPS = {
   home: {
@@ -98,55 +101,61 @@ export const TAB_PROPS = {
     title: 'Timeline',
     position: 20,
     icon: 'IconTimelineEvent',
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
   },
   tasks: {
     title: 'Tasks',
     position: 30,
     icon: 'IconCheckbox',
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
   },
   notes: {
     title: 'Notes',
     position: 40,
     icon: 'IconNotes',
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
   },
   files: {
     title: 'Files',
     position: 50,
     icon: 'IconPaperclip',
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
   },
   emails: {
     title: 'Emails',
     position: 60,
     icon: 'IconMail',
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
   },
   calendar: {
     title: 'Calendar',
     position: 70,
     icon: 'IconCalendarEvent',
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
   },
   note: {
     title: 'Note',
     position: 15,
     icon: 'IconNotes',
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
   },
   flow: {
     title: 'Flow',
     position: 10,
     icon: 'IconSettings',
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+  },
+  composer: {
+    title: 'Email',
+    position: 15,
+    icon: 'IconMail',
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
   },
   flowSecondary: {
     title: 'Flow',
     position: 20,
     icon: 'IconSettings',
-    layoutMode: PageLayoutTabLayoutMode.CANVAS,
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
   },
 } as const;
 
@@ -161,66 +170,78 @@ export const WIDGET_PROPS = {
     title: 'Timeline',
     type: WidgetType.TIMELINE,
     gridPosition: GRID_POSITIONS.HALF_HEIGHT,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   tasks: {
     title: 'Tasks',
     type: WidgetType.TASKS,
     gridPosition: GRID_POSITIONS.HALF_HEIGHT,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   notes: {
     title: 'Notes',
     type: WidgetType.NOTES,
     gridPosition: GRID_POSITIONS.HALF_HEIGHT,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   files: {
     title: 'Files',
     type: WidgetType.FILES,
     gridPosition: GRID_POSITIONS.HALF_HEIGHT,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   emails: {
     title: 'Emails',
     type: WidgetType.EMAILS,
     gridPosition: GRID_POSITIONS.HALF_HEIGHT,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   calendar: {
     title: 'Calendar',
     type: WidgetType.CALENDAR,
     gridPosition: GRID_POSITIONS.HALF_HEIGHT,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   noteRichText: {
     title: 'Note',
     type: WidgetType.FIELD_RICH_TEXT,
     gridPosition: GRID_POSITIONS.RICH_TEXT,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   taskRichText: {
     title: 'Task',
     type: WidgetType.FIELD_RICH_TEXT,
     gridPosition: GRID_POSITIONS.RICH_TEXT,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   workflow: {
     title: 'Flow',
     type: WidgetType.WORKFLOW,
     gridPosition: GRID_POSITIONS.FULL_WIDTH,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
+  },
+  messageCampaign: {
+    title: 'Email',
+    type: WidgetType.MESSAGE_CAMPAIGN_BODY,
+    gridPosition: GRID_POSITIONS.RICH_TEXT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   workflowVersion: {
     title: 'Flow',
     type: WidgetType.WORKFLOW_VERSION,
     gridPosition: GRID_POSITIONS.FULL_WIDTH,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
   },
   workflowRun: {
     title: 'Flow',
     type: WidgetType.WORKFLOW_RUN,
     gridPosition: GRID_POSITIONS.FULL_WIDTH,
-    position: CANVAS_LAYOUT_POSITIONS.DEFAULT,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.FIRST,
+  },
+  emailThread: {
+    title: 'Thread',
+    type: WidgetType.EMAIL_THREAD,
+    gridPosition: GRID_POSITIONS.FULL_WIDTH,
+    position: VERTICAL_LIST_LAYOUT_POSITIONS.SECOND,
   },
 } as const;

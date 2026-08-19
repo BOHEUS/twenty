@@ -19,7 +19,11 @@ import { ApplicationRegistrationEntity } from 'src/engine/core-modules/applicati
 import { ApplicationRegistrationSourceType } from 'src/engine/core-modules/application/application-registration/enums/application-registration-source-type.enum';
 import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
 import { ApplicationVariableEntity } from 'src/engine/core-modules/application/application-variable/application-variable.entity';
+import { PublicDomainEntity } from 'src/engine/core-modules/public-domain/public-domain.entity';
+import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
 import { AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
+import { CommandMenuItemEntity } from 'src/engine/metadata-modules/command-menu-item/entities/command-menu-item.entity';
+import { FrontComponentEntity } from 'src/engine/metadata-modules/front-component/entities/front-component.entity';
 import { LogicFunctionEntity } from 'src/engine/metadata-modules/logic-function/logic-function.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { RoleDTO } from 'src/engine/metadata-modules/role/dtos/role.dto';
@@ -48,6 +52,24 @@ export class ApplicationEntity extends WorkspaceRelatedEntity {
 
   @Column({ nullable: true, type: 'text' })
   description: string | null;
+
+  @Column({ nullable: true, type: 'text' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.2.0_AddLogoToApplicationFastInstanceCommand_1777539664664',
+  })
+  logo: string | null;
+
+  @Column({ nullable: true, type: 'uuid' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.19.0_AddLogoFileIdToApplicationFastInstanceCommand_1783062755137',
+  })
+  logoFileId: string | null;
+
+  @OneToOne(() => FileEntity, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'logoFileId' })
+  logoFile: Relation<FileEntity> | null;
 
   // TODO should not be nullable
   @Column({ nullable: true, type: 'text' })
@@ -94,8 +116,46 @@ export class ApplicationEntity extends WorkspaceRelatedEntity {
   @Column({ nullable: true, type: 'uuid' })
   settingsCustomTabFrontComponentId: string | null;
 
+  @Column({ nullable: true, type: 'uuid' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.32.0_AddUninstallLogicFunctionIdToApplicationFastInstanceCommand_1786959731000',
+  })
+  uninstallLogicFunctionId: string | null;
+
   @Column({ nullable: false, type: 'boolean', default: true })
   canBeUninstalled: boolean;
+
+  @Column({ nullable: false, type: 'boolean', default: false })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.23.0_AddAutoUpgradeToApplicationFastInstanceCommand_1784297307235',
+  })
+  autoUpgrade: boolean;
+
+  @Column({ nullable: false, type: 'boolean', default: false })
+  isSdkLayerStale: boolean;
+
+  @Column({ nullable: true, type: 'text' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.23.0_AddSdkClientCoreChecksumToApplicationFastInstanceCommand_1784625638000',
+  })
+  sdkClientCoreChecksum: string | null;
+
+  @Column({ nullable: true, type: 'text' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.31.0_AddFrontComponentSharedDependenciesToApplicationFastInstanceCommand_1786529082690',
+  })
+  frontComponentSharedDependenciesChecksum: string | null;
+
+  @Column({ nullable: true, type: 'text' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.31.0_AddFrontComponentSharedDependenciesToApplicationFastInstanceCommand_1786529082690',
+  })
+  frontComponentSharedDependenciesBuiltPath: string | null;
 
   @Column({ nullable: true, type: 'uuid' })
   applicationRegistrationId: string | null;
@@ -106,6 +166,29 @@ export class ApplicationEntity extends WorkspaceRelatedEntity {
   })
   @JoinColumn({ name: 'applicationRegistrationId' })
   applicationRegistration: Relation<ApplicationRegistrationEntity> | null;
+
+  @Column({ nullable: true, type: 'uuid' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.16.0_AddPrimaryPublicDomainToApplicationFastInstanceCommand_1782281874768',
+  })
+  primaryPublicDomainId: string | null;
+
+  @ManyToOne(() => PublicDomainEntity, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'primaryPublicDomainId' })
+  primaryPublicDomain: Relation<PublicDomainEntity> | null;
+
+  @OneToMany(
+    () => PublicDomainEntity,
+    (publicDomain) => publicDomain.application,
+    {
+      onDelete: 'SET NULL',
+    },
+  )
+  publicDomains: Relation<PublicDomainEntity[]>;
 
   @OneToMany(() => AgentEntity, (agent) => agent.application, {
     onDelete: 'CASCADE',
@@ -125,6 +208,24 @@ export class ApplicationEntity extends WorkspaceRelatedEntity {
     onDelete: 'CASCADE',
   })
   objects: Relation<ObjectMetadataEntity[]>;
+
+  @OneToMany(
+    () => FrontComponentEntity,
+    (frontComponent) => frontComponent.application,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
+  frontComponents: Relation<FrontComponentEntity[]>;
+
+  @OneToMany(
+    () => CommandMenuItemEntity,
+    (commandMenuItem) => commandMenuItem.application,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
+  commandMenuItems: Relation<CommandMenuItemEntity[]>;
 
   @OneToMany(
     () => ApplicationVariableEntity,

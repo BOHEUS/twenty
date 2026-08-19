@@ -4,6 +4,7 @@ export const CREATE_ONE_OBJECT_METADATA_ITEM = gql`
   mutation CreateOneObjectMetadataItem($input: CreateOneObjectInput!) {
     createOneObject(input: $input) {
       id
+      universalIdentifier
       nameSingular
       namePlural
       labelSingular
@@ -11,14 +12,21 @@ export const CREATE_ONE_OBJECT_METADATA_ITEM = gql`
       description
       icon
       color
-      isCustom
+      isRemote
       isActive
+      isSystem
+      isUIEditable
+      isUICreatable
       isSearchable
+      openRecordIn
+      shortcut
+      duplicateCriteria
       createdAt
       updatedAt
       labelIdentifierFieldMetadataId
       imageIdentifierFieldMetadataId
       isLabelSyncedWithName
+      applicationId
       fieldsList {
         id
         universalIdentifier
@@ -27,10 +35,9 @@ export const CREATE_ONE_OBJECT_METADATA_ITEM = gql`
         label
         description
         icon
-        isCustom
         isActive
         isSystem
-        isUIReadOnly
+        isUIEditable
         isNullable
         isUnique
         createdAt
@@ -97,7 +104,6 @@ export const CREATE_ONE_FIELD_METADATA_ITEM = gql`
       label
       description
       icon
-      isCustom
       isActive
       isUnique
       isNullable
@@ -169,7 +175,6 @@ export const UPDATE_ONE_FIELD_METADATA_ITEM = gql`
       label
       description
       icon
-      isCustom
       isActive
       isUnique
       isNullable
@@ -199,14 +204,15 @@ export const UPDATE_ONE_OBJECT_METADATA_ITEM = gql`
       description
       icon
       color
-      isCustom
       isActive
       isSearchable
+      openRecordIn
       createdAt
       updatedAt
       labelIdentifierFieldMetadataId
       imageIdentifierFieldMetadataId
       isLabelSyncedWithName
+      applicationId
     }
   }
 `;
@@ -222,14 +228,15 @@ export const DELETE_ONE_OBJECT_METADATA_ITEM = gql`
       description
       icon
       color
-      isCustom
       isActive
       isSearchable
+      openRecordIn
       createdAt
       updatedAt
       labelIdentifierFieldMetadataId
       imageIdentifierFieldMetadataId
       isLabelSyncedWithName
+      applicationId
     }
   }
 `;
@@ -243,7 +250,6 @@ export const DELETE_ONE_FIELD_METADATA_ITEM = gql`
       label
       description
       icon
-      isCustom
       isActive
       isUnique
       isNullable
@@ -254,6 +260,38 @@ export const DELETE_ONE_FIELD_METADATA_ITEM = gql`
       object {
         id
       }
+    }
+  }
+`;
+
+export const CREATE_ONE_INDEX_METADATA_ITEM = gql`
+  mutation CreateOneIndexMetadataItem($input: CreateOneIndexInput!) {
+    createOneIndex(input: $input) {
+      id
+      name
+      indexType
+      isUnique
+      isCustom
+      indexWhereClause
+      createdAt
+      updatedAt
+      indexFieldMetadataList {
+        id
+        fieldMetadataId
+        subFieldName
+        createdAt
+        updatedAt
+        order
+      }
+    }
+  }
+`;
+
+export const DELETE_ONE_INDEX_METADATA_ITEM = gql`
+  mutation DeleteOneIndexMetadataItem($idToDelete: UUID!) {
+    deleteOneIndex(input: { id: $idToDelete }) {
+      id
+      name
     }
   }
 `;

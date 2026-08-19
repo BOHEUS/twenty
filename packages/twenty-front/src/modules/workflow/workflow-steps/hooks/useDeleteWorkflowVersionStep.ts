@@ -2,7 +2,8 @@ import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient
 import { CoreObjectNameSingular } from 'twenty-shared/types';
 import { useFindOneRecordQuery } from '@/object-record/hooks/useFindOneRecordQuery';
 import { DELETE_WORKFLOW_VERSION_STEP } from '@/workflow/graphql/mutations/deleteWorkflowVersionStep';
-import { useUpdateWorkflowVersionCache } from '@/workflow/workflow-steps/hooks/useUpdateWorkflowVersionCache';
+import { useApplyWorkflowVersionStepChanges } from '@/workflow/workflow-steps/hooks/useApplyWorkflowVersionStepChanges';
+import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { useMutation } from '@apollo/client/react';
 import {
   type DeleteWorkflowVersionStepInput,
@@ -13,7 +14,9 @@ import {
 export const useDeleteWorkflowVersionStep = () => {
   const apolloCoreClient = useApolloCoreClient();
 
-  const { updateWorkflowVersionCache } = useUpdateWorkflowVersionCache();
+  const { applyWorkflowVersionStepChanges } =
+    useApplyWorkflowVersionStepChanges();
+  const { enqueueErrorSnackBar } = useSnackBar();
 
   const { findOneRecordQuery: findOneWorkflowVersionQuery } =
     useFindOneRecordQuery({
@@ -39,11 +42,14 @@ export const useDeleteWorkflowVersionStep = () => {
           variables: { objectRecordId: input.workflowVersionId },
         },
       ],
+      onError: (error) => {
+        enqueueErrorSnackBar({ apolloError: error });
+      },
     });
 
     const workflowVersionStepChanges = result?.data?.deleteWorkflowVersionStep;
 
-    updateWorkflowVersionCache({
+    applyWorkflowVersionStepChanges({
       workflowVersionStepChanges,
       workflowVersionId: input.workflowVersionId,
     });

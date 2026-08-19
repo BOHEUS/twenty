@@ -1,6 +1,7 @@
 import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
 import { useIncrementalFetchAndMutateRecords } from '@/object-record/hooks/useIncrementalFetchAndMutateRecords';
 import { useIncrementalUpdateManyRecords } from '@/object-record/hooks/useIncrementalUpdateManyRecords';
+import { useRefetchFindManyRecords } from '@/object-record/hooks/useRefetchFindManyRecords';
 import { useUpdateManyRecords } from '@/object-record/hooks/useUpdateManyRecords';
 import { dispatchObjectRecordOperationBrowserEvent } from '@/browser-event/utils/dispatchObjectRecordOperationBrowserEvent';
 import { renderHook } from '@testing-library/react';
@@ -15,6 +16,9 @@ jest.mock('@/object-record/hooks/useRefetchAggregateQueries', () => ({
     refetchAggregateQueries: jest.fn(),
   }),
 }));
+jest.mock('@/object-record/hooks/useRefetchFindManyRecords', () => ({
+  useRefetchFindManyRecords: jest.fn(),
+}));
 jest.mock('@/object-record/hooks/useIncrementalFetchAndMutateRecords');
 
 const mockUseObjectMetadataItem = jest.mocked(useObjectMetadataItem);
@@ -25,6 +29,7 @@ const mockUseUpdateManyRecords = jest.mocked(useUpdateManyRecords);
 const mockUseIncrementalFetchAndMutateRecords = jest.mocked(
   useIncrementalFetchAndMutateRecords,
 );
+const mockUseRefetchFindManyRecords = jest.mocked(useRefetchFindManyRecords);
 
 describe('useIncrementalUpdateManyRecords', () => {
   const mockUpdateManyRecords = jest.fn();
@@ -53,11 +58,15 @@ describe('useIncrementalUpdateManyRecords', () => {
       updateProgress: mockUpdateProgress,
       cancel: jest.fn(),
     });
+
+    const mockRefetchFindManyRecords = jest.fn();
+    mockUseRefetchFindManyRecords.mockReturnValue({
+      refetchFindManyRecords: mockRefetchFindManyRecords,
+    });
   });
 
   it('should call incrementalFetchAndMutate and execute mutations via useUpdateManyRecords', async () => {
     mockIncrementalFetchAndMutate.mockImplementation(async (callback) => {
-      // Simulate one batch
       await callback({
         recordIds: ['1', '2'],
         totalCount: 2,
@@ -81,6 +90,7 @@ describe('useIncrementalUpdateManyRecords', () => {
       delayInMsBetweenRequests: 50,
       skipRegisterObjectOperation: true,
       skipRefetchAggregateQueries: true,
+      skipOptimisticEffect: true,
       abortSignal: expect.any(AbortSignal),
     });
     expect(mockUpdateProgress).toHaveBeenCalledWith(2, 2);
@@ -102,6 +112,10 @@ describe('useIncrementalUpdateManyRecords', () => {
         },
       },
     });
+
+    const { refetchFindManyRecords } =
+      mockUseRefetchFindManyRecords.mock.results[0].value;
+    expect(refetchFindManyRecords).toHaveBeenCalled();
   });
 
   it('should pass abortSignal to updateManyRecords', async () => {

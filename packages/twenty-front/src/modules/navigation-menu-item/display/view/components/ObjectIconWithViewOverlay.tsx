@@ -1,13 +1,12 @@
 import { styled } from '@linaria/react';
 import { useContext } from 'react';
-import type { IconComponent } from 'twenty-ui/display';
+import { getIconTileColorShades } from 'twenty-ui/data-display';
+import { type IconComponent } from 'twenty-ui/icon';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
-
-import { getNavigationMenuItemIconStyleFromColor } from '@/navigation-menu-item/common/utils/getNavigationMenuItemIconStyleFromColor';
 
 const StyledCompositeContainer = styled.div`
   align-items: center;
-  border-radius: 4px;
+  border-radius: ${themeCssVariables.border.radius.sm};
   box-sizing: border-box;
   display: flex;
   flex-shrink: 0;
@@ -25,7 +24,7 @@ const StyledObjectIconWrapper = styled.div<{
   background-color: ${({ $backgroundColor }) => $backgroundColor};
   border: ${({ $borderColor }) =>
     $borderColor ? `1px solid ${$borderColor}` : 'none'};
-  border-radius: 4px;
+  border-radius: ${themeCssVariables.border.radius.sm};
   box-sizing: border-box;
   display: flex;
   inset: 0;
@@ -36,7 +35,7 @@ const StyledObjectIconWrapper = styled.div<{
 const StyledViewOverlay = styled.div<{ $backgroundColor: string }>`
   align-items: center;
   background-color: ${({ $backgroundColor }) => $backgroundColor};
-  border-radius: 4px;
+  border-radius: ${themeCssVariables.border.radius.sm};
   bottom: -5px;
   display: flex;
   height: 14px;
@@ -58,7 +57,7 @@ export const ObjectIconWithViewOverlay = ({
   objectColor,
 }: ObjectIconWithViewOverlayProps) => {
   const { theme } = useContext(ThemeContext);
-  const objectStyle = getNavigationMenuItemIconStyleFromColor(objectColor);
+  const objectStyle = getIconTileColorShades(objectColor);
 
   return (
     <StyledCompositeContainer>

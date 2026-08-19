@@ -1,11 +1,10 @@
 import { Suspense, lazy } from 'react';
 
+import { FrontComponentSkeletonLoader } from '@/front-components/components/FrontComponentSkeletonLoader';
 import { viewableFrontComponentIdComponentState } from '@/side-panel/pages/front-component/states/viewableFrontComponentIdComponentState';
 import { viewableFrontComponentRecordContextComponentState } from '@/side-panel/pages/front-component/states/viewableFrontComponentRecordContextComponentState';
-import { LayoutRenderingProvider } from '@/ui/layout/contexts/LayoutRenderingContext';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { isDefined } from 'twenty-shared/utils';
-import { PageLayoutType } from '~/generated-metadata/graphql';
 
 const FrontComponentRenderer = lazy(() =>
   import('@/front-components/components/FrontComponentRenderer').then(
@@ -26,23 +25,19 @@ export const SidePanelFrontComponentPage = () => {
     return null;
   }
 
+  const selectedRecordIds = isDefined(
+    viewableFrontComponentRecordContext?.recordId,
+  )
+    ? [viewableFrontComponentRecordContext.recordId]
+    : undefined;
+
   return (
-    <LayoutRenderingProvider
-      value={{
-        targetRecordIdentifier: isDefined(viewableFrontComponentRecordContext)
-          ? {
-              id: viewableFrontComponentRecordContext.recordId,
-              targetObjectNameSingular:
-                viewableFrontComponentRecordContext.objectNameSingular,
-            }
-          : undefined,
-        layoutType: PageLayoutType.DASHBOARD,
-        isInSidePanel: true,
-      }}
-    >
-      <Suspense fallback={null}>
-        <FrontComponentRenderer frontComponentId={viewableFrontComponentId} />
-      </Suspense>
-    </LayoutRenderingProvider>
+    <Suspense fallback={<FrontComponentSkeletonLoader />}>
+      <FrontComponentRenderer
+        frontComponentId={viewableFrontComponentId}
+        selectedRecordIds={selectedRecordIds}
+        loadingFallback={<FrontComponentSkeletonLoader />}
+      />
+    </Suspense>
   );
 };

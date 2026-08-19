@@ -1,10 +1,13 @@
-import { PageHeaderCommandMenuButtons } from '@/command-menu-item/components/PageHeaderCommandMenuButtons';
+import { CommandMenuItemContainerType } from '@/command-menu-item/types/CommandMenuItemContainerType';
 import { RecordIndexCommandMenuDropdown } from '@/command-menu-item/components/RecordIndexCommandMenuDropdown';
 import { CommandMenuContextProvider } from '@/command-menu-item/contexts/CommandMenuContextProvider';
+import { PinnedCommandMenuItemButtons } from '@/command-menu-item/display/components/PinnedCommandMenuItemButtons';
+import { CommandMenuItemEditButton } from '@/command-menu-item/edit/components/CommandMenuItemEditButton';
 import { MAIN_CONTEXT_STORE_INSTANCE_ID } from '@/context-store/constants/MainContextStoreInstanceId';
 import { contextStoreCurrentObjectMetadataItemIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataItemIdComponentState';
+import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/states/isLayoutCustomizationModeEnabledState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
-import { useIsMobile } from 'twenty-ui/utilities';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 
 export const RecordIndexCommandMenu = () => {
   const contextStoreCurrentObjectMetadataItemId = useAtomComponentStateValue(
@@ -12,7 +15,9 @@ export const RecordIndexCommandMenu = () => {
     MAIN_CONTEXT_STORE_INSTANCE_ID,
   );
 
-  const isMobile = useIsMobile();
+  const isLayoutCustomizationModeEnabled = useAtomStateValue(
+    isLayoutCustomizationModeEnabledState,
+  );
 
   return (
     <>
@@ -21,17 +26,19 @@ export const RecordIndexCommandMenu = () => {
           <CommandMenuContextProvider
             isInSidePanel={false}
             displayType="button"
-            containerType="index-page-header"
+            containerType={CommandMenuItemContainerType.IndexPageHeader}
+            isInPreviewMode={isLayoutCustomizationModeEnabled}
           >
-            {!isMobile && <PageHeaderCommandMenuButtons />}
+            <PinnedCommandMenuItemButtons />
           </CommandMenuContextProvider>
           <CommandMenuContextProvider
             isInSidePanel={false}
             displayType="dropdownItem"
-            containerType="index-page-dropdown"
+            containerType={CommandMenuItemContainerType.IndexPageDropdown}
           >
             <RecordIndexCommandMenuDropdown />
           </CommandMenuContextProvider>
+          <CommandMenuItemEditButton />
         </>
       )}
     </>

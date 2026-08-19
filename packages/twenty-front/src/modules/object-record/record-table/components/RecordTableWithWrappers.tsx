@@ -1,5 +1,4 @@
 import { useDeleteOneRecord } from '@/object-record/hooks/useDeleteOneRecord';
-import { RecordIndexTableContainerEffect } from '@/object-record/record-index/components/RecordIndexTableContainerEffect';
 import { useOpenRecordFromIndexView } from '@/object-record/record-index/hooks/useOpenRecordFromIndexView';
 import { RecordTable } from '@/object-record/record-table/components/RecordTable';
 import { RecordTableComponentInstance } from '@/object-record/record-table/components/RecordTableComponentInstance';
@@ -8,20 +7,29 @@ import { EntityDeleteContext } from '@/object-record/record-table/contexts/Entit
 import { useSelectAllRows } from '@/object-record/record-table/hooks/internal/useSelectAllRows';
 import { useActiveRecordTableRow } from '@/object-record/record-table/hooks/useActiveRecordTableRow';
 import { useFocusedRecordTableRow } from '@/object-record/record-table/hooks/useFocusedRecordTableRow';
+import { RecordTableRecordLimitReloadEffect } from '@/object-record/record-table/virtualization/components/RecordTableRecordLimitReloadEffect';
 import { PageFocusId } from '@/types/PageFocusId';
 import { useHotkeysOnFocusedElement } from '@/ui/utilities/hotkey/hooks/useHotkeysOnFocusedElement';
 import { ScrollWrapper } from '@/ui/utilities/scroll/components/ScrollWrapper';
-import { RecordUpdateContext } from '@/object-record/record-table/contexts/EntityUpdateMutationHookContext';
+import { styled } from '@linaria/react';
+
+const StyledRecordTablePrintBoundary = styled.div`
+  display: contents;
+
+  @media print {
+    display: block;
+    max-height: calc(100vh / var(--t-zoom, 1));
+    overflow: hidden;
+  }
+`;
 
 type RecordTableWithWrappersProps = {
   objectNameSingular: string;
   recordTableId: string;
   viewBarId: string;
-  updateRecordMutation: (params: any) => void;
 };
 
 export const RecordTableWithWrappers = ({
-  updateRecordMutation,
   objectNameSingular,
   recordTableId,
   viewBarId,
@@ -63,14 +71,14 @@ export const RecordTableWithWrappers = ({
         onRecordIdentifierClick={handleRecordIdentifierClick}
       >
         <EntityDeleteContext.Provider value={deleteOneRecord}>
-          <ScrollWrapper
-            componentInstanceId={`record-table-scroll-${recordTableId}`}
-          >
-            <RecordUpdateContext.Provider value={updateRecordMutation}>
+          <StyledRecordTablePrintBoundary>
+            <ScrollWrapper
+              componentInstanceId={`record-table-scroll-${recordTableId}`}
+            >
+              <RecordTableRecordLimitReloadEffect />
               <RecordTable />
-              <RecordIndexTableContainerEffect />
-            </RecordUpdateContext.Provider>
-          </ScrollWrapper>
+            </ScrollWrapper>
+          </StyledRecordTablePrintBoundary>
         </EntityDeleteContext.Provider>
       </RecordTableContextProvider>
     </RecordTableComponentInstance>

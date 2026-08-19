@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { FieldActorSource } from 'twenty-shared/types';
-import { canObjectBeManagedByWorkflow } from 'twenty-shared/workflow';
+import { canObjectBeManagedByAutomation } from 'twenty-shared/workflow';
 
 import { CommonCreateManyQueryRunnerService } from 'src/engine/api/common/common-query-runners/common-create-many-query-runner/common-create-many-query-runner.service';
 import {
@@ -24,7 +24,8 @@ export class CreateManyRecordsService {
   ) {}
 
   async execute(params: CreateManyRecordsParams): Promise<ToolOutput> {
-    const { objectName, objectRecords, authContext } = params;
+    const { objectName, objectRecords, authContext, rolePermissionConfig } =
+      params;
 
     try {
       const {
@@ -35,16 +36,16 @@ export class CreateManyRecordsService {
       } = await this.commonApiContextBuilder.build({
         authContext,
         objectName,
+        rolePermissionConfig,
       });
 
       if (
-        !canObjectBeManagedByWorkflow({
+        !canObjectBeManagedByAutomation({
           nameSingular: flatObjectMetadata.nameSingular,
-          isSystem: flatObjectMetadata.isSystem,
         })
       ) {
         throw new RecordCrudException(
-          'Failed to create: Object cannot be created by workflow',
+          'Failed to create: Object cannot be created by automation',
           RecordCrudExceptionCode.INVALID_REQUEST,
         );
       }
@@ -59,13 +60,14 @@ export class CreateManyRecordsService {
         createdBy: actorMetadata,
       }));
 
-      const createdRecords = await this.commonCreateManyRunner.execute(
-        {
-          data: cleanedRecords,
-          selectedFields,
-        },
-        queryRunnerContext,
-      );
+      const { results: createdRecords } =
+        await this.commonCreateManyRunner.execute(
+          {
+            data: cleanedRecords,
+            selectedFields,
+          },
+          queryRunnerContext,
+        );
 
       this.logger.log(
         `Created ${createdRecords.length} records in ${objectName}`,

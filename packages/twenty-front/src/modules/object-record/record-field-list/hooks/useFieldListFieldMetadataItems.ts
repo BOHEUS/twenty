@@ -14,6 +14,7 @@ type UseFieldListFieldMetadataItemsProps = {
   excludeFieldMetadataIds?: string[];
   excludeCreatedAtAndUpdatedAt?: boolean;
   showRelationSections?: boolean;
+  includeSystemObjectRelations?: boolean;
 };
 
 export const useFieldListFieldMetadataItems = ({
@@ -21,6 +22,7 @@ export const useFieldListFieldMetadataItems = ({
   excludeFieldMetadataIds = [],
   showRelationSections = true,
   excludeCreatedAtAndUpdatedAt = true,
+  includeSystemObjectRelations = false,
 }: UseFieldListFieldMetadataItemsProps) => {
   const { labelIdentifierFieldMetadataItem } =
     useLabelIdentifierFieldMetadataItem({
@@ -42,7 +44,9 @@ export const useFieldListFieldMetadataItems = ({
   const availableFieldMetadataItems = objectMetadataItem.readableFields
     .filter(
       (fieldMetadataItem) =>
-        isFieldCellSupported(fieldMetadataItem, objectMetadataItems) &&
+        isFieldCellSupported(fieldMetadataItem, objectMetadataItems, {
+          includeSystemObjectRelations,
+        }) &&
         fieldMetadataItem.id !== labelIdentifierFieldMetadataItem?.id &&
         !excludeFieldMetadataIds.includes(fieldMetadataItem.id) &&
         (!excludeCreatedAtAndUpdatedAt ||
@@ -79,13 +83,17 @@ export const useFieldListFieldMetadataItems = ({
         : 'inlineFieldMetadataItems',
   );
 
-  const { activityTargetFields, inlineRelationFields, boxedRelationFields } =
-    categorizeRelationFields({
-      relationFields: relationFieldMetadataItems ?? [],
-      objectNameSingular,
-      objectPermissionsByObjectMetadataId,
-      isJunctionRelationsEnabled,
-    });
+  const {
+    activityTargetFields,
+    inlineRelationFields,
+    junctionRelationFields,
+    boxedRelationFields,
+  } = categorizeRelationFields({
+    relationFields: relationFieldMetadataItems ?? [],
+    objectNameSingular,
+    objectPermissionsByObjectMetadataId,
+    isJunctionRelationsEnabled,
+  });
 
   const allInlineFieldMetadataItems = [
     ...(inlineFieldMetadataItems ?? []),
@@ -95,6 +103,7 @@ export const useFieldListFieldMetadataItems = ({
   return {
     inlineFieldMetadataItems: allInlineFieldMetadataItems,
     legacyActivityTargetFieldMetadataItems: activityTargetFields,
+    junctionRelationFieldMetadataItems: junctionRelationFields,
     boxedRelationFieldMetadataItems: boxedRelationFields,
   };
 };

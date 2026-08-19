@@ -1,22 +1,17 @@
 /* @license Enterprise */
 
-import { FeatureFlagKey } from 'twenty-shared/types';
-import {
-  Brackets,
-  NotBrackets,
-  type ObjectLiteral,
-  type WhereExpressionBuilder,
-} from 'typeorm';
+import { isDefined } from 'twenty-shared/utils';
+import { Brackets, type ObjectLiteral } from 'typeorm';
 
 import { type FeatureFlagMap } from 'src/engine/core-modules/feature-flag/interfaces/feature-flag-map.interface';
 import { type WorkspaceInternalContext } from 'src/engine/twenty-orm/interfaces/workspace-internal-context.interface';
 
 import { GraphqlQueryFilterFieldParser } from 'src/engine/api/graphql/graphql-query-runner/graphql-query-parsers/graphql-query-filter/graphql-query-filter-field.parser';
-import { isUserAuthContext } from 'src/engine/core-modules/auth/guards/is-user-auth-context.guard';
+import { applyFilterEntriesToWhereExpression } from 'src/engine/api/graphql/graphql-query-runner/graphql-query-parsers/utils/apply-filter-entries-to-where-expression.util';
 import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 import { type WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/repository/workspace-select-query-builder';
-import { buildRowLevelPermissionRecordFilter } from 'src/engine/twenty-orm/utils/build-row-level-permission-record-filter.util';
+import { resolveRowLevelPermissionRecordFilter } from 'src/engine/twenty-orm/utils/resolve-row-level-permission-record-filter.util';
 
 type ApplyRowLevelPermissionPredicatesArgs<T extends ObjectLiteral> = {
   queryBuilder: WorkspaceSelectQueryBuilder<T>;
@@ -31,37 +26,15 @@ export const applyRowLevelPermissionPredicates = <T extends ObjectLiteral>({
   objectMetadata,
   internalContext,
   authContext,
-  featureFlagMap,
+  featureFlagMap: _featureFlagMap,
 }: ApplyRowLevelPermissionPredicatesArgs<T>): void => {
-  if (
-    featureFlagMap[
-      FeatureFlagKey.IS_ROW_LEVEL_PERMISSION_PREDICATES_ENABLED
-    ] !== true
-  ) {
-    return;
-  }
-
-  const userWorkspaceId = isUserAuthContext(authContext)
-    ? authContext.userWorkspaceId
-    : undefined;
-  const roleId = userWorkspaceId
-    ? internalContext.userWorkspaceRoleMap[userWorkspaceId]
-    : undefined;
-
-  const recordFilter = buildRowLevelPermissionRecordFilter({
-    flatRowLevelPermissionPredicateMaps:
-      internalContext.flatRowLevelPermissionPredicateMaps,
-    flatRowLevelPermissionPredicateGroupMaps:
-      internalContext.flatRowLevelPermissionPredicateGroupMaps,
-    flatFieldMetadataMaps: internalContext.flatFieldMetadataMaps,
+  const recordFilter = resolveRowLevelPermissionRecordFilter({
+    internalContext,
+    authContext,
     objectMetadata,
-    roleId,
-    workspaceMember: isUserAuthContext(authContext)
-      ? authContext.workspaceMember
-      : undefined,
   });
 
-  if (!recordFilter || Object.keys(recordFilter).length === 0) {
+  if (!isDefined(recordFilter)) {
     return;
   }
 
@@ -95,21 +68,19 @@ const applyObjectRecordFilterToQueryBuilder = <T extends ObjectLiteral>({
   fieldParser: GraphqlQueryFilterFieldParser;
   useDirectTableReference?: boolean;
 }): void => {
-  if (!recordFilter || Object.keys(recordFilter).length === 0) {
-    return;
-  }
+  // The walker only uses the join surface, so widen back to ObjectLiteral here
+  // rather than threading the concrete T through every recursive call.
+  const outerQueryBuilderAsObjectLiteral =
+    queryBuilder as WorkspaceSelectQueryBuilder<ObjectLiteral>;
 
   const whereCondition = new Brackets((qb) => {
-    Object.entries(recordFilter).forEach(([key, value], index) => {
-      parseKeyFilter({
-        queryBuilder: qb,
-        objectNameSingular,
-        key,
-        value,
-        isFirst: index === 0,
-        fieldParser,
-        useDirectTableReference,
-      });
+    applyFilterEntriesToWhereExpression({
+      whereExpression: qb,
+      outerQueryBuilder: outerQueryBuilderAsObjectLiteral,
+      objectNameSingular,
+      filter: recordFilter,
+      fieldParser,
+      useDirectTableReference,
     });
   });
 
@@ -117,131 +88,5 @@ const applyObjectRecordFilterToQueryBuilder = <T extends ObjectLiteral>({
     queryBuilder.where(whereCondition);
   } else {
     queryBuilder.andWhere(whereCondition);
-  }
-};
-
-const parseKeyFilter = ({
-  queryBuilder,
-  objectNameSingular,
-  key,
-  value,
-  isFirst,
-  fieldParser,
-  useDirectTableReference = false,
-}: {
-  queryBuilder: WhereExpressionBuilder;
-  objectNameSingular: string;
-  key: string;
-  // oxlint-disable-next-line @typescripttypescript/no-explicit-any
-  value: any;
-  isFirst: boolean;
-  fieldParser: GraphqlQueryFilterFieldParser;
-  useDirectTableReference?: boolean;
-}): void => {
-  switch (key) {
-    case 'and': {
-      const andWhereCondition = new Brackets((qb) => {
-        value.forEach((filter: Record<string, unknown>, index: number) => {
-          const whereCondition = new Brackets((qb2) => {
-            Object.entries(filter).forEach(
-              ([subFilterKey, subFilterValue], subIndex) => {
-                parseKeyFilter({
-                  queryBuilder: qb2,
-                  objectNameSingular,
-                  key: subFilterKey,
-                  value: subFilterValue,
-                  isFirst: subIndex === 0,
-                  fieldParser,
-                  useDirectTableReference,
-                });
-              },
-            );
-          });
-
-          if (index === 0) {
-            qb.where(whereCondition);
-          } else {
-            qb.andWhere(whereCondition);
-          }
-        });
-      });
-
-      if (isFirst) {
-        queryBuilder.where(andWhereCondition);
-      } else {
-        queryBuilder.andWhere(andWhereCondition);
-      }
-      break;
-    }
-    case 'or': {
-      const orWhereCondition = new Brackets((qb) => {
-        value.forEach((filter: Record<string, unknown>, index: number) => {
-          const whereCondition = new Brackets((qb2) => {
-            Object.entries(filter).forEach(
-              ([subFilterKey, subFilterValue], subIndex) => {
-                parseKeyFilter({
-                  queryBuilder: qb2,
-                  objectNameSingular,
-                  key: subFilterKey,
-                  value: subFilterValue,
-                  isFirst: subIndex === 0,
-                  fieldParser,
-                  useDirectTableReference,
-                });
-              },
-            );
-          });
-
-          if (index === 0) {
-            qb.where(whereCondition);
-          } else {
-            qb.orWhere(whereCondition);
-          }
-        });
-      });
-
-      if (isFirst) {
-        queryBuilder.where(orWhereCondition);
-      } else {
-        queryBuilder.andWhere(orWhereCondition);
-      }
-
-      break;
-    }
-    case 'not': {
-      const notWhereCondition = new NotBrackets((qb) => {
-        Object.entries(value).forEach(
-          ([subFilterKey, subFilterValue], subIndex) => {
-            parseKeyFilter({
-              queryBuilder: qb,
-              objectNameSingular,
-              key: subFilterKey,
-              value: subFilterValue,
-              isFirst: subIndex === 0,
-              fieldParser,
-              useDirectTableReference,
-            });
-          },
-        );
-      });
-
-      if (isFirst) {
-        queryBuilder.where(notWhereCondition);
-      } else {
-        queryBuilder.andWhere(notWhereCondition);
-      }
-
-      break;
-    }
-    default:
-      fieldParser.parse(
-        queryBuilder,
-        objectNameSingular,
-        key,
-        value,
-        isFirst,
-        useDirectTableReference,
-      );
-      break;
   }
 };

@@ -227,6 +227,16 @@ export const successfulCreateInputByFieldMetadataType: {
         );
       },
     },
+    {
+      input: {
+        dateTimeField: '2026-05-07',
+      },
+      validateInput: (record: Record<string, any>) => {
+        const date = new Date(record.dateTimeField);
+
+        return date.toISOString() === '2026-05-07T00:00:00.000Z';
+      },
+    },
   ],
   [FieldMetadataType.BOOLEAN]: [
     {
@@ -373,13 +383,15 @@ export const successfulCreateInputByFieldMetadataType: {
     {
       input: {
         richTextField: {
-          blocknote: 'test',
+          blocknote:
+            '[{"type":"paragraph","content":[{"type":"text","text":"test"}]}]',
           markdown: 'test',
         },
       },
       validateInput: (record: Record<string, any>) => {
         return (
-          record.richTextField.blocknote === 'test' &&
+          record.richTextField.blocknote ===
+            '[{"type":"paragraph","content":[{"type":"text","text":"test"}]}]' &&
           record.richTextField.markdown === 'test'
         );
       },
@@ -412,6 +424,7 @@ export const successfulCreateInputByFieldMetadataType: {
     },
     {
       input: {
+        name: 'position',
         position: undefined,
       },
       validateInput: (record: Record<string, any>) => {

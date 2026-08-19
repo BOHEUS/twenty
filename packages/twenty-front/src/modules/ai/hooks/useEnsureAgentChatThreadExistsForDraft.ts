@@ -5,11 +5,12 @@ import {
   AGENT_CHAT_NEW_THREAD_DRAFT_KEY,
   agentChatDraftsByThreadIdState,
 } from '@/ai/states/agentChatDraftsByThreadIdState';
-import { currentAIChatThreadState } from '@/ai/states/currentAIChatThreadState';
+import { currentAiChatThreadState } from '@/ai/states/currentAiChatThreadState';
 import { hasTriggeredCreateForDraftState } from '@/ai/states/hasTriggeredCreateForDraftState';
 import { isCreatingChatThreadState } from '@/ai/states/isCreatingChatThreadState';
 import { pendingCreateFromDraftPromiseState } from '@/ai/states/pendingCreateFromDraftPromiseState';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
+import { tipTapDocumentToMarkdown } from 'twenty-shared/utils';
 
 export const useEnsureAgentChatThreadExistsForDraft = (
   createChatThread: () => Promise<any>,
@@ -21,7 +22,7 @@ export const useEnsureAgentChatThreadExistsForDraft = (
   const store = useStore();
 
   const ensureThreadExistsForDraft = useCallback(() => {
-    const currentThreadId = store.get(currentAIChatThreadState.atom);
+    const currentThreadId = store.get(currentAiChatThreadState.atom);
 
     if (currentThreadId !== AGENT_CHAT_NEW_THREAD_DRAFT_KEY) {
       return;
@@ -32,7 +33,7 @@ export const useEnsureAgentChatThreadExistsForDraft = (
         AGENT_CHAT_NEW_THREAD_DRAFT_KEY
       ] ?? '';
 
-    if (draft.trim() === '') {
+    if (tipTapDocumentToMarkdown(draft).trim() === '') {
       return;
     }
 

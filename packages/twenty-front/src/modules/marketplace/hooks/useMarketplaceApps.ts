@@ -1,42 +1,15 @@
 import { useQuery } from '@apollo/client/react';
-import {
-  type MarketplaceApp,
-  FindManyMarketplaceAppsDocument,
-} from '~/generated-metadata/graphql';
+import { FindManyMarketplaceAppsDocument } from '~/generated-metadata/graphql';
 
-export type MarketplaceAppWithContentCounts = MarketplaceApp & {
-  content: {
-    objects: number;
-    fields: number;
-    functions: number;
-    frontComponents: number;
-  };
-};
-
-export const useMarketplaceApps = () => {
-  const { data, loading, error } = useQuery(FindManyMarketplaceAppsDocument);
-
-  const marketplaceApps: MarketplaceAppWithContentCounts[] =
-    data?.findManyMarketplaceApps.map((app) => {
-      const totalFieldsCount =
-        (app.objects ?? []).reduce(
-          (count, appObject) => count + appObject.fields.length,
-          0,
-        ) + (app.fields ?? []).length;
-
-      return {
-        ...app,
-        content: {
-          objects: (app.objects ?? []).length,
-          fields: totalFieldsCount,
-          functions: (app.logicFunctions ?? []).length,
-          frontComponents: (app.frontComponents ?? []).length,
-        },
-      };
-    }) ?? [];
+export const useMarketplaceApps = ({
+  universalIdentifiers,
+}: { universalIdentifiers?: string[] } = {}) => {
+  const { data, loading, error } = useQuery(FindManyMarketplaceAppsDocument, {
+    variables: { universalIdentifiers },
+  });
 
   return {
-    data: marketplaceApps,
+    data: data?.findManyMarketplaceApps ?? [],
     isLoading: loading,
     error,
   };

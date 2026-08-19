@@ -4,7 +4,8 @@ import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { IconPlug, Status } from 'twenty-ui/display';
+import { Status } from 'twenty-ui/data-display';
+import { IconPlug } from 'twenty-ui/icon';
 
 import { type AiProviderItem } from '@/settings/admin-panel/ai/types/AiProviderItem';
 import { getProviderIcon } from '@/settings/admin-panel/ai/utils/getProviderIcon';
@@ -33,7 +34,9 @@ const getProviderDescription = (provider: AiProviderItem): string => {
     parts.push(provider.baseUrl);
   }
 
-  if (provider.apiKey) {
+  if (provider.authType === 'role') {
+    parts.push(t`IAM role`);
+  } else if (provider.apiKey) {
     parts.push(t`API key configured`);
   } else if (provider.hasAccessKey) {
     parts.push(t`IAM credentials`);
@@ -41,6 +44,9 @@ const getProviderDescription = (provider: AiProviderItem): string => {
 
   return parts.join(' · ');
 };
+
+const isProviderConfigured = (provider: AiProviderItem): boolean =>
+  !!(provider.authType || provider.apiKey || provider.hasAccessKey);
 
 export const SettingsAdminAiProviderListCard = ({
   providers,
@@ -70,7 +76,7 @@ export const SettingsAdminAiProviderListCard = ({
       getItemLabel={(provider) => provider.label ?? provider.id}
       getItemDescription={getProviderDescription}
       RowRightComponent={({ item: provider }) =>
-        provider.apiKey || provider.hasAccessKey ? (
+        isProviderConfigured(provider) ? (
           <Status color="green" text={t`Configured`} weight="medium" />
         ) : (
           <Status color="orange" text={t`No credentials`} weight="medium" />

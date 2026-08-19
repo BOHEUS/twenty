@@ -1,11 +1,11 @@
-import { isDefined } from 'twenty-shared/utils';
+import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
+import { ObjectMetadataIcon } from '@/object-metadata/components/ObjectMetadataIcon';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
-import { Checkbox } from 'twenty-ui/input';
-import { useIcons } from 'twenty-ui/display';
 import { styled } from '@linaria/react';
 import { useContext } from 'react';
+import { Checkbox } from 'twenty-ui/input';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
 export const AVAILABLE_STANDARD_OBJECTS_GRID_TEMPLATE_COLUMNS =
@@ -29,8 +29,7 @@ export const SettingsAvailableStandardObjectItemTableRow = ({
   onClick,
 }: SettingsAvailableStandardObjectItemTableRowProps) => {
   const { theme } = useContext(ThemeContext);
-  const { getIcon } = useIcons();
-  const Icon = getIcon(objectItem.icon);
+  const { formatNumber } = useNumberFormat();
 
   return (
     <TableRow
@@ -49,13 +48,18 @@ export const SettingsAvailableStandardObjectItemTableRow = ({
         color={themeCssVariables.font.color.primary}
         gap={themeCssVariables.spacing[2]}
       >
-        {isDefined(Icon) && <Icon size={theme.icon.size.md} />}
+        <ObjectMetadataIcon
+          objectMetadataItem={objectItem}
+          size={theme.icon.size.md}
+        />
         {objectItem.labelPlural}
       </TableCell>
       <TableCell>
         <StyledDescription>{objectItem.description}</StyledDescription>
       </TableCell>
-      <TableCell align="right">{objectItem.fields.length}</TableCell>
+      <TableCell align="right">
+        {formatNumber(objectItem.fields.length)}
+      </TableCell>
     </TableRow>
   );
 };

@@ -5,25 +5,22 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 
 import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
-import { FileFolder, FeatureFlagKey } from 'twenty-shared/types';
+import { FeatureFlagKey, FileFolder } from 'twenty-shared/types';
 import { DataSource } from 'typeorm';
 
-import { FileStorageService } from 'src/engine/core-modules/file-storage/file-storage.service';
+import { ApplicationService } from 'src/engine/core-modules/application/application.service';
+import { FileStorageService } from 'src/engine/core-modules/file-storage/services/file-storage.service';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 import { ObjectMetadataService } from 'src/engine/metadata-modules/object-metadata/object-metadata.service';
 import { type WorkspaceEntityManager } from 'src/engine/twenty-orm/entity-manager/workspace-entity-manager';
-import { computeTableName } from 'src/engine/utils/compute-table-name.util';
+import { computeObjectTargetTable } from 'src/engine/utils/compute-object-target-table.util';
 import {
   ATTACHMENT_DATA_SEED_COLUMNS,
   ATTACHMENT_SAMPLE_FILES,
   type AttachmentFileSeedMetadata,
   generateAttachmentSeedsForWorkspace,
 } from 'src/engine/workspace-manager/dev-seeder/data/constants/attachment-data-seeds.constant';
-import {
-  CALENDAR_CHANNEL_DATA_SEED_COLUMNS,
-  CALENDAR_CHANNEL_DATA_SEEDS,
-} from 'src/engine/workspace-manager/dev-seeder/data/constants/calendar-channel-data-seeds.constant';
 import {
   CALENDAR_CHANNEL_EVENT_ASSOCIATION_DATA_SEED_COLUMNS,
   CALENDAR_CHANNEL_EVENT_ASSOCIATION_DATA_SEEDS,
@@ -41,10 +38,6 @@ import {
   COMPANY_DATA_SEEDS,
 } from 'src/engine/workspace-manager/dev-seeder/data/constants/company-data-seeds.constant';
 import {
-  CONNECTED_ACCOUNT_DATA_SEED_COLUMNS,
-  CONNECTED_ACCOUNT_DATA_SEEDS,
-} from 'src/engine/workspace-manager/dev-seeder/data/constants/connected-account-data-seeds.constant';
-import {
   DASHBOARD_DATA_SEED_COLUMNS,
   getDashboardDataSeeds,
 } from 'src/engine/workspace-manager/dev-seeder/data/constants/dashboard-data-seeds.constant';
@@ -52,14 +45,6 @@ import {
   EMPLOYMENT_HISTORY_DATA_SEED_COLUMNS,
   EMPLOYMENT_HISTORY_DATA_SEEDS,
 } from 'src/engine/workspace-manager/dev-seeder/data/constants/employment-history-data-seeds.constant';
-import {
-  MESSAGE_CHANNEL_DATA_SEED_COLUMNS,
-  MESSAGE_CHANNEL_DATA_SEEDS,
-} from 'src/engine/workspace-manager/dev-seeder/data/constants/message-channel-data-seeds.constant';
-import {
-  MESSAGE_FOLDER_DATA_SEED_COLUMNS,
-  MESSAGE_FOLDER_DATA_SEEDS,
-} from 'src/engine/workspace-manager/dev-seeder/data/constants/message-folder-data-seeds.constant';
 import {
   MESSAGE_CHANNEL_MESSAGE_ASSOCIATION_DATA_SEED_COLUMNS,
   MESSAGE_CHANNEL_MESSAGE_ASSOCIATION_DATA_SEEDS,
@@ -121,9 +106,11 @@ import {
   WORKSPACE_MEMBER_DATA_SEED_COLUMNS,
 } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
 import { TimelineActivitySeederService } from 'src/engine/workspace-manager/dev-seeder/data/services/timeline-activity-seeder.service';
-import { prefillWorkflowCommandMenuItems } from 'src/engine/workspace-manager/standard-objects-prefill-data/prefill-workflow-command-menu-items';
-import { prefillWorkflows } from 'src/engine/workspace-manager/standard-objects-prefill-data/prefill-workflows';
+import { prefillFrontComponentCommandMenuItems } from 'src/engine/workspace-manager/standard-objects-prefill-data/utils/prefill-front-component-command-menu-items.util';
+import { prefillWorkflowCommandMenuItems } from 'src/engine/workspace-manager/standard-objects-prefill-data/utils/prefill-workflow-command-menu-items.util';
+import { prefillWorkflows } from 'src/engine/workspace-manager/standard-objects-prefill-data/utils/prefill-workflows.util';
 import { TWENTY_STANDARD_APPLICATION } from 'src/engine/workspace-manager/twenty-standard-application/constants/twenty-standard-applications';
+import { WorkspaceMigrationValidateBuildAndRunService } from 'src/engine/workspace-manager/workspace-migration/services/workspace-migration-validate-build-and-run-service';
 
 type RecordSeedConfig = {
   tableName: string;
@@ -131,7 +118,6 @@ type RecordSeedConfig = {
   recordSeeds: Record<string, unknown>[];
 };
 
-// Organize seeds into dependency batches for parallel insertion
 const getRecordSeedsBatches = (
   workspaceId: string,
   attachmentSeeds: RecordSeedConfig['recordSeeds'],
@@ -164,18 +150,13 @@ const getRecordSeedsBatches = (
       recordSeeds: COMPANY_DATA_SEEDS,
     },
     {
-      tableName: 'connectedAccount',
-      pgColumns: CONNECTED_ACCOUNT_DATA_SEED_COLUMNS,
-      recordSeeds: CONNECTED_ACCOUNT_DATA_SEEDS,
-    },
-    {
       tableName: 'dashboard',
       pgColumns: DASHBOARD_DATA_SEED_COLUMNS,
       recordSeeds: getDashboardDataSeeds(workspaceId),
     },
   ];
 
-  // Batch 3: Depends on company and connectedAccount
+  // Batch 3: Depends on company
   const batch3: RecordSeedConfig[] = [
     {
       tableName: 'person',
@@ -187,25 +168,10 @@ const getRecordSeedsBatches = (
       pgColumns: PET_DATA_SEED_COLUMNS,
       recordSeeds: PET_DATA_SEEDS,
     },
-    {
-      tableName: 'calendarChannel',
-      pgColumns: CALENDAR_CHANNEL_DATA_SEED_COLUMNS,
-      recordSeeds: CALENDAR_CHANNEL_DATA_SEEDS,
-    },
-    {
-      tableName: 'messageChannel',
-      pgColumns: MESSAGE_CHANNEL_DATA_SEED_COLUMNS,
-      recordSeeds: MESSAGE_CHANNEL_DATA_SEEDS,
-    },
   ];
 
   // Batch 4: Depends on person/company/messageChannel or independent
   const batch4: RecordSeedConfig[] = [
-    {
-      tableName: 'messageFolder',
-      pgColumns: MESSAGE_FOLDER_DATA_SEED_COLUMNS,
-      recordSeeds: MESSAGE_FOLDER_DATA_SEEDS,
-    },
     {
       tableName: 'opportunity',
       pgColumns: OPPORTUNITY_DATA_SEED_COLUMNS,
@@ -231,7 +197,6 @@ const getRecordSeedsBatches = (
       pgColumns: MESSAGE_THREAD_DATA_SEED_COLUMNS,
       recordSeeds: MESSAGE_THREAD_DATA_SEEDS,
     },
-    // Junction tables
     {
       tableName: '_employmentHistory',
       pgColumns: EMPLOYMENT_HISTORY_DATA_SEED_COLUMNS,
@@ -304,6 +269,8 @@ export class DevSeederDataService {
     private readonly timelineActivitySeederService: TimelineActivitySeederService,
     private readonly fileStorageService: FileStorageService,
     private readonly flatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
+    private readonly applicationService: ApplicationService,
+    private readonly workspaceMigrationValidateBuildAndRunService: WorkspaceMigrationValidateBuildAndRunService,
   ) {}
 
   public async seed({
@@ -359,14 +326,29 @@ export class DevSeederDataService {
 
         await prefillWorkflows(
           entityManager,
+          workspaceId,
           schemaName,
           flatObjectMetadataMaps,
           flatFieldMetadataMaps,
         );
-
-        await prefillWorkflowCommandMenuItems(entityManager, workspaceId);
       },
     );
+
+    await prefillWorkflowCommandMenuItems({
+      workspaceId,
+      applicationService: this.applicationService,
+      flatEntityMapsCacheService: this.flatEntityMapsCacheService,
+      workspaceMigrationValidateBuildAndRunService:
+        this.workspaceMigrationValidateBuildAndRunService,
+    });
+
+    await prefillFrontComponentCommandMenuItems({
+      workspaceId,
+      applicationService: this.applicationService,
+      flatEntityMapsCacheService: this.flatEntityMapsCacheService,
+      workspaceMigrationValidateBuildAndRunService:
+        this.workspaceMigrationValidateBuildAndRunService,
+    });
   }
 
   private async seedRecordsInBatches({
@@ -403,8 +385,7 @@ export class DevSeederDataService {
 
           const objectMetadata = objectMetadataItems.find(
             (item) =>
-              computeTableName(item.nameSingular, item.isCustom) ===
-              recordSeedsConfig.tableName,
+              computeObjectTargetTable(item) === recordSeedsConfig.tableName,
           );
 
           if (!objectMetadata) {
@@ -461,7 +442,6 @@ export class DevSeederDataService {
         )
       : join(__dirname, '../sample-files');
 
-    // Read each sample file once and cache the buffer
     const sampleFileBuffers: Buffer[] = [];
 
     for (const sampleFile of ATTACHMENT_SAMPLE_FILES) {
@@ -481,7 +461,6 @@ export class DevSeederDataService {
 
       await this.fileStorageService.writeFile({
         sourceFile,
-        mimeType: metadata.mimeType,
         fileFolder: FileFolder.FilesField,
         applicationUniversalIdentifier,
         workspaceId,

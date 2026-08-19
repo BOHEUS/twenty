@@ -1,7 +1,45 @@
+import { isNonEmptyString } from '@sniptt/guards';
 import { FeatureFlagKey } from 'twenty-shared/types';
 import { type QueryRunner } from 'typeorm';
 
 const tableName = 'featureFlag';
+
+const DEFAULT_SEEDED_FEATURE_FLAGS: Partial<Record<FeatureFlagKey, boolean>> = {
+  [FeatureFlagKey.IS_APP_CLAIMING_ENABLED]: false,
+  [FeatureFlagKey.IS_UNIQUE_INDEXES_ENABLED]: false,
+  [FeatureFlagKey.IS_CALENDAR_WEEK_VIEW_ENABLED]: true,
+  [FeatureFlagKey.IS_EMAIL_GROUP_ENABLED]: true,
+  [FeatureFlagKey.IS_JUNCTION_RELATIONS_ENABLED]: true,
+  [FeatureFlagKey.IS_SETTINGS_DISCOVERY_HERO_ENABLED]: false,
+};
+
+// Temporary: lets CI run the suite against the ORM v2 read path while it is behind a
+// flag. To be deleted once the migration is complete.
+const getForcedFeatureFlags = (): FeatureFlagKey[] => {
+  const forcedFeatureFlags = process.env.TEST_FORCED_FEATURE_FLAGS;
+
+  if (!isNonEmptyString(forcedFeatureFlags)) {
+    return [];
+  }
+
+  return forcedFeatureFlags
+    .split(',')
+    .map((featureFlagKey) => featureFlagKey.trim())
+    .filter(isNonEmptyString)
+    .map((featureFlagKey) => {
+      if (
+        !Object.values(FeatureFlagKey).includes(
+          featureFlagKey as FeatureFlagKey,
+        )
+      ) {
+        throw new Error(
+          `Unknown feature flag "${featureFlagKey}" in TEST_FORCED_FEATURE_FLAGS`,
+        );
+      }
+
+      return featureFlagKey as FeatureFlagKey;
+    });
+};
 
 type SeedFeatureFlagsArgs = {
   queryRunner: QueryRunner;
@@ -14,108 +52,26 @@ export const seedFeatureFlags = async ({
   schemaName,
   workspaceId,
 }: SeedFeatureFlagsArgs) => {
+  const featureFlagValueByKey: Partial<Record<FeatureFlagKey, boolean>> = {
+    ...DEFAULT_SEEDED_FEATURE_FLAGS,
+  };
+
+  for (const featureFlagKey of getForcedFeatureFlags()) {
+    featureFlagValueByKey[featureFlagKey] = true;
+  }
+
   await queryRunner.manager
     .createQueryBuilder()
     .insert()
     .into(`${schemaName}.${tableName}`, ['key', 'workspaceId', 'value'])
     .orIgnore()
-    .values([
-      {
-        key: FeatureFlagKey.IS_UNIQUE_INDEXES_ENABLED,
-        workspaceId: workspaceId,
-        value: false,
-      },
-      {
-        key: FeatureFlagKey.IS_AI_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_APPLICATION_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_PUBLIC_DOMAIN_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_EMAILING_DOMAIN_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_DASHBOARD_V2_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_ATTACHMENT_MIGRATED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_NOTE_TARGET_MIGRATED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_TASK_TARGET_MIGRATED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_ROW_LEVEL_PERMISSION_PREDICATES_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_JUNCTION_RELATIONS_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_NAVIGATION_MENU_ITEM_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_NAVIGATION_MENU_ITEM_EDITING_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_MARKETPLACE_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_COMMAND_MENU_ITEM_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_DATE_TIME_WHOLE_DAY_FILTER_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_RECORD_PAGE_LAYOUT_EDITING_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_USAGE_ANALYTICS_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-      {
-        key: FeatureFlagKey.IS_RECORD_PAGE_LAYOUT_GLOBAL_EDITION_ENABLED,
-        workspaceId: workspaceId,
-        value: true,
-      },
-    ])
+    .values(
+      Object.entries(featureFlagValueByKey).map(([key, value]) => ({
+        key,
+        workspaceId,
+        value,
+      })),
+    )
     .execute();
 };
 

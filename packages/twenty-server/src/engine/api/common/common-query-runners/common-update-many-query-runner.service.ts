@@ -39,25 +39,13 @@ export class CommonUpdateManyQueryRunnerService extends CommonBaseQueryRunnerSer
     queryRunnerContext: CommonExtendedQueryRunnerContext,
   ): Promise<ObjectRecord[]> {
     const {
-      repository,
       authContext,
       rolePermissionConfig,
       workspaceDataSource,
       flatObjectMetadataMaps,
       flatFieldMetadataMaps,
       flatObjectMetadata,
-      commonQueryParser,
     } = queryRunnerContext;
-
-    const queryBuilder = repository.createQueryBuilder(
-      flatObjectMetadata.nameSingular,
-    );
-
-    commonQueryParser.applyFilterToBuilder(
-      queryBuilder,
-      flatObjectMetadata.nameSingular,
-      args.filter,
-    );
 
     const columnsToReturn = buildColumnsToReturn({
       select: args.selectedFieldsResult.select,
@@ -67,13 +55,13 @@ export class CommonUpdateManyQueryRunnerService extends CommonBaseQueryRunnerSer
       flatFieldMetadataMaps,
     });
 
-    const updatedObjectRecords = await queryBuilder
-      .update()
-      .set(args.data)
-      .returning(columnsToReturn)
-      .execute();
-
-    const updatedRecords = updatedObjectRecords.generatedMaps as ObjectRecord[];
+    const updatedRecords = await this.runFilteredMutation({
+      queryRunnerContext,
+      filter: args.filter,
+      columnsToReturn,
+      kind: 'update',
+      data: args.data,
+    });
 
     if (isDefined(args.selectedFieldsResult.relations)) {
       await this.processNestedRelationsHelper.processNestedRelations({
@@ -90,6 +78,7 @@ export class CommonUpdateManyQueryRunnerService extends CommonBaseQueryRunnerSer
         workspaceDataSource,
         rolePermissionConfig,
         selectedFields: args.selectedFieldsResult.select,
+        ...this.getNestedRelationsReadPathOptions(queryRunnerContext),
       });
     }
 
@@ -112,6 +101,7 @@ export class CommonUpdateManyQueryRunnerService extends CommonBaseQueryRunnerSer
       filter: this.filterArgProcessor.process({
         filter: args.filter,
         flatObjectMetadata,
+        flatObjectMetadataMaps,
         flatFieldMetadataMaps,
       }),
       data: (

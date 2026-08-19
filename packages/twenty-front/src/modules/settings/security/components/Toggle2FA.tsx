@@ -4,7 +4,7 @@ import { SettingsOptionCardContentToggle } from '@/settings/components/SettingsO
 import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { t } from '@lingui/core/macro';
-import { IconLifebuoy } from 'twenty-ui/display';
+import { IconLifebuoy } from 'twenty-ui/icon';
 import { useMutation } from '@apollo/client/react';
 import { UpdateWorkspaceDocument } from '~/generated-metadata/graphql';
 
@@ -24,7 +24,6 @@ export const Toggle2FA = () => {
     const newEnforceValue = !currentWorkspace.isTwoFactorAuthenticationEnforced;
 
     try {
-      // Optimistic update
       setCurrentWorkspace({
         ...currentWorkspace,
         isTwoFactorAuthenticationEnforced: newEnforceValue,
@@ -38,7 +37,6 @@ export const Toggle2FA = () => {
         },
       });
     } catch (err: any) {
-      // Rollback optimistic update if error
       setCurrentWorkspace({
         ...currentWorkspace,
         isTwoFactorAuthenticationEnforced: !newEnforceValue,

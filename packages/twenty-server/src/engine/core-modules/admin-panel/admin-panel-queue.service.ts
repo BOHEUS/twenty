@@ -40,7 +40,6 @@ export class AdminPanelQueueService {
       const start = validOffset;
       const end = validOffset + validLimit - 1;
 
-      // Convert GraphQL enum to BullMQ state
       const bullMQState = jobStateEnumToBullMQ[state];
       const jobs = await queue.getJobs([bullMQState], start, end, false);
 
@@ -58,9 +57,9 @@ export class AdminPanelQueueService {
             processedOn: job.processedOn,
             finishedOn: job.finishedOn,
             attemptsMade: job.attemptsMade,
-            returnValue: job.returnValue,
+            returnValue: job.returnvalue,
             logs: undefined,
-            stackTrace: job.stackTrace,
+            stackTrace: job.stacktrace ?? undefined,
           };
         }),
       );

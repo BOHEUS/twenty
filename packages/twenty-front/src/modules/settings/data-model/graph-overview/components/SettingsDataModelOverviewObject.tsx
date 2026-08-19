@@ -1,20 +1,22 @@
-import { useContext, useState } from 'react';
 import { styled } from '@linaria/react';
 import { type Node, type NodeProps } from '@xyflow/react';
+import { useContext, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
+import { ObjectMetadataIcon } from '@/object-metadata/components/ObjectMetadataIcon';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { isHiddenSystemField } from '@/object-metadata/utils/isHiddenSystemField';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
 import { ObjectFieldRow } from '@/settings/data-model/graph-overview/components/SettingsDataModelOverviewField';
 import { FieldMetadataType } from '~/generated-metadata/graphql';
 
+import { SettingsItemTypeTag } from '@/settings/components/SettingsItemTypeTag';
 import { ObjectFieldRowWithoutRelation } from '@/settings/data-model/graph-overview/components/SettingsDataModelOverviewFieldWithoutRelation';
 import '@xyflow/react/dist/style.css';
 import { SettingsPath } from 'twenty-shared/types';
-import { isDefined, getSettingsPath } from 'twenty-shared/utils';
-import { IconChevronDown, IconChevronUp, useIcons } from 'twenty-ui/display';
-import { SettingsItemTypeTag } from '@/settings/components/SettingsItemTypeTag';
+import { getSettingsPath, isDefined } from 'twenty-shared/utils';
+import { IconChevronDown, IconChevronUp } from 'twenty-ui/icon';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 
 type SettingsDataModelOverviewObjectNode = Node<
@@ -44,7 +46,8 @@ const StyledHeader = styled.div`
 
 const StyledObjectName = styled.div`
   border: 0;
-  border-radius: 4px 4px 0 0;
+  border-radius: ${themeCssVariables.border.radius.sm}
+    ${themeCssVariables.border.radius.sm} 0 0;
   display: flex;
   font-weight: ${themeCssVariables.font.weight.medium};
   gap: ${themeCssVariables.spacing[1]};
@@ -107,7 +110,7 @@ export const SettingsDataModelOverviewObject = ({
   data: objectMetadataItem,
 }: SettingsDataModelOverviewObjectProps) => {
   const { theme } = useContext(ThemeContext);
-  const { getIcon } = useIcons();
+  const { formatNumber } = useNumberFormat();
   const [otherFieldsExpanded, setOtherFieldsExpanded] = useState(false);
 
   const { totalCount } = useFindManyRecords({
@@ -122,8 +125,6 @@ export const SettingsDataModelOverviewObject = ({
     (x) => x.type !== FieldMetadataType.RELATION,
   ).length;
 
-  const Icon = getIcon(objectMetadataItem.icon);
-
   return (
     <StyledNode>
       <StyledHeader>
@@ -134,11 +135,17 @@ export const SettingsDataModelOverviewObject = ({
                 objectNamePlural: objectMetadataItem.namePlural,
               })}
             >
-              {isDefined(Icon) && <Icon size={theme.icon.size.md} />}
+              <ObjectMetadataIcon
+                objectMetadataItem={objectMetadataItem}
+                size={theme.icon.size.md}
+              />
               {objectMetadataItem.labelPlural}
             </Link>
           </StyledObjectLinkContainer>
-          <StyledObjectInstanceCount> · {totalCount}</StyledObjectInstanceCount>
+          <StyledObjectInstanceCount>
+            {' '}
+            · {isDefined(totalCount) ? formatNumber(totalCount) : totalCount}
+          </StyledObjectInstanceCount>
         </StyledObjectName>
         <SettingsItemTypeTag item={objectMetadataItem} />
       </StyledHeader>

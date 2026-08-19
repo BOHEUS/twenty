@@ -47,7 +47,6 @@ const getSchemaComponentsExample = (
   flatFieldMetadatas: FlatFieldMetadata[],
 ): OpenApiExample => {
   return flatFieldMetadatas.reduce((node, field) => {
-    // If field is required
     if (!field.isNullable && field.defaultValue === null) {
       return {
         ...node,
@@ -202,7 +201,6 @@ const computeSchemaComponent = ({
 
   const withRequiredFields = !forResponse && !forUpdate;
 
-  // Create a temporary object that looks like ObjectMetadataEntity for the converter
   const tempItem = {
     ...item,
     fields: flatFieldMetadatas,
@@ -292,9 +290,10 @@ export const computeSchemaComponents = (
   );
 };
 
-export const computeParameterComponents = (
-  fromMetadata = false,
-): Record<string, OpenAPIV3_1.ParameterObject> => {
+export const computeParameterComponents = (): Record<
+  string,
+  OpenAPIV3_1.ParameterObject
+> => {
   return {
     idPath: computeIdPathParameter(),
     startingAfter: computeStartingAfterParameters(),
@@ -304,7 +303,7 @@ export const computeParameterComponents = (
     upsert: computeUpsertParameters(),
     softDelete: computeSoftDeleteParameters(),
     orderBy: computeOrderByParameters(),
-    limit: computeLimitParameters(fromMetadata),
+    limit: computeLimitParameters(),
     groupBy: computeGroupByParameters(),
     viewId: computeViewIdParameters(),
     aggregate: computeAggregateParameters(),
@@ -366,19 +365,9 @@ export const computeMetadataSchemaComponents = (
               createdAt: { type: 'string', format: 'date-time' },
               updatedAt: { type: 'string', format: 'date-time' },
               fields: {
-                type: 'object',
-                properties: {
-                  edges: {
-                    type: 'object',
-                    properties: {
-                      node: {
-                        type: 'array',
-                        items: {
-                          $ref: '#/components/schemas/FieldForResponse',
-                        },
-                      },
-                    },
-                  },
+                type: 'array',
+                items: {
+                  $ref: '#/components/schemas/FieldForResponse',
                 },
               },
             },
@@ -1100,7 +1089,12 @@ export const computeMetadataSchemaComponents = (
               name: { type: 'string' },
               type: {
                 type: 'string',
-                enum: ['RECORD_INDEX', 'RECORD_PAGE', 'DASHBOARD'],
+                enum: [
+                  'RECORD_INDEX',
+                  'RECORD_PAGE',
+                  'DASHBOARD',
+                  'STANDALONE_PAGE',
+                ],
                 default: 'RECORD_PAGE',
               },
               objectMetadataId: { type: 'string', format: 'uuid' },
@@ -1121,7 +1115,12 @@ export const computeMetadataSchemaComponents = (
               name: { type: 'string' },
               type: {
                 type: 'string',
-                enum: ['RECORD_INDEX', 'RECORD_PAGE', 'DASHBOARD'],
+                enum: [
+                  'RECORD_INDEX',
+                  'RECORD_PAGE',
+                  'DASHBOARD',
+                  'STANDALONE_PAGE',
+                ],
               },
               objectMetadataId: { type: 'string', format: 'uuid' },
             },
@@ -1134,7 +1133,12 @@ export const computeMetadataSchemaComponents = (
               name: { type: 'string' },
               type: {
                 type: 'string',
-                enum: ['RECORD_INDEX', 'RECORD_PAGE', 'DASHBOARD'],
+                enum: [
+                  'RECORD_INDEX',
+                  'RECORD_PAGE',
+                  'DASHBOARD',
+                  'STANDALONE_PAGE',
+                ],
               },
               objectMetadataId: { type: 'string', format: 'uuid' },
               tabs: {

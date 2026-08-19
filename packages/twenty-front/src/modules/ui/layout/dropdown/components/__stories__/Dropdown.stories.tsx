@@ -13,9 +13,6 @@ import { DropdownMenuSkeletonItem } from '@/ui/input/relation-picker/components/
 
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { DropdownMenuHeaderLeftComponent } from '@/ui/layout/dropdown/components/DropdownMenuHeader/internal/DropdownMenuHeaderLeftComponent';
-// TEMP_DISABLED_TEST: Commented out unused imports due to commented tests
-// import { Modal } from '@/ui/layout/modal/components/Modal';
-// import { isModalOpenedComponentState } from '@/ui/layout/modal/states/isModalOpenedComponentState';
 import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
 import { DropdownMenuHeader } from '@/ui/layout/dropdown/components/DropdownMenuHeader/DropdownMenuHeader';
 import { DropdownMenuInput } from '@/ui/layout/dropdown/components/DropdownMenuInput';
@@ -23,11 +20,7 @@ import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/Drop
 import { DropdownMenuSearchInput } from '@/ui/layout/dropdown/components/DropdownMenuSearchInput';
 import { DropdownMenuSeparator } from '@/ui/layout/dropdown/components/DropdownMenuSeparator';
 import { StyledDropdownMenuSubheader } from '@/ui/layout/dropdown/components/StyledDropdownMenuSubheader';
-import {
-  // TEMP_DISABLED_TEST: Commented out unused import
-  // Avatar,
-  IconChevronLeft,
-} from 'twenty-ui/display';
+import { IconChevronLeft } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/input';
 import { MenuItem } from 'twenty-ui/navigation';
 import { ComponentDecorator } from 'twenty-ui/testing';
@@ -151,10 +144,6 @@ const optionsMock = [
     avatarUrl,
   },
 ];
-
-// TEMP_DISABLED_TEST: Commented out unused component
-// const FakeSelectableMenuItemList = ({ hasAvatar }: { hasAvatar?: boolean }) => {
-//   const [selectedItem, setSelectedItem] = useState<string | null>(null);
 
 //   return (
 //     <DropdownContent>
@@ -317,24 +306,6 @@ export const WithInput: Story = {
   play: playInteraction,
 };
 
-// TEMP_DISABLED_TEST: Temporarily commented out due to test failure
-// export const SelectableMenuItemWithAvatar: Story = {
-//   decorators: [WithContentBelowDecorator],
-//   args: {
-//     dropdownComponents: <FakeSelectableMenuItemList hasAvatar />,
-//   },
-//   play: playInteraction,
-// };
-
-// TEMP_DISABLED_TEST: Temporarily commented out due to test failure
-// export const CheckableMenuItemWithAvatar: Story = {
-//   decorators: [WithContentBelowDecorator],
-//   args: {
-//     dropdownComponents: <FakeCheckableMenuItemList hasAvatar />,
-//   },
-//   play: playInteraction,
-// };
-
 // TEMP_DISABLED_TEST: Commented out unused variable
 // const modalId = 'dropdown-modal-test';
 
@@ -373,15 +344,6 @@ export const WithInput: Story = {
 //   );
 // };
 
-// TEMP_DISABLED_TEST: Commented out unused function
-// const initializeModalState = ({ set }: { set: (atom: any, value: any) => void }) => {
-//   set(
-//     isModalOpenedComponentState.atomFamily({
-//       instanceId: modalId,
-//     }),
-//     true,
-//   );
-
 //   set(focusStackState, [
 //     {
 //       focusId: modalId,
@@ -395,25 +357,4 @@ export const WithInput: Story = {
 //       },
 //     },
 //   ]);
-// };
-
-// TEMP_DISABLED_TEST: Temporarily commented out due to test failure
-// export const DropdownInsideModal: Story = {
-//   decorators: [RootDecorator, ComponentDecorator],
-//   parameters: {
-//     initializeState: initializeModalState,
-//     disableHotkeyInitialization: true,
-//   },
-//   render: () => <ModalWithDropdown />,
-//   play: async () => {
-//     const canvas = within(document.body);
-
-//     const dropdownButton = await canvas.findByTestId('dropdown-button');
-
-//     await userEvent.click(dropdownButton);
-
-//     const dropdownContent = await canvas.findByTestId('dropdown-content');
-
-//     expect(dropdownContent).toBeVisible();
-//   },
 // };

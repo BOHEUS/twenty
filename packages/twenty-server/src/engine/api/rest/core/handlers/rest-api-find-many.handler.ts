@@ -43,20 +43,21 @@ export class RestApiFindManyHandler extends RestApiBaseHandler {
         authContext,
       });
 
-      const { records, aggregatedValues, pageInfo } =
-        await this.commonFindManyQueryRunnerService.execute(
-          {
-            ...parsedArgs,
-            selectedFields: { ...selectedFields, totalCount: true },
-          },
-          {
-            authContext,
-            flatObjectMetadata,
-            flatObjectMetadataMaps,
-            flatFieldMetadataMaps,
-            objectIdByNameSingular,
-          },
-        );
+      const {
+        results: { records, aggregatedValues, pageInfo },
+      } = await this.commonFindManyQueryRunnerService.execute(
+        {
+          ...parsedArgs,
+          selectedFields: { ...selectedFields, totalCount: true },
+        },
+        {
+          authContext,
+          flatObjectMetadata,
+          flatObjectMetadataMaps,
+          flatFieldMetadataMaps,
+          objectIdByNameSingular,
+        },
+      );
 
       return this.formatRestResponse(
         records,
@@ -71,7 +72,7 @@ export class RestApiFindManyHandler extends RestApiBaseHandler {
 
   private formatRestResponse(
     records: ObjectRecord[],
-    aggregatedValues: Record<string, number>,
+    aggregatedValues: Record<string, number> | undefined,
     objectNamePlural: string,
     pageInfo: PageInfo,
   ) {
@@ -79,7 +80,7 @@ export class RestApiFindManyHandler extends RestApiBaseHandler {
       data: {
         [objectNamePlural]: records,
       },
-      totalCount: Number(aggregatedValues.totalCount),
+      totalCount: Number(aggregatedValues?.totalCount ?? 0),
       pageInfo,
     };
   }

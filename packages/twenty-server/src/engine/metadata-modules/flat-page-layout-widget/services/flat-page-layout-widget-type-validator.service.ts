@@ -89,6 +89,24 @@ export class FlatPageLayoutWidgetTypeValidatorService {
       WORKFLOW_RUN: validateSimpleRecordPageWidgetForCreation(
         WidgetConfigurationType.WORKFLOW_RUN,
       ),
+      RECORD_TABLE: validateSimpleRecordPageWidgetForCreation(
+        WidgetConfigurationType.RECORD_TABLE,
+      ),
+      EMAIL_THREAD: validateSimpleRecordPageWidgetForCreation(
+        WidgetConfigurationType.EMAIL_THREAD,
+      ),
+      CALL_RECORDING_SUMMARY: validateSimpleRecordPageWidgetForCreation(
+        WidgetConfigurationType.CALL_RECORDING_SUMMARY,
+      ),
+      CALL_RECORDING_TRANSCRIPT: validateSimpleRecordPageWidgetForCreation(
+        WidgetConfigurationType.CALL_RECORDING_TRANSCRIPT,
+      ),
+      MESSAGE_CAMPAIGN_BODY: validateSimpleRecordPageWidgetForCreation(
+        WidgetConfigurationType.MESSAGE_CAMPAIGN_BODY,
+      ),
+      MESSAGE_CAMPAIGN_DETAILS: validateSimpleRecordPageWidgetForCreation(
+        WidgetConfigurationType.MESSAGE_CAMPAIGN_DETAILS,
+      ),
     };
 
   private readonly PAGE_LAYOUT_WIDGET_TYPE_VALIDATOR_FOR_UPDATE_HASHMAP: FlatPageLayoutWidgetTypeValidatorForUpdate =
@@ -136,6 +154,24 @@ export class FlatPageLayoutWidgetTypeValidatorService {
       ),
       WORKFLOW_RUN: validateSimpleRecordPageWidgetForUpdate(
         WidgetConfigurationType.WORKFLOW_RUN,
+      ),
+      RECORD_TABLE: validateSimpleRecordPageWidgetForUpdate(
+        WidgetConfigurationType.RECORD_TABLE,
+      ),
+      EMAIL_THREAD: validateSimpleRecordPageWidgetForUpdate(
+        WidgetConfigurationType.EMAIL_THREAD,
+      ),
+      CALL_RECORDING_SUMMARY: validateSimpleRecordPageWidgetForUpdate(
+        WidgetConfigurationType.CALL_RECORDING_SUMMARY,
+      ),
+      CALL_RECORDING_TRANSCRIPT: validateSimpleRecordPageWidgetForUpdate(
+        WidgetConfigurationType.CALL_RECORDING_TRANSCRIPT,
+      ),
+      MESSAGE_CAMPAIGN_BODY: validateSimpleRecordPageWidgetForUpdate(
+        WidgetConfigurationType.MESSAGE_CAMPAIGN_BODY,
+      ),
+      MESSAGE_CAMPAIGN_DETAILS: validateSimpleRecordPageWidgetForUpdate(
+        WidgetConfigurationType.MESSAGE_CAMPAIGN_DETAILS,
       ),
     };
 

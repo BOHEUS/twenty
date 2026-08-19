@@ -5,8 +5,6 @@ import {
   ObjectType,
   registerEnumType,
 } from '@nestjs/graphql';
-
-import { IDField } from '@ptc-org/nestjs-query-graphql';
 import { PageLayoutTabLayoutMode } from 'twenty-shared/types';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
@@ -19,8 +17,14 @@ registerEnumType(PageLayoutTabLayoutMode, {
 
 @ObjectType('PageLayoutTab')
 export class PageLayoutTabDTO {
-  @IDField(() => UUIDScalarType)
+  @Field(() => UUIDScalarType)
   id: string;
+
+  @Field(() => UUIDScalarType, { nullable: false })
+  universalIdentifier: string;
+
+  @Field({ nullable: false })
+  isSystemSideEffect: boolean;
 
   @Field(() => UUIDScalarType, { nullable: false })
   applicationId: string;
@@ -52,11 +56,17 @@ export class PageLayoutTabDTO {
   @Field()
   updatedAt: Date;
 
+  @Field(() => Boolean, { nullable: false })
+  isActive: boolean;
+
   @Field(() => Date, { nullable: true })
   deletedAt?: Date | null;
 
-  @Field(() => Boolean, { nullable: false })
-  isOverridden: boolean;
+  @Field(() => Boolean, {
+    nullable: true,
+    deprecationReason: 'isOverridden is deprecated',
+  })
+  isOverridden?: boolean;
 
   @HideField()
   overrides?: PageLayoutTabOverrides | null;

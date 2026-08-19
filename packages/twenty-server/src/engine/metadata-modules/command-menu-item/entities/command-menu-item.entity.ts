@@ -10,12 +10,30 @@ import {
   type Relation,
   UpdateDateColumn,
 } from 'typeorm';
+import { type SerializedRelation } from 'twenty-shared/types';
 
+import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
+import { type CommandMenuItemPayload } from 'src/engine/metadata-modules/command-menu-item/dtos/command-menu-item-payload.union';
+import { ADD_IS_SYSTEM_SIDE_EFFECT_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-15/is-system-side-effect-upgrade-command-name.constant';
 import { CommandMenuItemAvailabilityType } from 'src/engine/metadata-modules/command-menu-item/enums/command-menu-item-availability-type.enum';
 import { EngineComponentKey } from 'src/engine/metadata-modules/command-menu-item/enums/engine-component-key.enum';
 import { FrontComponentEntity } from 'src/engine/metadata-modules/front-component/entities/front-component.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
-import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-entity.interface';
+import { PageLayoutEntity } from 'src/engine/metadata-modules/page-layout/entities/page-layout.entity';
+import { OverridableEntity } from 'src/engine/workspace-manager/types/overridable-entity';
+
+export type CommandMenuItemOverrides = {
+  label?: string;
+  icon?: string | null;
+  shortLabel?: string | null;
+  position?: number;
+  isPinned?: boolean;
+  hotKeys?: string[] | null;
+  availabilityType?: CommandMenuItemAvailabilityType;
+  availabilityObjectMetadataId?: SerializedRelation | null;
+  engineComponentKey?: EngineComponentKey;
+  pageLayoutId?: SerializedRelation | null;
+};
 
 @Entity({ name: 'commandMenuItem', schema: 'core' })
 @Index('IDX_COMMAND_MENU_ITEM_WORKFLOW_VERSION_ID_WORKSPACE_ID', [
@@ -29,12 +47,16 @@ import { SyncableEntity } from 'src/engine/workspace-manager/types/syncable-enti
 @Index('IDX_COMMAND_MENU_ITEM_AVAILABILITY_OBJECT_METADATA_ID', [
   'availabilityObjectMetadataId',
 ])
+@Index('IDX_COMMAND_MENU_ITEM_PAGE_LAYOUT_ID_WORKSPACE_ID', [
+  'pageLayoutId',
+  'workspaceId',
+])
 @Check(
-  'CHK_CMD_MENU_ITEM_WF_OR_FC_OR_ENGINE_KEY',
-  '("workflowVersionId" IS NOT NULL AND "frontComponentId" IS NULL AND "engineComponentKey" IS NULL) OR ("workflowVersionId" IS NULL AND "frontComponentId" IS NOT NULL AND "engineComponentKey" IS NULL) OR ("workflowVersionId" IS NULL AND "frontComponentId" IS NULL AND "engineComponentKey" IS NOT NULL)',
+  'CHK_CMD_MENU_ITEM_ENGINE_KEY_COHERENCE',
+  `("engineComponentKey" = 'TRIGGER_WORKFLOW_VERSION' AND "workflowVersionId" IS NOT NULL AND "frontComponentId" IS NULL AND "payload" IS NULL) OR ("engineComponentKey" = 'FRONT_COMPONENT_RENDERER' AND "frontComponentId" IS NOT NULL AND "workflowVersionId" IS NULL AND "payload" IS NULL) OR ("engineComponentKey" = 'NAVIGATION' AND "payload" IS NOT NULL AND "workflowVersionId" IS NULL AND "frontComponentId" IS NULL) OR ("engineComponentKey" NOT IN ('TRIGGER_WORKFLOW_VERSION', 'FRONT_COMPONENT_RENDERER', 'NAVIGATION') AND "workflowVersionId" IS NULL AND "frontComponentId" IS NULL AND "payload" IS NULL)`,
 )
 export class CommandMenuItemEntity
-  extends SyncableEntity
+  extends OverridableEntity<CommandMenuItemOverrides>
   implements Required<CommandMenuItemEntity>
 {
   @PrimaryGeneratedColumn('uuid')
@@ -53,12 +75,8 @@ export class CommandMenuItemEntity
   @JoinColumn({ name: 'frontComponentId' })
   frontComponent: Relation<FrontComponentEntity> | null;
 
-  @Column({
-    type: 'enum',
-    enum: Object.values(EngineComponentKey),
-    nullable: true,
-  })
-  engineComponentKey: EngineComponentKey | null;
+  @Column({ type: 'varchar', nullable: false })
+  engineComponentKey: EngineComponentKey;
 
   @Column({ nullable: false })
   label: string;
@@ -83,6 +101,9 @@ export class CommandMenuItemEntity
   })
   availabilityType: CommandMenuItemAvailabilityType;
 
+  @Column({ type: 'jsonb', nullable: true })
+  payload: CommandMenuItemPayload | null;
+
   @Column({ type: 'text', array: true, nullable: true })
   hotKeys: string[] | null;
 
@@ -99,9 +120,37 @@ export class CommandMenuItemEntity
   @JoinColumn({ name: 'availabilityObjectMetadataId' })
   availabilityObjectMetadata: Relation<ObjectMetadataEntity> | null;
 
+  @Column({ nullable: true, type: 'uuid' })
+  pageLayoutId: string | null;
+
+  @ManyToOne(() => PageLayoutEntity, {
+    onDelete: 'CASCADE',
+    nullable: true,
+  })
+  @JoinColumn({ name: 'pageLayoutId' })
+  pageLayout: Relation<PageLayoutEntity> | null;
+
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ADD_IS_SYSTEM_SIDE_EFFECT_UPGRADE_COMMAND_NAME,
+  })
+  @Column({ nullable: false, default: false, type: 'boolean' })
+  isSystemSideEffect: boolean;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
 }
+
+const COMMAND_MENU_ITEM_OVERRIDABLE_COLUMNS_UPGRADE_COMMAND_NAME =
+  '2.13.0_CommandMenuItemOverridableEntityFastInstanceCommand_1781253016028';
+
+WasIntroducedInUpgrade({
+  upgradeCommandName:
+    COMMAND_MENU_ITEM_OVERRIDABLE_COLUMNS_UPGRADE_COMMAND_NAME,
+})(CommandMenuItemEntity.prototype, 'overrides');
+WasIntroducedInUpgrade({
+  upgradeCommandName:
+    COMMAND_MENU_ITEM_OVERRIDABLE_COLUMNS_UPGRADE_COMMAND_NAME,
+})(CommandMenuItemEntity.prototype, 'isActive');

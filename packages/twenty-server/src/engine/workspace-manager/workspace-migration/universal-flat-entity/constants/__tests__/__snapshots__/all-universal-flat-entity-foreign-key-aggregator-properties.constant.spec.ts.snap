@@ -1,17 +1,23 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`ALL_UNIVERSAL_FLAT_ENTITY_FOREIGN_KEY_AGGREGATOR_PROPERTIES should match snapshot 1`] = `
 {
   "agent": [],
+  "applicationVariable": [],
   "commandMenuItem": [],
+  "connectionProvider": [],
   "fieldMetadata": [
     "viewSortUniversalIdentifiers",
+    "fieldPermissionUniversalIdentifiers",
     "viewFieldUniversalIdentifiers",
     "viewFilterUniversalIdentifiers",
     "kanbanAggregateOperationViewUniversalIdentifiers",
     "calendarViewUniversalIdentifiers",
+    "calendarEndViewUniversalIdentifiers",
     "mainGroupByFieldMetadataViewUniversalIdentifiers",
+    "searchFieldMetadataUniversalIdentifiers",
   ],
+  "fieldPermission": [],
   "frontComponent": [],
   "index": [],
   "logicFunction": [],
@@ -20,7 +26,9 @@ exports[`ALL_UNIVERSAL_FLAT_ENTITY_FOREIGN_KEY_AGGREGATOR_PROPERTIES should matc
     "fieldUniversalIdentifiers",
     "indexMetadataUniversalIdentifiers",
     "objectPermissionUniversalIdentifiers",
+    "fieldPermissionUniversalIdentifiers",
     "viewUniversalIdentifiers",
+    "searchFieldMetadataUniversalIdentifiers",
   ],
   "objectPermission": [],
   "pageLayout": [
@@ -30,20 +38,25 @@ exports[`ALL_UNIVERSAL_FLAT_ENTITY_FOREIGN_KEY_AGGREGATOR_PROPERTIES should matc
     "widgetUniversalIdentifiers",
   ],
   "pageLayoutWidget": [],
-  "permissionFlag": [],
+  "permissionFlag": [
+    "rolePermissionFlagUniversalIdentifiers",
+  ],
   "role": [
     "roleTargetUniversalIdentifiers",
     "objectPermissionUniversalIdentifiers",
-    "permissionFlagUniversalIdentifiers",
+    "rolePermissionFlagUniversalIdentifiers",
+    "fieldPermissionUniversalIdentifiers",
     "rowLevelPermissionPredicateUniversalIdentifiers",
     "rowLevelPermissionPredicateGroupUniversalIdentifiers",
   ],
+  "rolePermissionFlag": [],
   "roleTarget": [],
   "rowLevelPermissionPredicate": [],
   "rowLevelPermissionPredicateGroup": [
     "childRowLevelPermissionPredicateGroupUniversalIdentifiers",
     "rowLevelPermissionPredicateUniversalIdentifiers",
   ],
+  "searchFieldMetadata": [],
   "skill": [],
   "view": [
     "viewFieldUniversalIdentifiers",
@@ -51,6 +64,7 @@ exports[`ALL_UNIVERSAL_FLAT_ENTITY_FOREIGN_KEY_AGGREGATOR_PROPERTIES should matc
     "viewFilterGroupUniversalIdentifiers",
     "viewGroupUniversalIdentifiers",
     "viewFieldGroupUniversalIdentifiers",
+    "viewSortUniversalIdentifiers",
   ],
   "viewField": [],
   "viewFieldGroup": [

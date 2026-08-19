@@ -22,6 +22,7 @@ type CategorizeRelationFieldsArgs = {
 type CategorizedRelationFields = {
   activityTargetFields: FieldMetadataItem[];
   inlineRelationFields: FieldMetadataItem[];
+  junctionRelationFields: FieldMetadataItem[];
   boxedRelationFields: FieldMetadataItem[];
 };
 
@@ -70,22 +71,21 @@ export const categorizeRelationFields = ({
 }: CategorizeRelationFieldsArgs): CategorizedRelationFields => {
   const activityTargetFields: FieldMetadataItem[] = [];
   const inlineRelationFields: FieldMetadataItem[] = [];
+  const junctionRelationFields: FieldMetadataItem[] = [];
   const boxedRelationFields: FieldMetadataItem[] = [];
 
   for (const field of relationFields) {
-    // Activity targets are always rendered with ActivityTargetsInlineCell
     if (isActivityTargetRelation(field, objectNameSingular)) {
       activityTargetFields.push(field);
       continue;
     }
 
-    // Junction relations (when feature enabled) are rendered inline with other fields
     if (isJunctionRelationsEnabled && isJunctionRelationField(field)) {
       inlineRelationFields.push(field);
+      junctionRelationFields.push(field);
       continue;
     }
 
-    // Boxed relations need read permission check
     if (canReadRelationTarget(field, objectPermissionsByObjectMetadataId)) {
       boxedRelationFields.push(field);
     }
@@ -94,6 +94,7 @@ export const categorizeRelationFields = ({
   return {
     activityTargetFields,
     inlineRelationFields,
+    junctionRelationFields,
     boxedRelationFields,
   };
 };

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
+import { inputSchemaToOutputSchema } from 'twenty-shared/logic-function';
 import {
   FieldMetadataType,
   StepLogicalOperator,
@@ -9,6 +10,7 @@ import {
 import { isDefined, isValidUuid } from 'twenty-shared/utils';
 import {
   IF_ELSE_BRANCH_POSITION_OFFSETS,
+  WorkflowActionType,
   getFunctionInputFromInputSchema,
   type StepIfElseBranch,
 } from 'twenty-shared/workflow';
@@ -17,28 +19,36 @@ import { v4 } from 'uuid';
 
 import { getFlatFieldsFromFlatObjectMetadata } from 'src/engine/api/graphql/workspace-schema-builder/utils/get-flat-fields-for-flat-object-metadata.util';
 import { type WorkflowStepPositionInput } from 'src/engine/core-modules/workflow/dtos/update-workflow-step-position.input';
+import { WorkflowVersionCoreSyncService } from 'src/engine/core-modules/workflow/services/workflow-version-core-sync.service';
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AiAgentRoleService } from 'src/engine/metadata-modules/ai/ai-agent-role/ai-agent-role.service';
 import { AgentService } from 'src/engine/metadata-modules/ai/ai-agent/agent.service';
-import { DEFAULT_SMART_MODEL } from 'src/engine/metadata-modules/ai/ai-models/types/default-smart-model.const';
+import { AiModelRegistryService } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-registry.service';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
+import {
+  LogicFunctionException,
+  LogicFunctionExceptionCode,
+} from 'src/engine/metadata-modules/logic-function/logic-function.exception';
 import { LogicFunctionFromSourceService } from 'src/engine/metadata-modules/logic-function/services/logic-function-from-source.service';
 import { findFlatLogicFunctionOrThrow } from 'src/engine/metadata-modules/logic-function/utils/find-flat-logic-function-or-throw.util';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { RoleTargetEntity } from 'src/engine/metadata-modules/role-target/role-target.entity';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
+import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
+import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
-import { CodeStepBuildService } from 'src/modules/workflow/workflow-builder/workflow-version-step/code-step/services/code-step-build.service';
 import {
   WorkflowVersionStepException,
   WorkflowVersionStepExceptionCode,
 } from 'src/modules/workflow/common/exceptions/workflow-version-step.exception';
 import { type WorkflowVersionWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow-version.workspace-entity';
 import { WorkflowCommonWorkspaceService } from 'src/modules/workflow/common/workspace-services/workflow-common.workspace-service';
+import { type OutputSchema } from 'src/modules/workflow/workflow-builder/workflow-schema/types/output-schema.type';
+import { CodeStepBuildService } from 'src/modules/workflow/workflow-builder/workflow-version-step/code-step/services/code-step-build.service';
 import { type BaseWorkflowActionSettings } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action-settings.type';
 import {
   type WorkflowAction,
-  WorkflowActionType,
   type WorkflowEmptyAction,
   type WorkflowFormAction,
 } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
@@ -68,15 +78,39 @@ export class WorkflowVersionStepOperationsWorkspaceService {
     private readonly logicFunctionFromSourceService: LogicFunctionFromSourceService,
     private readonly codeStepBuildService: CodeStepBuildService,
     private readonly agentService: AgentService,
-    @InjectRepository(RoleTargetEntity)
-    private readonly roleTargetRepository: Repository<RoleTargetEntity>,
+    private readonly aiModelRegistryService: AiModelRegistryService,
+    @InjectWorkspaceScopedRepository(RoleTargetEntity)
+    private readonly roleTargetRepository: WorkspaceScopedRepository<RoleTargetEntity>,
     @InjectRepository(ObjectMetadataEntity)
     private readonly objectMetadataRepository: Repository<ObjectMetadataEntity>,
+    @InjectRepository(WorkspaceEntity)
+    private readonly workspaceRepository: Repository<WorkspaceEntity>,
     private readonly workflowCommonWorkspaceService: WorkflowCommonWorkspaceService,
     private readonly aiAgentRoleService: AiAgentRoleService,
     private readonly workspaceCacheService: WorkspaceCacheService,
     private readonly flatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
+    private readonly workflowVersionCoreSyncService: WorkflowVersionCoreSyncService,
   ) {}
+
+  private async getWorkspaceDefaultFastModelId(
+    workspaceId: string,
+  ): Promise<string> {
+    const workspace = await this.workspaceRepository.findOneBy({
+      id: workspaceId,
+    });
+
+    if (!isDefined(workspace)) {
+      throw new WorkflowVersionStepException(
+        `Workspace ${workspaceId} not found`,
+        WorkflowVersionStepExceptionCode.NOT_FOUND,
+      );
+    }
+
+    const effectiveModelConfig =
+      this.aiModelRegistryService.getEffectiveModelConfig(workspace.fastModel);
+
+    return effectiveModelConfig.modelId;
+  }
 
   async runWorkflowVersionStepDeletionSideEffects({
     step,
@@ -87,10 +121,25 @@ export class WorkflowVersionStepOperationsWorkspaceService {
   }) {
     switch (step.type) {
       case WorkflowActionType.CODE: {
-        await this.logicFunctionFromSourceService.deleteOneWithSource({
-          id: step.settings.input.logicFunctionId,
-          workspaceId,
-        });
+        if (!isValidUuid(step.settings.input.logicFunctionId)) {
+          break;
+        }
+
+        await this.logicFunctionFromSourceService
+          .deleteOneWithSource({
+            id: step.settings.input.logicFunctionId,
+            workspaceId,
+          })
+          .catch((error) => {
+            if (
+              error instanceof LogicFunctionException &&
+              error.code === LogicFunctionExceptionCode.LOGIC_FUNCTION_NOT_FOUND
+            ) {
+              return;
+            }
+
+            throw error;
+          });
         break;
       }
       case WorkflowActionType.AI_AGENT: {
@@ -98,12 +147,14 @@ export class WorkflowVersionStepOperationsWorkspaceService {
           break;
         }
 
-        const roleTarget = await this.roleTargetRepository.findOne({
-          where: {
-            agentId: step.settings.input.agentId,
-            workspaceId,
+        const roleTarget = await this.roleTargetRepository.findOne(
+          workspaceId,
+          {
+            where: {
+              agentId: step.settings.input.agentId,
+            },
           },
-        });
+        );
 
         await this.agentService.deleteManyAgents({
           ids: [step.settings.input.agentId],
@@ -164,6 +215,12 @@ export class WorkflowVersionStepOperationsWorkspaceService {
           );
         }
 
+        const defaultLogicFunctionInput = (
+          defaultSettings?.input as
+            | { logicFunctionInput?: Record<string, unknown> }
+            | undefined
+        )?.logicFunctionInput;
+
         return {
           builtStep: {
             ...baseStep,
@@ -180,22 +237,32 @@ export class WorkflowVersionStepOperationsWorkspaceService {
                 },
                 _outputSchemaType: 'LINK',
               },
+              expectedOutputSchema: {},
               input: {
                 logicFunctionId: newLogicFunction.id,
-                logicFunctionInput: isDefined(newLogicFunction.toolInputSchema)
-                  ? (getFunctionInputFromInputSchema([
-                      newLogicFunction.toolInputSchema,
-                    ])[0] ?? {})
-                  : {},
+                logicFunctionInput:
+                  defaultLogicFunctionInput ??
+                  (isDefined(
+                    newLogicFunction.workflowActionTriggerSettings?.inputSchema,
+                  )
+                    ? (getFunctionInputFromInputSchema(
+                        newLogicFunction.workflowActionTriggerSettings
+                          .inputSchema,
+                      )[0] ?? {})
+                    : {}),
               },
             },
           },
         };
       }
       case WorkflowActionType.LOGIC_FUNCTION: {
-        const logicFunctionId = (
-          defaultSettings?.input as { logicFunctionId: string } | undefined
-        )?.logicFunctionId;
+        const defaultInput = defaultSettings?.input as
+          | {
+              logicFunctionId?: string;
+              logicFunctionInput?: Record<string, unknown>;
+            }
+          | undefined;
+        const logicFunctionId = defaultInput?.logicFunctionId;
 
         if (!isDefined(logicFunctionId)) {
           throw new WorkflowVersionStepException(
@@ -217,16 +284,47 @@ export class WorkflowVersionStepOperationsWorkspaceService {
           flatLogicFunctionMaps,
         });
 
+        const declaredOutputSchema =
+          flatLogicFunction.workflowActionTriggerSettings?.outputSchema;
+
+        const initialOutputSchema: OutputSchema = isDefined(
+          declaredOutputSchema,
+        )
+          ? inputSchemaToOutputSchema(declaredOutputSchema)
+          : {
+              link: {
+                isLeaf: true,
+                icon: 'IconVariable',
+                tab: 'test',
+                label: 'Generate Function Output',
+              },
+              _outputSchemaType: 'LINK',
+            };
+
         return {
           builtStep: {
             ...baseStep,
-            name: flatLogicFunction.name,
+            name:
+              flatLogicFunction.workflowActionTriggerSettings?.label ??
+              flatLogicFunction.name,
             type: WorkflowActionType.LOGIC_FUNCTION,
             settings: {
               ...BASE_STEP_DEFINITION,
+              outputSchema: initialOutputSchema,
+              expectedOutputSchema: {},
               input: {
                 logicFunctionId,
-                logicFunctionInput: {},
+                logicFunctionInput:
+                  defaultInput?.logicFunctionInput ??
+                  (isDefined(
+                    flatLogicFunction.workflowActionTriggerSettings
+                      ?.inputSchema,
+                  )
+                    ? (getFunctionInputFromInputSchema(
+                        flatLogicFunction.workflowActionTriggerSettings
+                          .inputSchema,
+                      )[0] ?? {})
+                    : {}),
               },
             },
           },
@@ -249,6 +347,31 @@ export class WorkflowVersionStepOperationsWorkspaceService {
                 },
                 subject: '',
                 body: '',
+              },
+            },
+          },
+        };
+      }
+      case WorkflowActionType.CREATE_CALENDAR_EVENT: {
+        return {
+          builtStep: {
+            ...baseStep,
+            name: 'Create Calendar Event',
+            type: WorkflowActionType.CREATE_CALENDAR_EVENT,
+            settings: {
+              ...BASE_STEP_DEFINITION,
+              input: {
+                connectedAccountId: '',
+                title: '',
+                description: '',
+                location: '',
+                startsAt: '',
+                endsAt: '',
+                isFullDay: false,
+                timeZone: '',
+                attendees: '',
+                sendInvitations: false,
+                addConferencing: false,
               },
             },
           },
@@ -379,6 +502,29 @@ export class WorkflowVersionStepOperationsWorkspaceService {
               input: {
                 objectName: activeObjectMetadataItem?.nameSingular || '',
                 limit: 1,
+                offset: 0,
+              },
+            },
+          },
+        };
+      }
+      case WorkflowActionType.PICK_RECORD: {
+        const activeObjectMetadataItem =
+          await this.objectMetadataRepository.findOne({
+            where: { workspaceId, isActive: true, isSystem: false },
+          });
+
+        return {
+          builtStep: {
+            ...baseStep,
+            name: 'Pick Record',
+            type: WorkflowActionType.PICK_RECORD,
+            settings: {
+              ...BASE_STEP_DEFINITION,
+              input: {
+                objectName: activeObjectMetadataItem?.nameSingular || '',
+                strategy: 'RANDOM',
+                recordIds: [],
               },
             },
           },
@@ -421,6 +567,7 @@ export class WorkflowVersionStepOperationsWorkspaceService {
             type: WorkflowActionType.HTTP_REQUEST,
             settings: {
               ...BASE_STEP_DEFINITION,
+              expectedOutputSchema: {},
               input: {
                 url: '',
                 method: 'GET',
@@ -432,21 +579,14 @@ export class WorkflowVersionStepOperationsWorkspaceService {
         };
       }
       case WorkflowActionType.AI_AGENT: {
-        const workflowVersion =
-          await this.workflowCommonWorkspaceService.getWorkflowVersionOrFail({
-            workflowVersionId,
-            workspaceId,
-          });
-
         const newAgent = await this.agentService.createOneAgent(
           {
-            label:
-              'Workflow Agent' + workflowVersion.workflowId.substring(0, 4),
+            label: 'Workflow Agent ' + baseStep.id.substring(0, 4),
             icon: 'IconRobot',
             description: '',
             prompt:
               'You are a helpful AI assistant. Complete the task based on the workflow context.',
-            modelId: DEFAULT_SMART_MODEL,
+            modelId: await this.getWorkspaceDefaultFastModelId(workspaceId),
             responseFormat: { type: 'text' },
             isCustom: true,
           },
@@ -707,9 +847,11 @@ export class WorkflowVersionStepOperationsWorkspaceService {
           workspaceId,
         });
 
+        const clonedStepId = v4();
+
         const clonedAgent = await this.agentService.createOneAgent(
           {
-            label: existingAgent.label,
+            label: existingAgent.label + ' ' + clonedStepId.substring(0, 4),
             icon: existingAgent.icon ?? undefined,
             description: existingAgent.description ?? undefined,
             prompt: existingAgent.prompt,
@@ -723,7 +865,7 @@ export class WorkflowVersionStepOperationsWorkspaceService {
 
         return {
           ...step,
-          id: v4(),
+          id: clonedStepId,
           nextStepIds: [],
           position: duplicatedStepPosition,
           settings: {
@@ -829,9 +971,16 @@ export class WorkflowVersionStepOperationsWorkspaceService {
           },
         };
 
-        await workflowVersionRepository.update(workflowVersion.id, {
-          steps: [...existingSteps, emptyNodeStep],
-        });
+        await this.workflowVersionCoreSyncService.writeWorkflowVersionAndMirror(
+          workspaceId,
+          async (scopedRepository) => {
+            await scopedRepository.update(workflowVersion.id, {
+              steps: [...existingSteps, emptyNodeStep],
+            });
+
+            return workflowVersion.id;
+          },
+        );
 
         return emptyNodeStep;
       },
@@ -911,9 +1060,16 @@ export class WorkflowVersionStepOperationsWorkspaceService {
           },
         };
 
-        await workflowVersionRepository.update(workflowVersion.id, {
-          steps: [...existingSteps, ifEmptyNode, elseEmptyNode],
-        });
+        await this.workflowVersionCoreSyncService.writeWorkflowVersionAndMirror(
+          workspaceId,
+          async (scopedRepository) => {
+            await scopedRepository.update(workflowVersion.id, {
+              steps: [...existingSteps, ifEmptyNode, elseEmptyNode],
+            });
+
+            return workflowVersion.id;
+          },
+        );
 
         const ifFilterGroupId = v4();
 

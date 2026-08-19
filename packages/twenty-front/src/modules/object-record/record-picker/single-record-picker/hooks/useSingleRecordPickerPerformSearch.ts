@@ -3,11 +3,13 @@ import { useStore } from 'jotai';
 
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { DEFAULT_SEARCH_REQUEST_LIMIT } from '@/object-record/constants/DefaultSearchRequestLimit';
+import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
 import { useObjectRecordSearchRecords } from '@/object-record/hooks/useObjectRecordSearchRecords';
 import { searchRecordStoreFamilyState } from '@/object-record/record-picker/multiple-record-picker/states/searchRecordStoreComponentFamilyState';
 import { SingleRecordPickerComponentInstanceContext } from '@/object-record/record-picker/single-record-picker/states/contexts/SingleRecordPickerComponentInstanceContext';
 import { singleRecordPickerSearchableObjectMetadataItemsComponentState } from '@/object-record/record-picker/single-record-picker/states/singleRecordPickerSearchableObjectMetadataItemsComponentState';
 import { type RecordPickerPickableMorphItem } from '@/object-record/record-picker/types/RecordPickerPickableMorphItem';
+import { getObjectPermissionsFromMapByObjectMetadataId } from '@/settings/roles/role-permissions/objects-permissions/utils/getObjectPermissionsFromMapByObjectMetadataId';
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
 import { CustomError, isDefined } from 'twenty-shared/utils';
 
@@ -33,14 +35,37 @@ export const useSingleRecordPickerPerformSearch = ({
   );
 
   const { objectMetadataItems } = useObjectMetadataItems();
+  const { objectPermissionsByObjectMetadataId } = useObjectPermissions();
 
-  const selectedIdsFilter = { id: { in: selectedIds } };
+  const readableObjectNameSingulars = objectNameSingulars.filter(
+    (objectNameSingular) => {
+      const objectMetadataItem = objectMetadataItems.find(
+        (item) => item.nameSingular === objectNameSingular,
+      );
+
+      if (!isDefined(objectMetadataItem)) {
+        return false;
+      }
+
+      return (
+        getObjectPermissionsFromMapByObjectMetadataId({
+          objectPermissionsByObjectMetadataId,
+          objectMetadataId: objectMetadataItem.id,
+        }).canReadObjectRecords === true
+      );
+    },
+  );
+
+  const hasSelectedIds = selectedIds.length > 0;
+  const selectedIdsFilter = hasSelectedIds
+    ? { id: { in: selectedIds } }
+    : undefined;
 
   const { loading: selectedRecordsLoading, searchRecords: selectedRecords } =
     useObjectRecordSearchRecords({
-      objectNameSingulars,
+      objectNameSingulars: readableObjectNameSingulars,
       filter: selectedIdsFilter,
-      skip: !selectedIds.length,
+      skip: !hasSelectedIds,
       searchInput: '',
     });
 
@@ -48,9 +73,9 @@ export const useSingleRecordPickerPerformSearch = ({
     loading: filteredSelectedRecordsLoading,
     searchRecords: filteredSelectedRecords,
   } = useObjectRecordSearchRecords({
-    objectNameSingulars,
+    objectNameSingulars: readableObjectNameSingulars,
     filter: selectedIdsFilter,
-    skip: !selectedIds.length,
+    skip: !hasSelectedIds,
     searchInput: searchFilter,
   });
 
@@ -60,7 +85,7 @@ export const useSingleRecordPickerPerformSearch = ({
     : undefined;
   const { loading: recordsToSelectLoading, searchRecords: recordsToSelect } =
     useObjectRecordSearchRecords({
-      objectNameSingulars,
+      objectNameSingulars: readableObjectNameSingulars,
       filter: notFilter,
       limit: limit ?? DEFAULT_SEARCH_REQUEST_LIMIT,
       searchInput: searchFilter,
@@ -89,14 +114,14 @@ export const useSingleRecordPickerPerformSearch = ({
         instanceId: singleRecordPickerInstanceId,
       }),
       objectMetadataItems.filter((objectMetadataItem) =>
-        objectNameSingulars.includes(objectMetadataItem.nameSingular),
+        readableObjectNameSingulars.includes(objectMetadataItem.nameSingular),
       ),
     );
   }, [
     allSearchRecords,
     store,
     objectMetadataItems,
-    objectNameSingulars,
+    readableObjectNameSingulars,
     singleRecordPickerInstanceId,
   ]);
 

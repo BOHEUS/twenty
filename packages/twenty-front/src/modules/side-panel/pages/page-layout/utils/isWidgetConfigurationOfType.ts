@@ -3,16 +3,21 @@ import {
   type AggregateChartConfiguration,
   type BarChartConfiguration,
   type CalendarConfiguration,
+  type CallRecordingSummaryConfiguration,
+  type CallRecordingTranscriptConfiguration,
+  type EmailThreadConfiguration,
   type EmailsConfiguration,
   type FieldRichTextConfiguration,
   type FieldsConfiguration,
   type FilesConfiguration,
   type FrontComponentConfiguration,
-  type GaugeChartConfiguration,
   type IframeConfiguration,
   type LineChartConfiguration,
+  type MessageCampaignBodyConfiguration,
+  type MessageCampaignDetailsConfiguration,
   type NotesConfiguration,
   type PieChartConfiguration,
+  type RecordTableConfiguration,
   type StandaloneRichTextConfiguration,
   type TasksConfiguration,
   type TimelineConfiguration,
@@ -43,6 +48,36 @@ type WidgetConfigurationTypenameMap = {
   > & {
     configurationType: WidgetConfigurationType.FRONT_COMPONENT;
   };
+  EmailThreadConfiguration: Omit<
+    EmailThreadConfiguration,
+    'configurationType'
+  > & {
+    configurationType: WidgetConfigurationType.EMAIL_THREAD;
+  };
+  CallRecordingSummaryConfiguration: Omit<
+    CallRecordingSummaryConfiguration,
+    'configurationType'
+  > & {
+    configurationType: WidgetConfigurationType.CALL_RECORDING_SUMMARY;
+  };
+  CallRecordingTranscriptConfiguration: Omit<
+    CallRecordingTranscriptConfiguration,
+    'configurationType'
+  > & {
+    configurationType: WidgetConfigurationType.CALL_RECORDING_TRANSCRIPT;
+  };
+  MessageCampaignBodyConfiguration: Omit<
+    MessageCampaignBodyConfiguration,
+    'configurationType'
+  > & {
+    configurationType: WidgetConfigurationType.MESSAGE_CAMPAIGN_BODY;
+  };
+  MessageCampaignDetailsConfiguration: Omit<
+    MessageCampaignDetailsConfiguration,
+    'configurationType'
+  > & {
+    configurationType: WidgetConfigurationType.MESSAGE_CAMPAIGN_DETAILS;
+  };
   EmailsConfiguration: Omit<EmailsConfiguration, 'configurationType'> & {
     configurationType: WidgetConfigurationType.EMAILS;
   };
@@ -61,12 +96,6 @@ type WidgetConfigurationTypenameMap = {
   FilesConfiguration: Omit<FilesConfiguration, 'configurationType'> & {
     configurationType: WidgetConfigurationType.FILES;
   };
-  GaugeChartConfiguration: Omit<
-    GaugeChartConfiguration,
-    'configurationType'
-  > & {
-    configurationType: WidgetConfigurationType.GAUGE_CHART;
-  };
   IframeConfiguration: Omit<IframeConfiguration, 'configurationType'> & {
     configurationType: WidgetConfigurationType.IFRAME;
   };
@@ -78,6 +107,12 @@ type WidgetConfigurationTypenameMap = {
   };
   PieChartConfiguration: Omit<PieChartConfiguration, 'configurationType'> & {
     configurationType: WidgetConfigurationType.PIE_CHART;
+  };
+  RecordTableConfiguration: Omit<
+    RecordTableConfiguration,
+    'configurationType'
+  > & {
+    configurationType: WidgetConfigurationType.RECORD_TABLE;
   };
   StandaloneRichTextConfiguration: Omit<
     StandaloneRichTextConfiguration,

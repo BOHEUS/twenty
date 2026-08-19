@@ -8,13 +8,17 @@ import {
   ResolveField,
 } from '@nestjs/graphql';
 
+import { isNonEmptyString } from '@sniptt/guards';
 import { isDefined } from 'twenty-shared/utils';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 import { ApiKeyEntity } from 'src/engine/core-modules/api-key/api-key.entity';
 import { ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { getWorkspaceAuthContext } from 'src/engine/core-modules/auth/storage/workspace-auth-context.storage';
+import { type I18nContext } from 'src/engine/core-modules/i18n/types/i18n-context.type';
+import { I18nService } from 'src/engine/core-modules/i18n/i18n.service';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { type IDataloaders } from 'src/engine/dataloaders/dataloader.interface';
 import { AuthApiKey } from 'src/engine/decorators/auth/auth-api-key.decorator';
 import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
@@ -27,6 +31,7 @@ import { RecordIdentifierDTO } from 'src/engine/metadata-modules/navigation-menu
 import { UpdateOneNavigationMenuItemInput } from 'src/engine/metadata-modules/navigation-menu-item/dtos/update-navigation-menu-item.input';
 import { NavigationMenuItemGraphqlApiExceptionInterceptor } from 'src/engine/metadata-modules/navigation-menu-item/interceptors/navigation-menu-item-graphql-api-exception.interceptor';
 import { NavigationMenuItemService } from 'src/engine/metadata-modules/navigation-menu-item/navigation-menu-item.service';
+import { resolveEffectiveEntityProperty } from 'src/engine/metadata-modules/utils/resolve-effective-entity-property.util';
 import { WorkspaceMigrationGraphqlApiExceptionInterceptor } from 'src/engine/workspace-manager/workspace-migration/interceptors/workspace-migration-graphql-api-exception.interceptor';
 
 @UseGuards(WorkspaceAuthGuard)
@@ -38,7 +43,35 @@ import { WorkspaceMigrationGraphqlApiExceptionInterceptor } from 'src/engine/wor
 export class NavigationMenuItemResolver {
   constructor(
     private readonly navigationMenuItemService: NavigationMenuItemService,
+    private readonly i18nService: I18nService,
   ) {}
+
+  @ResolveField(() => String, { nullable: true })
+  async name(
+    @Parent() navigationMenuItem: NavigationMenuItemDTO,
+    @Context() context: { loaders: IDataloaders } & I18nContext,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<string | null> {
+    if (!isNonEmptyString(navigationMenuItem.name)) {
+      return navigationMenuItem.name ?? null;
+    }
+
+    return resolveEffectiveEntityProperty({
+      metadataName: 'navigationMenuItem',
+      baseValue: navigationMenuItem.name,
+      // navigationMenuItem is not an overridable entity: a workspace renaming a
+      // folder edits the row itself, so there is no standard value left to
+      // translate and no override to arbitrate against.
+      overrides: undefined,
+      property: 'name',
+      i18nContext: await this.i18nService.buildEffectiveEntityI18nContext({
+        applicationId: navigationMenuItem.applicationId,
+        loaders: context.loaders,
+        locale: context.req.locale,
+        workspaceId: workspace.id,
+      }),
+    });
+  }
 
   @Query(() => [NavigationMenuItemDTO])
   @UseGuards(NoPermissionGuard)
@@ -65,6 +98,26 @@ export class NavigationMenuItemResolver {
     });
   }
 
+  @Mutation(() => [NavigationMenuItemDTO])
+  @UseGuards(NoPermissionGuard)
+  async createManyNavigationMenuItems(
+    @Args('inputs', { type: () => [CreateNavigationMenuItemInput] })
+    inputs: CreateNavigationMenuItemInput[],
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
+    @AuthApiKey() apiKey: ApiKeyEntity | undefined,
+    @Context() context: { req: { application?: ApplicationEntity } },
+  ): Promise<NavigationMenuItemDTO[]> {
+    return await this.navigationMenuItemService.createMany({
+      inputs,
+      workspaceId: workspace.id,
+      authUserWorkspaceId: userWorkspaceId,
+      authApiKeyId: apiKey?.id,
+      authApplicationId: context.req.application?.id,
+    });
+  }
+
   @Mutation(() => NavigationMenuItemDTO)
   @UseGuards(NoPermissionGuard)
   async createNavigationMenuItem(
@@ -84,6 +137,26 @@ export class NavigationMenuItemResolver {
     });
   }
 
+  @Mutation(() => [NavigationMenuItemDTO])
+  @UseGuards(NoPermissionGuard)
+  async updateManyNavigationMenuItems(
+    @Args('inputs', { type: () => [UpdateOneNavigationMenuItemInput] })
+    inputs: UpdateOneNavigationMenuItemInput[],
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
+    @AuthApiKey() apiKey: ApiKeyEntity | undefined,
+    @Context() context: { req: { application?: ApplicationEntity } },
+  ): Promise<NavigationMenuItemDTO[]> {
+    return await this.navigationMenuItemService.updateMany({
+      inputs,
+      workspaceId: workspace.id,
+      authUserWorkspaceId: userWorkspaceId,
+      authApiKeyId: apiKey?.id,
+      authApplicationId: context.req.application?.id,
+    });
+  }
+
   @Mutation(() => NavigationMenuItemDTO)
   @UseGuards(NoPermissionGuard)
   async updateNavigationMenuItem(
@@ -96,6 +169,25 @@ export class NavigationMenuItemResolver {
   ): Promise<NavigationMenuItemDTO> {
     return await this.navigationMenuItemService.update({
       input: { ...input.update, id: input.id },
+      workspaceId: workspace.id,
+      authUserWorkspaceId: userWorkspaceId,
+      authApiKeyId: apiKey?.id,
+      authApplicationId: context.req.application?.id,
+    });
+  }
+
+  @Mutation(() => [NavigationMenuItemDTO])
+  @UseGuards(NoPermissionGuard)
+  async deleteManyNavigationMenuItems(
+    @Args('ids', { type: () => [UUIDScalarType] }) ids: string[],
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
+    @AuthApiKey() apiKey: ApiKeyEntity | undefined,
+    @Context() context: { req: { application?: ApplicationEntity } },
+  ): Promise<NavigationMenuItemDTO[]> {
+    return await this.navigationMenuItemService.deleteMany({
+      ids,
       workspaceId: workspace.id,
       authUserWorkspaceId: userWorkspaceId,
       authApiKeyId: apiKey?.id,

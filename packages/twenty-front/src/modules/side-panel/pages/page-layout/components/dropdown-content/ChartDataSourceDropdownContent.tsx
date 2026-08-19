@@ -1,12 +1,15 @@
+import { ObjectMetadataIcon } from '@/object-metadata/components/ObjectMetadataIcon';
+import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
+import { filterReadableActiveObjectMetadataItems } from '@/object-metadata/utils/filterReadableActiveObjectMetadataItems';
+import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
 import { usePageLayoutIdFromContextStore } from '@/side-panel/pages/page-layout/hooks/usePageLayoutIdFromContextStore';
 import { useResetChartDraftFiltersSettings } from '@/side-panel/pages/page-layout/hooks/useResetChartDraftFiltersSettings';
 import { useUpdateCurrentWidgetConfig } from '@/side-panel/pages/page-layout/hooks/useUpdateCurrentWidgetConfig';
 import { useWidgetInEditMode } from '@/side-panel/pages/page-layout/hooks/useWidgetInEditMode';
-import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
-import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
-import { DropdownMenuHeader } from '@/ui/layout/dropdown/components/DropdownMenuHeader/DropdownMenuHeader';
-import { DropdownMenuHeaderLeftComponent } from '@/ui/layout/dropdown/components/DropdownMenuHeader/internal/DropdownMenuHeaderLeftComponent';
-import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
+import {
+  StyledPageLayoutDropdownContentContainer,
+  StyledPageLayoutDropdownMenuItemsContainer,
+} from '@/side-panel/pages/page-layout/components/dropdown-content/PageLayoutDropdownContentContainer';
 import { DropdownMenuSearchInput } from '@/ui/layout/dropdown/components/DropdownMenuSearchInput';
 import { DropdownMenuSeparator } from '@/ui/layout/dropdown/components/DropdownMenuSeparator';
 import { DropdownComponentInstanceContext } from '@/ui/layout/dropdown/contexts/DropdownComponentInstanceContext';
@@ -17,19 +20,13 @@ import { selectedItemIdComponentState } from '@/ui/layout/selectable-list/states
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { t } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { IconChevronLeft, IconSettings, useIcons } from 'twenty-ui/display';
-import { MenuItem, MenuItemSelect } from 'twenty-ui/navigation';
+import { MenuItemSelect } from 'twenty-ui/navigation';
 import { filterBySearchQuery } from '~/utils/filterBySearchQuery';
-
-const ADVANCED_OBJECTS_MENU_ITEM_ID = 'advanced-objects';
 
 export const ChartDataSourceDropdownContent = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAdvancedObjectsMenuOpened, setIsAdvancedObjectsMenuOpened] =
-    useState(false);
   const { objectMetadataItems } = useObjectMetadataItems();
   const { objectPermissionsByObjectMetadataId } = useObjectPermissions();
   const { pageLayoutId } = usePageLayoutIdFromContextStore();
@@ -49,29 +46,25 @@ export const ChartDataSourceDropdownContent = () => {
     dropdownId,
   );
 
-  const objectsWithReadAccess = objectMetadataItems.filter(
-    (objectMetadataItem) => {
-      const objectPermissions =
-        objectPermissionsByObjectMetadataId[objectMetadataItem.id];
+  const searchableObjects = useMemo(() => {
+    const objectsWithReadAccess = filterReadableActiveObjectMetadataItems(
+      objectMetadataItems,
+      objectPermissionsByObjectMetadataId,
+    );
 
-      return (
-        isDefined(objectPermissions) &&
-        objectPermissions.canReadObjectRecords &&
-        objectMetadataItem.isActive
-      );
-    },
-  );
+    const regularObjects = objectsWithReadAccess
+      .filter((item) => item.isSystem === false)
+      .sort((a, b) => a.labelPlural.localeCompare(b.labelPlural));
 
-  const regularObjects = objectsWithReadAccess
-    .filter((item) => !item.isSystem)
-    .sort((a, b) => a.labelPlural.localeCompare(b.labelPlural));
+    const systemObjects = objectsWithReadAccess
+      .filter((item) => item.isSystem === true)
+      .sort((a, b) => a.labelPlural.localeCompare(b.labelPlural));
 
-  const systemObjects = objectsWithReadAccess
-    .filter((item) => item.isSystem)
-    .sort((a, b) => a.labelPlural.localeCompare(b.labelPlural));
+    return [...regularObjects, ...systemObjects];
+  }, [objectMetadataItems, objectPermissionsByObjectMetadataId]);
 
   const availableObjectMetadataItems = filterBySearchQuery({
-    items: isAdvancedObjectsMenuOpened ? systemObjects : regularObjects,
+    items: searchableObjects,
     searchQuery,
     getSearchableValues: (item) => [item.labelPlural, item.namePlural],
   });
@@ -80,8 +73,6 @@ export const ChartDataSourceDropdownContent = () => {
     useUpdateCurrentWidgetConfig(pageLayoutId);
 
   const { closeDropdown } = useCloseDropdown();
-
-  const { getIcon } = useIcons();
 
   const { resetChartDraftFiltersSettings } =
     useResetChartDraftFiltersSettings();
@@ -112,30 +103,8 @@ export const ChartDataSourceDropdownContent = () => {
     closeDropdown();
   };
 
-  const handleAdvancedObjectsClick = () => {
-    setIsAdvancedObjectsMenuOpened(true);
-    setSearchQuery('');
-  };
-
-  const handleBack = () => {
-    setIsAdvancedObjectsMenuOpened(false);
-    setSearchQuery('');
-  };
-
   return (
-    <>
-      {isAdvancedObjectsMenuOpened && (
-        <DropdownMenuHeader
-          StartComponent={
-            <DropdownMenuHeaderLeftComponent
-              onClick={handleBack}
-              Icon={IconChevronLeft}
-            />
-          }
-        >
-          <Trans>Advanced objects</Trans>
-        </DropdownMenuHeader>
-      )}
+    <StyledPageLayoutDropdownContentContainer>
       <DropdownMenuSearchInput
         autoFocus
         type="text"
@@ -144,18 +113,13 @@ export const ChartDataSourceDropdownContent = () => {
         value={searchQuery}
       />
       <DropdownMenuSeparator />
-      <DropdownMenuItemsContainer>
+      <StyledPageLayoutDropdownMenuItemsContainer>
         <SelectableList
           selectableListInstanceId={dropdownId}
           focusId={dropdownId}
-          selectableItemIdArray={[
-            ...availableObjectMetadataItems.map(
-              (objectMetadataItem) => objectMetadataItem.id,
-            ),
-            ...(!isAdvancedObjectsMenuOpened
-              ? [ADVANCED_OBJECTS_MENU_ITEM_ID]
-              : []),
-          ]}
+          selectableItemIdArray={availableObjectMetadataItems.map(
+            (objectMetadataItem) => objectMetadataItem.id,
+          )}
         >
           {availableObjectMetadataItems.map((objectMetadataItem) => (
             <SelectableListItem
@@ -169,28 +133,17 @@ export const ChartDataSourceDropdownContent = () => {
                 text={objectMetadataItem.labelPlural}
                 selected={currentObjectMetadataItemId === objectMetadataItem.id}
                 focused={selectedItemId === objectMetadataItem.id}
-                LeftIcon={getIcon(objectMetadataItem.icon)}
+                LeftIcon={() => (
+                  <ObjectMetadataIcon objectMetadataItem={objectMetadataItem} />
+                )}
                 onClick={() => {
                   handleSelectSource(objectMetadataItem.id);
                 }}
               />
             </SelectableListItem>
           ))}
-          {!isAdvancedObjectsMenuOpened && (
-            <SelectableListItem
-              itemId={ADVANCED_OBJECTS_MENU_ITEM_ID}
-              onEnter={handleAdvancedObjectsClick}
-            >
-              <MenuItem
-                text={t`Advanced objects`}
-                LeftIcon={IconSettings}
-                onClick={handleAdvancedObjectsClick}
-                hasSubMenu
-              />
-            </SelectableListItem>
-          )}
         </SelectableList>
-      </DropdownMenuItemsContainer>
-    </>
+      </StyledPageLayoutDropdownMenuItemsContainer>
+    </StyledPageLayoutDropdownContentContainer>
   );
 };

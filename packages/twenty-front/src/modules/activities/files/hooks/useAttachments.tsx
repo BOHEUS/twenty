@@ -3,20 +3,16 @@ import { type ActivityTargetableObject } from '@/activities/types/ActivityTarget
 import { getActivityTargetObjectFieldIdName } from '@/activities/utils/getActivityTargetObjectFieldIdName';
 import { CoreObjectNameSingular } from 'twenty-shared/types';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
-import { FeatureFlagKey } from '~/generated-metadata/graphql';
-
 export const useAttachments = (targetableObject: ActivityTargetableObject) => {
-  const isAttachmentMigrated = useIsFeatureEnabled(
-    FeatureFlagKey.IS_ATTACHMENT_MIGRATED,
-  );
-
   const targetableObjectFieldIdName = getActivityTargetObjectFieldIdName({
     nameSingular: targetableObject.targetObjectNameSingular,
-    isMorphRelation: isAttachmentMigrated,
   });
 
-  const { records: attachments, loading } = useFindManyRecords<Attachment>({
+  const {
+    records: attachments,
+    loading,
+    totalCount,
+  } = useFindManyRecords<Attachment>({
     objectNameSingular: CoreObjectNameSingular.Attachment,
     filter: {
       [targetableObjectFieldIdName]: {
@@ -33,5 +29,6 @@ export const useAttachments = (targetableObject: ActivityTargetableObject) => {
   return {
     attachments,
     loading,
+    totalCountAttachments: totalCount,
   };
 };

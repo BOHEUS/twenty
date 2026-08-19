@@ -1,22 +1,21 @@
 import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
 import { CREATE_WORKFLOW_VERSION_STEP } from '@/workflow/graphql/mutations/createWorkflowVersionStep';
+import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { useMutation } from '@apollo/client/react';
 import {
   type CreateWorkflowVersionStepInput,
   type CreateWorkflowVersionStepMutation,
   type CreateWorkflowVersionStepMutationVariables,
 } from '~/generated/graphql';
-import { useUpdateWorkflowVersionCache } from '@/workflow/workflow-steps/hooks/useUpdateWorkflowVersionCache';
-import { flowComponentState } from '@/workflow/states/flowComponentState';
-import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
-import { isDefined } from 'twenty-shared/utils';
+import { useApplyWorkflowVersionStepChanges } from '@/workflow/workflow-steps/hooks/useApplyWorkflowVersionStepChanges';
 
 export const useCreateWorkflowVersionStep = () => {
   const apolloCoreClient = useApolloCoreClient();
 
-  const { updateWorkflowVersionCache } = useUpdateWorkflowVersionCache();
+  const { applyWorkflowVersionStepChanges } =
+    useApplyWorkflowVersionStepChanges();
 
-  const setFlow = useSetAtomComponentState(flowComponentState);
+  const { enqueueErrorSnackBar } = useSnackBar();
 
   const [mutate] = useMutation<
     CreateWorkflowVersionStepMutation,
@@ -30,22 +29,17 @@ export const useCreateWorkflowVersionStep = () => {
   ) => {
     const result = await mutate({
       variables: { input },
+      onError: (error) => {
+        enqueueErrorSnackBar({ apolloError: error });
+      },
     });
 
     const workflowVersionStepChanges = result?.data?.createWorkflowVersionStep;
 
-    const updatedWorkflowVersion = updateWorkflowVersionCache({
+    applyWorkflowVersionStepChanges({
       workflowVersionStepChanges,
       workflowVersionId: input.workflowVersionId,
     });
-
-    if (isDefined(updatedWorkflowVersion)) {
-      setFlow({
-        workflowVersionId: updatedWorkflowVersion.id,
-        trigger: updatedWorkflowVersion.trigger,
-        steps: updatedWorkflowVersion.steps,
-      });
-    }
 
     return result;
   };

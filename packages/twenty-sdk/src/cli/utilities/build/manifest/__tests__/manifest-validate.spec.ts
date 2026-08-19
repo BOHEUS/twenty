@@ -1,19 +1,24 @@
 import {
   type ApplicationManifest,
-  type Manifest,
   type FieldManifest,
+  type Manifest,
+  type PageLayoutTabManifest,
+  type PageLayoutWidgetManifest,
 } from 'twenty-shared/application';
-import { FieldMetadataType } from 'twenty-shared/types';
+import {
+  AggregateOperations,
+  FieldMetadataType,
+  RelationType,
+} from 'twenty-shared/types';
 import { manifestValidate } from '@/cli/utilities/build/manifest/manifest-validate';
 
 const validApplication: ApplicationManifest = {
-  universalIdentifier: '4ec0391d-18d5-411c-b2f3-266ddc1c3ef7',
+  universalIdentifier: '8e8ee827-5a0b-46b0-bb63-c13ccd734ac6',
   displayName: 'Test App',
   description: 'Test app for Twenty',
   defaultRoleUniversalIdentifier: '68bb56f3-8300-4cb5-8cc3-8da9ee66f1b2',
   packageJsonChecksum: '98592af7-4be9-4655-b5c4-9bef307a996c',
   yarnLockChecksum: '580ee05f-15fe-4146-bac2-6c382483c94e',
-  apiClientChecksum: null,
 };
 
 const validField: FieldManifest = {
@@ -26,18 +31,22 @@ const validField: FieldManifest = {
 };
 
 const validManifest: Manifest = {
+  commandMenuItems: [],
   application: validApplication,
   objects: [],
   frontComponents: [],
   fields: [],
   logicFunctions: [],
+  permissionFlags: [],
   roles: [],
   skills: [],
   agents: [],
   publicAssets: [],
   views: [],
+  viewFields: [],
   navigationMenuItems: [],
   pageLayouts: [],
+  pageLayoutTabs: [],
 };
 
 describe('manifestValidate', () => {
@@ -146,9 +155,6 @@ describe('manifestValidate', () => {
       expect(result.errors).toContain(
         'Duplicate universal identifiers: 550e8400-e29b-41d4-a716-446655440001',
       );
-      expect(result.warnings).toContain('No object defined');
-      expect(result.warnings).toContain('No logic function defined');
-      expect(result.warnings).toContain('No front component defined');
     });
 
     it('should fail when extension field ID conflicts with object field ID', () => {
@@ -158,7 +164,7 @@ describe('manifestValidate', () => {
         ...validManifest,
         objects: [
           {
-            universalIdentifier: 'obj-uuid',
+            universalIdentifier: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
             nameSingular: 'myObject',
             namePlural: 'myObjects',
             labelSingular: 'My Object',
@@ -189,9 +195,464 @@ describe('manifestValidate', () => {
       expect(result.errors).toContain(
         'Duplicate universal identifiers: 550e8400-e29b-41d4-a716-446655440001',
       );
-      expect(result.warnings).not.toContain('No object defined');
-      expect(result.warnings).toContain('No logic function defined');
-      expect(result.warnings).toContain('No front component defined');
+    });
+
+    it.each(['onConnectLogicFunction', 'onDisconnectLogicFunction'] as const)(
+      'should not flag a connection provider referencing a logic function via %s as a duplicate',
+      (lifecycleHookKey) => {
+        const logicFunctionId = '550e8400-e29b-41d4-a716-446655440040';
+
+        const logicFunction = {
+          universalIdentifier: logicFunctionId,
+          name: lifecycleHookKey,
+          sourceHandlerPath: 'src/logic-functions/lifecycle-hook.ts',
+          builtHandlerPath: 'dist/lifecycle-hook.js',
+          builtHandlerChecksum: '00000000-0000-4000-8000-000000000000',
+          handlerName: 'handler',
+        } as unknown as Manifest['logicFunctions'][number];
+
+        const connectionProvider = {
+          universalIdentifier: '550e8400-e29b-41d4-a716-446655440041',
+          name: 'slack',
+          displayName: 'Slack',
+          type: 'oauth',
+          oauth: {},
+          [lifecycleHookKey]: { universalIdentifier: logicFunctionId },
+        } as unknown as NonNullable<Manifest['connectionProviders']>[number];
+
+        const result = manifestValidate({
+          ...validManifest,
+          logicFunctions: [logicFunction],
+          connectionProviders: [connectionProvider],
+        });
+
+        expect(result.isValid).toBe(true);
+        expect(result.errors).toHaveLength(0);
+      },
+    );
+
+    it('should not flag a front component referenced via settingsFrontComponent as a duplicate', () => {
+      const frontComponentId = '550e8400-e29b-41d4-a716-446655440050';
+
+      const frontComponent = {
+        universalIdentifier: frontComponentId,
+        name: 'app-settings',
+        componentName: 'AppSettings',
+        sourceComponentPath: 'src/front-components/app-settings.tsx',
+        builtComponentPath: 'dist/app-settings.mjs',
+        builtComponentChecksum: '00000000-0000-4000-8000-000000000000',
+        isHeadless: false,
+      } as unknown as Manifest['frontComponents'][number];
+
+      const result = manifestValidate({
+        ...validManifest,
+        application: {
+          ...validApplication,
+          settingsFrontComponent: { universalIdentifier: frontComponentId },
+        },
+        frontComponents: [frontComponent],
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('relation field validation', () => {
+    it('should fail when a RELATION field in fields is missing relationType', () => {
+      const relationFieldWithoutSettings = {
+        objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+        universalIdentifier: '550e8400-e29b-41d4-a716-446655440010',
+        type: FieldMetadataType.RELATION,
+        name: 'company',
+        label: 'Company',
+        relationTargetFieldMetadataUniversalIdentifier:
+          '550e8400-e29b-41d4-a716-446655440011',
+        relationTargetObjectMetadataUniversalIdentifier:
+          '20202020-b374-4779-a561-80086cb2e17f',
+      } as unknown as FieldManifest;
+
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [relationFieldWithoutSettings],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors[0]).toContain('company');
+      expect(result.errors[0]).toContain('missing relationType');
+    });
+
+    it('should fail when a RELATION field in object fields is missing relationType', () => {
+      const result = manifestValidate({
+        ...validManifest,
+        objects: [
+          {
+            universalIdentifier: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+            nameSingular: 'recipient',
+            namePlural: 'recipients',
+            labelSingular: 'Recipient',
+            labelPlural: 'Recipients',
+            labelIdentifierFieldMetadataUniversalIdentifier:
+              '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+            fields: [
+              {
+                universalIdentifier: '7c9e6679-7425-40de-944b-e07fc1f90ae7',
+                type: FieldMetadataType.TEXT,
+                name: 'name',
+                label: 'Name',
+              },
+              {
+                universalIdentifier: '550e8400-e29b-41d4-a716-446655440012',
+                type: FieldMetadataType.RELATION,
+                name: 'company',
+                label: 'Company',
+                relationTargetFieldMetadataUniversalIdentifier:
+                  '550e8400-e29b-41d4-a716-446655440013',
+                relationTargetObjectMetadataUniversalIdentifier:
+                  '20202020-b374-4779-a561-80086cb2e17f',
+              } as unknown as FieldManifest,
+            ],
+          },
+        ],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors[0]).toContain('company');
+      expect(result.errors[0]).toContain('missing relationType');
+    });
+
+    it('should pass when a RELATION field has valid universalSettings with relationType', () => {
+      const validRelationField = {
+        objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+        universalIdentifier: '550e8400-e29b-41d4-a716-446655440014',
+        type: FieldMetadataType.RELATION,
+        name: 'company',
+        label: 'Company',
+        relationTargetFieldMetadataUniversalIdentifier:
+          '550e8400-e29b-41d4-a716-446655440015',
+        relationTargetObjectMetadataUniversalIdentifier:
+          '20202020-b374-4779-a561-80086cb2e17f',
+        universalSettings: {
+          relationType: RelationType.MANY_TO_ONE,
+          joinColumnName: 'companyId',
+        },
+      } as unknown as FieldManifest;
+
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [validRelationField],
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should fail when a MANY_TO_ONE field is missing joinColumnName', () => {
+      const manyToOneWithoutJoinColumn = {
+        objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+        universalIdentifier: '550e8400-e29b-41d4-a716-446655440018',
+        type: FieldMetadataType.RELATION,
+        name: 'company',
+        label: 'Company',
+        relationTargetFieldMetadataUniversalIdentifier:
+          '550e8400-e29b-41d4-a716-446655440019',
+        relationTargetObjectMetadataUniversalIdentifier:
+          '20202020-b374-4779-a561-80086cb2e17f',
+        universalSettings: {
+          relationType: RelationType.MANY_TO_ONE,
+        },
+      } as unknown as FieldManifest;
+
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [manyToOneWithoutJoinColumn],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.isValid).toBe(false);
+      expect(result.errors[0]).toContain('company');
+      expect(result.errors[0]).toContain('missing joinColumnName');
+    });
+
+    it('should pass when a ONE_TO_MANY field has no joinColumnName', () => {
+      const oneToManyField = {
+        objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+        universalIdentifier: '550e8400-e29b-41d4-a716-446655440020',
+        type: FieldMetadataType.RELATION,
+        name: 'contacts',
+        label: 'Contacts',
+        relationTargetFieldMetadataUniversalIdentifier:
+          '550e8400-e29b-41d4-a716-446655440021',
+        relationTargetObjectMetadataUniversalIdentifier:
+          '20202020-b374-4779-a561-80086cb2e17f',
+        universalSettings: {
+          relationType: RelationType.ONE_TO_MANY,
+        },
+      } as unknown as FieldManifest;
+
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [oneToManyField],
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should fail when a RELATION field has an invalid relationType', () => {
+      const relationFieldWithBadType = {
+        objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+        universalIdentifier: '550e8400-e29b-41d4-a716-446655440016',
+        type: FieldMetadataType.RELATION,
+        name: 'company',
+        label: 'Company',
+        relationTargetFieldMetadataUniversalIdentifier:
+          '550e8400-e29b-41d4-a716-446655440017',
+        relationTargetObjectMetadataUniversalIdentifier:
+          '20202020-b374-4779-a561-80086cb2e17f',
+        universalSettings: {
+          relationType: 'INVALID_TYPE',
+        },
+      } as unknown as FieldManifest;
+
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [relationFieldWithBadType],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors[0]).toContain('company');
+      expect(result.errors[0]).toContain('invalid relationType');
+    });
+  });
+
+  describe('UUID version validation', () => {
+    it('should pass with UUID v4 identifiers', () => {
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [validField],
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should pass with UUID v5 identifiers', () => {
+      const v5Field: FieldManifest = {
+        objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+        universalIdentifier: '21f7f8de-8051-5b89-8680-0195ef798b6a',
+        type: FieldMetadataType.TEXT,
+        name: 'v5Field',
+        label: 'V5 Field',
+      };
+
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [v5Field],
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should fail with UUID v1 identifiers', () => {
+      const v1Uuid = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+      const v1Field: FieldManifest = {
+        objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+        universalIdentifier: v1Uuid,
+        type: FieldMetadataType.TEXT,
+        name: 'v1Field',
+        label: 'V1 Field',
+      };
+
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [v1Field],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining(`"${v1Uuid}" is UUID version 1`),
+      );
+      expect(result.errors).toContainEqual(
+        expect.stringContaining('Only UUID version 4 or higher is allowed'),
+      );
+    });
+
+    it('should fail with UUID v3 identifiers', () => {
+      const v3Uuid = 'a3bb189e-8bf9-3888-9912-ace4e6543002';
+      const v3Field: FieldManifest = {
+        objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+        universalIdentifier: v3Uuid,
+        type: FieldMetadataType.TEXT,
+        name: 'v3Field',
+        label: 'V3 Field',
+      };
+
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [v3Field],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining(`"${v3Uuid}" is UUID version 3`),
+      );
+    });
+
+    it('should fail with non-UUID universal identifiers', () => {
+      const result = manifestValidate({
+        ...validManifest,
+        objects: [
+          {
+            universalIdentifier: 'not-a-uuid',
+            nameSingular: 'myObject',
+            namePlural: 'myObjects',
+            labelSingular: 'My Object',
+            labelPlural: 'My Objects',
+            labelIdentifierFieldMetadataUniversalIdentifier:
+              '550e8400-e29b-41d4-a716-446655440030',
+            fields: [
+              {
+                universalIdentifier: '550e8400-e29b-41d4-a716-446655440030',
+                type: FieldMetadataType.TEXT,
+                name: 'name',
+                label: 'Name',
+              },
+            ],
+          },
+        ],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining('"not-a-uuid" is not a valid UUID'),
+      );
+    });
+
+    it('should not report duplicate version errors for the same identifier', () => {
+      const v1Uuid = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+
+      const result = manifestValidate({
+        ...validManifest,
+        fields: [
+          {
+            objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+            universalIdentifier: v1Uuid,
+            type: FieldMetadataType.TEXT,
+            name: 'field1',
+            label: 'Field 1',
+          },
+          {
+            objectUniversalIdentifier: '20202020-b374-4779-a561-80086cb2e17f',
+            universalIdentifier: v1Uuid,
+            type: FieldMetadataType.TEXT,
+            name: 'field2',
+            label: 'Field 2',
+          },
+        ],
+      });
+
+      const versionErrors = result.errors.filter((e) =>
+        e.includes('is UUID version 1'),
+      );
+
+      expect(versionErrors).toHaveLength(1);
+    });
+  });
+
+  describe('graph widget validation', () => {
+    const makeGraphWidgetTab = (
+      configuration: PageLayoutWidgetManifest['configuration'],
+    ): PageLayoutTabManifest => ({
+      universalIdentifier: 'b0a5f0f2-6c2e-4d1c-9d0b-2f8a4c3e1a01',
+      title: 'Dashboard',
+      position: 0,
+      widgets: [
+        {
+          universalIdentifier: 'b0a5f0f2-6c2e-4d1c-9d0b-2f8a4c3e1a02',
+          title: 'Total opportunities',
+          type: 'GRAPH',
+          configuration,
+        },
+      ],
+    });
+
+    it('should pass when a graph widget has aggregateFieldMetadataUniversalIdentifier', () => {
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [
+          makeGraphWidgetTab({
+            configurationType: 'AGGREGATE_CHART',
+            aggregateFieldMetadataUniversalIdentifier:
+              'b0a5f0f2-6c2e-4d1c-9d0b-2f8a4c3e1a03',
+            aggregateOperation: AggregateOperations.COUNT,
+          }),
+        ],
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should error when a graph widget is missing the aggregate field identifier', () => {
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [
+          makeGraphWidgetTab({
+            configurationType: 'AGGREGATE_CHART',
+            aggregateFieldMetadataUniversalIdentifier: null,
+            aggregateOperation: AggregateOperations.COUNT,
+          }),
+        ],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining(
+          'is missing aggregateFieldMetadataUniversalIdentifier',
+        ),
+      );
+    });
+
+    it('should hint at the correct key when the raw aggregateFieldMetadataId was used', () => {
+      const configurationWithRawKey = {
+        configurationType: 'AGGREGATE_CHART',
+        aggregateFieldMetadataId: 'b0a5f0f2-6c2e-4d1c-9d0b-2f8a4c3e1a03',
+        aggregateOperation: AggregateOperations.COUNT,
+      } as unknown as PageLayoutWidgetManifest['configuration'];
+
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [makeGraphWidgetTab(configurationWithRawKey)],
+      });
+
+      expect(result.isValid).toBe(false);
+      expect(result.errors).toContainEqual(
+        expect.stringContaining('not "aggregateFieldMetadataId"'),
+      );
+    });
+
+    it('should ignore non-graph widgets that have no aggregate field', () => {
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [makeGraphWidgetTab({ configurationType: 'TIMELINE' })],
+      });
+
+      expect(result.isValid).toBe(true);
+      expect(result.errors).toHaveLength(0);
+    });
+
+    it('should not crash on a widget with a missing configuration', () => {
+      const nullConfiguration =
+        null as unknown as PageLayoutWidgetManifest['configuration'];
+
+      const result = manifestValidate({
+        ...validManifest,
+        pageLayoutTabs: [makeGraphWidgetTab(nullConfiguration)],
+      });
+
+      expect(result.isValid).toBe(true);
     });
   });
 });

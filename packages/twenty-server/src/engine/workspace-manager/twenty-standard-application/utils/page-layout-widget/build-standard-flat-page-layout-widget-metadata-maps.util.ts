@@ -23,9 +23,7 @@ import { findObjectNameByUniversalIdentifier } from 'src/engine/workspace-manage
 export type BuildStandardFlatPageLayoutWidgetMetadataMapsArgs = Omit<
   CreateStandardPageLayoutWidgetArgs,
   'context'
-> & {
-  shouldIncludeRecordPageLayouts?: boolean;
-};
+>;
 
 const RECORD_PAGE_LAYOUT_WIDGET_TYPES = [
   WidgetType.FIELDS,
@@ -41,6 +39,10 @@ const RECORD_PAGE_LAYOUT_WIDGET_TYPES = [
   WidgetType.WORKFLOW,
   WidgetType.WORKFLOW_VERSION,
   WidgetType.WORKFLOW_RUN,
+  WidgetType.CALL_RECORDING_SUMMARY,
+  WidgetType.CALL_RECORDING_TRANSCRIPT,
+  WidgetType.MESSAGE_CAMPAIGN_BODY,
+  WidgetType.MESSAGE_CAMPAIGN_DETAILS,
 ];
 
 const WIDGET_TYPE_TO_CONFIGURATION_TYPE: Partial<
@@ -60,16 +62,39 @@ const WIDGET_TYPE_TO_CONFIGURATION_TYPE: Partial<
   [WidgetType.WORKFLOW]: WidgetConfigurationType.WORKFLOW,
   [WidgetType.WORKFLOW_VERSION]: WidgetConfigurationType.WORKFLOW_VERSION,
   [WidgetType.WORKFLOW_RUN]: WidgetConfigurationType.WORKFLOW_RUN,
+  [WidgetType.RECORD_TABLE]: WidgetConfigurationType.RECORD_TABLE,
+  [WidgetType.EMAIL_THREAD]: WidgetConfigurationType.EMAIL_THREAD,
+  [WidgetType.CALL_RECORDING_SUMMARY]:
+    WidgetConfigurationType.CALL_RECORDING_SUMMARY,
+  [WidgetType.CALL_RECORDING_TRANSCRIPT]:
+    WidgetConfigurationType.CALL_RECORDING_TRANSCRIPT,
+  [WidgetType.MESSAGE_CAMPAIGN_BODY]:
+    WidgetConfigurationType.MESSAGE_CAMPAIGN_BODY,
+  [WidgetType.MESSAGE_CAMPAIGN_DETAILS]:
+    WidgetConfigurationType.MESSAGE_CAMPAIGN_DETAILS,
 };
 
 const RECORD_PAGE_FIELDS_VIEW_NAME_BY_OBJECT: Partial<
   Record<AllStandardObjectName, string>
 > = {
+  blocklist: 'blocklistRecordPageFields',
+  calendarChannelEventAssociation:
+    'calendarChannelEventAssociationRecordPageFields',
+  calendarEvent: 'calendarEventRecordPageFields',
+  calendarEventParticipant: 'calendarEventParticipantRecordPageFields',
+  callRecording: 'callRecordingRecordPageFields',
   company: 'companyRecordPageFields',
-  person: 'personRecordPageFields',
-  opportunity: 'opportunityRecordPageFields',
-  task: 'taskRecordPageFields',
+  messageCampaign: 'messageCampaignRecordPageFields',
+  messageChannelMessageAssociation:
+    'messageChannelMessageAssociationRecordPageFields',
+  messageChannelMessageAssociationMessageFolder:
+    'messageChannelMessageAssociationMessageFolderRecordPageFields',
+  messageParticipant: 'messageParticipantRecordPageFields',
   note: 'noteRecordPageFields',
+  opportunity: 'opportunityRecordPageFields',
+  person: 'personRecordPageFields',
+  task: 'taskRecordPageFields',
+  workflowAutomatedTrigger: 'workflowAutomatedTriggerRecordPageFields',
   workflowRun: 'workflowRunRecordPageFields',
   workflowVersion: 'workflowVersionRecordPageFields',
 };
@@ -118,10 +143,9 @@ const buildRecordPageWidgetConfigurations = ({
   const baseConfig = { configurationType };
 
   return {
-    // @ts-expect-error ignore - configurationType is validated but TS can't match to discriminated union
-    configuration: baseConfig,
-    // @ts-expect-error ignore - we'd need to implement for each widget type (including unused GRAPH type) to be able to match to the discriminated union
-    universalConfiguration: baseConfig,
+    configuration: baseConfig as AllPageLayoutWidgetConfiguration,
+    universalConfiguration:
+      baseConfig as CreateStandardPageLayoutWidgetContext['universalConfiguration'],
   };
 };
 
@@ -147,7 +171,7 @@ const buildFieldsWidgetConfiguration = ({
       },
       universalConfiguration: {
         configurationType: WidgetConfigurationType.FIELDS,
-        viewId: null,
+        viewUniversalIdentifier: null,
         newFieldDefaultVisibility: true,
       },
     };
@@ -184,7 +208,7 @@ const buildFieldsWidgetConfiguration = ({
     },
     universalConfiguration: {
       configurationType: WidgetConfigurationType.FIELDS,
-      viewId: viewUniversalIdentifier,
+      viewUniversalIdentifier,
       newFieldDefaultVisibility: true,
     },
   };
@@ -304,6 +328,8 @@ const computeRecordPageWidgets = ({
               universalConfiguration,
               objectMetadataId,
               conditionalDisplay: widget.conditionalDisplay ?? null,
+              conditionalAvailabilityExpression:
+                widget.conditionalAvailabilityExpression ?? null,
             },
           }),
         );
@@ -319,9 +345,7 @@ export const buildStandardFlatPageLayoutWidgetMetadataMaps = (
 ): FlatEntityMaps<FlatPageLayoutWidget> => {
   const allWidgetMetadatas: FlatPageLayoutWidget[] = [
     ...computeMyFirstDashboardWidgets(args),
-    ...(args.shouldIncludeRecordPageLayouts
-      ? computeRecordPageWidgets(args)
-      : []),
+    ...computeRecordPageWidgets(args),
   ];
 
   let flatPageLayoutWidgetMaps = createEmptyFlatEntityMaps();

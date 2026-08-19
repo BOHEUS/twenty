@@ -4,6 +4,7 @@ import { deleteOneObjectMetadata } from 'test/integration/metadata/suites/object
 import { updateOneObjectMetadata } from 'test/integration/metadata/suites/object-metadata/utils/update-one-object-metadata.util';
 import { makeRestAPIRequest } from 'test/integration/rest/utils/make-rest-api-request.util';
 import {
+  assertMetadataRestListResponse,
   assertRestApiErrorNotFoundResponse,
   assertRestApiErrorResponse,
   assertRestApiSuccessfulResponse,
@@ -15,10 +16,9 @@ import {
 } from 'test/integration/rest/utils/view-rest-api.util';
 import { assertViewSortStructure } from 'test/integration/utils/view-test.util';
 import { jestExpectToBeDefined } from 'test/utils/jest-expect-to-be-defined.util.test';
-import { FieldMetadataType } from 'twenty-shared/types';
+import { FieldMetadataType, ViewSortDirection } from 'twenty-shared/types';
 
 import { type ViewSortDTO } from 'src/engine/metadata-modules/view-sort/dtos/view-sort.dto';
-import { ViewSortDirection } from 'src/engine/metadata-modules/view-sort/enums/view-sort-direction';
 import {
   generateViewSortExceptionMessage,
   ViewSortExceptionMessageKey,
@@ -109,8 +109,8 @@ describe('View Sort REST API', () => {
         bearer: APPLE_JANE_ADMIN_ACCESS_TOKEN,
       });
 
-      assertRestApiSuccessfulResponse(response);
-      expect(response.body).toEqual([]);
+      expect(assertMetadataRestListResponse<ViewSortDTO>(response)).toEqual([]);
+      expect(response.body.totalCount).toBe(0);
     });
 
     it('should return all view sorts for workspace when no viewId provided', async () => {
@@ -120,8 +120,7 @@ describe('View Sort REST API', () => {
         bearer: APPLE_JANE_ADMIN_ACCESS_TOKEN,
       });
 
-      assertRestApiSuccessfulResponse(response);
-      expect(Array.isArray(response.body)).toBe(true);
+      assertMetadataRestListResponse<ViewSortDTO>(response);
     });
 
     it('should return view sorts for a specific view after creating one', async () => {
@@ -139,10 +138,8 @@ describe('View Sort REST API', () => {
         bearer: APPLE_JANE_ADMIN_ACCESS_TOKEN,
       });
 
-      assertRestApiSuccessfulResponse(response);
-      expect(Array.isArray(response.body)).toBe(true);
-
-      const returnedViewSort = response.body.find(
+      const viewSorts = assertMetadataRestListResponse<ViewSortDTO>(response);
+      const returnedViewSort = viewSorts.find(
         (el: ViewSortDTO) => el.id === viewSort.id,
       );
 

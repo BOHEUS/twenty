@@ -4,12 +4,14 @@ import { type CheckServerOrchestratorStepOutput } from '@/cli/utilities/dev/orch
 import { type StartWatchersOrchestratorStepOutput } from '@/cli/utilities/dev/orchestrator/steps/start-watchers-orchestrator-step';
 import { type SyncApplicationOrchestratorStepOutput } from '@/cli/utilities/dev/orchestrator/steps/sync-application-orchestrator-step';
 import { type UploadFilesOrchestratorStepOutput } from '@/cli/utilities/dev/orchestrator/steps/upload-files-orchestrator-step';
+import { type VersionInfo } from '@/cli/utilities/version/version-info';
 import { type Manifest, SyncableEntity } from 'twenty-shared/application';
 import { type FileFolder } from 'twenty-shared/types';
 
 export type OrchestratorStateStepEvent = {
   message: string;
   status: 'info' | 'success' | 'error' | 'warning';
+  spacingBefore?: boolean;
 };
 
 export type OrchestratorStateEvent = OrchestratorStateStepEvent & {
@@ -54,6 +56,7 @@ export type OrchestratorStateBuiltFileInfo = {
   builtPath: string;
   sourcePath: string;
   fileFolder: FileFolder;
+  usesSdkClient?: boolean;
 };
 
 export type OrchestratorStatePipeline = {
@@ -70,9 +73,13 @@ const ENTITY_TYPE_TO_SYNCABLE: Record<string, SyncableEntity | undefined> = {
   frontComponents: SyncableEntity.FrontComponent,
   roles: SyncableEntity.Role,
   skills: SyncableEntity.Skill,
+  connectionProviders: SyncableEntity.ConnectionProvider,
   views: SyncableEntity.View,
+  viewFields: SyncableEntity.ViewField,
   navigationMenuItems: SyncableEntity.NavigationMenuItem,
   pageLayouts: SyncableEntity.PageLayout,
+  pageLayoutTabs: SyncableEntity.PageLayoutTab,
+  commandMenuItems: SyncableEntity.CommandMenuItem,
 };
 
 const MAX_EVENT_COUNT = 200;
@@ -110,17 +117,22 @@ export class OrchestratorState {
 
   pipeline: OrchestratorStatePipeline;
 
+  versionInfo: VersionInfo | null;
+
   entities: Map<string, OrchestratorStateEntityInfo>;
   events: OrchestratorStateEvent[];
 
+  pendingConfirmation: { deleteCount: number } | null;
+
+  private confirmationResolver: ((approved: boolean) => void) | null = null;
   private eventIdCounter = 0;
   onChange?: () => void;
 
-  constructor(options: { appPath: string; frontendUrl?: string }) {
+  constructor(options: { appPath: string }) {
     this.appPath = options.appPath;
-    this.frontendUrl = options.frontendUrl;
 
     this.previousObjectsFieldsFingerprint = null;
+    this.pendingConfirmation = null;
 
     this.steps = {
       checkServer: {
@@ -168,12 +180,37 @@ export class OrchestratorState {
       appName: null,
     };
 
+    this.versionInfo = null;
+
     this.entities = new Map();
     this.events = [];
   }
 
+  setVersionInfo(versionInfo: VersionInfo): void {
+    this.versionInfo = versionInfo;
+    this.notify();
+  }
+
   notify(): void {
     this.onChange?.();
+  }
+
+  requestDestructiveConfirmation(deleteCount: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.pendingConfirmation = { deleteCount };
+      this.confirmationResolver = resolve;
+      this.notify();
+    });
+  }
+
+  resolveDestructiveConfirmation(approved: boolean): void {
+    const resolver = this.confirmationResolver;
+
+    this.pendingConfirmation = null;
+    this.confirmationResolver = null;
+    this.notify();
+
+    resolver?.(approved);
   }
 
   updatePipeline(update: Partial<OrchestratorStatePipeline>): void {
@@ -268,6 +305,17 @@ export class OrchestratorState {
         ...entity,
         type: entityTypeMap.get(filePath),
       });
+    }
+
+    for (const [filePath, syncableEntity] of entityTypeMap) {
+      if (!entities.has(filePath)) {
+        entities.set(filePath, {
+          name: filePath,
+          path: filePath,
+          type: syncableEntity,
+          status: 'pending',
+        });
+      }
     }
 
     this.entities = entities;

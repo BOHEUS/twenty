@@ -7,12 +7,15 @@ import { useRecordTableContextOrThrow } from '@/object-record/record-table/conte
 import { useResetTableRowSelection } from '@/object-record/record-table/hooks/internal/useResetTableRowSelection';
 import { recordTableWidthComponentState } from '@/object-record/record-table/states/recordTableWidthComponentState';
 
+import { useIsRecordTableCheckboxColumnHidden } from '@/object-record/record-table/hooks/useIsRecordTableCheckboxColumnHidden';
+import { isRecordTableDragColumnHiddenComponentState } from '@/object-record/record-table/states/isRecordTableDragColumnHiddenComponentState';
 import { resizedFieldMetadataIdComponentState } from '@/object-record/record-table/states/resizedFieldMetadataIdComponentState';
 import { resizeFieldOffsetComponentState } from '@/object-record/record-table/states/resizeFieldOffsetComponentState';
 import { shouldCompactRecordTableFirstColumnComponentState } from '@/object-record/record-table/states/shouldCompactRecordTableFirstColumnComponentState';
 import { computeLastRecordTableColumnWidth } from '@/object-record/record-table/utils/computeLastRecordTableColumnWidth';
 import { getRecordTableColumnFieldWidthCSSVariableName } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthCSSVariableName';
 import { updateRecordTableCSSVariable } from '@/object-record/record-table/utils/updateRecordTableCSSVariable';
+import { getUiZoom } from '@/ui/theme/utils/getUiZoom';
 import { useDragSelect } from '@/ui/utilities/drag-select/hooks/useDragSelect';
 import { useTrackPointer } from '@/ui/utilities/pointer-event/hooks/useTrackPointer';
 import { type PointerEventListener } from '@/ui/utilities/pointer-event/types/PointerEventListener';
@@ -69,9 +72,22 @@ export const useResizeTableHeader = () => {
     recordTableId,
   );
 
+  const isRecordTableDragColumnHidden = useAtomComponentStateValue(
+    isRecordTableDragColumnHiddenComponentState,
+    recordTableId,
+  );
+
+  const isRecordTableCheckboxColumnHidden =
+    useIsRecordTableCheckboxColumnHidden(recordTableId);
+
+  // captured once per drag: reading computed style on every move would
+  // force a synchronous style recalc, and the zoom cannot change mid-drag
+  const [dragUiZoom, setDragUiZoom] = useState(1);
+
   const handleResizeHandlerStart = useCallback<PointerEventListener>(
     ({ x }) => {
       resetTableRowSelection();
+      setDragUiZoom(getUiZoom());
       setInitialPointerPositionX(x);
     },
     [resetTableRowSelection],
@@ -83,7 +99,7 @@ export const useResizeTableHeader = () => {
 
       throwIfNotDefined(recordField, 'recordField');
 
-      const newResizeOffset = x - initialPointerPositionX;
+      const newResizeOffset = (x - initialPointerPositionX) / dragUiZoom;
 
       const newRecordFieldSizeWithOffset = recordField.size + newResizeOffset;
 
@@ -98,6 +114,7 @@ export const useResizeTableHeader = () => {
       );
 
       updateRecordTableCSSVariable(
+        recordTableId,
         getRecordTableColumnFieldWidthCSSVariableName(recordFieldIndex),
         `${newWidth}px`,
       );
@@ -106,11 +123,14 @@ export const useResizeTableHeader = () => {
         recordFields: visibleRecordFields,
         shouldCompactFirstColumn: shouldCompactRecordTableFirstColumn,
         tableWidth: recordTableWidth,
+        isDragColumnHidden: isRecordTableDragColumnHidden,
+        isCheckboxColumnHidden: isRecordTableCheckboxColumnHidden,
       });
 
       const newLastColumnWidth = lastColumnWidth - newResizeOffset;
 
       updateRecordTableCSSVariable(
+        recordTableId,
         RECORD_TABLE_COLUMN_LAST_EMPTY_COLUMN_WIDTH_VARIABLE_NAME,
         `${newLastColumnWidth}px`,
       );
@@ -121,18 +141,23 @@ export const useResizeTableHeader = () => {
       );
 
       updateRecordTableCSSVariable(
+        recordTableId,
         RECORD_TABLE_COLUMN_WITH_GROUP_LAST_EMPTY_COLUMN_WIDTH_VARIABLE_NAME,
         `${newGroupSectionLastColumnWidth}px`,
       );
 
-      setResizeFieldOffset(x - initialPointerPositionX);
+      setResizeFieldOffset((x - initialPointerPositionX) / dragUiZoom);
     },
     [
+      dragUiZoom,
       initialPointerPositionX,
       recordField,
+      recordTableId,
       visibleRecordFields,
       shouldCompactRecordTableFirstColumn,
       recordTableWidth,
+      isRecordTableDragColumnHidden,
+      isRecordTableCheckboxColumnHidden,
       setResizeFieldOffset,
     ],
   );

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { msg } from '@lingui/core/macro';
 import { ALL_METADATA_NAME } from 'twenty-shared/metadata';
+import { isFieldMetadataTypeWithDefaultValue } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
 import { FieldMetadataExceptionCode } from 'src/engine/metadata-modules/field-metadata/field-metadata.exception';
@@ -159,7 +160,6 @@ export class FlatFieldMetadataValidatorService {
         });
       }
     }
-    ///
 
     if (isDefined(flatEntityUpdate.name)) {
       validationResult.errors.push(
@@ -191,6 +191,7 @@ export class FlatFieldMetadataValidatorService {
     }
 
     if (
+      isFieldMetadataTypeWithDefaultValue(flatFieldMetadataToValidate.type) &&
       flatFieldMetadataToValidate.isNullable === false &&
       flatFieldMetadataToValidate.defaultValue === null
     ) {

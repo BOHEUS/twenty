@@ -1,4 +1,4 @@
-import { UseFilters, UseGuards } from '@nestjs/common';
+import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
 import {
   Args,
   Context,
@@ -8,10 +8,12 @@ import {
   ResolveField,
 } from '@nestjs/graphql';
 
+import { PermissionFlagType } from 'twenty-shared/constants';
 import { ViewType, ViewVisibility } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
+import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
 import { I18nService } from 'src/engine/core-modules/i18n/i18n.service';
 import { type I18nContext } from 'src/engine/core-modules/i18n/types/i18n-context.type';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
@@ -20,8 +22,11 @@ import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-worksp
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { CustomPermissionGuard } from 'src/engine/guards/custom-permission.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
+import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
-import { resolveObjectMetadataStandardOverride } from 'src/engine/metadata-modules/object-metadata/utils/resolve-object-metadata-standard-override.util';
+import { resolveEffectiveEntityProperty } from 'src/engine/metadata-modules/utils/resolve-effective-entity-property.util';
+import { OBJECT_LABEL_PLURAL_PLACEHOLDER } from 'src/engine/metadata-modules/view/constants/object-label-plural-placeholder.constant';
+import { resolveViewName } from 'src/engine/metadata-modules/view/utils/resolve-view-name.util';
 import { ViewFieldGroupDTO } from 'src/engine/metadata-modules/view-field-group/dtos/view-field-group.dto';
 import { ViewFieldDTO } from 'src/engine/metadata-modules/view-field/dtos/view-field.dto';
 import { ViewFilterGroupDTO } from 'src/engine/metadata-modules/view-filter-group/dtos/view-filter-group.dto';
@@ -34,7 +39,10 @@ import { UpdateViewPermissionGuard } from 'src/engine/metadata-modules/view-perm
 import { ViewSortDTO } from 'src/engine/metadata-modules/view-sort/dtos/view-sort.dto';
 import { CreateViewInput } from 'src/engine/metadata-modules/view/dtos/inputs/create-view.input';
 import { UpdateViewInput } from 'src/engine/metadata-modules/view/dtos/inputs/update-view.input';
+import { UpsertViewWidgetInput } from 'src/engine/metadata-modules/view/dtos/inputs/upsert-view-widget.input';
 import { ViewDTO } from 'src/engine/metadata-modules/view/dtos/view.dto';
+import { type ViewEntity } from 'src/engine/metadata-modules/view/entities/view.entity';
+import { ViewWidgetUpsertService } from 'src/engine/metadata-modules/view/services/view-widget-upsert.service';
 import { ViewService } from 'src/engine/metadata-modules/view/services/view.service';
 import { ViewGraphqlApiExceptionFilter } from 'src/engine/metadata-modules/view/utils/view-graphql-api-exception.filter';
 
@@ -44,6 +52,7 @@ import { ViewGraphqlApiExceptionFilter } from 'src/engine/metadata-modules/view/
 export class ViewResolver {
   constructor(
     private readonly viewService: ViewService,
+    private readonly viewWidgetUpsertService: ViewWidgetUpsertService,
     private readonly i18nService: I18nService,
   ) {}
 
@@ -53,43 +62,61 @@ export class ViewResolver {
     @Context() context: { loaders: IDataloaders } & I18nContext,
     @AuthWorkspace() workspace: WorkspaceEntity,
   ): Promise<string> {
-    if (view.name.includes('{objectLabelPlural}')) {
-      const objectMetadata = await context.loaders.objectMetadataLoader.load({
-        objectMetadataId: view.objectMetadataId,
-        workspaceId: workspace.id,
-      });
+    const i18nContext = await this.i18nService.buildEffectiveEntityI18nContext({
+      applicationId: view.applicationId,
+      loaders: context.loaders,
+      locale: context.req.locale,
+      workspaceId: workspace.id,
+    });
 
-      if (isDefined(objectMetadata)) {
-        const i18n = this.i18nService.getI18nInstance(context.req.locale);
-        const translatedObjectLabel = resolveObjectMetadataStandardOverride(
-          {
-            labelPlural: objectMetadata.labelPlural,
-            labelSingular: objectMetadata.labelSingular,
-            description: objectMetadata.description ?? undefined,
-            icon: objectMetadata.icon ?? undefined,
-            isCustom: objectMetadata.isCustom,
-            standardOverrides: objectMetadata.standardOverrides ?? undefined,
-          },
-          'labelPlural',
-          context.req.locale,
-          i18n,
-        );
+    return resolveViewName({
+      view,
+      objectLabelPlural: await this.resolveObjectLabelPlural({
+        view,
+        context,
+        workspace,
+      }),
+      i18nContext,
+    });
+  }
 
-        return this.viewService.processViewNameWithTemplate(
-          view.name,
-          view.isCustom,
-          translatedObjectLabel,
-          context.req.locale,
-        );
-      }
+  // The object label is resolved against the object's own application, which is
+  // not necessarily the view's -- a workspace-custom view can point at a
+  // standard object.
+  private async resolveObjectLabelPlural({
+    view,
+    context,
+    workspace,
+  }: {
+    view: ViewDTO;
+    context: { loaders: IDataloaders } & I18nContext;
+    workspace: WorkspaceEntity;
+  }): Promise<string | undefined> {
+    if (!view.name.includes(OBJECT_LABEL_PLURAL_PLACEHOLDER)) {
+      return undefined;
     }
 
-    return this.viewService.processViewNameWithTemplate(
-      view.name,
-      view.isCustom,
-      undefined,
-      context.req.locale,
-    );
+    const objectMetadata = await context.loaders.objectMetadataLoader.load({
+      objectMetadataId: view.objectMetadataId,
+      workspaceId: workspace.id,
+    });
+
+    if (!isDefined(objectMetadata)) {
+      return undefined;
+    }
+
+    return resolveEffectiveEntityProperty({
+      metadataName: 'objectMetadata',
+      baseValue: objectMetadata.labelPlural,
+      overrides: objectMetadata.overrides ?? undefined,
+      property: 'labelPlural',
+      i18nContext: await this.i18nService.buildEffectiveEntityI18nContext({
+        applicationId: objectMetadata.applicationId,
+        loaders: context.loaders,
+        locale: context.req.locale,
+        workspaceId: workspace.id,
+      }),
+    });
   }
 
   @Query(() => [ViewDTO])
@@ -195,6 +222,19 @@ export class ViewResolver {
     });
 
     return isDefined(deletedView);
+  }
+
+  @Mutation(() => ViewDTO)
+  @UseGuards(SettingsPermissionGuard(PermissionFlagType.LAYOUTS))
+  @UsePipes(ResolverValidationPipe)
+  async upsertViewWidget(
+    @Args('input') input: UpsertViewWidgetInput,
+    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+  ): Promise<ViewEntity> {
+    return await this.viewWidgetUpsertService.upsertViewWidget({
+      input,
+      workspaceId,
+    });
   }
 
   @ResolveField(() => [ViewFieldDTO])

@@ -3,11 +3,16 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { ClickHouseModule } from 'src/database/clickHouse/clickHouse.module';
+import { WorkspaceIteratorModule } from 'src/database/commands/command-runners/workspace-iterator.module';
+import { CoreEntityCacheModule } from 'src/engine/core-entity-cache/core-entity-cache.module';
 import { BillingGaugeService } from 'src/engine/core-modules/billing/billing-gauge.service';
+import { BillingSubscriptionItemResolver } from 'src/engine/core-modules/billing/billing-subscription-item.resolver';
 import { BillingResolver } from 'src/engine/core-modules/billing/billing.resolver';
 import { BillingSyncCustomerDataCommand } from 'src/engine/core-modules/billing/commands/billing-sync-customer-data.command';
 import { BillingSyncPlansDataCommand } from 'src/engine/core-modules/billing/commands/billing-sync-plans-data.command';
 import { BillingUpdateSubscriptionPriceCommand } from 'src/engine/core-modules/billing/commands/billing-update-subscription-price.command';
+import { BillingCreditGrantEntity } from 'src/engine/core-modules/billing/entities/billing-credit-grant.entity';
 import { BillingCustomerEntity } from 'src/engine/core-modules/billing/entities/billing-customer.entity';
 import { BillingEntitlementEntity } from 'src/engine/core-modules/billing/entities/billing-entitlement.entity';
 import { BillingMeterEntity } from 'src/engine/core-modules/billing/entities/billing-meter.entity';
@@ -16,9 +21,10 @@ import { BillingProductEntity } from 'src/engine/core-modules/billing/entities/b
 import { BillingSubscriptionItemEntity } from 'src/engine/core-modules/billing/entities/billing-subscription-item.entity';
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { BillingRestApiExceptionFilter } from 'src/engine/core-modules/billing/filters/billing-api-exception.filter';
-import { BillingUsageEventListener } from 'src/engine/core-modules/billing/listeners/billing-usage-event.listener';
 import { BillingWorkspaceMemberListener } from 'src/engine/core-modules/billing/listeners/billing-workspace-member.listener';
+import { BillingCreditGrantService } from 'src/engine/core-modules/billing/services/billing-credit-grant.service';
 import { BillingCreditRolloverService } from 'src/engine/core-modules/billing/services/billing-credit-rollover.service';
+import { BillingCreditService } from 'src/engine/core-modules/billing/services/billing-credit.service';
 import { BillingPlanService } from 'src/engine/core-modules/billing/services/billing-plan.service';
 import { BillingPortalWorkspaceService } from 'src/engine/core-modules/billing/services/billing-portal.workspace-service';
 import { BillingPriceService } from 'src/engine/core-modules/billing/services/billing-price.service';
@@ -27,10 +33,13 @@ import { BillingSubscriptionItemService } from 'src/engine/core-modules/billing/
 import { BillingSubscriptionPhaseService } from 'src/engine/core-modules/billing/services/billing-subscription-phase.service';
 import { BillingSubscriptionUpdateService } from 'src/engine/core-modules/billing/services/billing-subscription-update.service';
 import { BillingSubscriptionService } from 'src/engine/core-modules/billing/services/billing-subscription.service';
+import { BillingUsageCacheService } from 'src/engine/core-modules/billing/services/billing-usage-cache.service';
 import { BillingUsageService } from 'src/engine/core-modules/billing/services/billing-usage.service';
 import { BillingService } from 'src/engine/core-modules/billing/services/billing.service';
-import { MeteredCreditService } from 'src/engine/core-modules/billing/services/metered-credit.service';
+import { ResourceCreditService } from 'src/engine/core-modules/billing/services/resource-credit.service';
+import { WorkspaceCurrentBillingSubscriptionCacheService } from 'src/engine/core-modules/billing/services/workspace-current-billing-subscription-cache.service';
 import { StripeModule } from 'src/engine/core-modules/billing/stripe/stripe.module';
+import { CacheLockModule } from 'src/engine/core-modules/cache-lock/cache-lock.module';
 import { WorkspaceDomainsModule } from 'src/engine/core-modules/domain/workspace-domains/workspace-domains.module';
 import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { FeatureFlagEntity } from 'src/engine/core-modules/feature-flag/feature-flag.entity';
@@ -39,19 +48,20 @@ import { MessageQueueModule } from 'src/engine/core-modules/message-queue/messag
 import { MetricsModule } from 'src/engine/core-modules/metrics/metrics.module';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
-import { AiBillingModule } from 'src/engine/metadata-modules/ai/ai-billing/ai-billing.module';
-import { AiModelsModule } from 'src/engine/metadata-modules/ai/ai-models/ai-models.module';
-import { DataSourceModule } from 'src/engine/metadata-modules/data-source/data-source.module';
 import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permissions.module';
+import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/provide-workspace-scoped-repository';
+import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
 
 @Module({
   imports: [
+    CacheLockModule,
+    ClickHouseModule,
+    CoreEntityCacheModule,
     FeatureFlagModule,
     StripeModule,
     MessageQueueModule,
     PermissionsModule,
-    AiBillingModule,
-    AiModelsModule,
+    WorkspaceCacheModule,
     WorkspaceDomainsModule,
     TypeOrmModule.forFeature([
       BillingSubscriptionEntity,
@@ -61,13 +71,14 @@ import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permi
       BillingPriceEntity,
       BillingMeterEntity,
       BillingEntitlementEntity,
+      BillingCreditGrantEntity,
       WorkspaceEntity,
       UserWorkspaceEntity,
       FeatureFlagEntity,
     ]),
-    DataSourceModule,
     MetricsModule,
     EnterpriseModule,
+    WorkspaceIteratorModule,
   ],
   providers: [
     BillingSubscriptionService,
@@ -77,29 +88,41 @@ import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permi
     BillingProductService,
     BillingSubscriptionPhaseService,
     BillingResolver,
+    BillingSubscriptionItemResolver,
     BillingPlanService,
     BillingWorkspaceMemberListener,
-    BillingUsageEventListener,
     BillingService,
     BillingRestApiExceptionFilter,
     BillingSyncCustomerDataCommand,
     BillingUpdateSubscriptionPriceCommand,
     BillingSyncPlansDataCommand,
     BillingUsageService,
+    BillingUsageCacheService,
     BillingPriceService,
     BillingCreditRolloverService,
-    MeteredCreditService,
+    BillingCreditGrantService,
+    BillingCreditService,
+    ResourceCreditService,
     BillingGaugeService,
+    WorkspaceCurrentBillingSubscriptionCacheService,
+    provideWorkspaceScopedRepository(BillingEntitlementEntity),
+    provideWorkspaceScopedRepository(BillingCreditGrantEntity),
+    provideWorkspaceScopedRepository(BillingCustomerEntity),
+    provideWorkspaceScopedRepository(BillingSubscriptionEntity),
   ],
   exports: [
     BillingSubscriptionService,
     BillingSubscriptionUpdateService,
     BillingSubscriptionItemService,
+    BillingSubscriptionPhaseService,
     BillingPortalWorkspaceService,
     BillingService,
     BillingUsageService,
+    BillingUsageCacheService,
     BillingCreditRolloverService,
-    MeteredCreditService,
+    BillingCreditGrantService,
+    BillingCreditService,
+    ResourceCreditService,
   ],
 })
 export class BillingModule {}

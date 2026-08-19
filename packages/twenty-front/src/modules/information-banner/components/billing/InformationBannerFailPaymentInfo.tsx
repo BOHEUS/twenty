@@ -32,13 +32,16 @@ export const InformationBannerFailPaymentInfo = () => {
   return (
     <InformationBanner
       componentInstanceId="information-banner-fail-payment-info"
-      variant="danger"
+      color="danger"
+      variant="secondary"
       message={
         hasPermissionToUpdateBillingDetails
           ? t`Last payment failed. Please update your billing details.`
           : t`Last payment failed. Please contact your admin.`
       }
-      buttonTitle={hasPermissionToUpdateBillingDetails ? t`Update` : undefined}
+      buttonTitle={
+        hasPermissionToUpdateBillingDetails ? t`Update payment` : undefined
+      }
       buttonOnClick={() => openBillingPortal()}
       isButtonDisabled={loading || !isDefined(data)}
     />

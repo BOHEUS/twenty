@@ -9,8 +9,12 @@ import {
 
 describe('addWidgetToTab', () => {
   const mockWidget: PageLayoutWidget = {
+    isSystemSideEffect: false,
+    universalIdentifier: 'universal-identifier-mock',
     __typename: 'PageLayoutWidget',
     id: 'widget-1',
+    applicationId: '',
+    isActive: true,
     pageLayoutTabId: 'tab-1',
     title: 'Test Widget',
     type: WidgetType.GRAPH,
@@ -22,7 +26,6 @@ describe('addWidgetToTab', () => {
     },
     gridPosition: { row: 0, column: 0, rowSpan: 2, columnSpan: 2 },
     objectMetadataId: null,
-    isOverridden: false,
     createdAt: '2024-01-01T00:00:00Z',
     updatedAt: '2024-01-01T00:00:00Z',
     deletedAt: null,
@@ -30,25 +33,29 @@ describe('addWidgetToTab', () => {
 
   const mockTabs: PageLayoutTab[] = [
     {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       id: 'tab-1',
       applicationId: '',
+      isActive: true,
       title: 'Tab 1',
       position: 0,
       pageLayoutId: 'layout-1',
       widgets: [],
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
     },
     {
+      isSystemSideEffect: false,
+      universalIdentifier: 'universal-identifier-mock',
       id: 'tab-2',
       applicationId: '',
+      isActive: true,
       title: 'Tab 2',
       position: 1,
       pageLayoutId: 'layout-1',
       widgets: [],
-      isOverridden: false,
       createdAt: '2024-01-01T00:00:00Z',
       updatedAt: '2024-01-01T00:00:00Z',
       deletedAt: null,
@@ -73,7 +80,6 @@ describe('addWidgetToTab', () => {
   it('should handle non-existent tab ID gracefully', () => {
     const result = addWidgetToTab(mockTabs, 'non-existent-tab', mockWidget);
 
-    // All tabs should remain unchanged
     expect(result[0].widgets).toHaveLength(0);
     expect(result[1].widgets).toHaveLength(0);
   });

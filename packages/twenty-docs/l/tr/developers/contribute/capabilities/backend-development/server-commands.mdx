@@ -1,5 +1,6 @@
 ---
 title: Backend Komutları
+icon: terminal
 ---
 
 ## Faydalı Komutlar
@@ -10,7 +11,7 @@ Diğer herhangi bir klasörden `npx nx {command} twenty-server` (veya `npx nx ru
 ### İlk Kurulum
 
 ```
-npx nx database:reset twenty-server # veritabanını geliştirme tohum verileriyle kur
+npx nx database:reset twenty-server # setup the database with dev seeds
 ```
 
 ### Sunucuyu Başlatma
@@ -22,14 +23,14 @@ npx nx run twenty-server:start
 ### Kod Temizleme
 
 ```
-npx nx run twenty-server:lint # lint hatalarını düzeltmek için --fix'i geç
+npx nx run twenty-server:lint # pass --fix to fix lint errors
 ```
 
 ### Test
 
 ```
-npx nx run twenty-server:test:unit # birim testleri çalıştır
-npx nx run twenty-server:test:integration # entegrasyon testlerini çalıştır
+npx nx run twenty-server:test:unit          # run unit tests
+npx nx run twenty-server:test:integration   # run integration tests
 ```
 
 Not: Entegrasyon testlerini çalıştırmadan önce veritabanını sıfırlamanız gerekirse `npx nx run twenty-server:test:integration:with-db-reset` komutunu kullanabilirsiniz.
@@ -47,25 +48,8 @@ npx nx run twenty-server:database:reset
 #### Core/Metadata şemalarında (TypeORM) nesneler için
 
 ```bash
-npx nx run twenty-server:typeorm migration:generate src/database/typeorm/core/migrations/nameOfYourMigration -d src/database/typeorm/core/core.datasource.ts
+npx nx run twenty-server:database:migrate:generate
 ```
-
-#### Çalışma Alanı Nesneleri İçin
-
-Çalışma alanı için geçiş dosyaları yoktur; her çalışma alanı için otomatik olarak oluşturulur,
-veritabanında depolanır ve bu komut ile uygulanır.
-
-```bash
-npx nx run twenty-server:command workspace:sync-metadata -f
-```
-
-<Warning>
-
-Bu işlem veritabanını siler, migrasyonları ve tohumlamayı yeniden çalıştırır.
-
-Bu komutu çalıştırmadan önce saklamak istediğiniz verileri yedeklediğinizden emin olun.
-
-</Warning>
 
 ## Teknoloji Yığını
 
