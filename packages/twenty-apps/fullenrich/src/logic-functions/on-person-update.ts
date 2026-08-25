@@ -2,7 +2,7 @@ import {
   DatabaseEventPayload,
   defineLogicFunction,
   ObjectRecordUpdateEvent,
-} from 'twenty-sdk';
+} from 'twenty-sdk/define';
 import { fullEnrichRequest, twentyCompany, twentyPerson } from './shared/types';
 import { checkCompanyRequirements } from 'src/logic-functions/shared/check-company-requirements';
 import { checkPersonRequirements } from 'src/logic-functions/shared/check-person-requirements';

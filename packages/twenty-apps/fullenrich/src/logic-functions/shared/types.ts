@@ -1,18 +1,44 @@
 export type fullEnrichRequest = {
   name: string;
   webhook_url: string;
+  webhook_events?: {
+    contact_finished?: string;
+  };
   data: fullEnrichRequestData[];
 }
 
-export type fullEnrichRequestData = {
+export type fullEnrichEnrichField =
+  | 'contact.work_emails'
+  | 'contact.phones'
+  | 'contact.personal_emails';
+
+type fullEnrichRequestDataBase = {
+  enrich_fields: fullEnrichEnrichField[];
+  custom?: fullEnrichCustomProperties;
+}
+
+// FullEnrich accepts a contact identified either by name plus company, or by
+// its professional network URL alone
+type fullEnrichRequestDataFromName = fullEnrichRequestDataBase & {
   first_name: string;
   last_name: string;
-  domain: string;
-  company_name: string;
+  linkedin_url?: string;
+} & (
+    | { domain: string; company_name?: string }
+    | { domain?: string; company_name: string }
+  );
+
+type fullEnrichRequestDataFromLinkedin = fullEnrichRequestDataBase & {
   linkedin_url: string;
-  enrich_fields: string[];
-  custom: fullEnrichCustomProperties;
+  first_name?: string;
+  last_name?: string;
+  domain?: string;
+  company_name?: string;
 }
+
+export type fullEnrichRequestData =
+  | fullEnrichRequestDataFromName
+  | fullEnrichRequestDataFromLinkedin;
 
 export type fullEnrichCustomProperties = {
   companyId: string;
@@ -95,14 +121,13 @@ export type EnrichmentResponse = {
 
 export type ContactData = {
   input: ContactInput;
-  custom: fullEnrichCustomProperties;
-  contact_info: ContactInfo;
-  profile: Profile;
+  custom?: fullEnrichCustomProperties;
+  contact_info?: ContactInfo;
+  profile?: Profile;
 };
 
 export type ContactInput = {
   professional_network_url?: string;
-  linkedin_url?: string;
   first_name?: string;
   last_name?: string;
   full_name?: string;
@@ -121,7 +146,12 @@ export type ContactInfo = {
 
 export type EmailInfo = {
   email: string;
-  status: 'DELIVERABLE' | 'HIGH_PROBABILITY' | 'CATCH_ALL' | 'INVALID';
+  status:
+    | 'DELIVERABLE'
+    | 'HIGH_PROBABILITY'
+    | 'CATCH_ALL'
+    | 'INVALID'
+    | 'INVALID_DOMAIN';
 };
 
 export type PhoneInfo = {
@@ -134,33 +164,40 @@ export type Profile = {
   full_name: string;
   first_name: string;
   last_name: string;
-  headline?: string;
+  headline: string;
   description?: string;
-  location?: Location;
+  location: Location;
   social_profiles?: SocialProfiles;
-  educations?: Education[];
-  languages?: Language[];
+  educations: Education[];
+  languages: Language[];
   skills?: string[];
   employment?: Employment;
 };
 
 export type Location = {
-  country?: string;
-  country_code?: string;
-  city?: string;
-  region?: string;
+  country: string;
+  country_code: string;
+  city: string;
+  region: string;
 };
 
 export type Education = {
   school_name: string;
-  degree?: string;
-  start_at?: string;
-  end_at?: string;
+  degree: string;
+  start_at: string;
+  end_at: string;
 };
+
+export type LanguageProficiency =
+  | 'NATIVE_OR_BILINGUAL'
+  | 'FULL_PROFESSIONAL'
+  | 'PROFESSIONAL_WORKING'
+  | 'LIMITED_WORKING'
+  | 'ELEMENTARY';
 
 export type Language = {
   language: string;
-  proficiency?: string;
+  proficiency: LanguageProficiency;
 };
 
 export type Employment = {
@@ -170,11 +207,18 @@ export type Employment = {
 
 export type JobPosition = {
   title: string;
+  seniority?: string;
+  job_functions?: JobFunction[];
   description?: string;
   company: Company;
   is_current: boolean;
   start_at?: string;
   end_at?: string;
+};
+
+export type JobFunction = {
+  function: string;
+  sub_function: string;
 };
 
 export type Company = {
@@ -185,14 +229,14 @@ export type Company = {
   description?: string;
   year_founded?: number;
   headcount?: number;
-  headcount_range?: string;
+  headcount_range?: HeadCountRange;
   company_type?: string;
   locations?: {
     headquarters?: CompanyLocation;
-    offices?: CompanyLocation[] | null;
+    offices?: OfficeLocation[] | null;
   };
   social_profiles?: SocialProfiles;
-  specialties?: string | null;
+  specialties?: string[] | null;
   industry?: {
     main_industry?: string;
   };
@@ -208,9 +252,13 @@ export type CompanyLocation = {
   country_code?: string;
 };
 
+export type OfficeLocation = {
+  line1?: string;
+  line2?: string;
+};
+
 export type SocialProfiles = {
   professional_network?: SocialProfile;
-  linkedin?: SocialProfile;
 };
 
 export type SocialProfile = {
@@ -219,3 +267,19 @@ export type SocialProfile = {
   handle: string;
   connection_count?: number;
 };
+
+export type HeadCountRange =
+  | '1-10'
+  | '11-50'
+  | '51-200'
+  | '201-500'
+  | '501-1000'
+  | '1001-5000'
+  | '5001-10000'
+  | '10001+';
+
+export type fullEnrichTwentyCompany = Omit<twentyCompany, "id">;
+
+// FullEnrich may return no profile at all, so person fields are only sent when
+// enrichment actually produced them
+export type fullEnrichTwentyPerson = Partial<Omit<twentyPerson, "id">>;
