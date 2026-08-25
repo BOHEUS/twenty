@@ -162,6 +162,7 @@ export { MessageChannelType } from './MessageChannelType';
 export { MessageChannelVisibility } from './MessageChannelVisibility';
 export { MessageFolderImportPolicy } from './MessageFolderImportPolicy';
 export { MessageFolderPendingSyncAction } from './MessageFolderPendingSyncAction';
+export { MessageHandleKind } from './MessageHandleKind';
 export { MessageParticipantRole } from './MessageParticipantRole';
 export type { MetadataGqlOperationSignature } from './MetadataGqlOperationSignature';
 export { MetadataWritability } from './MetadataWritability';

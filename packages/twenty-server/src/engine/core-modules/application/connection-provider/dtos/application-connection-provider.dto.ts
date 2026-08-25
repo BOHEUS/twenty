@@ -16,6 +16,36 @@ export class ApplicationConnectionProviderOAuthConfigDTO {
   isClientCredentialsConfigured: boolean;
 }
 
+@ObjectType('ApplicationConnectionProviderApiKeyField')
+export class ApplicationConnectionProviderApiKeyFieldDTO {
+  @Field()
+  key: string;
+
+  @Field()
+  label: string;
+
+  @Field()
+  isSecret: boolean;
+
+  @Field()
+  isRequired: boolean;
+
+  @Field(() => String, { nullable: true })
+  placeholder: string | null;
+}
+
+@ObjectType('ApplicationConnectionProviderApiKeyConfig')
+export class ApplicationConnectionProviderApiKeyConfigDTO {
+  @Field(() => [ApplicationConnectionProviderApiKeyFieldDTO])
+  fields: ApplicationConnectionProviderApiKeyFieldDTO[];
+
+  @Field()
+  tokenFieldKey: string;
+
+  @Field(() => String, { nullable: true })
+  handleFieldKey: string | null;
+}
+
 @ObjectType('ApplicationConnectionProvider')
 export class ApplicationConnectionProviderDTO {
   @Field(() => UUIDScalarType)
@@ -37,4 +67,7 @@ export class ApplicationConnectionProviderDTO {
 
   @Field(() => ApplicationConnectionProviderOAuthConfigDTO, { nullable: true })
   oauth: ApplicationConnectionProviderOAuthConfigDTO | null;
+
+  @Field(() => ApplicationConnectionProviderApiKeyConfigDTO, { nullable: true })
+  apiKey: ApplicationConnectionProviderApiKeyConfigDTO | null;
 }

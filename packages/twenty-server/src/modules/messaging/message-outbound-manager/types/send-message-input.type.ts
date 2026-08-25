@@ -15,4 +15,7 @@ export type SendMessageInput = {
   inReplyTo?: string;
   threadExternalId?: string;
   references?: string[];
+  // Only app channels read this: one connected account fronts several of them,
+  // so the sender is a channel rather than the account.
+  messageChannelId?: string;
 };

@@ -1,3 +1,4 @@
+import { MessageHandleKind } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
 import { type ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
@@ -39,13 +40,26 @@ export function filterOutContactsThatBelongToSelfOrWorkspaceMembers(
   const isDifferentDomain = (contact: Contact, selfDomainName: string) =>
     getDomainNameFromHandle(contact.handle).toLowerCase() !== selfDomainName;
 
-  return contacts.filter(
-    (contact) =>
+  return contacts.filter((contact) => {
+    if (allHandles.includes(contact.handle.toLowerCase())) {
+      return false;
+    }
+
+    // Only an email carries a company domain. A phone number parses to an empty
+    // one, which reads as "same domain as us" and would drop every contact.
+    if (
+      (contact.handleKind ?? MessageHandleKind.EMAIL) !==
+      MessageHandleKind.EMAIL
+    ) {
+      return true;
+    }
+
+    return (
       (isDifferentDomain(contact, selfDomainName) ||
         !isWorkDomain(selfDomainName) ||
         isInternalMessagesImportEnabled) &&
       // @ts-expect-error legacy noImplicitAny
-      !workspaceMembersMap[contact.handle.toLowerCase()] &&
-      !allHandles.includes(contact.handle.toLowerCase()),
-  );
+      !workspaceMembersMap[contact.handle.toLowerCase()]
+    );
+  });
 }

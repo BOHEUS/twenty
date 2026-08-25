@@ -14,6 +14,7 @@ import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decora
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
 import { WorkspaceEventBatch } from 'src/engine/workspace-event-emitter/types/workspace-event-batch.type';
+import { buildPhoneHandleCandidates } from 'src/modules/match-participant/utils/build-phone-handle-candidates.util';
 import {
   MessageParticipantMatchParticipantJob,
   type MessageParticipantMatchParticipantJobData,
@@ -50,6 +51,10 @@ export class MessageParticipantPersonListener {
       ])
       .filter(isDefined);
 
+    const personPhoneHandles = payload.events.flatMap((eventPayload) =>
+      buildPhoneHandleCandidates(eventPayload.properties.after.phones),
+    );
+
     await this.messageQueueService.add<MessageParticipantMatchParticipantJobData>(
       MessageParticipantMatchParticipantJob.name,
       {
@@ -57,6 +62,7 @@ export class MessageParticipantPersonListener {
         participantMatching: {
           personIds,
           personEmails,
+          personPhoneHandles,
           workspaceMemberIds: [],
         },
       },
@@ -76,9 +82,20 @@ export class MessageParticipantPersonListener {
       ).includes('emails'),
     );
 
-    const personIds = personWithEmails.map(
-      (eventPayload) => eventPayload.recordId,
+    const personWithPhones = payload.events.filter((eventPayload) =>
+      objectRecordUpdateEventChangedProperties(
+        eventPayload.properties.before,
+        eventPayload.properties.after,
+      ).includes('phones'),
     );
+
+    const personIds = [
+      ...new Set(
+        [...personWithEmails, ...personWithPhones].map(
+          (eventPayload) => eventPayload.recordId,
+        ),
+      ),
+    ];
     const personEmails = personWithEmails
       .flatMap((eventPayload) => [
         eventPayload.properties.after.emails.primaryEmail,
@@ -87,6 +104,13 @@ export class MessageParticipantPersonListener {
       ])
       .filter(isDefined);
 
+    // Both sides: the handles the person just stopped carrying have to be
+    // unmatched, and the ones they now carry have to be matched.
+    const personPhoneHandles = personWithPhones.flatMap((eventPayload) => [
+      ...buildPhoneHandleCandidates(eventPayload.properties.before.phones),
+      ...buildPhoneHandleCandidates(eventPayload.properties.after.phones),
+    ]);
+
     await this.messageQueueService.add<MessageParticipantMatchParticipantJobData>(
       MessageParticipantMatchParticipantJob.name,
       {
@@ -94,6 +118,7 @@ export class MessageParticipantPersonListener {
         participantMatching: {
           personIds,
           personEmails,
+          personPhoneHandles,
           workspaceMemberIds: [],
         },
       },
@@ -125,6 +150,9 @@ export class MessageParticipantPersonListener {
                 []) as string[]),
             ])
             .filter(isDefined),
+          personPhoneHandles: payload.events.flatMap((eventPayload) =>
+            buildPhoneHandleCandidates(eventPayload.properties.before.phones),
+          ),
           workspaceMemberIds: [],
         },
       },

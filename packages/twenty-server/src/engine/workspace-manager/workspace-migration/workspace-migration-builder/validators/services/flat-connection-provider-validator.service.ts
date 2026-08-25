@@ -79,6 +79,47 @@ export class FlatConnectionProviderValidatorService {
       }
     }
 
+    if (flatConnectionProvider.type === 'apiKey') {
+      const apiKeyConfig = flatConnectionProvider.apiKeyConfig;
+
+      if (!isDefined(apiKeyConfig)) {
+        validationResult.errors.push({
+          code: ConnectionProviderExceptionCode.INVALID_CONNECTION_PROVIDER_INPUT,
+          message: t`Connection provider with type 'apiKey' is missing apiKeyConfig`,
+          userFriendlyMessage: msg`API key connection provider is missing its apiKey config block`,
+        });
+      } else {
+        if (apiKeyConfig.fields.length === 0) {
+          validationResult.errors.push({
+            code: ConnectionProviderExceptionCode.INVALID_CONNECTION_PROVIDER_INPUT,
+            message: t`Connection provider apiKeyConfig.fields must not be empty`,
+            userFriendlyMessage: msg`API key connection provider must declare at least one field`,
+          });
+        }
+
+        const fieldKeys = apiKeyConfig.fields.map((field) => field.key);
+
+        if (!fieldKeys.includes(apiKeyConfig.tokenFieldKey)) {
+          validationResult.errors.push({
+            code: ConnectionProviderExceptionCode.INVALID_CONNECTION_PROVIDER_INPUT,
+            message: t`Connection provider apiKeyConfig.tokenFieldKey must name one of its fields`,
+            userFriendlyMessage: msg`API key tokenFieldKey must name one of the declared fields`,
+          });
+        }
+
+        if (
+          isDefined(apiKeyConfig.handleFieldKey) &&
+          !fieldKeys.includes(apiKeyConfig.handleFieldKey)
+        ) {
+          validationResult.errors.push({
+            code: ConnectionProviderExceptionCode.INVALID_CONNECTION_PROVIDER_INPUT,
+            message: t`Connection provider apiKeyConfig.handleFieldKey must name one of its fields`,
+            userFriendlyMessage: msg`API key handleFieldKey must name one of the declared fields`,
+          });
+        }
+      }
+    }
+
     const existingByName = Object.values(
       optimisticFlatConnectionProviderMaps.byUniversalIdentifier,
     ).find(

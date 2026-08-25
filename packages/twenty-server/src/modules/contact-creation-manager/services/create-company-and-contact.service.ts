@@ -4,13 +4,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { isNonEmptyString, isNull } from '@sniptt/guards';
 import chunk from 'lodash.chunk';
 import compact from 'lodash.compact';
+import uniqBy from 'lodash.uniqby';
 import {
   ConnectedAccountProvider,
   FieldActorSource,
   type FullNameMetadata,
+  MessageHandleKind,
+  type PhonesMetadata,
 } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
-import { type DeepPartial, type Repository } from 'typeorm';
+import { capitalize, isDefined } from 'twenty-shared/utils';
+import { In, IsNull, type DeepPartial, type Repository } from 'typeorm';
 import { v4 } from 'uuid';
 
 import { ExceptionHandlerService } from 'src/engine/core-modules/exception-handler/exception-handler.service';
@@ -22,6 +25,7 @@ import {
   TwentyORMExceptionCode,
 } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
+import { type WorkspaceRepository } from 'src/engine/twenty-orm/repository/workspace.repository';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { CONTACTS_CREATION_BATCH_SIZE } from 'src/modules/contact-creation-manager/constants/contacts-creation-batch-size.constant';
 import { CreateCompanyService } from 'src/modules/contact-creation-manager/services/create-company.service';
@@ -31,7 +35,13 @@ import { filterOutContactsThatBelongToSelfOrWorkspaceMembers } from 'src/modules
 import { getDomainNameFromHandle } from 'src/modules/contact-creation-manager/utils/get-domain-name-from-handle.util';
 import { getFirstNameAndLastNameFromHandleAndDisplayName } from 'src/modules/contact-creation-manager/utils/get-first-name-and-last-name-from-handle-and-display-name.util';
 import { getUniqueContactsAndHandles } from 'src/modules/contact-creation-manager/utils/get-unique-contacts-and-handles.util';
+import { getParsedNameFromDisplayName } from 'src/modules/contact-creation-manager/utils/get-parsed-name-from-display-name.util';
 import { addPersonEmailFiltersToQueryBuilder } from 'src/modules/match-participant/utils/add-person-email-filters-to-query-builder';
+import { addPersonPhoneFiltersToQueryBuilder } from 'src/modules/match-participant/utils/add-person-phone-filters-to-query-builder';
+import { findPersonByPrimaryOrAdditionalPhone } from 'src/modules/match-participant/utils/find-person-by-primary-or-additional-phone';
+import { findPersonIdsByRememberedHandles } from 'src/modules/match-participant/utils/find-person-ids-by-remembered-handles.util';
+import { type MessageParticipantWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-participant.workspace-entity';
+import { parsePhoneHandle } from 'src/modules/match-participant/utils/parse-phone-handle.util';
 import { PersonWorkspaceEntity } from 'src/modules/person/standard-objects/person.workspace-entity';
 import { WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
 import { computeDisplayName } from 'src/utils/compute-display-name';
@@ -102,12 +112,42 @@ export class CreateCompanyAndPersonService {
             workspace?.isInternalMessagesImportEnabled ?? false,
           );
 
+        const createdPeopleFromPhones =
+          await this.createPeopleFromPhoneContacts({
+            phoneContacts: peopleToCreateFromOtherCompanies.filter(
+              (contact) => contact.handleKind === MessageHandleKind.PHONE,
+            ),
+            personRepository,
+            workspaceId,
+            source,
+            connectedAccount,
+            accountOwner,
+          });
+
+        const createdPeopleFromExternalHandles =
+          await this.createPeopleFromExternalContacts({
+            externalContacts: peopleToCreateFromOtherCompanies.filter(
+              (contact) => contact.handleKind === MessageHandleKind.EXTERNAL,
+            ),
+            workspaceId,
+            source,
+            connectedAccount,
+            accountOwner,
+          });
+
         const { uniqueContacts, uniqueHandles } = getUniqueContactsAndHandles(
-          peopleToCreateFromOtherCompanies,
+          peopleToCreateFromOtherCompanies.filter(
+            (contact) =>
+              (contact.handleKind ?? MessageHandleKind.EMAIL) ===
+              MessageHandleKind.EMAIL,
+          ),
         );
 
         if (uniqueHandles.length === 0) {
-          return [];
+          return [
+            ...createdPeopleFromPhones,
+            ...createdPeopleFromExternalHandles,
+          ];
         }
 
         const queryBuilder = addPersonEmailFiltersToQueryBuilder({
@@ -174,7 +214,12 @@ export class CreateCompanyAndPersonService {
           workspaceId,
         );
 
-        return { ...createdPeople, ...restoredPeople };
+        return {
+          ...createdPeople,
+          ...restoredPeople,
+          ...createdPeopleFromPhones,
+          ...createdPeopleFromExternalHandles,
+        };
       },
       authContext,
     );
@@ -246,6 +291,231 @@ export class CreateCompanyAndPersonService {
         });
       }
     }
+  }
+
+  // An opaque handle has no person field to write it to, so the created person
+  // carries nothing but a name and the link back to the conversation is the
+  // participant's personId. That link has to be written here: nothing else
+  // would ever find this person again.
+  private async createPeopleFromExternalContacts({
+    externalContacts,
+    workspaceId,
+    source,
+    connectedAccount,
+    accountOwner,
+  }: {
+    externalContacts: Contact[];
+    workspaceId: string;
+    source: FieldActorSource;
+    connectedAccount: ConnectedAccountEntity;
+    accountOwner: WorkspaceMemberWorkspaceEntity | null;
+  }): Promise<DeepPartial<PersonWorkspaceEntity>[]> {
+    // A person with neither a name nor a matchable handle could never be told
+    // apart from any other, so an unnamed contact is left unmatched instead.
+    const namedContacts = uniqBy(
+      externalContacts.filter((contact) =>
+        isNonEmptyString(contact.displayName.trim()),
+      ),
+      (contact) => contact.handle,
+    );
+
+    if (namedContacts.length === 0) {
+      return [];
+    }
+
+    const participantRepository =
+      await this.globalWorkspaceOrmManager.getRepository<MessageParticipantWorkspaceEntity>(
+        workspaceId,
+        'messageParticipant',
+        { shouldBypassPermissionChecks: true },
+      );
+
+    const personIdByRememberedHandle = await findPersonIdsByRememberedHandles({
+      participantRepository,
+      handles: namedContacts.map((contact) => contact.handle),
+    });
+
+    const personIdByHandle = new Map(personIdByRememberedHandle);
+
+    const peopleToCreate: Partial<PersonWorkspaceEntity>[] = [];
+
+    for (const contact of namedContacts) {
+      if (personIdByHandle.has(contact.handle)) {
+        continue;
+      }
+
+      const { firstName, lastName } = getParsedNameFromDisplayName(
+        contact.displayName,
+      );
+
+      const personId = v4();
+
+      personIdByHandle.set(contact.handle, personId);
+
+      peopleToCreate.push({
+        id: personId,
+        name: {
+          firstName: capitalize(firstName),
+          lastName: capitalize(lastName),
+        },
+        createdBy: {
+          source,
+          workspaceMemberId: accountOwner?.id ?? null,
+          name: computeDisplayName(accountOwner?.name),
+          context: {
+            provider: connectedAccount.provider,
+          },
+        },
+      });
+    }
+
+    const createdPeople = await this.createPersonService.createPeople(
+      peopleToCreate,
+      workspaceId,
+    );
+
+    await this.linkExternalParticipantsToPeople({
+      participantRepository,
+      personIdByHandle,
+    });
+
+    return createdPeople;
+  }
+
+  private async linkExternalParticipantsToPeople({
+    participantRepository,
+    personIdByHandle,
+  }: {
+    participantRepository: WorkspaceRepository<MessageParticipantWorkspaceEntity>;
+    personIdByHandle: Map<string, string>;
+  }): Promise<void> {
+    const unlinkedParticipants = await participantRepository.find({
+      where: {
+        handle: In([...personIdByHandle.keys()]),
+        handleKind: MessageHandleKind.EXTERNAL,
+        personId: IsNull(),
+      },
+    });
+
+    const participantsToLink = unlinkedParticipants.flatMap((participant) => {
+      const personId = isNonEmptyString(participant.handle)
+        ? personIdByHandle.get(participant.handle)
+        : undefined;
+
+      return isDefined(personId)
+        ? [{ criteria: participant.id, partialEntity: { personId } }]
+        : [];
+    });
+
+    if (participantsToLink.length === 0) {
+      return;
+    }
+
+    await participantRepository.updateMany(participantsToLink);
+  }
+
+  // Phones get their own pass rather than joining the email pipeline: there is
+  // no domain to infer a company from, and the stored phone is split across
+  // three columns so neither the lookup nor the write is shaped like an email.
+  private async createPeopleFromPhoneContacts({
+    phoneContacts,
+    personRepository,
+    workspaceId,
+    source,
+    connectedAccount,
+    accountOwner,
+  }: {
+    phoneContacts: Contact[];
+    personRepository: WorkspaceRepository<PersonWorkspaceEntity>;
+    workspaceId: string;
+    source: FieldActorSource;
+    connectedAccount: ConnectedAccountEntity;
+    accountOwner: WorkspaceMemberWorkspaceEntity | null;
+  }): Promise<DeepPartial<PersonWorkspaceEntity>[]> {
+    const parsedContacts = phoneContacts.flatMap((contact) => {
+      const parsedPhone = parsePhoneHandle(contact.handle);
+
+      return isDefined(parsedPhone) ? [{ contact, parsedPhone }] : [];
+    });
+
+    const uniqueParsedContacts = uniqBy(
+      parsedContacts,
+      ({ parsedPhone }) =>
+        `${parsedPhone.callingCode}${parsedPhone.nationalNumber}`,
+    );
+
+    if (uniqueParsedContacts.length === 0) {
+      return [];
+    }
+
+    const alreadyCreatedPeople = await addPersonPhoneFiltersToQueryBuilder({
+      queryBuilder: personRepository.createQueryBuilder('person'),
+      phones: uniqueParsedContacts.map(({ contact }) => contact.handle),
+    })
+      .orderBy('person.createdAt', 'ASC')
+      .withDeleted()
+      .getMany();
+
+    const peopleToCreate: Partial<PersonWorkspaceEntity>[] = [];
+    const peopleToRestore: { personId: string; companyId: undefined }[] = [];
+
+    for (const { contact, parsedPhone } of uniqueParsedContacts) {
+      const existingPerson = findPersonByPrimaryOrAdditionalPhone({
+        people: alreadyCreatedPeople,
+        phone: contact.handle,
+      });
+
+      if (isDefined(existingPerson)) {
+        if (!isNull(existingPerson.deletedAt)) {
+          peopleToRestore.push({
+            personId: existingPerson.id,
+            companyId: undefined,
+          });
+        }
+
+        continue;
+      }
+
+      const { firstName, lastName } = getParsedNameFromDisplayName(
+        contact.displayName,
+      );
+
+      peopleToCreate.push({
+        id: v4(),
+        // The country cannot always be inferred from a calling code, and the
+        // column is nullable, so the cast stands in for a partial composite.
+        phones: {
+          primaryPhoneNumber: parsedPhone.nationalNumber,
+          primaryPhoneCallingCode: parsedPhone.callingCode,
+          primaryPhoneCountryCode: parsedPhone.countryCode,
+          additionalPhones: null,
+        } as PhonesMetadata,
+        name: {
+          firstName: capitalize(firstName),
+          lastName: capitalize(lastName),
+        },
+        createdBy: {
+          source,
+          workspaceMemberId: accountOwner?.id ?? null,
+          name: computeDisplayName(accountOwner?.name),
+          context: {
+            provider: connectedAccount.provider,
+          },
+        },
+      });
+    }
+
+    const createdPeople = await this.createPersonService.createPeople(
+      peopleToCreate,
+      workspaceId,
+    );
+
+    const restoredPeople = await this.createPersonService.restorePeople(
+      peopleToRestore,
+      workspaceId,
+    );
+
+    return [...createdPeople, ...restoredPeople];
   }
 
   computeContactsThatNeedPersonCreateAndRestoreAndWorkDomainNamesToCreate(

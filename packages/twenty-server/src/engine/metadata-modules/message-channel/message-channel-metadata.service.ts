@@ -15,6 +15,7 @@ import {
   MessageChannelSyncStatus,
   MessageChannelType,
   MessageChannelVisibility,
+  MessageHandleKind,
 } from 'twenty-shared/types';
 
 import { EmailingDomainDriver } from 'src/engine/core-modules/emailing-domain/drivers/types/emailing-domain-driver.type';
@@ -443,6 +444,129 @@ export class MessageChannelMetadataService {
     }
 
     return messageChannel;
+  }
+
+  async createAppMessageChannel({
+    applicationId,
+    connectedAccountId,
+    handle,
+    handleKind,
+    displayName,
+    externalChannelId,
+    visibility,
+    contactAutoCreationPolicy,
+    workspaceId,
+  }: {
+    applicationId: string;
+    connectedAccountId: string;
+    handle: string;
+    handleKind?: MessageHandleKind;
+    displayName?: string;
+    externalChannelId?: string;
+    visibility?: MessageChannelVisibility;
+    contactAutoCreationPolicy?: MessageChannelContactAutoCreationPolicy;
+    workspaceId: string;
+  }): Promise<MessageChannelDTO> {
+    await this.verifyConnectedAccountBelongsToApplication({
+      applicationId,
+      connectedAccountId,
+      workspaceId,
+    });
+
+    const trimmedDisplayName = displayName?.trim();
+
+    return this.create({
+      workspaceId,
+      handle,
+      handleKind: handleKind ?? MessageHandleKind.EXTERNAL,
+      connectedAccountId,
+      displayName: isNonEmptyString(trimmedDisplayName)
+        ? trimmedDisplayName
+        : null,
+      externalChannelId: externalChannelId ?? null,
+      type: MessageChannelType.CHAT,
+      // Both defaults are the opposite of the email ones: a chat channel is
+      // company-wide rather than one member's, and an inbound message from an
+      // unknown handle is exactly the contact worth creating.
+      visibility: visibility ?? MessageChannelVisibility.SHARE_EVERYTHING,
+      contactAutoCreationPolicy:
+        contactAutoCreationPolicy ??
+        MessageChannelContactAutoCreationPolicy.SENT_AND_RECEIVED,
+      isContactAutoCreationEnabled: true,
+      syncStage: MessageChannelSyncStage.MESSAGE_LIST_FETCH_PENDING,
+      syncStatus: MessageChannelSyncStatus.ACTIVE,
+      // The sync crons skip this channel on type, not on the flag: it is fed
+      // by the app's webhook and has no import driver to poll with.
+      isSyncEnabled: true,
+      // Both filters read the handle as an email address, which a phone number
+      // or an opaque provider id is not.
+      excludeGroupEmails: false,
+      excludeNonProfessionalEmails: false,
+      pendingGroupEmailsAction: MessageChannelPendingGroupEmailsAction.NONE,
+    });
+  }
+
+  async deleteAppMessageChannel({
+    applicationId,
+    id,
+    workspaceId,
+  }: {
+    applicationId: string;
+    id: string;
+    workspaceId: string;
+  }): Promise<MessageChannelDTO> {
+    const messageChannel = await this.repository.findOne({
+      where: { id, workspaceId },
+    });
+
+    if (!isDefined(messageChannel)) {
+      throw new MessageChannelException(
+        `Message channel ${id} not found`,
+        MessageChannelExceptionCode.MESSAGE_CHANNEL_NOT_FOUND,
+      );
+    }
+
+    if (messageChannel.type !== MessageChannelType.CHAT) {
+      throw new MessageChannelException(
+        `Message channel ${id} is not a chat channel`,
+        MessageChannelExceptionCode.INVALID_MESSAGE_CHANNEL_INPUT,
+      );
+    }
+
+    await this.verifyConnectedAccountBelongsToApplication({
+      applicationId,
+      connectedAccountId: messageChannel.connectedAccountId,
+      workspaceId,
+    });
+
+    // The account is left alone: it fronts every other channel the app created.
+    return this.delete({ id, workspaceId });
+  }
+
+  private async verifyConnectedAccountBelongsToApplication({
+    applicationId,
+    connectedAccountId,
+    workspaceId,
+  }: {
+    applicationId: string;
+    connectedAccountId: string;
+    workspaceId: string;
+  }): Promise<void> {
+    const connectedAccount =
+      await this.connectedAccountMetadataService.findById({
+        id: connectedAccountId,
+        workspaceId,
+      });
+
+    if (
+      !isDefined(connectedAccount) ||
+      connectedAccount.applicationId !== applicationId
+    ) {
+      throw new MessageChannelException(
+        `Connected account ${connectedAccountId} is not owned by application ${applicationId}`,
+        MessageChannelExceptionCode.MESSAGE_CHANNEL_OWNERSHIP_VIOLATION,
+      );
+    }
   }
 
   private async hasEmailGroupChannelForDomain(

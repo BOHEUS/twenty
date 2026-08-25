@@ -957,6 +957,9 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
   },
   "message": {
     "fields": {
+      "attachments": {
+        "universalIdentifier": "c7879595-aa4d-4d6e-b8cc-ca8ced714d38",
+      },
       "createdAt": {
         "universalIdentifier": "74d0ddc0-4dbe-5c29-8d4a-2e512c1e66ab",
       },
@@ -1532,6 +1535,9 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
       "handle": {
         "universalIdentifier": "20202020-2456-464e-b422-b965a4db4a0b",
       },
+      "handleKind": {
+        "universalIdentifier": "c36e0135-2ae8-41f7-bc3b-d418a21b3dc7",
+      },
       "id": {
         "universalIdentifier": "f1a22964-745b-5e1e-af62-f21cc78f9572",
       },
@@ -1564,6 +1570,9 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
       },
     },
     "indexes": {
+      "handleAndHandleKindIndex": {
+        "universalIdentifier": "a96d61d1-10a7-4dc3-8815-9f279ff03c22",
+      },
       "messageCampaignIdIndex": {
         "universalIdentifier": "e9bcdd77-cc8b-4532-833c-124dfdc8e5ff",
       },

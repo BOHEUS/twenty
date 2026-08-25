@@ -12,28 +12,34 @@ import { resolveOutboundThreadExternalId } from 'src/modules/messaging/message-o
 export const formatSentMessage = (
   input: PersistSentMessageInput,
 ): MessageWithParticipants => {
-  const senderHandle = input.connectedAccount.handle ?? '';
+  const senderHandle =
+    input.senderHandle ?? input.connectedAccount.handle ?? '';
+  const handleKind = input.handleKind;
 
   const participants: MessageParticipant[] = [
     {
       role: MessageParticipantRole.FROM,
       handle: senderHandle,
       displayName: senderHandle,
+      handleKind,
     },
     ...input.recipients.to.map((handle) => ({
       role: MessageParticipantRole.TO,
       handle,
       displayName: handle,
+      handleKind,
     })),
     ...input.recipients.cc.map((handle) => ({
       role: MessageParticipantRole.CC,
       handle,
       displayName: handle,
+      handleKind,
     })),
     ...input.recipients.bcc.map((handle) => ({
       role: MessageParticipantRole.BCC,
       handle,
       displayName: handle,
+      handleKind,
     })),
   ];
 

@@ -21,9 +21,11 @@ import {
   MessageChannelType,
   MessageChannelVisibility,
   MessageFolderImportPolicy,
+  type MessageHandleKind,
   WebhookSubscriptionStatus,
 } from 'twenty-shared/types';
 
+import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
 import { ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
 import { type MessageFolderEntity } from 'src/engine/metadata-modules/message-folder/entities/message-folder.entity';
 import { WorkspaceRelatedEntity } from 'src/engine/workspace-manager/types/workspace-related-entity';
@@ -59,6 +61,9 @@ registerEnumType(MessageChannelPendingGroupEmailsAction, {
   ['webhookSubscriptionExternalId'],
   { where: '"webhookSubscriptionExternalId" IS NOT NULL' },
 )
+@Index('IDX_MESSAGE_CHANNEL_EXTERNAL_CHANNEL_ID', ['externalChannelId'], {
+  where: '"externalChannelId" IS NOT NULL',
+})
 export class MessageChannelEntity extends WorkspaceRelatedEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -72,6 +77,15 @@ export class MessageChannelEntity extends WorkspaceRelatedEntity {
 
   @Column({ type: 'varchar', nullable: false })
   handle: string;
+
+  // What kind of identifier every handle on this channel is. Only chat channels
+  // set it; an email channel's handles are addresses by construction.
+  @Column({ type: 'varchar', nullable: true })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.34.0_AddAppConnectionAndChatColumnsFastInstanceCommand_1787706420000',
+  })
+  handleKind: MessageHandleKind | null;
 
   @Column({ type: 'varchar', nullable: true })
   displayName: string | null;
@@ -163,6 +177,12 @@ export class MessageChannelEntity extends WorkspaceRelatedEntity {
 
   @Column({ type: 'timestamptz', nullable: true })
   webhookSubscriptionExpiresAt: Date | null;
+
+  // The provider's own id for this channel (a WhatsApp phone_number_id, a bot
+  // id). One connected account fronts many of them, and the inbound webhook
+  // resolver looks a channel up by it on every event.
+  @Column({ type: 'varchar', nullable: true })
+  externalChannelId: string | null;
 
   @Column({ type: 'uuid', nullable: false })
   connectedAccountId: string;

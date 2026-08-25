@@ -52,6 +52,7 @@ import { MessagingMessageService } from 'src/modules/messaging/message-import-ma
 import { MessagingMessagesImportService } from 'src/modules/messaging/message-import-manager/services/messaging-messages-import.service';
 import { MessagingProcessFolderActionsService } from 'src/modules/messaging/message-import-manager/services/messaging-process-folder-actions.service';
 import { MessagingProcessGroupEmailActionsService } from 'src/modules/messaging/message-import-manager/services/messaging-process-group-email-actions.service';
+import { MessagingIngestService } from 'src/modules/messaging/message-import-manager/services/messaging-ingest.service';
 import { MessagingSaveMessagesAndEnqueueContactCreationService } from 'src/modules/messaging/message-import-manager/services/messaging-save-messages-and-enqueue-contact-creation.service';
 import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/provide-workspace-scoped-repository';
 import { MessageParticipantManagerModule } from 'src/modules/messaging/message-participant-manager/message-participant-manager.module';
@@ -107,6 +108,7 @@ import { MessagingMonitoringModule } from 'src/modules/messaging/monitoring/mess
     MessagingMessageListFetchService,
     MessagingMessagesImportService,
     MessagingSaveMessagesAndEnqueueContactCreationService,
+    MessagingIngestService,
     MessagingGetMessageListService,
     MessagingGetMessagesService,
     MessageImportExceptionHandlerService,
@@ -127,6 +129,7 @@ import { MessagingMonitoringModule } from 'src/modules/messaging/monitoring/mess
     InboundEmailImportService,
     MessagingSaveMessagesAndEnqueueContactCreationService,
     MessagingMessagesImportService,
+    MessagingIngestService,
   ],
 })
 export class MessagingImportManagerModule {}

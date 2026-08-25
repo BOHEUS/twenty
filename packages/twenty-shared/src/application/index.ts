@@ -8,6 +8,10 @@
  */
 
 export type { AgentManifest } from './agentManifestType';
+export type {
+  ApiKeyConnectionProviderField,
+  ApiKeyConnectionProviderConfig,
+} from './apiKeyConnectionProviderConfigType';
 export type { AppConnection } from './appConnectionType';
 export type { AppKeyValueScope } from './appKeyValueScopeType';
 export type { AppKeyValue } from './appKeyValueType';
@@ -151,6 +155,10 @@ export type { ServerRouteDispatchResult } from './serverRouteDispatchResultType'
 export type { ServerRouteTriggerSettings } from './serverRouteTriggerSettingsType';
 export type { SettingsFrontComponentApplicationManifest } from './settingsFrontComponentApplicationType';
 export type { SkillManifest } from './skillManifestType';
+export type {
+  StoredApiKeyConnectionProviderField,
+  StoredApiKeyConnectionProviderConfig,
+} from './storedApiKeyConnectionProviderConfigType';
 export type { StoredOAuthConnectionProviderConfig } from './storedOAuthConnectionProviderConfigType';
 export type { SyncableEntityOptions } from './syncableEntityOptionsType';
 export type { ToolTriggerSettings } from './toolTriggerSettingsType';

@@ -3,6 +3,7 @@ import { i18nLabel } from 'src/engine/workspace-manager/twenty-standard-applicat
 import {
   DateDisplayFormat,
   FieldMetadataType,
+  MessageHandleKind,
   MessageParticipantRole,
   RelationOnDeleteAction,
   RelationType,
@@ -320,6 +321,61 @@ export const buildMessageParticipantStandardFlatFieldMetadatas = ({
       icon: 'IconAt',
       isNullable: true,
       isUIEditable: false,
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
+  handleKind: createStandardFieldFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      fieldName: 'handleKind',
+      type: FieldMetadataType.SELECT,
+      label: i18nLabel(
+        msg({ message: `Handle Kind`, context: 'fieldMetadata.label' }),
+      ),
+      description: i18nLabel(
+        msg({
+          message: `What kind of identifier the handle is`,
+          context: 'fieldMetadata.description',
+        }),
+      ),
+      icon: 'IconIdBadge2',
+      isSystem: true,
+      isNullable: false,
+      isUIEditable: false,
+      defaultValue: `'${MessageHandleKind.EMAIL}'`,
+      options: [
+        {
+          id: '38df04d3-44a0-4ea1-8de6-0623e0e15bf1',
+          value: MessageHandleKind.EMAIL,
+          label: i18nLabel(
+            msg({ message: `Email`, context: 'fieldMetadata.label' }),
+          ),
+          position: 0,
+          color: 'blue',
+        },
+        {
+          id: '90758bab-9dd0-4e99-937b-3c601b3a3e81',
+          value: MessageHandleKind.PHONE,
+          label: i18nLabel(
+            msg({ message: `Phone`, context: 'fieldMetadata.label' }),
+          ),
+          position: 1,
+          color: 'green',
+        },
+        {
+          id: '6f105a0c-79ba-4a2d-a598-43e4c7821fc9',
+          value: MessageHandleKind.EXTERNAL,
+          label: i18nLabel(
+            msg({ message: `External`, context: 'fieldMetadata.label' }),
+          ),
+          position: 2,
+          color: 'orange',
+        },
+      ],
     },
     standardObjectMetadataRelatedEntityIds,
     dependencyFlatEntityMaps,

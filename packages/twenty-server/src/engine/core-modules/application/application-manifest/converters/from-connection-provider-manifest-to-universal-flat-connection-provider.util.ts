@@ -1,5 +1,6 @@
 import {
   type ConnectionProviderManifest,
+  type StoredApiKeyConnectionProviderConfig,
   type StoredOAuthConnectionProviderConfig,
 } from 'twenty-shared/application';
 
@@ -36,6 +37,22 @@ export const fromConnectionProviderManifestToUniversalFlatConnectionProvider =
           }
         : null;
 
+    const apiKeyConfig: StoredApiKeyConnectionProviderConfig | null =
+      connectionProviderManifest.type === 'apiKey'
+        ? {
+            fields: connectionProviderManifest.apiKey.fields.map((field) => ({
+              key: field.key,
+              label: field.label,
+              isSecret: field.isSecret ?? true,
+              isRequired: field.isRequired ?? true,
+              placeholder: field.placeholder ?? null,
+            })),
+            tokenFieldKey: connectionProviderManifest.apiKey.tokenFieldKey,
+            handleFieldKey:
+              connectionProviderManifest.apiKey.handleFieldKey ?? null,
+          }
+        : null;
+
     return {
       universalIdentifier: connectionProviderManifest.universalIdentifier,
       applicationUniversalIdentifier,
@@ -43,11 +60,15 @@ export const fromConnectionProviderManifestToUniversalFlatConnectionProvider =
       displayName: connectionProviderManifest.displayName,
       type: connectionProviderManifest.type,
       oauthConfig,
+      apiKeyConfig,
       onConnectLogicFunctionUniversalIdentifier:
         connectionProviderManifest.onConnectLogicFunction
           ?.universalIdentifier ?? null,
       onDisconnectLogicFunctionUniversalIdentifier:
         connectionProviderManifest.onDisconnectLogicFunction
+          ?.universalIdentifier ?? null,
+      onSendMessageLogicFunctionUniversalIdentifier:
+        connectionProviderManifest.onSendMessageLogicFunction
           ?.universalIdentifier ?? null,
       createdAt: now,
       updatedAt: now,

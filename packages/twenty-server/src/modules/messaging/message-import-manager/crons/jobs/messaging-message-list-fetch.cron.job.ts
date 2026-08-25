@@ -2,11 +2,10 @@ import { Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
-import { In, Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import {
   MessageChannelSyncStage,
-  MessageChannelType,
   WebhookSubscriptionStatus,
 } from 'twenty-shared/types';
 import { SentryCronMonitor } from 'src/engine/core-modules/cron/sentry-cron-monitor.decorator';
@@ -24,6 +23,7 @@ import {
 import { isLastSuccessfulSyncStale } from 'src/modules/connected-account/utils/is-last-successful-sync-stale.util';
 import { isThrottled } from 'src/modules/connected-account/utils/is-throttled';
 import { MessageChannelEntity } from 'src/engine/metadata-modules/message-channel/entities/message-channel.entity';
+import { POLLABLE_MESSAGE_CHANNEL_TYPES } from 'src/modules/messaging/common/constants/pollable-message-channel-types.constant';
 import { toIsoStringOrNull } from 'src/utils/date/toIsoStringOrNull';
 
 export const MESSAGING_MESSAGE_LIST_FETCH_CRON_PATTERN = '2-59/5 * * * *';
@@ -62,7 +62,7 @@ export class MessagingMessageListFetchCronJob {
               workspaceId: activeWorkspace.id,
               isSyncEnabled: true,
               syncStage: MessageChannelSyncStage.MESSAGE_LIST_FETCH_PENDING,
-              type: Not(MessageChannelType.EMAIL_GROUP),
+              type: In(POLLABLE_MESSAGE_CHANNEL_TYPES),
             },
           },
         );

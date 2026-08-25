@@ -64,4 +64,16 @@ export const buildMessageParticipantStandardFlatIndexMetadatas = ({
     twentyStandardApplicationId,
     now,
   }),
+  handleAndHandleKindIndex: createStandardIndexFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      indexName: 'handleAndHandleKindIndex',
+      relatedFieldNames: ['handle', 'handleKind'],
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
 });

@@ -1034,6 +1034,7 @@ msgstr "Attachment target"
 
 #. js-lingui-id: j81CIH
 #: src/engine/metadata-modules/object-metadata/constants/standard-relation-field-properties.constant.ts
+#: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-message-standard-flat-field-metadata.util.ts
 #: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-workflow-standard-flat-field-metadata.util.ts
 msgctxt "fieldMetadata.label"
 msgid "Attachments"
@@ -3193,6 +3194,12 @@ msgstr "Edit Layout"
 msgid "Either workflow version or front component is required."
 msgstr "Either workflow version or front component is required."
 
+#. js-lingui-id: kCAIZn
+#: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-message-participant-standard-flat-field-metadata.util.ts
+msgctxt "fieldMetadata.label"
+msgid "Email"
+msgstr "Email"
+
 #. js-lingui-id: BgYg6s
 #: src/engine/metadata-modules/page-layout-tab/constants/standard-page-layout-tab-titles.ts
 msgctxt "pageLayoutTab.title"
@@ -3572,6 +3579,12 @@ msgstr "Export to PDF"
 msgctxt "commandMenuItem.label"
 msgid "Export View"
 msgstr "Export View"
+
+#. js-lingui-id: sM5nlM
+#: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-message-participant-standard-flat-field-metadata.util.ts
+msgctxt "fieldMetadata.label"
+msgid "External"
+msgstr "External"
 
 #. js-lingui-id: jCBIuc
 #: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-call-recording-standard-flat-field-metadata.util.ts
@@ -4064,6 +4077,12 @@ msgctxt "pageLayoutWidget.title"
 msgid "Files"
 msgstr "Files"
 
+#. js-lingui-id: xz4d+o
+#: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-message-standard-flat-field-metadata.util.ts
+msgctxt "fieldMetadata.description"
+msgid "Files attached to the message"
+msgstr "Files attached to the message"
+
 #. js-lingui-id: psMxtB
 #: src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-files-flat-field-metadata.util.ts
 msgid "Files field is not supported for unique fields"
@@ -4464,6 +4483,12 @@ msgstr "Handle"
 #: src/modules/calendar/calendar-event-import-manager/drivers/exceptions/calendar-event-import-driver.exception.ts
 msgid "Handle aliases are required."
 msgstr "Handle aliases are required."
+
+#. js-lingui-id: o7DkqV
+#: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-message-participant-standard-flat-field-metadata.util.ts
+msgctxt "fieldMetadata.label"
+msgid "Handle Kind"
+msgstr "Handle Kind"
 
 #. js-lingui-id: icnIAm
 #: src/engine/workspace-manager/workspace-migration/workspace-migration-builder/validators/services/flat-logic-function-validator.service.ts
@@ -7719,6 +7744,12 @@ msgstr "Person"
 msgctxt "fieldMetadata.description"
 msgid "Person record Position"
 msgstr "Person record Position"
+
+#. js-lingui-id: NEJYQt
+#: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-message-participant-standard-flat-field-metadata.util.ts
+msgctxt "fieldMetadata.label"
+msgid "Phone"
+msgstr "Phone"
 
 #. js-lingui-id: JrteyL
 #: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-person-standard-flat-field-metadata.util.ts
@@ -11669,6 +11700,12 @@ msgstr "Wednesday"
 #: src/engine/core-modules/email-verification/services/email-verification.service.ts
 msgid "Welcome to Twenty: Please Confirm Your Email"
 msgstr "Welcome to Twenty: Please Confirm Your Email"
+
+#. js-lingui-id: 7ldp09
+#: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-message-participant-standard-flat-field-metadata.util.ts
+msgctxt "fieldMetadata.description"
+msgid "What kind of identifier the handle is"
+msgstr "What kind of identifier the handle is"
 
 #. js-lingui-id: ofdfh5
 #: src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/compute-message-campaign-standard-flat-field-metadata.util.ts

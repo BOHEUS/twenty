@@ -29,7 +29,13 @@ export class SentMessagePersistenceService {
       relations: { connectedAccount: true },
     });
 
-    const messageToSave = formatSentMessage(input);
+    const messageToSave = formatSentMessage({
+      ...input,
+      senderHandle: isDefined(messageChannel.handleKind)
+        ? messageChannel.handle
+        : undefined,
+      handleKind: messageChannel.handleKind ?? undefined,
+    });
 
     const savedMessagesResult =
       await this.saveMessagesAndEnqueueContactCreationService.saveMessagesAndEnqueueContactCreation(

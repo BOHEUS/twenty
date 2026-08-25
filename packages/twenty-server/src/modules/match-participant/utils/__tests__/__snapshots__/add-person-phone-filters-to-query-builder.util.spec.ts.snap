@@ -1,0 +1,154 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`addPersonPhoneFiltersToQueryBuilder empty phones array: should match nothing rather than every person - query builder calls 1`] = `
+[
+  {
+    "args": [
+      "1 = 0",
+    ],
+    "method": "where",
+  },
+]
+`;
+
+exports[`addPersonPhoneFiltersToQueryBuilder multiple phones: should create unique parameter names for each phone - query builder calls 1`] = `
+[
+  {
+    "args": [
+      "("person"."phonesPrimaryPhoneCallingCode" = :callingCode0 AND "person"."phonesPrimaryPhoneNumber" = :nationalNumber0)",
+      {
+        "callingCode0": "+33",
+        "nationalNumber0": "780123456",
+      },
+    ],
+    "method": "where",
+  },
+  {
+    "args": [],
+    "method": "withDeleted",
+  },
+  {
+    "args": [
+      ""person"."phonesAdditionalPhones" @> :additionalPhone0::jsonb",
+      {
+        "additionalPhone0": "[{"number":"780123456","callingCode":"+33"}]",
+      },
+    ],
+    "method": "orWhere",
+  },
+  {
+    "args": [
+      "("person"."phonesPrimaryPhoneCallingCode" = :callingCode1 AND "person"."phonesPrimaryPhoneNumber" = :nationalNumber1)",
+      {
+        "callingCode1": "+1",
+        "nationalNumber1": "2125550123",
+      },
+    ],
+    "method": "orWhere",
+  },
+  {
+    "args": [
+      ""person"."phonesAdditionalPhones" @> :additionalPhone1::jsonb",
+      {
+        "additionalPhone1": "[{"number":"2125550123","callingCode":"+1"}]",
+      },
+    ],
+    "method": "orWhere",
+  },
+]
+`;
+
+exports[`addPersonPhoneFiltersToQueryBuilder only unparseable phones: should match nothing rather than every person - query builder calls 1`] = `
+[
+  {
+    "args": [
+      "1 = 0",
+    ],
+    "method": "where",
+  },
+]
+`;
+
+exports[`addPersonPhoneFiltersToQueryBuilder phone without a leading plus: should parse a WhatsApp style wa_id - query builder calls 1`] = `
+[
+  {
+    "args": [
+      "("person"."phonesPrimaryPhoneCallingCode" = :callingCode0 AND "person"."phonesPrimaryPhoneNumber" = :nationalNumber0)",
+      {
+        "callingCode0": "+33",
+        "nationalNumber0": "780123456",
+      },
+    ],
+    "method": "where",
+  },
+  {
+    "args": [],
+    "method": "withDeleted",
+  },
+  {
+    "args": [
+      ""person"."phonesAdditionalPhones" @> :additionalPhone0::jsonb",
+      {
+        "additionalPhone0": "[{"number":"780123456","callingCode":"+33"}]",
+      },
+    ],
+    "method": "orWhere",
+  },
+]
+`;
+
+exports[`addPersonPhoneFiltersToQueryBuilder single E.164 phone: should split one phone into calling code and number - query builder calls 1`] = `
+[
+  {
+    "args": [
+      "("person"."phonesPrimaryPhoneCallingCode" = :callingCode0 AND "person"."phonesPrimaryPhoneNumber" = :nationalNumber0)",
+      {
+        "callingCode0": "+33",
+        "nationalNumber0": "780123456",
+      },
+    ],
+    "method": "where",
+  },
+  {
+    "args": [],
+    "method": "withDeleted",
+  },
+  {
+    "args": [
+      ""person"."phonesAdditionalPhones" @> :additionalPhone0::jsonb",
+      {
+        "additionalPhone0": "[{"number":"780123456","callingCode":"+33"}]",
+      },
+    ],
+    "method": "orWhere",
+  },
+]
+`;
+
+exports[`addPersonPhoneFiltersToQueryBuilder unparseable phone among parseable ones: should drop the handles it cannot parse - query builder calls 1`] = `
+[
+  {
+    "args": [
+      "("person"."phonesPrimaryPhoneCallingCode" = :callingCode0 AND "person"."phonesPrimaryPhoneNumber" = :nationalNumber0)",
+      {
+        "callingCode0": "+33",
+        "nationalNumber0": "780123456",
+      },
+    ],
+    "method": "where",
+  },
+  {
+    "args": [],
+    "method": "withDeleted",
+  },
+  {
+    "args": [
+      ""person"."phonesAdditionalPhones" @> :additionalPhone0::jsonb",
+      {
+        "additionalPhone0": "[{"number":"780123456","callingCode":"+33"}]",
+      },
+    ],
+    "method": "orWhere",
+  },
+]
+`;

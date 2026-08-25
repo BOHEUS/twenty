@@ -1,4 +1,9 @@
-import { type MessageParticipantRole } from 'twenty-shared/types';
+import {
+  type MessageHandleKind,
+  type MessageParticipantRole,
+} from 'twenty-shared/types';
+
+import { type ParticipantMatchHints } from 'src/modules/match-participant/types/participant-match-hints.type';
 
 export type GmailMessage = {
   historyId: string;
@@ -17,7 +22,9 @@ export type GmailMessage = {
 export type Participant = {
   role: MessageParticipantRole;
   handle: string;
+  handleKind?: MessageHandleKind;
   displayName: string;
+  matchHints?: ParticipantMatchHints;
 };
 
 export type ParticipantWithMessageId = Participant & { messageId: string };

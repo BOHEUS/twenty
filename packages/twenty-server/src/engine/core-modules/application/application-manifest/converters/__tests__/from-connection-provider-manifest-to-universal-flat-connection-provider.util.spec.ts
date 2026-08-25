@@ -50,8 +50,10 @@ describe('fromConnectionProviderManifestToUniversalFlatConnectionProvider', () =
         tokenRequestContentType: 'json',
         usePkce: true,
       },
+      apiKeyConfig: null,
       onConnectLogicFunctionUniversalIdentifier: null,
       onDisconnectLogicFunctionUniversalIdentifier: null,
+      onSendMessageLogicFunctionUniversalIdentifier: null,
       createdAt: NOW,
       updatedAt: NOW,
     });
@@ -135,5 +137,69 @@ describe('fromConnectionProviderManifestToUniversalFlatConnectionProvider', () =
 
     expect(result.oauthConfig?.tokenRequestContentType).toBe('json');
     expect(result.oauthConfig?.usePkce).toBe(true);
+  });
+
+  it('resolves the onSendMessageLogicFunction universalIdentifier into the flat field when provided', () => {
+    const onSendMessageLogicFunctionUniversalIdentifier =
+      'd1d1d1d1-d1d1-4d1d-d1d1-d1d1d1d1d1d1';
+
+    const result =
+      fromConnectionProviderManifestToUniversalFlatConnectionProvider({
+        connectionProviderManifest: buildManifest({
+          onSendMessageLogicFunction: {
+            universalIdentifier: onSendMessageLogicFunctionUniversalIdentifier,
+          },
+        }),
+        applicationUniversalIdentifier: APP_UID,
+        now: NOW,
+      });
+
+    expect(result.onSendMessageLogicFunctionUniversalIdentifier).toBe(
+      onSendMessageLogicFunctionUniversalIdentifier,
+    );
+  });
+
+  it('moves apiKey manifest fields into the resolved apiKeyConfig blob with defaults filled', () => {
+    const result =
+      fromConnectionProviderManifestToUniversalFlatConnectionProvider({
+        connectionProviderManifest: {
+          universalIdentifier: PROVIDER_UID,
+          name: 'telegram',
+          displayName: 'Telegram',
+          type: 'apiKey',
+          apiKey: {
+            fields: [
+              { key: 'botToken', label: 'Bot token' },
+              { key: 'botName', label: 'Bot name', isSecret: false },
+            ],
+            tokenFieldKey: 'botToken',
+            handleFieldKey: 'botName',
+          },
+        },
+        applicationUniversalIdentifier: APP_UID,
+        now: NOW,
+      });
+
+    expect(result.oauthConfig).toBeNull();
+    expect(result.apiKeyConfig).toEqual({
+      fields: [
+        {
+          key: 'botToken',
+          label: 'Bot token',
+          isSecret: true,
+          isRequired: true,
+          placeholder: null,
+        },
+        {
+          key: 'botName',
+          label: 'Bot name',
+          isSecret: false,
+          isRequired: true,
+          placeholder: null,
+        },
+      ],
+      tokenFieldKey: 'botToken',
+      handleFieldKey: 'botName',
+    });
   });
 });

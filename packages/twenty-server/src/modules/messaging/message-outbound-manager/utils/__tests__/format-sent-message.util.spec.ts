@@ -1,4 +1,4 @@
-import { MessageParticipantRole } from 'twenty-shared/types';
+import { MessageHandleKind, MessageParticipantRole } from 'twenty-shared/types';
 
 import { type ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
 import { MessageDirection } from 'src/modules/messaging/common/enums/message-direction.enum';
@@ -93,6 +93,31 @@ describe('formatSentMessage', () => {
     );
 
     expect(message.messageThreadExternalId).toBe('<root@mail.example>');
+  });
+
+  it('should send as the channel and stamp every participant when the channel is not an email one', () => {
+    const message = formatSentMessage(
+      buildInput({
+        senderHandle: '33711111111',
+        handleKind: MessageHandleKind.PHONE,
+        recipients: { to: ['33780123456'], cc: [], bcc: [] },
+      }),
+    );
+
+    expect(message.participants).toEqual([
+      {
+        role: MessageParticipantRole.FROM,
+        handle: '33711111111',
+        displayName: '33711111111',
+        handleKind: MessageHandleKind.PHONE,
+      },
+      {
+        role: MessageParticipantRole.TO,
+        handle: '33780123456',
+        displayName: '33780123456',
+        handleKind: MessageHandleKind.PHONE,
+      },
+    ]);
   });
 
   it('should copy subject and body verbatim and start with no folder associations', () => {

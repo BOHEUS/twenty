@@ -4,6 +4,7 @@ import { isDefined } from 'twenty-shared/utils';
 import { In } from 'typeorm';
 import { v4 } from 'uuid';
 
+import { type FileOutput } from 'src/engine/api/common/common-args-processors/data-arg-processor/types/file-item.type';
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
 import { type WorkspaceTransactionScope } from 'src/engine/twenty-orm/global-workspace-datasource/types/workspace-transaction-scope.type';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
@@ -25,6 +26,7 @@ type MessageAccumulator = {
     | 'text'
     | 'messageThreadId'
     | 'isDraft'
+    | 'attachments'
   >;
   threadToCreate?: Pick<MessageThreadWorkspaceEntity, 'id' | 'subject'>;
   messageChannelMessageAssociationToCreate?: Pick<
@@ -170,6 +172,11 @@ export class MessagingMessageService {
               text: message.text,
               messageThreadId,
               isDraft: message.isDraft,
+              // The ORM derives each file's extension from its stored path on
+              // insert, so the cast stands in for that missing half.
+              attachments: (message.attachmentFiles ?? null) as
+                | FileOutput[]
+                | null,
             };
 
             messageAccumulator.messageToCreate = messageToCreate;

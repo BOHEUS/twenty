@@ -1,4 +1,7 @@
-import { type FieldActorSource } from 'twenty-shared/types';
+import {
+  type FieldActorSource,
+  type MessageHandleKind,
+} from 'twenty-shared/types';
 
 import { Process } from 'src/engine/core-modules/message-queue/decorators/process.decorator';
 import { Processor } from 'src/engine/core-modules/message-queue/decorators/processor.decorator';
@@ -12,6 +15,7 @@ export type CreateCompanyAndContactJobData = {
   contactsToCreate: {
     displayName: string;
     handle: string;
+    handleKind?: MessageHandleKind;
   }[];
   source: FieldActorSource;
 };
@@ -31,6 +35,7 @@ export class CreateCompanyAndContactJob {
       contactsToCreate.map((contact) => ({
         handle: contact.handle,
         displayName: contact.displayName,
+        handleKind: contact.handleKind,
       })),
       workspaceId,
       source,

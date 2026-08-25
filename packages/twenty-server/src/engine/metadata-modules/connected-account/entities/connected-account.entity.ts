@@ -17,6 +17,7 @@ import { type ConnectedAccountProvider } from 'twenty-shared/types';
 import { ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { ConnectionProviderEntity } from 'src/engine/core-modules/application/connection-provider/connection-provider.entity';
 import { type EncryptedImapSmtpCaldavParams } from 'src/engine/core-modules/imap-smtp-caldav-connection/types/imap-smtp-caldav-connection.type';
+import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
 import { type EncryptedString } from 'src/engine/core-modules/secret-encryption/branded-strings/encrypted-string.type';
 import { type CalendarChannelEntity } from 'src/engine/metadata-modules/calendar-channel/entities/calendar-channel.entity';
 import { type MessageChannelEntity } from 'src/engine/metadata-modules/message-channel/entities/message-channel.entity';
@@ -83,6 +84,16 @@ export class ConnectedAccountEntity extends WorkspaceRelatedEntity {
 
   @Column({ type: 'jsonb', nullable: true })
   oidcTokenClaims: Record<string, unknown> | null;
+
+  // Non-secret values an api-key provider asked the workspace for (a server
+  // URL, a bot user id). The one secret it collects lives in accessToken,
+  // where key rotation already covers it.
+  @Column({ type: 'jsonb', nullable: true })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.34.0_AddAppConnectionAndChatColumnsFastInstanceCommand_1787706420000',
+  })
+  apiKeyParameters: Record<string, string> | null;
 
   @Column({ type: 'uuid', nullable: false })
   userWorkspaceId: string;

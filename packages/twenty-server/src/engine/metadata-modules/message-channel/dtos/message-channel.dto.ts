@@ -18,6 +18,7 @@ import {
   MessageChannelType,
   MessageChannelVisibility,
   MessageFolderImportPolicy,
+  MessageHandleKind,
 } from 'twenty-shared/types';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
@@ -38,6 +39,11 @@ export class MessageChannelDTO {
   @IsNotEmpty()
   @Field()
   handle: string;
+
+  @IsEnum(MessageHandleKind)
+  @IsOptional()
+  @Field(() => MessageHandleKind, { nullable: true })
+  handleKind: MessageHandleKind | null;
 
   @IsString()
   @IsOptional()
@@ -111,6 +117,11 @@ export class MessageChannelDTO {
   @IsOptional()
   @Field(() => Date, { nullable: true })
   throttleRetryAfter: Date | null;
+
+  @IsString()
+  @IsOptional()
+  @Field(() => String, { nullable: true })
+  externalChannelId: string | null;
 
   @IsUUID()
   @IsNotEmpty()

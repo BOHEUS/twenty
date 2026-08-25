@@ -150,6 +150,8 @@ import { AddUninstallLogicFunctionIdToApplicationFastInstanceCommand } from 'src
 import { BackfillUninstallLogicFunctionIdOnApplicationSlowInstanceCommand } from 'src/database/commands/upgrade-version-command/2-32/2-32-instance-command-slow-1786959731001-backfill-uninstall-logic-function-id-on-application';
 import { AddUninstallHookCompletedForRequestedAtToApplicationFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-33/2-33-instance-command-fast-1787151824000-add-uninstall-hook-completed-for-requested-at-to-application';
 import { AddTimelineActivityTypeTableFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-33/2-33-instance-command-fast-1787352088649-add-timeline-activity-type-table';
+import { AddAppConnectionAndChatColumnsFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-34/2-34-instance-command-fast-1787706420000-add-app-connection-and-chat-columns';
+import { AddExternalChannelIdToMessageChannelFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-34/2-34-instance-command-fast-1787516865637-add-external-channel-id-to-message-channel';
 
 export const INSTANCE_COMMANDS = [
   AddViewFieldGroupIdIndexOnViewFieldFastInstanceCommand,
@@ -302,4 +304,6 @@ export const INSTANCE_COMMANDS = [
   BackfillUninstallLogicFunctionIdOnApplicationSlowInstanceCommand,
   AddUninstallHookCompletedForRequestedAtToApplicationFastInstanceCommand,
   AddTimelineActivityTypeTableFastInstanceCommand,
+  AddExternalChannelIdToMessageChannelFastInstanceCommand,
+  AddAppConnectionAndChatColumnsFastInstanceCommand,
 ];

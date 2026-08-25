@@ -3,12 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { isDefined } from 'twenty-shared/utils';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
-import { In, Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
-import {
-  MessageChannelSyncStage,
-  MessageChannelType,
-} from 'twenty-shared/types';
+import { MessageChannelSyncStage } from 'twenty-shared/types';
 import { SentryCronMonitor } from 'src/engine/core-modules/cron/sentry-cron-monitor.decorator';
 import { ExceptionHandlerService } from 'src/engine/core-modules/exception-handler/exception-handler.service';
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
@@ -23,6 +20,7 @@ import {
 } from 'src/modules/messaging/message-import-manager/jobs/messaging-messages-import.job';
 import { isThrottled } from 'src/modules/connected-account/utils/is-throttled';
 import { MessageChannelEntity } from 'src/engine/metadata-modules/message-channel/entities/message-channel.entity';
+import { POLLABLE_MESSAGE_CHANNEL_TYPES } from 'src/modules/messaging/common/constants/pollable-message-channel-types.constant';
 import { toIsoStringOrNull } from 'src/utils/date/toIsoStringOrNull';
 
 export const MESSAGING_MESSAGES_IMPORT_CRON_PATTERN = '*/1 * * * *';
@@ -61,7 +59,7 @@ export class MessagingMessagesImportCronJob {
               workspaceId: activeWorkspace.id,
               isSyncEnabled: true,
               syncStage: MessageChannelSyncStage.MESSAGES_IMPORT_PENDING,
-              type: Not(MessageChannelType.EMAIL_GROUP),
+              type: In(POLLABLE_MESSAGE_CHANNEL_TYPES),
             },
           },
         );

@@ -551,6 +551,9 @@ export const STANDARD_OBJECTS = {
       messageCampaignIdIndex: {
         universalIdentifier: 'e9bcdd77-cc8b-4532-833c-124dfdc8e5ff',
       },
+      handleAndHandleKindIndex: {
+        universalIdentifier: 'a96d61d1-10a7-4dc3-8815-9f279ff03c22',
+      },
     },
     views: {
       allMessageParticipants: buildStandardObjectIndexView({

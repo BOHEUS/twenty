@@ -5,10 +5,9 @@ import {
   CalendarChannelSyncStage,
   CalendarChannelSyncStatus,
   MessageChannelSyncStage,
-  MessageChannelType,
   WebhookSubscriptionChannelType,
 } from 'twenty-shared/types';
-import { Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
@@ -27,6 +26,7 @@ import {
   type CreateWebhookSubscriptionJobData,
 } from 'src/modules/connected-account/webhook-subscription-manager/jobs/create-webhook-subscription.job';
 import { MessageChannelSyncStatusService } from 'src/modules/messaging/common/services/message-channel-sync-status.service';
+import { POLLABLE_MESSAGE_CHANNEL_TYPES } from 'src/modules/messaging/common/constants/pollable-message-channel-types.constant';
 import {
   MessagingMessageListFetchJob,
   type MessagingMessageListFetchJobData,
@@ -75,7 +75,7 @@ export class ChannelSyncService {
         where: {
           connectedAccountId,
           syncStage: MessageChannelSyncStage.PENDING_CONFIGURATION,
-          type: Not(MessageChannelType.EMAIL_GROUP),
+          type: In(POLLABLE_MESSAGE_CHANNEL_TYPES),
           workspaceId,
         },
       });

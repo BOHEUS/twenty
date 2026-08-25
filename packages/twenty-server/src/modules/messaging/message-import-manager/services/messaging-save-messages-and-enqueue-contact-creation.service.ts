@@ -3,8 +3,10 @@ import { Injectable } from '@nestjs/common';
 import {
   FieldActorSource,
   MessageChannelContactAutoCreationPolicy,
+  MessageHandleKind,
   MessageParticipantRole,
 } from 'twenty-shared/types';
+import { isNonEmptyString } from '@sniptt/guards';
 import { isDefined } from 'twenty-shared/utils';
 
 import { type MessageChannelEntity } from 'src/engine/metadata-modules/message-channel/entities/message-channel.entity';
@@ -50,10 +52,19 @@ export class MessagingSaveMessagesAndEnqueueContactCreationService {
     | {
         messageExternalIdsAndIdsMap: Map<string, string>;
         messageExternalIdToMessageThreadIdMap: Map<string, string>;
+        createdMessageIds: Set<string>;
       }
     | undefined
   > {
     const handleAliases = connectedAccount.handleAliases || [];
+    // One connected account can front several channels (a WhatsApp Business
+    // Account holds many numbers), so "us" means the channel's own handle as
+    // well as the account's, or our other numbers look like inbound contacts.
+    const ownHandles = new Set(
+      [messageChannel.handle, connectedAccount.handle, ...handleAliases].filter(
+        isNonEmptyString,
+      ),
+    );
     const authContext = buildSystemAuthContext(workspaceId);
 
     const savedMessagesResult =
@@ -62,6 +73,7 @@ export class MessagingSaveMessagesAndEnqueueContactCreationService {
           return this.globalWorkspaceOrmManager.runInWorkspaceTransaction(
             async (transactionScope) => {
               const {
+                createdMessages,
                 messageExternalIdsAndIdsMap,
                 messageExternalIdToMessageChannelMessageAssociationIdMap,
                 messageExternalIdToMessageThreadIdMap,
@@ -87,18 +99,25 @@ export class MessagingSaveMessagesAndEnqueueContactCreationService {
                         )?.handle || '';
 
                       const isMessageSentByConnectedAccount =
-                        handleAliases.includes(fromHandle) ||
-                        fromHandle === connectedAccount.handle;
+                        ownHandles.has(fromHandle);
 
-                      const isParticipantConnectedAccount =
-                        handleAliases.includes(participant.handle) ||
-                        participant.handle === connectedAccount.handle;
+                      const isParticipantConnectedAccount = ownHandles.has(
+                        participant.handle,
+                      );
+
+                      // Both filters read the handle as an email address, so
+                      // they can only speak for participants whose handle is one.
+                      const isEmailHandle =
+                        (participant.handleKind ?? MessageHandleKind.EMAIL) ===
+                        MessageHandleKind.EMAIL;
 
                       const isExcludedByNonProfessionalEmails =
+                        isEmailHandle &&
                         messageChannel.excludeNonProfessionalEmails &&
                         !isWorkEmail(participant.handle);
 
                       const isExcludedByGroupEmails =
+                        isEmailHandle &&
                         messageChannel.excludeGroupEmails &&
                         isGroupEmail(participant.handle);
 
@@ -166,6 +185,11 @@ export class MessagingSaveMessagesAndEnqueueContactCreationService {
                 participantsWithMessageId,
                 messageExternalIdsAndIdsMap,
                 messageExternalIdToMessageThreadIdMap,
+                createdMessageIds: new Set(
+                  createdMessages
+                    .map((message) => message.id)
+                    .filter(isDefined),
+                ),
               };
             },
           );
@@ -200,6 +224,7 @@ export class MessagingSaveMessagesAndEnqueueContactCreationService {
         savedMessagesResult.messageExternalIdsAndIdsMap,
       messageExternalIdToMessageThreadIdMap:
         savedMessagesResult.messageExternalIdToMessageThreadIdMap,
+      createdMessageIds: savedMessagesResult.createdMessageIds,
     };
   }
 }

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
+import { MessageHandleKind } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
 import { In } from 'typeorm';
 
 import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
@@ -41,7 +43,7 @@ export class MessagingMessageParticipantService {
 
         const participantsToCreate: Pick<
           MessageParticipantWorkspaceEntity,
-          'messageId' | 'handle' | 'displayName' | 'role'
+          'messageId' | 'handle' | 'handleKind' | 'displayName' | 'role'
         >[] = participants
           .filter(
             (participant) =>
@@ -57,6 +59,7 @@ export class MessagingMessageParticipantService {
             return {
               messageId: participant.messageId,
               handle: participant.handle,
+              handleKind: participant.handleKind ?? MessageHandleKind.EMAIL,
               displayName: participant.displayName,
               role: participant.role,
             };
@@ -69,12 +72,23 @@ export class MessagingMessageParticipantService {
           where: { id: In(identifiers.map(({ id }) => id)) },
         });
 
+        // Hints are not persisted on the participant, so they have to travel
+        // with the call that matches the rows we just inserted.
+        const matchHintsByHandle = new Map(
+          participants.flatMap((participant) =>
+            isDefined(participant.matchHints)
+              ? [[participant.handle, participant.matchHints] as const]
+              : [],
+          ),
+        );
+
         await this.matchParticipantService.matchParticipants({
           participants: createdParticipants,
           objectMetadataName: 'messageParticipant',
           matchWith: 'workspaceMemberAndPerson',
           workspaceId,
           transactionScope,
+          matchHintsByHandle,
         });
       },
       authContext,

@@ -10,7 +10,7 @@ const PROVIDER_NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
 // fails the dev's `twenty deploy` rather than blowing up at install time.
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const SUPPORTED_TYPES = ['oauth'] as const;
+const SUPPORTED_TYPES = ['oauth', 'apiKey'] as const;
 
 type ConnectionProviderLifecycleHookKey = Extract<
   keyof ConnectionProviderManifest,
@@ -20,6 +20,7 @@ type ConnectionProviderLifecycleHookKey = Extract<
 const LIFECYCLE_HOOK_KEYS = [
   'onConnectLogicFunction',
   'onDisconnectLogicFunction',
+  'onSendMessageLogicFunction',
 ] as const satisfies readonly ConnectionProviderLifecycleHookKey[];
 
 export const defineConnectionProvider: DefineEntity<
@@ -63,6 +64,37 @@ export const defineConnectionProvider: DefineEntity<
     errors.push(
       `Connection provider type "${config.type}" is not supported. Supported types: ${SUPPORTED_TYPES.join(', ')}.`,
     );
+  }
+
+  if (config.type === 'apiKey') {
+    const apiKey = config.apiKey;
+
+    if (!apiKey) {
+      errors.push(
+        "Connection provider with type 'apiKey' must declare an `apiKey` config block",
+      );
+    } else if (!Array.isArray(apiKey.fields) || apiKey.fields.length === 0) {
+      errors.push(
+        'API key connection provider must declare at least one field to collect',
+      );
+    } else {
+      const fieldKeys = apiKey.fields.map((field) => field.key);
+
+      if (!fieldKeys.includes(apiKey.tokenFieldKey)) {
+        errors.push(
+          `API key connection provider tokenFieldKey "${apiKey.tokenFieldKey}" must name one of its fields (${fieldKeys.join(', ')})`,
+        );
+      }
+
+      if (
+        isDefined(apiKey.handleFieldKey) &&
+        !fieldKeys.includes(apiKey.handleFieldKey)
+      ) {
+        errors.push(
+          `API key connection provider handleFieldKey "${apiKey.handleFieldKey}" must name one of its fields (${fieldKeys.join(', ')})`,
+        );
+      }
+    }
   }
 
   if (config.type === 'oauth') {

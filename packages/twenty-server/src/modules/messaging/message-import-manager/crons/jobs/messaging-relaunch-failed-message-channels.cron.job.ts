@@ -1,12 +1,11 @@
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
-import { In, Not, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 
 import {
   MessageChannelSyncStage,
   MessageChannelSyncStatus,
-  MessageChannelType,
 } from 'twenty-shared/types';
 import { SentryCronMonitor } from 'src/engine/core-modules/cron/sentry-cron-monitor.decorator';
 import { ExceptionHandlerService } from 'src/engine/core-modules/exception-handler/exception-handler.service';
@@ -16,6 +15,7 @@ import { Processor } from 'src/engine/core-modules/message-queue/decorators/proc
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
 import { MessageChannelEntity } from 'src/engine/metadata-modules/message-channel/entities/message-channel.entity';
+import { POLLABLE_MESSAGE_CHANNEL_TYPES } from 'src/modules/messaging/common/constants/pollable-message-channel-types.constant';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import {
   MessagingRelaunchFailedMessageChannelJob,
@@ -62,7 +62,7 @@ export class MessagingRelaunchFailedMessageChannelsCronJob {
         where: {
           syncStage: MessageChannelSyncStage.FAILED,
           syncStatus: MessageChannelSyncStatus.FAILED_UNKNOWN,
-          type: Not(MessageChannelType.EMAIL_GROUP),
+          type: In(POLLABLE_MESSAGE_CHANNEL_TYPES),
           workspaceId: In(activeWorkspaceIds),
         },
       })

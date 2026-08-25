@@ -1,5 +1,6 @@
 import {
   type ConnectionProviderType,
+  type StoredApiKeyConnectionProviderConfig,
   type StoredOAuthConnectionProviderConfig,
 } from 'twenty-shared/application';
 import {
@@ -40,6 +41,13 @@ export class ConnectionProviderEntity
   @Column({ nullable: true, type: 'jsonb' })
   oauthConfig: StoredOAuthConnectionProviderConfig | null;
 
+  @Column({ nullable: true, type: 'jsonb' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.34.0_AddAppConnectionAndChatColumnsFastInstanceCommand_1787706420000',
+  })
+  apiKeyConfig: StoredApiKeyConnectionProviderConfig | null;
+
   @Column({ nullable: true, type: 'uuid' })
   @WasIntroducedInUpgrade({
     upgradeCommandName:
@@ -53,6 +61,15 @@ export class ConnectionProviderEntity
       '2.27.0_AddOnDisconnectLogicFunctionToConnectionProviderFastInstanceCommand_1785810340935',
   })
   onDisconnectLogicFunctionUniversalIdentifier: string | null;
+
+  // Chat providers have no send endpoint the engine could call itself: the
+  // credentials and the wire format both live in the app.
+  @Column({ nullable: true, type: 'uuid' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.34.0_AddAppConnectionAndChatColumnsFastInstanceCommand_1787706420000',
+  })
+  onSendMessageLogicFunctionUniversalIdentifier: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

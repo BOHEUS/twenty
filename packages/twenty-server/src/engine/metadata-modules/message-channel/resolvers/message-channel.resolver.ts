@@ -11,6 +11,8 @@ import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorato
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 import { buildPublicConnectedAccount } from 'src/engine/metadata-modules/connected-account/utils/build-public-connected-account.util';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
+import { AuthApplication } from 'src/engine/decorators/auth/auth-application.decorator';
 import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
@@ -18,6 +20,7 @@ import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.g
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { ConnectedAccountMetadataService } from 'src/engine/metadata-modules/connected-account/connected-account-metadata.service';
 import { ConnectedAccountPublicDTO } from 'src/engine/metadata-modules/connected-account/dtos/connected-account-public.dto';
+import { CreateAppMessageChannelInput } from 'src/engine/metadata-modules/message-channel/dtos/create-app-message-channel.input';
 import { CreateEmailGroupChannelInput } from 'src/engine/metadata-modules/message-channel/dtos/create-email-group-channel.input';
 import { UpdateEmailGroupChannelInput } from 'src/engine/metadata-modules/message-channel/dtos/update-email-group-channel.input';
 import { CreateEmailGroupChannelOutput } from 'src/engine/metadata-modules/message-channel/dtos/create-email-group-channel.output';
@@ -194,6 +197,43 @@ export class MessageChannelResolver {
       id: input.id,
       displayName: input.displayName,
       userWorkspaceId,
+      workspaceId: workspace.id,
+    });
+  }
+
+  // Apps hold an APPLICATION_ACCESS token rather than a member session, so
+  // these are scoped by the calling application instead of the workspace
+  // settings permission the email-group mutations use.
+  @Mutation(() => MessageChannelDTO)
+  @UseGuards(NoPermissionGuard)
+  async createAppMessageChannel(
+    @Args('input') input: CreateAppMessageChannelInput,
+    @AuthApplication() application: FlatApplication,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<MessageChannelDTO> {
+    return this.messageChannelMetadataService.createAppMessageChannel({
+      applicationId: application.id,
+      connectedAccountId: input.connectedAccountId,
+      handle: input.handle,
+      handleKind: input.handleKind,
+      displayName: input.displayName,
+      externalChannelId: input.externalChannelId,
+      visibility: input.visibility,
+      contactAutoCreationPolicy: input.contactAutoCreationPolicy,
+      workspaceId: workspace.id,
+    });
+  }
+
+  @Mutation(() => MessageChannelDTO)
+  @UseGuards(NoPermissionGuard)
+  async deleteAppMessageChannel(
+    @Args('id', { type: () => UUIDScalarType }) id: string,
+    @AuthApplication() application: FlatApplication,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+  ): Promise<MessageChannelDTO> {
+    return this.messageChannelMetadataService.deleteAppMessageChannel({
+      applicationId: application.id,
+      id,
       workspaceId: workspace.id,
     });
   }

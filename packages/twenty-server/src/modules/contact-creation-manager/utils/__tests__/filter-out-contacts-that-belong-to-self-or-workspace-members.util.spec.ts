@@ -1,3 +1,5 @@
+import { MessageHandleKind } from 'twenty-shared/types';
+
 import { type ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
 import { type Contact } from 'src/modules/contact-creation-manager/types/contact.type';
 import { filterOutContactsThatBelongToSelfOrWorkspaceMembers } from 'src/modules/contact-creation-manager/utils/filter-out-contacts-that-belong-to-self-or-workspace-members.util';
@@ -10,6 +12,12 @@ const account = (
   ({ handle, handleAliases }) as ConnectedAccountEntity;
 
 const contact = (handle: string): Contact => ({ handle, displayName: handle });
+
+const phoneContact = (handle: string): Contact => ({
+  handle,
+  displayName: handle,
+  handleKind: MessageHandleKind.PHONE,
+});
 
 describe('filterOutContactsThatBelongToSelfOrWorkspaceMembers', () => {
   it('drops same-domain contacts by default for work domains', () => {
@@ -52,5 +60,30 @@ describe('filterOutContactsThatBelongToSelfOrWorkspaceMembers', () => {
     );
 
     expect(result).toEqual([contact('alice@acme.com')]);
+  });
+
+  it('keeps phone contacts even though they parse to an empty domain', () => {
+    const contacts = [phoneContact('+33780123456')];
+    const result = filterOutContactsThatBelongToSelfOrWorkspaceMembers(
+      contacts,
+      account('+33600000000'),
+      [],
+    );
+
+    expect(result).toEqual(contacts);
+  });
+
+  it('still drops a phone contact that is the connected account itself', () => {
+    const contacts = [
+      phoneContact('+33780123456'),
+      phoneContact('+33600000000'),
+    ];
+    const result = filterOutContactsThatBelongToSelfOrWorkspaceMembers(
+      contacts,
+      account('+33600000000'),
+      [],
+    );
+
+    expect(result).toEqual([phoneContact('+33780123456')]);
   });
 });

@@ -600,6 +600,9 @@ export const STANDARD_OBJECT_FIELDS = {
     handle: {
       universalIdentifier: '20202020-2456-464e-b422-b965a4db4a0b',
     },
+    handleKind: {
+      universalIdentifier: 'c36e0135-2ae8-41f7-bc3b-d418a21b3dc7',
+    },
     displayName: {
       universalIdentifier: '20202020-36dd-4a4f-ac02-228425be9fac',
     },
@@ -656,6 +659,9 @@ export const STANDARD_OBJECT_FIELDS = {
     },
     isDraft: {
       universalIdentifier: '20202020-4d3a-4b6e-9c1f-2a5e7b9d0c34',
+    },
+    attachments: {
+      universalIdentifier: 'c7879595-aa4d-4d6e-b8cc-ca8ced714d38',
     },
   },
   note: {

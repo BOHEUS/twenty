@@ -1,4 +1,7 @@
-import { type MessageParticipantRole } from 'twenty-shared/types';
+import {
+  type MessageHandleKind,
+  type MessageParticipantRole,
+} from 'twenty-shared/types';
 
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { type MessageCampaignWorkspaceEntity } from 'src/modules/emailing/standard-objects/message-campaign.workspace-entity';
@@ -10,6 +13,7 @@ import { type WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-membe
 export class MessageParticipantWorkspaceEntity extends BaseWorkspaceEntity {
   role: MessageParticipantRole;
   handle: string | null;
+  handleKind: MessageHandleKind;
   displayName: string | null;
   message: EntityRelation<MessageWorkspaceEntity>;
   messageId: string;

@@ -182,12 +182,34 @@ export class ConnectedAccountMetadataService {
       return;
     }
 
-    const connectedAccountIds = connectedAccounts.map((account) => account.id);
+    // A workspace-visibility account belongs to the company rather than to the
+    // member who happened to connect it, so a departure only moves
+    // custodianship. Revoking its credentials would take down an integration
+    // the rest of the workspace is still using.
+    const sharedAccountIds = connectedAccounts
+      .filter((account) => account.visibility === 'workspace')
+      .map((account) => account.id);
+    const personalAccounts = connectedAccounts.filter(
+      (account) => account.visibility !== 'workspace',
+    );
+    const personalAccountIds = personalAccounts.map((account) => account.id);
 
     await this.repository.manager.transaction(async (entityManager) => {
+      if (sharedAccountIds.length > 0) {
+        await entityManager.update(
+          ConnectedAccountEntity,
+          { id: In(sharedAccountIds), workspaceId },
+          { userWorkspaceId: toUserWorkspaceId },
+        );
+      }
+
+      if (personalAccountIds.length === 0) {
+        return;
+      }
+
       await entityManager.update(
         ConnectedAccountEntity,
-        { id: In(connectedAccountIds), workspaceId },
+        { id: In(personalAccountIds), workspaceId },
         {
           userWorkspaceId: toUserWorkspaceId,
           accessToken: null,
@@ -198,24 +220,24 @@ export class ConnectedAccountMetadataService {
 
       await entityManager.update(
         ConnectedAccountEntity,
-        { id: In(connectedAccountIds), workspaceId, archivedAt: IsNull() },
+        { id: In(personalAccountIds), workspaceId, archivedAt: IsNull() },
         { archivedAt: new Date() },
       );
 
       await entityManager.update(
         MessageChannelEntity,
-        { connectedAccountId: In(connectedAccountIds), workspaceId },
+        { connectedAccountId: In(personalAccountIds), workspaceId },
         { isSyncEnabled: false },
       );
 
       await entityManager.update(
         CalendarChannelEntity,
-        { connectedAccountId: In(connectedAccountIds), workspaceId },
+        { connectedAccountId: In(personalAccountIds), workspaceId },
         { isSyncEnabled: false },
       );
     });
 
-    for (const connectedAccount of connectedAccounts) {
+    for (const connectedAccount of personalAccounts) {
       await this.appOAuthRevokeService.revokeIfApp(connectedAccount);
     }
   }
