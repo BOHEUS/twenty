@@ -1,8 +1,11 @@
 import { type Manifest } from 'twenty-shared/application';
 import {
+  getMetadataLabelContext,
   TRANSLATABLE_PROPERTIES_BY_METADATA_NAME,
   type TranslatableMetadataName,
 } from 'twenty-shared/i18n';
+
+import { type MessageDescriptor } from '@/sdk/front-component/translations/message';
 
 // Which manifest collection carries which metadata entity. The properties to
 // extract are not listed here on purpose: they come from the shared registry,
@@ -12,19 +15,20 @@ const MANIFEST_KEY_BY_METADATA_NAME = {
   objectMetadata: 'objects',
   fieldMetadata: 'fields',
   view: 'views',
+  pageLayout: 'pageLayouts',
   pageLayoutTab: 'pageLayoutTabs',
   commandMenuItem: 'commandMenuItems',
   navigationMenuItem: 'navigationMenuItems',
+  timelineActivityType: 'timelineActivityTypes',
 } as const satisfies Partial<Record<TranslatableMetadataName, keyof Manifest>>;
 
-export const collectTranslatableStrings = (manifest: Manifest): string[] => {
-  const strings = new Set<string>();
-
-  const addString = (value: unknown) => {
-    if (typeof value === 'string' && value.length > 0) {
-      strings.add(value);
-    }
-  };
+export const collectTranslatableStrings = (
+  manifest: Manifest,
+): MessageDescriptor[] => {
+  // The same string can label several roles ('Invoice' as an object name and a
+  // field label), and each role is its own catalog entry, so descriptors are
+  // deduplicated per (context, message) rather than per message.
+  const descriptorByKey = new Map<string, MessageDescriptor>();
 
   const addEntityStrings = (
     entity: unknown,
@@ -37,7 +41,18 @@ export const collectTranslatableStrings = (manifest: Manifest): string[] => {
     for (const property of TRANSLATABLE_PROPERTIES_BY_METADATA_NAME[
       metadataName
     ]) {
-      addString((entity as Record<string, unknown>)[property]);
+      const value = (entity as Record<string, unknown>)[property];
+
+      if (typeof value !== 'string' || value.length === 0) {
+        continue;
+      }
+
+      const context = getMetadataLabelContext(metadataName, property);
+
+      descriptorByKey.set(JSON.stringify([context, value]), {
+        message: value,
+        context,
+      });
     }
   };
 
@@ -67,5 +82,5 @@ export const collectTranslatableStrings = (manifest: Manifest): string[] => {
     }
   }
 
-  return [...strings].sort();
+  return [...descriptorByKey.values()];
 };
