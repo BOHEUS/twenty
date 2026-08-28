@@ -55,17 +55,41 @@ type twentyAddress = {
   addressStreet2: string;
   addressCity: string;
   addressCountry: string;
-  addressPostCode: string;
   addressState: string;
+  addressZipCode: string;
 }
+
+export const TWENTY_COMPANY_TYPES = [
+  'PRIVATELY_HELD',
+  'PUBLIC_COMPANY',
+  'PARTNERSHIP',
+  'NONPROFIT',
+  'EDUCATIONAL',
+  'GOVERNMENT_AGENCY',
+  'SELF_OWNED',
+  'SELF_EMPLOYED',
+] as const;
+
+export type twentyCompanyType = (typeof TWENTY_COMPANY_TYPES)[number];
 
 export type twentyCompany = {
   id: string;
   name: string;
   domainName: twentyDomainName;
-  employees: number | null;
   linkedinLink: twentyDomainName;
   address: twentyAddress;
+  description: string | null;
+  yearFounded: number | null;
+  headcount: number | null;
+  headcountRange: HeadCountRange | null;
+  companyType: twentyCompanyType | null;
+  industry: string | null;
+  specialties: string[] | null;
+  logo: twentyDomainName | null;
+  officeLocations: OfficeLocation[] | null;
+  linkedinFollowerCount: number | null;
+  fullEnrichCompanyId: string | null;
+  enrichedAt: string | null;
 }
 
 type twentyPersonName = {
@@ -83,23 +107,55 @@ type twentyPersonEmail = {
   additionalEmails: string[] | null;
 }
 
+export type twentyAdditionalPhone = {
+  number: string;
+  callingCode: string;
+  countryCode: string;
+}
+
 export type twentyPersonPhones = {
   primaryPhoneNumber: string;
   primaryPhoneCallingCode: string;
-  additionalPhones: string[] | null;
+  primaryPhoneCountryCode: string;
+  additionalPhones: twentyAdditionalPhone[] | null;
 }
+
+export const TWENTY_SENIORITIES = [
+  'OWNER',
+  'FOUNDER',
+  'C_LEVEL',
+  'PARTNER',
+  'VP',
+  'HEAD',
+  'DIRECTOR',
+  'MANAGER',
+  'SENIOR',
+] as const;
+
+export type twentySeniority = (typeof TWENTY_SENIORITIES)[number];
 
 export type twentyPerson = {
   id: string;
   name: twentyPersonName;
   emails: twentyPersonEmail;
   linkedinLink: twentyPersonSocialMedia;
-  xLink: twentyPersonSocialMedia;
   jobTitle: string;
   phones: twentyPersonPhones;
-  city: string;
-  intro: string;
   companyId: string | null;
+  headline: string | null;
+  about: string | null;
+  location: twentyAddress | null;
+  skills: string[] | null;
+  languages: Language[] | null;
+  educations: Education[] | null;
+  seniority: twentySeniority | null;
+  jobFunction: string | null;
+  jobSubFunction: string | null;
+  employmentHistory: JobPosition[] | null;
+  currentRoleStartedAt: string | null;
+  linkedinConnectionCount: number | null;
+  fullEnrichPersonId: string | null;
+  enrichedAt: string | null;
 }
 
 export type EnrichmentResponse = {
@@ -268,17 +324,22 @@ export type SocialProfile = {
   connection_count?: number;
 };
 
-export type HeadCountRange =
-  | '1-10'
-  | '11-50'
-  | '51-200'
-  | '201-500'
-  | '501-1000'
-  | '1001-5000'
-  | '5001-10000'
-  | '10001+';
+export const HEAD_COUNT_RANGES = [
+  '1-10',
+  '11-50',
+  '51-200',
+  '201-500',
+  '501-1000',
+  '1001-5000',
+  '5001-10000',
+  '10001+',
+] as const;
 
-export type fullEnrichTwentyCompany = Omit<twentyCompany, "id">;
+export type HeadCountRange = (typeof HEAD_COUNT_RANGES)[number];
+
+// FullEnrich may return no profile at all, so company fields are only sent when
+// enrichment actually produced them
+export type fullEnrichTwentyCompany = Partial<Omit<twentyCompany, "id">>;
 
 // FullEnrich may return no profile at all, so person fields are only sent when
 // enrichment actually produced them

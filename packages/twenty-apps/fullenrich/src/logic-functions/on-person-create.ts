@@ -1,10 +1,10 @@
 import { DatabaseEventPayload, defineLogicFunction, ObjectRecordCreateEvent } from 'twenty-sdk/define';
-import type { fullEnrichRequest, twentyCompany, twentyPerson } from './shared/types';
+import type { fullEnrichRequest, twentyPerson } from './shared/types';
 import { checkPersonRequirements } from 'src/logic-functions/shared/check-person-requirements';
 import { checkCompanyRequirements } from 'src/logic-functions/shared/check-company-requirements';
 import { fullEnrichRequirements } from './shared/create-fullenrich-requirements';
+import { fetchTwentyCompany } from 'src/logic-functions/data/fetch-records.util';
 import { sendRequestToFullEnrich } from './shared/send-request-to-fullenrich';
-import { CoreApiClient } from 'twenty-client-sdk/core';
 
 const FULL_ENRICH_API_KEY: string = process.env.FULL_ENRICH_API_KEY ?? '';
 const TWENTY_URL: string = process.env.TWENTY_URL ?? '';
@@ -12,18 +12,6 @@ const TWENTY_URL: string = process.env.TWENTY_URL ?? '';
 type PersonCreateEvent = DatabaseEventPayload<
   ObjectRecordCreateEvent<twentyPerson>
 >;
-
-const fetchTwentyCompany = async (companyId: string) => {
-  const client = new CoreApiClient();
-
-  const result = await client.query({});
-
-  if (!result) {
-    throw new Error('Failed to fetch related company');
-  }
-
-  return result;
-}
 
 const handler = async (event: PersonCreateEvent): Promise<object | undefined> => {
   if (FULL_ENRICH_API_KEY === "" || FULL_ENRICH_API_KEY === undefined || TWENTY_URL === "" || TWENTY_URL === undefined) {
@@ -44,9 +32,11 @@ const handler = async (event: PersonCreateEvent): Promise<object | undefined> =>
     console.log(`Request to FullEnrich not sent as all necessary data are present in ${properties.after.name.firstName} ${properties.after.name.lastName} record.`);
     return {};
   }
-  const linkedCompany: twentyCompany = await fetchTwentyCompany(
-    properties.after.companyId,
-  );
+  const linkedCompany = await fetchTwentyCompany(properties.after.companyId);
+  if (!linkedCompany) {
+    console.warn(`Company ${properties.after.companyId} not found.`);
+    return {};
+  }
   if (
     linkedCompany.name === '' &&
     linkedCompany.domainName.primaryLinkUrl === ''

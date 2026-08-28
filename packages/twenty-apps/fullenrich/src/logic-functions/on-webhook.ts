@@ -1,15 +1,12 @@
 import {
   EnrichmentResponse,
   fullEnrichTwentyCompany,
-  fullEnrichTwentyPerson,
-  twentyPersonSocialMedia,
 } from './shared/types';
 import { CoreApiClient } from 'twenty-client-sdk/core';
 import { HTTPMethod } from 'twenty-shared/types';
 import { defineLogicFunction, RoutePayload } from "twenty-sdk/define";
-import { buildTwentyPhones } from "src/logic-functions/data/build-twenty-phones.util";
-import { buildTwentyEmails } from "src/logic-functions/data/build-twenty-emails.util";
 import { buildTwentyCompany } from "src/logic-functions/data/build-twenty-company.util";
+import { buildTwentyPerson } from "src/logic-functions/data/build-twenty-person.util";
 import { updatePersonInTwenty } from "src/logic-functions/data/update-person.util";
 import { WEBHOOK_FUNCTION_PATH } from "src/constants/universal-identifiers";
 
@@ -40,6 +37,9 @@ const handler = async (event: RoutePayload<EnrichmentResponse>): Promise<object 
   if (!body) {
     throw new Error('Error parsing webhook data from FullEnrich');
   }
+  // FullEnrich does not timestamp its response, so receipt time is the best
+  // available answer for when enrichment came back
+  const enrichedAt = new Date().toISOString();
   for (const record of body.data) {
     const { custom, contact_info: contactInfo, profile } = record;
 
@@ -48,7 +48,9 @@ const handler = async (event: RoutePayload<EnrichmentResponse>): Promise<object 
       continue;
     }
 
-    const twentyCompanyData = profile ? buildTwentyCompany(profile) : null;
+    const twentyCompanyData = profile
+      ? buildTwentyCompany(profile, enrichedAt)
+      : null;
     if (twentyCompanyData) {
       await updateCompanyInTwenty(custom.companyId, twentyCompanyData);
       console.log(
@@ -58,27 +60,12 @@ const handler = async (event: RoutePayload<EnrichmentResponse>): Promise<object 
       console.warn(`No company data returned for person ${custom.personId}.`);
     }
 
-    const professionalNetworkUrl =
-      profile?.social_profiles?.professional_network?.url;
-    const linkedinLink: twentyPersonSocialMedia | undefined =
-      professionalNetworkUrl
-        ? { primaryLinkLabel: '', primaryLinkUrl: professionalNetworkUrl }
-        : undefined;
-
-    const twentyPersonData: fullEnrichTwentyPerson = {
+    const twentyPersonData = buildTwentyPerson({
+      profile,
+      contactInfo,
       companyId: custom.companyId,
-      ...(contactInfo && {
-        emails: buildTwentyEmails(contactInfo),
-        phones: buildTwentyPhones(contactInfo),
-      }),
-      ...(profile && {
-        name: { firstName: profile.first_name, lastName: profile.last_name },
-        jobTitle: profile.employment?.current?.title ?? '',
-        city: profile.location?.city ?? '',
-        intro: profile.description ?? '',
-      }),
-      ...(linkedinLink && { linkedinLink }),
-    };
+      enrichedAt,
+    });
     await updatePersonInTwenty(custom.personId, twentyPersonData, client);
     console.log(`Person ${custom.personId} has been updated successfully.`);
   }

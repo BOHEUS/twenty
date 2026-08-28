@@ -1,17 +1,21 @@
 import { defineLogicFunction, RoutePayload } from 'twenty-sdk/define';
 import { ENRICH_FUNCTION_PATH } from "src/constants/universal-identifiers";
+import { chunk } from "src/logic-functions/utils/chunk.util";
 
-// Fullenrich limit: 100 records in request, 60 req/min
-// Twenty limit: 50/100 req/min
+// Fullenrich limit: 100 records in request, 60 req/min, 15 min = 90000 records queued
+// Twenty limit: 50/100 req/min * 200 records * 15 min = 150000-300000 records
 
-// Logic function handler - rename and implement your logic
-const handler = async (params: RoutePayload<{recordIds?: []}>): Promise<{ message: string }> => {
-  const { a, b } = params;
+const handler = async (params: RoutePayload<{recordIds?: string[]}>) => {
+  const recordIds = params.body?.recordIds;
 
-  // Replace with your own logic
-  const message = `Hello, input: ${a} and ${b}`;
-
-  return { message };
+  if (recordIds === undefined || recordIds.length === 0) {
+    console.warn("");
+    return;
+  }
+  // no need to worry about enrichment req limits as the limit is 150k/300k records capped by Twenty req limit (50|100*200*15)
+  for (const records of chunk({items: recordIds, size: 200})) {
+    const fetchedRecords = await fetchData()
+  }
 };
 
 export default defineLogicFunction({

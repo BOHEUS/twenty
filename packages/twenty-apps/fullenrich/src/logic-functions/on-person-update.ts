@@ -3,12 +3,12 @@ import {
   defineLogicFunction,
   ObjectRecordUpdateEvent,
 } from 'twenty-sdk/define';
-import { fullEnrichRequest, twentyCompany, twentyPerson } from './shared/types';
+import { fullEnrichRequest, twentyPerson } from './shared/types';
 import { checkCompanyRequirements } from 'src/logic-functions/shared/check-company-requirements';
 import { checkPersonRequirements } from 'src/logic-functions/shared/check-person-requirements';
 import { fullEnrichRequirements } from 'src/logic-functions/shared/create-fullenrich-requirements';
+import { fetchTwentyCompany } from 'src/logic-functions/data/fetch-records.util';
 import { sendRequestToFullEnrich } from 'src/logic-functions/shared/send-request-to-fullenrich';
-import { CoreApiClient } from 'twenty-client-sdk/core';
 
 const FULL_ENRICH_API_KEY: string = process.env.FULL_ENRICH_API_KEY ?? '';
 const TWENTY_URL: string = process.env.TWENTY_URL ?? '';
@@ -16,18 +16,6 @@ const TWENTY_URL: string = process.env.TWENTY_URL ?? '';
 type PersonUpdateEvent = DatabaseEventPayload<
   ObjectRecordUpdateEvent<twentyPerson>
 >;
-
-const fetchTwentyCompany = async (companyId: string) => {
-  const client = new CoreApiClient();
-
-  const result = await client.query({});
-
-  if (!result) {
-    throw new Error(`Failed to fetch company ${companyId}: no result`);
-  }
-
-  return result;
-}
 
 const handler = async (event: PersonUpdateEvent): Promise<object | undefined> => {
   if (FULL_ENRICH_API_KEY === '' || TWENTY_URL === '') {
@@ -51,9 +39,11 @@ const handler = async (event: PersonUpdateEvent): Promise<object | undefined> =>
     );
     return {};
   }
-  const linkedCompany: twentyCompany = await fetchTwentyCompany(
-    properties.after.companyId,
-  );
+  const linkedCompany = await fetchTwentyCompany(properties.after.companyId);
+  if (!linkedCompany) {
+    console.warn(`Company ${properties.after.companyId} not found.`);
+    return {};
+  }
   if (
     linkedCompany.name === '' &&
     linkedCompany.domainName.primaryLinkUrl === ''

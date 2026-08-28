@@ -10,14 +10,11 @@ export const checkPersonRequirements = (twentyPerson: twentyPerson) => {
   const email = FULL_ENRICH_REQUEST_CONSTRAINTS?.includes('person.email')
     ? twentyPerson.emails.primaryEmail !== ''
     : true;
-  const x = FULL_ENRICH_REQUEST_CONSTRAINTS?.includes('person.xLink')
-    ? twentyPerson.xLink.primaryLinkUrl !== ''
+  const location = FULL_ENRICH_REQUEST_CONSTRAINTS?.includes('person.location')
+    ? !!twentyPerson.location?.addressCity
     : true;
-  const city = FULL_ENRICH_REQUEST_CONSTRAINTS?.includes('person.city')
-    ? twentyPerson.city !== ''
-    : true;
-  const intro = FULL_ENRICH_REQUEST_CONSTRAINTS?.includes('person.intro')
-    ? twentyPerson.intro !== ''
+  const about = FULL_ENRICH_REQUEST_CONSTRAINTS?.includes('person.about')
+    ? !!twentyPerson.about
     : true;
   const jobTitle = FULL_ENRICH_REQUEST_CONSTRAINTS?.includes('person.jobTitle')
     ? twentyPerson.jobTitle !== ''
@@ -28,9 +25,8 @@ export const checkPersonRequirements = (twentyPerson: twentyPerson) => {
     twentyPerson.linkedinLink.primaryLinkUrl !== '' &&
     phones &&
     email &&
-    x &&
-    city &&
-    intro &&
+    location &&
+    about &&
     jobTitle
   );
 };
