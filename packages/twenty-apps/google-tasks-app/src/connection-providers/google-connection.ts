@@ -1,10 +1,11 @@
 import { defineConnectionProvider } from 'twenty-sdk/define';
 import { GOOGLE_TASKS_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
+import { GOOGLE_TASKS_CONNECTION_PROVIDER_NAME } from "src/constants/sync";
 
 export default defineConnectionProvider({
   universalIdentifier: GOOGLE_TASKS_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER,
-  name: 'google-tasks',
-  displayName: 'google-tasks',
+  name: GOOGLE_TASKS_CONNECTION_PROVIDER_NAME,
+  displayName: 'Google Tasks',
   type: 'oauth',
   oauth: {
     authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',

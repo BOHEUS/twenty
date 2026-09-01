@@ -6,5 +6,6 @@ export default defineField({
   name: 'googleTasksId',
   label: 'Google Tasks ID',
   type: FieldType.TEXT,
+  isUnique: true,
   objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.task.universalIdentifier,
 });
