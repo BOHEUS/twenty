@@ -2,15 +2,19 @@ import {
   defineLogicFunction,
   STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS,
 } from 'twenty-sdk/define';
+import { type LogicFunctionExecutionContext } from 'twenty-sdk/logic-function';
 
 import { APOLLO_LOGIC_FUNCTION_UNIVERSAL_IDENTIFIERS } from 'src/constants/universal-identifiers';
 import { enrichCompanyHandler } from 'src/logic-functions/handlers/enrich-company';
 
-const handler = ({ recordId }: { recordId: string }) =>
-  enrichCompanyHandler({ recordId });
+const handler = (
+  { recordId }: { recordId: string },
+  context: LogicFunctionExecutionContext,
+) => enrichCompanyHandler({ recordId, context });
 
 export default defineLogicFunction({
-  universalIdentifier: APOLLO_LOGIC_FUNCTION_UNIVERSAL_IDENTIFIERS.enrichCompany,
+  universalIdentifier:
+    APOLLO_LOGIC_FUNCTION_UNIVERSAL_IDENTIFIERS.enrichCompany,
   name: 'enrich-company',
   description:
     'Enrich a Company record with Apollo organization data: industry, keywords, employee count, funding, technologies, social profiles and corporate hierarchy.',
@@ -39,8 +43,7 @@ export default defineLogicFunction({
           recordId: {
             type: 'record',
             objectUniversalIdentifier:
-              STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.company
-                .universalIdentifier,
+              STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.company.universalIdentifier,
             label: 'Record',
           },
         },

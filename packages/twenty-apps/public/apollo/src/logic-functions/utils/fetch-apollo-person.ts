@@ -12,27 +12,34 @@ export type ApolloPersonMatchParams = {
   linkedinUrl?: string;
 };
 
+export const toApolloPersonDetail = (
+  params: ApolloPersonMatchParams,
+): Record<string, unknown> =>
+  pruneUndefined({
+    email: params.email,
+    first_name: params.firstName,
+    last_name: params.lastName,
+    domain: params.domain,
+    linkedin_url: params.linkedinUrl,
+  });
+
 export const fetchApolloPerson = async ({
   params,
-  apiKey,
+  accessToken,
   revealPersonalEmails,
 }: {
   params: ApolloPersonMatchParams;
-  apiKey: string;
+  accessToken: string;
   revealPersonalEmails: boolean;
 }): Promise<ApolloApiResult<ApolloRecord | undefined>> => {
   const result = await callApolloApi({
     path: '/people/match',
     method: 'POST',
-    apiKey,
-    body: pruneUndefined({
-      email: params.email,
-      first_name: params.firstName,
-      last_name: params.lastName,
-      domain: params.domain,
-      linkedin_url: params.linkedinUrl,
+    accessToken,
+    body: {
+      ...toApolloPersonDetail(params),
       reveal_personal_emails: revealPersonalEmails,
-    }),
+    },
   });
 
   if (!result.success) {

@@ -1,14 +1,34 @@
-# My Twenty App
+# Apollo
 
-Describe your app in one or two sentences.
+Enrich People and Companies with Apollo data, and keep the fields Apollo returns
+that the standard objects have no home for.
 
 ## Features
 
-List the top things your app does, for example:
+- Enrich a single Person or Company, from the AI assistant or a workflow step.
+- Enrich several People or Companies at once: select records in a table and run
+  **Enrich with Apollo**, or use the bulk step in a workflow. Records are sent to
+  Apollo's bulk endpoints ten at a time, and each one comes back with its own
+  status (enriched, not found, skipped, error).
+- Re-enrich a Company automatically when its domain changes.
+- Store what Apollo returns beyond the standard fields: industry, keywords,
+  funding, headcount growth, technologies, seniority, employment history, and the
+  raw payload.
 
-- Feature one
-- Feature two
-- Feature three
+## Configuration
+
+Enrichment runs on an OAuth connection to Apollo, not on an API key. A server
+admin fills in `APOLLO_CONNECTION_CLIENT_ID` and `APOLLO_CONNECTION_CLIENT_SECRET`
+once, from an OAuth app registered with Apollo; each user then connects their
+Apollo account from the app's settings tab.
+
+A run started by a person uses that person's own connection. Workflows,
+database events and agents have nobody behind them, so they need a connection
+shared with the workspace. If Apollo rejects a token, the app reports it and the
+connection shows as needing a reconnect.
+
+Enrichment consumes Apollo credits; asking for personal emails on People
+consumes extra ones.
 
 ## Getting started
 
@@ -22,10 +42,6 @@ The `Publish` workflow (`.github/workflows/publish.yml`) publishes the app to np
 2. Bump the version in `package.json`, then push a version tag (e.g. `git tag v1.0.0 && git push --tags`) or run the workflow manually from the Actions tab.
 
 Publishing with provenance is also how you prove ownership when claiming your app in a Twenty marketplace.
-
-## Changelog
-
-Notable changes are documented in [CHANGELOG.md](CHANGELOG.md).
 
 ## Learn more
 

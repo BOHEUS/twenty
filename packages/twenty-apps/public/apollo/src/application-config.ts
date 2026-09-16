@@ -13,18 +13,14 @@ export default defineApplication({
   category: 'Enrichment',
   serverVariables: {
     APOLLO_CONNECTION_CLIENT_ID: {
-      description: "OAuth client ID issued by the third-party provider. Filled in once by the server admin on the application registration.",
+      description:
+        'OAuth client ID issued by the third-party provider. Filled in once by the server admin on the application registration.',
       isSecret: false,
       isRequired: true,
     },
     APOLLO_CONNECTION_CLIENT_SECRET: {
-      description: "OAuth client secret issued by the third-party provider. Stored encrypted; never echoed in API responses.",
-      isSecret: true,
-      isRequired: true,
-    },
-    APOLLO_API_KEY: {
       description:
-        'Apollo API key (Apollo → Settings → Integrations → API). Sent as the x-api-key header on every enrichment call.',
+        'OAuth client secret issued by the third-party provider. Stored encrypted; never echoed in API responses.',
       isSecret: true,
       isRequired: true,
     },

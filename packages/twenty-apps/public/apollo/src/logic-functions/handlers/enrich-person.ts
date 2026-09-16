@@ -1,81 +1,43 @@
 import { CoreApiClient } from 'twenty-client-sdk/core';
-
-import { type EnrichmentResult } from 'src/logic-functions/types/enrichment-result.type';
 import {
-  fetchApolloPerson,
-  type ApolloPersonMatchParams,
-} from 'src/logic-functions/utils/fetch-apollo-person';
-import { getApolloApiKey } from 'src/logic-functions/utils/get-apollo-api-key';
+  reportConnectionAuthFailure,
+  type LogicFunctionExecutionContext,
+} from 'twenty-sdk/logic-function';
+
+import {
+  APOLLO_NOT_CONNECTED_MESSAGE,
+  APOLLO_PERSON_NO_IDENTIFIER_MESSAGE,
+} from 'src/constants/enrichment-messages.constant';
+import { type EnrichmentResult } from 'src/logic-functions/types/enrichment-result.type';
+import { type PersonRecord } from 'src/logic-functions/types/person-record.type';
+import { buildPersonMatchParams } from 'src/logic-functions/utils/build-person-match-params';
+import { fetchApolloPerson } from 'src/logic-functions/utils/fetch-apollo-person';
+import { findApolloConnection } from 'src/logic-functions/utils/find-apollo-connection';
 import {
   buildPersonApolloData,
   buildPersonStandardData,
 } from 'src/logic-functions/utils/map-person';
-import { isDefined } from 'src/data/is-defined';
-import { normalizeDomain } from 'src/data/normalize-domain';
-import { pruneUndefined } from 'src/data/prune-undefined';
-import { toText } from 'src/data/to-text';
-
-type PersonRecord = {
-  id: string;
-  name?: { firstName?: string | null; lastName?: string | null } | null;
-  emails?: { primaryEmail?: string | null } | null;
-  linkedinLink?: { primaryLinkUrl?: string | null } | null;
-  company?: { domainName?: { primaryLinkUrl?: string | null } | null } | null;
-};
-
-const buildMatchParams = (
-  person: PersonRecord,
-): ApolloPersonMatchParams | undefined => {
-  const params = pruneUndefined({
-    email: toText(person.emails?.primaryEmail),
-    firstName: toText(person.name?.firstName),
-    lastName: toText(person.name?.lastName),
-    linkedinUrl: toText(person.linkedinLink?.primaryLinkUrl),
-    domain: normalizeDomain(person.company?.domainName?.primaryLinkUrl),
-  }) as ApolloPersonMatchParams;
-
-  // Apollo needs an email, a LinkedIn profile, or a name paired with the
-  // employer domain; a bare name matches the wrong person too often.
-  const hasStrongIdentifier =
-    isDefined(params.email) || isDefined(params.linkedinUrl);
-  const hasNameAndDomain =
-    (isDefined(params.firstName) || isDefined(params.lastName)) &&
-    isDefined(params.domain);
-
-  return hasStrongIdentifier || hasNameAndDomain ? params : undefined;
-};
-
-const updatePerson = async ({
-  client,
-  recordId,
-  data,
-}: {
-  client: CoreApiClient;
-  recordId: string;
-  data: Record<string, unknown>;
-}): Promise<void> => {
-  await client.mutation({
-    updatePerson: { __args: { id: recordId, data }, id: true },
-  });
-};
+import { updatePersonRecord } from 'src/logic-functions/utils/update-person-record';
+import { isDefined } from 'src/logic-functions/data/is-defined';
 
 export const enrichPersonHandler = async ({
   recordId,
   revealPersonalEmails = false,
+  context,
 }: {
   recordId: string;
   revealPersonalEmails?: boolean;
+  context: Pick<LogicFunctionExecutionContext, 'userWorkspaceId'>;
 }): Promise<EnrichmentResult> => {
-  const apiKey = getApolloApiKey();
+  const connection = await findApolloConnection(context);
 
-  if (!isDefined(apiKey)) {
+  if (!isDefined(connection)) {
     return {
       success: false,
       recordId,
       status: 'ERROR',
       updatedFields: [],
-      message:
-        'APOLLO_API_KEY is not set. An admin must configure the Apollo API key on this application.',
+      message: APOLLO_NOT_CONNECTED_MESSAGE,
     };
   }
 
@@ -104,7 +66,7 @@ export const enrichPersonHandler = async ({
     };
   }
 
-  const params = buildMatchParams(person);
+  const params = buildPersonMatchParams(person);
 
   if (!isDefined(params)) {
     return {
@@ -112,20 +74,26 @@ export const enrichPersonHandler = async ({
       recordId,
       status: 'SKIPPED',
       updatedFields: [],
-      message:
-        'Person has no email, LinkedIn profile, or name plus employer domain for Apollo to match on.',
+      message: APOLLO_PERSON_NO_IDENTIFIER_MESSAGE,
     };
   }
 
   const enrichedAt = new Date().toISOString();
   const matchResult = await fetchApolloPerson({
     params,
-    apiKey,
+    accessToken: connection.accessToken,
     revealPersonalEmails,
   });
 
   if (!matchResult.success) {
-    await updatePerson({
+    if (matchResult.isAuthFailure) {
+      await reportConnectionAuthFailure({
+        connectionId: connection.id,
+        reason: 'Apollo rejected the access token.',
+      }).catch(() => undefined);
+    }
+
+    await updatePersonRecord({
       client,
       recordId,
       data: {
@@ -146,7 +114,7 @@ export const enrichPersonHandler = async ({
   const matchedPerson = matchResult.data;
 
   if (!isDefined(matchedPerson)) {
-    await updatePerson({
+    await updatePersonRecord({
       client,
       recordId,
       data: {
@@ -169,7 +137,7 @@ export const enrichPersonHandler = async ({
     ...buildPersonApolloData({ person: matchedPerson, enrichedAt }),
   };
 
-  await updatePerson({ client, recordId, data });
+  await updatePersonRecord({ client, recordId, data });
 
   return {
     success: true,

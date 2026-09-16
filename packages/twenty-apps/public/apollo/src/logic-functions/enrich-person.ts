@@ -2,17 +2,21 @@ import {
   defineLogicFunction,
   STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS,
 } from 'twenty-sdk/define';
+import { type LogicFunctionExecutionContext } from 'twenty-sdk/logic-function';
 
 import { APOLLO_LOGIC_FUNCTION_UNIVERSAL_IDENTIFIERS } from 'src/constants/universal-identifiers';
 import { enrichPersonHandler } from 'src/logic-functions/handlers/enrich-person';
 
-const handler = ({
-  recordId,
-  revealPersonalEmails,
-}: {
-  recordId: string;
-  revealPersonalEmails?: boolean;
-}) => enrichPersonHandler({ recordId, revealPersonalEmails });
+const handler = (
+  {
+    recordId,
+    revealPersonalEmails,
+  }: {
+    recordId: string;
+    revealPersonalEmails?: boolean;
+  },
+  context: LogicFunctionExecutionContext,
+) => enrichPersonHandler({ recordId, revealPersonalEmails, context });
 
 export default defineLogicFunction({
   universalIdentifier: APOLLO_LOGIC_FUNCTION_UNIVERSAL_IDENTIFIERS.enrichPerson,

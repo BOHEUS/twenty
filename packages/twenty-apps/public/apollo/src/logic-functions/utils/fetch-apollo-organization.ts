@@ -5,15 +5,16 @@ import { toJsonObject } from '../data/to-json';
 
 export const fetchApolloOrganization = async ({
   domain,
-  apiKey,
+  accessToken,
 }: {
   domain: string;
-  apiKey: string;
+  accessToken: string;
 }): Promise<ApolloApiResult<ApolloRecord | undefined>> => {
   const result = await callApolloApi({
-    path: `/organizations/enrich?domain=${encodeURIComponent(domain)}`,
+    path: '/organizations/enrich',
     method: 'GET',
-    apiKey,
+    accessToken,
+    query: { domain },
   });
 
   if (!result.success) {

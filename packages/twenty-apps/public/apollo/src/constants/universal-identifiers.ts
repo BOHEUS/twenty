@@ -24,12 +24,32 @@ export const MAIN_PAGE_WIDGET_UNIVERSAL_IDENTIFIER =
 export const MAIN_PAGE_NAVIGATION_MENU_ITEM_UNIVERSAL_IDENTIFIER =
   'c48a6a4a-4849-4625-94e0-3bf5c75e355b';
 
-export const APOLLO_API_KEY_VARIABLE_KEY = 'APOLLO_API_KEY';
+// Matches defineConnectionProvider({ name }); listConnections filters on it.
+export const APOLLO_CONNECTION_PROVIDER_NAME = 'apollo-connection';
 
 export const APOLLO_LOGIC_FUNCTION_UNIVERSAL_IDENTIFIERS = {
   enrichCompany: '46acb0ad-ddec-405a-b50e-34b6e5ab1135',
   enrichPerson: '6c2563ec-e4df-4098-a5e6-c9796af30d05',
+  enrichCompanies: 'e78113e5-7983-45c4-a32b-5feb2f4edc51',
+  enrichPeople: '1e6e06ca-6f7f-46b2-a145-ea1915f39422',
   onCompanyUpdated: '6248b3fe-a8af-404a-8e38-19df98f73d81',
+} as const;
+
+// The front components that back the record-selection commands reach the bulk
+// logic functions through these routes, served under the /s prefix.
+export const APOLLO_LOGIC_FUNCTION_ROUTE_PATHS = {
+  enrichCompanies: '/apollo/enrich-companies',
+  enrichPeople: '/apollo/enrich-people',
+} as const;
+
+export const APOLLO_FRONT_COMPONENT_UNIVERSAL_IDENTIFIERS = {
+  enrichCompanies: 'aa2cadff-e0ad-40af-929b-0dd527da221d',
+  enrichPeople: '37c5fe66-020e-44ad-ba38-5afb5d9f34c9',
+} as const;
+
+export const APOLLO_COMMAND_MENU_ITEM_UNIVERSAL_IDENTIFIERS = {
+  enrichCompanies: '964ff042-3806-45b9-836e-f1a0fedfbfb9',
+  enrichPeople: '74ea311b-0fa5-4c8f-a2ee-4332098491a5',
 } as const;
 
 export const APOLLO_FIELD_UNIVERSAL_IDENTIFIERS = {
