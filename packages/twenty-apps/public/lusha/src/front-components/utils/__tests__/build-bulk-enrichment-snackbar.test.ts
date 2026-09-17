@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildBulkEnrichmentSnackbar } from 'src/front-components/utils/build-bulk-enrichment-snackbar';
 
-const bulkEnrichmentResult = {
+const BULK_ENRICHMENT_RESULT = {
   success: true,
   total: 3,
   enriched: 3,
@@ -14,7 +14,7 @@ const bulkEnrichmentResult = {
 
 describe('buildBulkEnrichmentSnackbar', () => {
   it('should report a run where every record was enriched', () => {
-    expect(buildBulkEnrichmentSnackbar(bulkEnrichmentResult)).toEqual({
+    expect(buildBulkEnrichmentSnackbar(BULK_ENRICHMENT_RESULT)).toEqual({
       message: 'Enriched 3 of 3 records with Lusha.',
       variant: 'success',
       detailedMessage: undefined,
@@ -24,7 +24,7 @@ describe('buildBulkEnrichmentSnackbar', () => {
   it('should detail the records that were not enriched', () => {
     expect(
       buildBulkEnrichmentSnackbar({
-        ...bulkEnrichmentResult,
+        ...BULK_ENRICHMENT_RESULT,
         enriched: 1,
         notFound: 1,
         skipped: 1,

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   LUSHA_API_KEY_MISSING_MESSAGE,
   LUSHA_COMPLIANCE_RESTRICTED_MESSAGE,
+  LUSHA_OUT_OF_TIME_MESSAGE,
 } from 'src/constants/enrichment-messages.constant';
 import { type EnrichmentAdapter } from 'src/logic-functions/types/enrichment-adapter.type';
 import { type LushaApiResult } from 'src/logic-functions/types/lusha-api-result.type';
@@ -71,6 +72,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe('runBulkEnrichment', () => {
@@ -395,6 +397,41 @@ describe('runBulkEnrichment', () => {
         .mocked(adapter.searchAndEnrich)
         .mock.calls.map(([{ items }]) => items.length),
     ).toEqual([100, 100, 50]);
+  });
+
+  it('should stop starting batches before the run is out of time', async () => {
+    const records = Array.from({ length: 250 }, (_, index) => ({
+      id: `company-${index}`,
+      domain: `company-${index}.com`,
+    }));
+    let currentTimestamp = Date.UTC(2026, 0, 1);
+
+    vi.spyOn(Date, 'now').mockImplementation(() => currentTimestamp);
+
+    const adapter = createAdapter({
+      records,
+      searchAndEnrich: ({ items }) => {
+        currentTimestamp += 200_000;
+
+        return Promise.resolve({
+          success: true,
+          data: items.map(({ clientReferenceId, domain }) => ({
+            clientReferenceId,
+            id: `lusha-${domain}`,
+          })),
+        });
+      },
+    });
+
+    const result = await runBulkEnrichment({
+      input: { records: records.map(({ id }) => id) },
+      adapter,
+      client,
+    });
+
+    expect(adapter.searchAndEnrich).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ total: 250, enriched: 200, errored: 50 });
+    expect(result.results[249].message).toBe(LUSHA_OUT_OF_TIME_MESSAGE);
   });
 
   it('should reveal phone numbers when the app setting asks for it', async () => {

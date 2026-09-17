@@ -16,5 +16,8 @@ export const LUSHA_COMPANY_NOT_FOUND_MESSAGE =
 export const LUSHA_COMPLIANCE_RESTRICTED_MESSAGE =
   'Lusha cannot share this data for compliance reasons.';
 
+export const LUSHA_OUT_OF_TIME_MESSAGE =
+  'Not sent to Lusha because the run reached its time limit. Enrich the remaining records again.';
+
 export const LUSHA_NOT_ATTEMPTED_MESSAGE =
   'Not sent to Lusha because an earlier request failed';

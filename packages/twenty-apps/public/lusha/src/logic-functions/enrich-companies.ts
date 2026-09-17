@@ -7,6 +7,7 @@ import {
   type InputJsonSchema,
 } from 'twenty-sdk/logic-function';
 
+import { ENRICHMENT_TIMEOUT_SECONDS } from 'src/constants/enrichment-run.constant';
 import { BULK_ENRICHMENT_OUTPUT_SCHEMA } from 'src/constants/enrichment-schemas.constant';
 import {
   LUSHA_LOGIC_FUNCTION_ROUTE_PATHS,
@@ -19,7 +20,7 @@ import {
   type BulkEnrichmentFunctionInput,
 } from 'src/logic-functions/utils/to-bulk-enrichment-input';
 
-const inputSchema: InputJsonSchema = {
+const ENRICH_COMPANIES_INPUT_SCHEMA: InputJsonSchema = {
   type: 'object',
   properties: {
     records: {
@@ -46,18 +47,18 @@ export default defineLogicFunction({
   name: 'enrich-companies',
   description:
     'Enrich Company records with Lusha by domain: industry, employee count, revenue range, funding, technologies and headquarters. Spends Lusha credits.',
-  timeoutSeconds: 300,
+  timeoutSeconds: ENRICHMENT_TIMEOUT_SECONDS,
   handler,
   httpRouteTriggerSettings: {
     path: LUSHA_LOGIC_FUNCTION_ROUTE_PATHS.enrichCompanies,
     httpMethod: 'POST',
     isAuthRequired: true,
   },
-  toolTriggerSettings: { inputSchema },
+  toolTriggerSettings: { inputSchema: ENRICH_COMPANIES_INPUT_SCHEMA },
   workflowActionTriggerSettings: {
     label: 'Enrich Companies with Lusha',
     icon: 'IconBuildingSkyscraper',
-    inputSchema: jsonSchemaToInputSchema(inputSchema),
+    inputSchema: jsonSchemaToInputSchema(ENRICH_COMPANIES_INPUT_SCHEMA),
     outputSchema: BULK_ENRICHMENT_OUTPUT_SCHEMA,
   },
 });

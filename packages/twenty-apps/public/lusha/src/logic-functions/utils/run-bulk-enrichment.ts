@@ -6,7 +6,12 @@ import {
   LUSHA_API_KEY_MISSING_MESSAGE,
   LUSHA_COMPLIANCE_RESTRICTED_MESSAGE,
   LUSHA_NOT_ATTEMPTED_MESSAGE,
+  LUSHA_OUT_OF_TIME_MESSAGE,
 } from 'src/constants/enrichment-messages.constant';
+import {
+  ENRICHMENT_CONCURRENCY,
+  ENRICHMENT_RUN_BUDGET_MILLISECONDS,
+} from 'src/constants/enrichment-run.constant';
 import { LUSHA_BATCH_SIZE } from 'src/constants/lusha-api.constant';
 import { RECORD_READ_BATCH_SIZE } from 'src/constants/record-read-batch-size.constant';
 import { chunk } from 'src/logic-functions/data/chunk';
@@ -237,6 +242,49 @@ const enrichRecord = async <
   }
 };
 
+const enrichMatchedRecords = async <
+  TRecord extends { id: string },
+  TSearchItem extends { clientReferenceId: string },
+>({
+  context,
+  batch,
+  matches,
+  enrichedAt,
+}: {
+  context: RunContext<TRecord, TSearchItem>;
+  batch: MatchableRecord<TRecord, TSearchItem>[];
+  matches: LushaRecord[];
+  enrichedAt: string;
+}): Promise<EnrichmentResult[]> => {
+  const matchByRecordId = new Map(
+    matches.map((match) => [toText(match.clientReferenceId), match]),
+  );
+  const results: EnrichmentResult[] = [];
+
+  for (const wave of chunk({ items: batch, size: ENRICHMENT_CONCURRENCY })) {
+    results.push(
+      ...(await Promise.all(
+        wave.map(({ record }) =>
+          enrichRecord({
+            context,
+            record,
+            match: matchByRecordId.get(record.id),
+            enrichedAt,
+          }).catch((error) =>
+            buildResult({
+              recordId: record.id,
+              status: 'ERROR',
+              message: toErrorMessage(error),
+            }),
+          ),
+        ),
+      )),
+    );
+  }
+
+  return results;
+};
+
 const enrichBatch = async <
   TRecord extends { id: string },
   TSearchItem extends { clientReferenceId: string },
@@ -259,38 +307,17 @@ const enrichBatch = async <
     revealPhones,
   });
 
-  let results: EnrichmentResult[];
-
-  if (searchResult.success) {
-    const matchByRecordId = new Map(
-      searchResult.data.map((match) => [
-        toText(match.clientReferenceId),
-        match,
-      ]),
-    );
-
-    results = await Promise.all(
-      batch.map(({ record }) =>
-        enrichRecord({
-          context,
-          record,
-          match: matchByRecordId.get(record.id),
-          enrichedAt,
-        }).catch((error) =>
-          buildResult({
-            recordId: record.id,
-            status: 'ERROR',
-            message: toErrorMessage(error),
-          }),
-        ),
-      ),
-    );
-  } else {
-    results = buildErrorResults({
-      recordIds: batch.map(({ record }) => record.id),
-      message: searchResult.error,
-    });
-  }
+  const results = searchResult.success
+    ? await enrichMatchedRecords({
+        context,
+        batch,
+        matches: searchResult.data,
+        enrichedAt,
+      })
+    : buildErrorResults({
+        recordIds: batch.map(({ record }) => record.id),
+        message: searchResult.error,
+      });
 
   // The status field only mirrors the outcome, so a failed status write must
   // not change what the run reports.
@@ -359,17 +386,30 @@ export const runBulkEnrichment = async <
     client,
     recordIds,
   });
+  const runDeadline = Date.now() + ENRICHMENT_RUN_BUDGET_MILLISECONDS;
   let accountFailureMessage: string | undefined;
 
   for (const batch of chunk({
     items: matchableRecords,
     size: LUSHA_BATCH_SIZE,
   })) {
+    const batchRecordIds = batch.map(({ record }) => record.id);
+
     if (isDefined(accountFailureMessage)) {
       results.push(
         ...buildErrorResults({
-          recordIds: batch.map(({ record }) => record.id),
+          recordIds: batchRecordIds,
           message: `${LUSHA_NOT_ATTEMPTED_MESSAGE}: ${accountFailureMessage}`,
+        }),
+      );
+      continue;
+    }
+
+    if (Date.now() > runDeadline) {
+      results.push(
+        ...buildErrorResults({
+          recordIds: batchRecordIds,
+          message: LUSHA_OUT_OF_TIME_MESSAGE,
         }),
       );
       continue;

@@ -54,9 +54,8 @@ const createCompany = async ({
   return result.createCompany?.id;
 };
 
-// Resolves the company of a contact by domain, creating it when the workspace
-// has none. People are enriched concurrently, so the cache holds the pending
-// lookup to create each new company only once.
+// People are enriched concurrently, so the cache holds the pending lookup to
+// create each new company only once.
 export const findOrCreateCompany = async ({
   client,
   contact,

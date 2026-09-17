@@ -1,4 +1,5 @@
 import { CoreApiClient } from 'twenty-client-sdk/core';
+import { isDefined } from 'twenty-sdk/utils';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { LUSHA_COMPANY_MOCK } from 'src/logic-functions/__mocks__/lusha-company.mock';
@@ -74,9 +75,7 @@ describe('Lusha field writes', () => {
     }
 
     const companyIds = new Set(
-      [createdIds.companyId, createdIds.linkedCompanyId].filter(
-        (companyId): companyId is string => companyId !== undefined,
-      ),
+      [createdIds.companyId, createdIds.linkedCompanyId].filter(isDefined),
     );
 
     for (const companyId of companyIds) {

@@ -5,22 +5,6 @@ import { toStringArray } from 'src/logic-functions/data/to-string-array';
 import { toText } from 'src/logic-functions/data/to-text';
 import { type PersonRecord } from 'src/logic-functions/types/person-record.type';
 
-const uniqueCaseInsensitive = (emails: string[]): string[] => {
-  const seenLowerCaseEmails = new Set<string>();
-
-  return emails.filter((email) => {
-    const lowerCaseEmail = email.toLowerCase();
-
-    if (seenLowerCaseEmails.has(lowerCaseEmail)) {
-      return false;
-    }
-
-    seenLowerCaseEmails.add(lowerCaseEmail);
-
-    return true;
-  });
-};
-
 // Emails Lusha returns are only ever added: the best one becomes primary when
 // the person has none.
 export const mergeEmails = ({
@@ -41,10 +25,9 @@ export const mergeEmails = ({
     toStringArray(currentEmails?.additionalEmails) ?? [];
   const primaryEmail = currentPrimaryEmail ?? bestLushaEmail;
 
-  const additionalEmails = uniqueCaseInsensitive([
-    ...currentAdditionalEmails,
-    ...lushaEmails,
-  ]).filter((email) => email.toLowerCase() !== primaryEmail.toLowerCase());
+  const additionalEmails = (
+    toStringArray([...currentAdditionalEmails, ...lushaEmails]) ?? []
+  ).filter((email) => email.toLowerCase() !== primaryEmail.toLowerCase());
 
   if (
     isDefined(currentPrimaryEmail) &&

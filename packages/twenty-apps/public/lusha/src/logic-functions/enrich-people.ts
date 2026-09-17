@@ -7,6 +7,7 @@ import {
   type InputJsonSchema,
 } from 'twenty-sdk/logic-function';
 
+import { ENRICHMENT_TIMEOUT_SECONDS } from 'src/constants/enrichment-run.constant';
 import {
   BULK_ENRICHMENT_OUTPUT_SCHEMA,
   REVEAL_PHONES_INPUT_SCHEMA,
@@ -22,7 +23,7 @@ import {
   type BulkEnrichmentFunctionInput,
 } from 'src/logic-functions/utils/to-bulk-enrichment-input';
 
-const inputSchema: InputJsonSchema = {
+const ENRICH_PEOPLE_INPUT_SCHEMA: InputJsonSchema = {
   type: 'object',
   properties: {
     records: {
@@ -49,18 +50,18 @@ export default defineLogicFunction({
   name: 'enrich-people',
   description:
     'Enrich Person records with Lusha: job title, seniority, departments, location, work emails and, when revealed, phone numbers. Spends Lusha credits.',
-  timeoutSeconds: 300,
+  timeoutSeconds: ENRICHMENT_TIMEOUT_SECONDS,
   handler,
   httpRouteTriggerSettings: {
     path: LUSHA_LOGIC_FUNCTION_ROUTE_PATHS.enrichPeople,
     httpMethod: 'POST',
     isAuthRequired: true,
   },
-  toolTriggerSettings: { inputSchema },
+  toolTriggerSettings: { inputSchema: ENRICH_PEOPLE_INPUT_SCHEMA },
   workflowActionTriggerSettings: {
     label: 'Enrich People with Lusha',
     icon: 'IconUser',
-    inputSchema: jsonSchemaToInputSchema(inputSchema),
+    inputSchema: jsonSchemaToInputSchema(ENRICH_PEOPLE_INPUT_SCHEMA),
     outputSchema: BULK_ENRICHMENT_OUTPUT_SCHEMA,
   },
 });

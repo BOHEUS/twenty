@@ -1,4 +1,4 @@
-import { isArray } from '@sniptt/guards';
+import { isArray, isNonEmptyString } from '@sniptt/guards';
 import { isDefined } from 'twenty-sdk/utils';
 
 import { toDigits } from 'src/logic-functions/data/to-digits';
@@ -14,7 +14,7 @@ import {
 // sends the international format, so a phone matches on either digit string.
 const getPhoneKeys = ({ number, callingCode }: PhoneValue): string[] =>
   [toDigits(number), toDigits(`${callingCode}${number}`)].filter(
-    (key) => key.length > 0,
+    isNonEmptyString,
   );
 
 const readPhone = ({

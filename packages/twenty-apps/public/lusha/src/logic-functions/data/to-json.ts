@@ -1,4 +1,4 @@
-import { isArray, isObject } from '@sniptt/guards';
+import { isArray, isNonEmptyArray, isObject } from '@sniptt/guards';
 
 export const toJsonObject = (
   value: unknown,
@@ -8,4 +8,4 @@ export const toJsonObject = (
     : undefined;
 
 export const toJsonArray = (value: unknown): unknown[] | undefined =>
-  isArray(value) && value.length > 0 ? value : undefined;
+  isNonEmptyArray(value) ? value : undefined;
