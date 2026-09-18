@@ -1,0 +1,1 @@
+export const COMPANY_REDEEM_COST_DOLLARS = 0.1;

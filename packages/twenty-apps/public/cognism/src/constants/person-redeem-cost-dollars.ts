@@ -1,0 +1,1 @@
+export const PERSON_REDEEM_COST_DOLLARS = 0.25;

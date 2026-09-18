@@ -1,0 +1,36 @@
+import { type CognismCompanyData } from 'src/logic-functions/types/cognism-company-data';
+
+export const COGNISM_COMPANY_DATA_MOCK: CognismCompanyData = {
+  id: 'cognism-account-1',
+  redeemId: 'redeem-account-1',
+  name: 'Acme',
+  domain: 'acme.com',
+  website: 'https://www.acme.com',
+  linkedinUrl: 'https://www.linkedin.com/company/acme/',
+  revenue: 12_500_000,
+  locations: [
+    { street: '1 Side Street', city: 'Manchester', country: 'United Kingdom' },
+    {
+      street: '10 Main Street',
+      city: 'London',
+      state: 'Greater London',
+      zip: 'EC1A 1BB',
+      country: 'United Kingdom',
+      headquarters: true,
+    },
+  ],
+  industries: ['Software', 'software', 'Information Technology'],
+  description: 'Acme builds anvils.',
+  shortDescription: 'Anvils.',
+  founded: 1998,
+  type: 'Private',
+  sizeFrom: 201,
+  sizeTo: 500,
+  headcount: 412,
+  naics: [{ code: '541511' }],
+  sic: [{ code: '7372' }],
+  officePhoneNumbers: [{ number: '+442071234567', score: 80, dnc: false }],
+  technologies: ['Salesforce', 'Snowflake'],
+  hiringEvent: [{ title: 'Account Executive' }],
+  lastConfirmed: '2026-09-01',
+};
