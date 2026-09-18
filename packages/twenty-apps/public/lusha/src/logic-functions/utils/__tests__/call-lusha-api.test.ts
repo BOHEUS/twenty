@@ -32,7 +32,10 @@ afterEach(() => {
 describe('callLushaApi', () => {
   it('should post the body to the V3 endpoint and return the results', async () => {
     fetchMock.mockResolvedValue(
-      jsonResponse(200, { results: [{ clientReferenceId: 'company-1' }] }),
+      jsonResponse(200, {
+        results: [{ clientReferenceId: 'company-1' }],
+        billing: { creditsCharged: 2, resultsReturned: 1 },
+      }),
     );
 
     const result = await callWithoutRetryDelays();
@@ -40,6 +43,7 @@ describe('callLushaApi', () => {
     expect(result).toEqual({
       success: true,
       data: [{ clientReferenceId: 'company-1' }],
+      creditsCharged: 2,
     });
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.lusha.com/v3/companies/search-and-enrich',
@@ -109,6 +113,41 @@ describe('callLushaApi', () => {
       error:
         'Lusha request failed (HTTP 400): companies.0.domain must be a string',
       isAccountFailure: false,
+    });
+  });
+
+  it('should report what the plan has left when the rate limit is reached', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ statusCode: 429 }), {
+          status: 429,
+          headers: {
+            'content-type': 'application/json',
+            'x-minute-requests-left': '0',
+            'x-hourly-requests-left': '120',
+            'x-daily-requests-left': '3400',
+          },
+        }),
+      ),
+    );
+
+    expect(await callWithoutRetryDelays()).toEqual({
+      success: false,
+      error:
+        'Lusha rate limit reached (0 left this minute, 120 left this hour, 3400 left today). Try again later.',
+      isAccountFailure: true,
+    });
+  });
+
+  it('should report a rate limit whose headers Lusha left out', async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(jsonResponse(429, { statusCode: 429 })),
+    );
+
+    expect(await callWithoutRetryDelays()).toEqual({
+      success: false,
+      error: 'Lusha rate limit reached. Try again later.',
+      isAccountFailure: true,
     });
   });
 

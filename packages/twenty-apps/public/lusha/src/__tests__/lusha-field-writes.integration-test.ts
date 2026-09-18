@@ -156,9 +156,7 @@ describe('Lusha field writes', () => {
     expect(Number(company?.lushaTotalFunding?.amountMicros)).toBe(
       245_000_000_000_000,
     );
-    expect(company?.lushaPhones?.additionalPhones).toEqual([
-      expect.objectContaining({ number: '8004207332', callingCode: '+1' }),
-    ]);
+    expect(company?.lushaPhones?.additionalPhones ?? []).toEqual([]);
     expect(new Date(company?.lushaLastEnrichedAt ?? '').toISOString()).toBe(
       ENRICHED_AT,
     );

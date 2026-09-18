@@ -94,15 +94,10 @@ export const readLushaContactPhones = (contact: LushaRecord): PhoneValue[] => {
     .filter(isDefined);
 };
 
-// The documented schema has a single phone string, while Lusha's own examples
-// return a phones list, so both are read.
-export const readLushaCompanyPhones = (company: LushaRecord): PhoneValue[] => {
-  const countryCode = toJsonObject(company.location)?.countryIso2;
-
-  return [
-    company.phone,
-    ...readObjects(company.phones).map((phone) => phone.number),
-  ]
-    .map((number) => toPhoneValue({ number, countryCode }))
-    .filter(isDefined);
-};
+export const readLushaCompanyPhone = (
+  company: LushaRecord,
+): PhoneValue | undefined =>
+  toPhoneValue({
+    number: company.phone,
+    countryCode: toJsonObject(company.location)?.countryIso2,
+  });

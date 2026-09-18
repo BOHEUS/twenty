@@ -34,6 +34,9 @@ export const personEnrichmentAdapter: EnrichmentAdapter<
       body: {
         contacts: items,
         reveal: revealPhones ? ['emails', 'phones'] : ['emails'],
+        // A partial profile still fills some fields, which beats reporting the
+        // record as not found.
+        options: { includePartialProfiles: true },
       },
     }),
   buildUpdateData: async ({

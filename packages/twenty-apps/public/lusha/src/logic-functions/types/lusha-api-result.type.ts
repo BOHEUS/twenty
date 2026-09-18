@@ -1,5 +1,13 @@
-export type LushaApiResult<TData> =
-  | { success: true; data: TData }
+import { type LushaRecord } from 'src/logic-functions/types/lusha-record.type';
+
+export type LushaApiResult =
+  | {
+      success: true;
+      data: LushaRecord[];
+      // What Lusha billed for the request, which it leaves out when the plan
+      // is not charged per call.
+      creditsCharged?: number;
+    }
   | {
       success: false;
       error: string;

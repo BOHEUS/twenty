@@ -30,8 +30,19 @@ workspace admin fills in:
 - **Reveal phone numbers**: off by default, because phone numbers cost more
   credits than emails. Workflows and the AI chat can override it for a run.
 
+A server admin can also set a `LUSHA_DEFAULT_API_KEY` on the Lusha application
+registration of the instance. Workspaces that leave the app setting empty
+enrich with that key, and a key filled in by a workspace always wins over it.
+
 Each run reports every record as enriched, not found, skipped (nothing Lusha
-can match on) or failed, and writes the outcome to the **Lusha Status** field.
+can match on) or failed, how many Lusha credits it spent, and writes the
+outcome to the **Lusha Status** field.
+
+## Billing
+
+Enriching with the instance-wide Lusha API key spends Twenty credits, priced on
+the Lusha credits each run is billed for. A workspace that fills in its own
+Lusha API key spends its own Lusha credits instead and is not charged.
 
 ## Getting started
 

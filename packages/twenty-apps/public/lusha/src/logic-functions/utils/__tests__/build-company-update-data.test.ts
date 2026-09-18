@@ -91,9 +91,7 @@ describe('buildCompanyLushaData', () => {
         primaryPhoneNumber: '(617) 555-0142',
         primaryPhoneCountryCode: 'US',
         primaryPhoneCallingCode: '',
-        additionalPhones: [
-          { number: '+1 800-420-7332', countryCode: '', callingCode: '' },
-        ],
+        additionalPhones: null,
       },
       lushaLocation: {
         addressStreet1: '',

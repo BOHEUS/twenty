@@ -22,7 +22,7 @@ export type EnrichmentAdapter<
     apiKey: string;
     items: TSearchItem[];
     revealPhones: boolean;
-  }) => Promise<LushaApiResult<LushaRecord[]>>;
+  }) => Promise<LushaApiResult>;
   buildUpdateData: (args: {
     client: CoreApiClient;
     record: TRecord;

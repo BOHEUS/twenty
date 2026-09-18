@@ -6,9 +6,10 @@ import {
   LUSHA_RETRY_DELAYS_MILLISECONDS,
 } from 'src/constants/lusha-api.constant';
 import { toJsonArray, toJsonObject } from 'src/logic-functions/data/to-json';
+import { toNumber } from 'src/logic-functions/data/to-number';
 import { type LushaApiResult } from 'src/logic-functions/types/lusha-api-result.type';
-import { type LushaRecord } from 'src/logic-functions/types/lusha-record.type';
 import { buildLushaError } from 'src/logic-functions/utils/build-lusha-error';
+import { readLushaRateLimit } from 'src/logic-functions/utils/read-lusha-rate-limit';
 
 const isRetryableStatus = (status: number): boolean =>
   status === 429 || status >= 500;
@@ -68,7 +69,7 @@ export const callLushaApi = async ({
   apiKey: string;
   body: Record<string, unknown>;
   retryDelaysInMilliseconds?: number[];
-}): Promise<LushaApiResult<LushaRecord[]>> => {
+}): Promise<LushaApiResult> => {
   let response: Response;
 
   try {
@@ -95,6 +96,7 @@ export const callLushaApi = async ({
     const { message, isAccountFailure } = buildLushaError({
       status: response.status,
       payload,
+      rateLimit: readLushaRateLimit(response.headers),
     });
 
     return { success: false, error: message, isAccountFailure };
@@ -108,6 +110,7 @@ export const callLushaApi = async ({
         data: (toJsonArray(data.results) ?? [])
           .map(toJsonObject)
           .filter(isDefined),
+        creditsCharged: toNumber(toJsonObject(data.billing)?.creditsCharged),
       }
     : {
         success: false,

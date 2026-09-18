@@ -24,6 +24,7 @@ import { type EnrichmentAdapter } from 'src/logic-functions/types/enrichment-ada
 import { type EnrichmentResult } from 'src/logic-functions/types/enrichment-result.type';
 import { type LushaRecord } from 'src/logic-functions/types/lusha-record.type';
 import { aggregateBulkEnrichmentResult } from 'src/logic-functions/utils/aggregate-bulk-enrichment-result';
+import { chargeEnrichment } from 'src/logic-functions/utils/charge-enrichment';
 import { getLushaApiKey } from 'src/logic-functions/utils/get-lusha-api-key';
 import { toRecordIds } from 'src/logic-functions/utils/to-record-ids';
 
@@ -297,6 +298,7 @@ const enrichBatch = async <
 }): Promise<{
   results: EnrichmentResult[];
   accountFailureMessage: string | undefined;
+  creditsCharged: number;
 }> => {
   const { adapter, client, apiKey, revealPhones } = context;
   const enrichedAt = new Date().toISOString();
@@ -346,6 +348,9 @@ const enrichBatch = async <
       !searchResult.success && searchResult.isAccountFailure
         ? searchResult.error
         : undefined,
+    creditsCharged: searchResult.success
+      ? (searchResult.creditsCharged ?? 0)
+      : 0,
   };
 };
 
@@ -362,18 +367,22 @@ export const runBulkEnrichment = async <
   client?: CoreApiClient;
 }): Promise<BulkEnrichmentResult> => {
   const recordIds = toRecordIds(input.records);
-  const apiKey = getLushaApiKey();
+  const lushaApiKey = getLushaApiKey();
 
-  if (!isDefined(apiKey)) {
-    return aggregateBulkEnrichmentResult(
-      buildErrorResults({ recordIds, message: LUSHA_API_KEY_MISSING_MESSAGE }),
-    );
+  if (!isDefined(lushaApiKey)) {
+    return aggregateBulkEnrichmentResult({
+      results: buildErrorResults({
+        recordIds,
+        message: LUSHA_API_KEY_MISSING_MESSAGE,
+      }),
+      creditsCharged: 0,
+    });
   }
 
   const context: RunContext<TRecord, TSearchItem> = {
     adapter,
     client,
-    apiKey,
+    apiKey: lushaApiKey.value,
     // A command started from a record selection has no inputs, so revealing
     // phone numbers falls back to the workspace-wide app setting.
     revealPhones:
@@ -388,6 +397,7 @@ export const runBulkEnrichment = async <
   });
   const runDeadline = Date.now() + ENRICHMENT_RUN_BUDGET_MILLISECONDS;
   let accountFailureMessage: string | undefined;
+  let creditsCharged = 0;
 
   for (const batch of chunk({
     items: matchableRecords,
@@ -419,15 +429,21 @@ export const runBulkEnrichment = async <
 
     results.push(...batchOutcome.results);
     accountFailureMessage = batchOutcome.accountFailureMessage;
+    creditsCharged += batchOutcome.creditsCharged;
+  }
+
+  if (lushaApiKey.isBillable) {
+    await chargeEnrichment({ lushaCreditsCharged: creditsCharged });
   }
 
   const resultByRecordId = new Map(
     results.map((result) => [result.recordId, result]),
   );
 
-  return aggregateBulkEnrichmentResult(
-    recordIds
+  return aggregateBulkEnrichmentResult({
+    results: recordIds
       .map((recordId) => resultByRecordId.get(recordId))
       .filter(isDefined),
-  );
+    creditsCharged,
+  });
 };

@@ -1,6 +1,12 @@
 import { type CoreApiClient } from 'twenty-client-sdk/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const { chargeCreditsMock } = vi.hoisted(() => ({
+  chargeCreditsMock: vi.fn(),
+}));
+
+vi.mock('twenty-sdk/billing', () => ({ chargeCredits: chargeCreditsMock }));
+
 import {
   LUSHA_API_KEY_MISSING_MESSAGE,
   LUSHA_COMPLIANCE_RESTRICTED_MESSAGE,
@@ -31,7 +37,7 @@ const createAdapter = ({
   records: FakeRecord[];
   searchAndEnrich?: (args: {
     items: FakeSearchItem[];
-  }) => Promise<LushaApiResult<LushaRecord[]>>;
+  }) => Promise<LushaApiResult>;
 }) =>
   ({
     objectNameSingular: 'Company',
@@ -67,7 +73,9 @@ const createAdapter = ({
 
 beforeEach(() => {
   vi.stubEnv('LUSHA_API_KEY', 'lusha-api-key');
+  vi.stubEnv('LUSHA_DEFAULT_API_KEY', '');
   vi.stubEnv('LUSHA_REVEAL_PHONES', '');
+  chargeCreditsMock.mockClear();
 });
 
 afterEach(() => {
@@ -397,6 +405,85 @@ describe('runBulkEnrichment', () => {
         .mocked(adapter.searchAndEnrich)
         .mock.calls.map(([{ items }]) => items.length),
     ).toEqual([100, 100, 50]);
+  });
+
+  it('should report the credits Lusha charged across the batches', async () => {
+    const records = Array.from({ length: 150 }, (_, index) => ({
+      id: `company-${index}`,
+      domain: `company-${index}.com`,
+    }));
+    const adapter = createAdapter({
+      records,
+      searchAndEnrich: ({ items }) =>
+        Promise.resolve({
+          success: true,
+          creditsCharged: items.length,
+          data: items.map(({ clientReferenceId, domain }) => ({
+            clientReferenceId,
+            id: `lusha-${domain}`,
+          })),
+        }),
+    });
+
+    const result = await runBulkEnrichment({
+      input: { records: records.map(({ id }) => id) },
+      adapter,
+      client,
+    });
+
+    expect(result.creditsCharged).toBe(150);
+  });
+
+  it('should charge the run that enriched with the key of the instance', async () => {
+    vi.stubEnv('LUSHA_API_KEY', '');
+    vi.stubEnv('LUSHA_DEFAULT_API_KEY', 'instance-api-key');
+    const adapter = createAdapter({
+      records: [{ id: 'company-1', domain: 'lusha.com' }],
+      searchAndEnrich: ({ items }) =>
+        Promise.resolve({
+          success: true,
+          creditsCharged: 4,
+          data: items.map(({ clientReferenceId, domain }) => ({
+            clientReferenceId,
+            id: `lusha-${domain}`,
+          })),
+        }),
+    });
+
+    await runBulkEnrichment({
+      input: { records: ['company-1'] },
+      adapter,
+      client,
+    });
+
+    expect(chargeCreditsMock).toHaveBeenCalledWith({
+      creditsUsedMicro: 1_200_000,
+      quantity: 4,
+      operation: 'lushaEnrichment',
+    });
+  });
+
+  it('should not charge the run that enriched with the key of the workspace', async () => {
+    const adapter = createAdapter({
+      records: [{ id: 'company-1', domain: 'lusha.com' }],
+      searchAndEnrich: ({ items }) =>
+        Promise.resolve({
+          success: true,
+          creditsCharged: 4,
+          data: items.map(({ clientReferenceId, domain }) => ({
+            clientReferenceId,
+            id: `lusha-${domain}`,
+          })),
+        }),
+    });
+
+    await runBulkEnrichment({
+      input: { records: ['company-1'] },
+      adapter,
+      client,
+    });
+
+    expect(chargeCreditsMock).not.toHaveBeenCalled();
   });
 
   it('should stop starting batches before the run is out of time', async () => {

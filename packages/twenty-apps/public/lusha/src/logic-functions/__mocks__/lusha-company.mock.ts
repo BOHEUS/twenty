@@ -51,7 +51,6 @@ export const LUSHA_COMPANY_MOCK: LushaRecord = {
     lastRoundAmount: 205000000,
     lastRoundDate: 'Nov 10, 2021',
   },
-  technologies: ['amazon', { name: 'google analytics' }],
+  technologies: ['amazon', 'google analytics'],
   phone: '(617) 555-0142',
-  phones: [{ number: '+1 800-420-7332' }],
 };

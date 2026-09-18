@@ -9,6 +9,7 @@ const BULK_ENRICHMENT_RESULT = {
   notFound: 0,
   skipped: 0,
   errored: 0,
+  creditsCharged: 0,
   results: [],
 };
 
@@ -37,6 +38,15 @@ describe('buildBulkEnrichmentSnackbar', () => {
     });
   });
 
+  it('should report the credits the run spent', () => {
+    expect(
+      buildBulkEnrichmentSnackbar({
+        ...BULK_ENRICHMENT_RESULT,
+        creditsCharged: 6,
+      }).detailedMessage,
+    ).toBe('6 Lusha credits spent.');
+  });
+
   it('should explain the first failure in an error snackbar', () => {
     expect(
       buildBulkEnrichmentSnackbar({
@@ -46,6 +56,7 @@ describe('buildBulkEnrichmentSnackbar', () => {
         notFound: 0,
         skipped: 0,
         errored: 1,
+        creditsCharged: 0,
         results: [
           {
             success: false,

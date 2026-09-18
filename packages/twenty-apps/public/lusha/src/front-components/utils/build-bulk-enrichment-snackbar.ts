@@ -14,6 +14,7 @@ export const buildBulkEnrichmentSnackbar = ({
   notFound,
   skipped,
   errored,
+  creditsCharged,
   results,
 }: BulkEnrichmentResult): BulkEnrichmentSnackbar => {
   const counts = [
@@ -28,6 +29,9 @@ export const buildBulkEnrichmentSnackbar = ({
 
   const detailedMessage = [
     counts.length > 0 ? `${counts.join(', ')}.` : undefined,
+    creditsCharged > 0
+      ? `${creditsCharged} Lusha credit${creditsCharged === 1 ? '' : 's'} spent.`
+      : undefined,
     firstErrorMessage,
   ]
     .filter(isDefined)

@@ -18,7 +18,7 @@ import {
   pickLinks,
   pickText,
 } from 'src/logic-functions/utils/pick-standard-value';
-import { readLushaCompanyPhones } from 'src/logic-functions/utils/read-lusha-contact-points';
+import { readLushaCompanyPhone } from 'src/logic-functions/utils/read-lusha-contact-points';
 
 const isEmptyAddress = (address: CompanyRecord['address']): boolean =>
   [
@@ -44,16 +44,6 @@ const formatIndustryCodes = (value: unknown): string[] | undefined =>
 
       return isDefined(description) ? `${code} - ${description}` : `${code}`;
     }),
-  );
-
-// Lusha's examples list technologies as names, while its data catalog
-// describes objects, so both shapes are read.
-const readTechnologyNames = (value: unknown): string[] | undefined =>
-  toStringArray(
-    (toJsonArray(value) ?? []).map(
-      (technology) =>
-        toText(technology) ?? toText(toJsonObject(technology)?.name),
-    ),
   );
 
 export const buildCompanyStandardData = ({
@@ -111,7 +101,7 @@ export const buildCompanyLushaData = ({
     lushaFoundedYear: toNumber(lushaCompany.yearFounded),
     lushaCompanyType: toText(lushaCompany.companyType),
     lushaSpecialities: toStringArray(lushaCompany.specialities),
-    lushaTechnologies: readTechnologyNames(lushaCompany.technologies),
+    lushaTechnologies: toStringArray(lushaCompany.technologies),
     lushaSicCodes: formatIndustryCodes(lushaCompany.sicCodes),
     lushaNaicsCodes: formatIndustryCodes(lushaCompany.naicsCodes),
     lushaTotalFunding: buildCurrency({
@@ -125,7 +115,7 @@ export const buildCompanyLushaData = ({
     lushaFacebookLink: buildLinks(socialLinks?.facebook),
     lushaPhones: mergePhones({
       currentPhones: null,
-      lushaPhones: readLushaCompanyPhones(lushaCompany),
+      lushaPhones: [readLushaCompanyPhone(lushaCompany)].filter(isDefined),
     }),
     lushaLocation: buildAddress({
       city: location?.city,

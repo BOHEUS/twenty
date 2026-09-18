@@ -26,6 +26,7 @@ export const BULK_ENRICHMENT_OUTPUT_SCHEMA: WorkflowOutputSchema = [
       notFound: { type: 'number', label: 'Not Found' },
       skipped: { type: 'number', label: 'Skipped' },
       errored: { type: 'number', label: 'Errored' },
+      creditsCharged: { type: 'number', label: 'Credits Charged' },
       results: {
         type: 'array',
         items: {

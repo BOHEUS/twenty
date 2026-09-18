@@ -27,7 +27,7 @@ export const companyEnrichmentAdapter: EnrichmentAdapter<
     callLushaApi({
       path: '/companies/search-and-enrich',
       apiKey,
-      body: { companies: items },
+      body: { companies: items, options: { includePartialProfiles: true } },
     }),
   buildUpdateData: async ({ record, match, enrichedAt }) => ({
     ...buildCompanyStandardData({ company: record, lushaCompany: match }),

@@ -7,5 +7,6 @@ export type BulkEnrichmentResult = {
   notFound: number;
   skipped: number;
   errored: number;
+  creditsCharged: number;
   results: EnrichmentResult[];
 };

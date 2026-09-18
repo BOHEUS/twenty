@@ -1,9 +1,11 @@
 import { defineApplication, FieldType } from 'twenty-sdk/define';
 
+import { ENRICHMENT_BILLABLE_OPERATION_NAME } from 'src/constants/billing.constant';
 import {
   LUSHA_API_KEY_VARIABLE_NAME,
   LUSHA_REVEAL_PHONES_VARIABLE_NAME,
 } from 'src/constants/application-variable-names.constant';
+import { LUSHA_DEFAULT_API_KEY_VARIABLE_NAME } from 'src/constants/server-variable-names.constant';
 import {
   APP_DESCRIPTION,
   APP_DISPLAY_NAME,
@@ -34,6 +36,24 @@ export default defineApplication({
         'Also reveal phone numbers when enriching people. Phone numbers cost more Lusha credits than emails.',
       type: FieldType.BOOLEAN,
       value: false,
+    },
+  },
+  billing: {
+    description:
+      'Enriching with the Lusha API key of this Twenty instance spends credits. A workspace that sets its own Lusha API key in the app settings is not charged.',
+    operations: {
+      [ENRICHMENT_BILLABLE_OPERATION_NAME]: {
+        operationType: 'CODE_EXECUTION',
+        label: 'Lusha credits spent on enrichment',
+      },
+    },
+  },
+  serverVariables: {
+    [LUSHA_DEFAULT_API_KEY_VARIABLE_NAME]: {
+      description:
+        'Lusha API key every workspace that has not set its own in the app settings enriches with. Enriching then spends the credits of that Lusha account.',
+      type: FieldType.TEXT,
+      isSecret: true,
     },
   },
 });
