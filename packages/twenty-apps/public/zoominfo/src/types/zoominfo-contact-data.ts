@@ -1,0 +1,45 @@
+export type ZoomInfoContactCompany = {
+  id?: number | string | null;
+  name?: string | null;
+  website?: string | null;
+  socialMediaUrls?: unknown;
+  industries?: unknown;
+  employeeCount?: number | null;
+  revenue?: number | null;
+};
+
+export type ZoomInfoContactData = {
+  id?: string | number | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+  emailAlt?: unknown;
+  supplementalEmail?: string | null;
+  phone?: string | null;
+  directPhoneAlt?: unknown;
+  mobilePhone?: string | null;
+  mobilePhoneAlt?: unknown;
+  jobTitle?: string | null;
+  jobFunction?: unknown;
+  managementLevel?: unknown;
+  positionStartDate?: string | null;
+  yearsOfExperience?: string | null;
+  techSkills?: unknown;
+  education?: unknown;
+  employmentHistory?: unknown;
+  externalUrls?: unknown;
+  street?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  country?: string | null;
+  metroArea?: string | null;
+  personHasMoved?: string | null;
+  withinEu?: boolean | null;
+  withinCalifornia?: boolean | null;
+  withinCanada?: boolean | null;
+  contactAccuracyScore?: string | null;
+  validDate?: string | null;
+  lastUpdatedDate?: string | null;
+  company?: ZoomInfoContactCompany | null;
+};

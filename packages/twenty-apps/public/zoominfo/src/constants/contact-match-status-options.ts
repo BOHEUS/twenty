@@ -1,0 +1,81 @@
+import { type SelectOptionMeta } from 'src/types/select-option-meta';
+
+export const CONTACT_MATCH_STATUS_OPTIONS: readonly SelectOptionMeta[] = [
+  {
+    key: 'fullMatch',
+    value: 'FULL_MATCH',
+    label: 'Full Match',
+    color: 'green',
+    position: 0,
+  },
+  {
+    key: 'contactOnlyMatch',
+    value: 'CONTACT_ONLY_MATCH',
+    label: 'Contact Only',
+    color: 'jade',
+    position: 1,
+  },
+  {
+    key: 'companyOnlyMatch',
+    value: 'COMPANY_ONLY_MATCH',
+    label: 'Company Only',
+    color: 'turquoise',
+    position: 2,
+  },
+  {
+    key: 'noMatch',
+    value: 'NO_MATCH',
+    label: 'No Match',
+    color: 'gray',
+    position: 3,
+  },
+  {
+    key: 'nonMatchByLastUpdatedDate',
+    value: 'NON_MATCH_BY_LAST_UPDATED_DATE',
+    label: 'Filtered By Last Updated Date',
+    color: 'bronze',
+    position: 4,
+  },
+  {
+    key: 'nonMatchByValidDate',
+    value: 'NON_MATCH_BY_VALID_DATE',
+    label: 'Filtered By Valid Date',
+    color: 'bronze',
+    position: 5,
+  },
+  {
+    key: 'nonMatchByRequiredFields',
+    value: 'NON_MATCH_BY_REQUIRED_FIELDS',
+    label: 'Filtered By Required Fields',
+    color: 'bronze',
+    position: 6,
+  },
+  {
+    key: 'nonMatchByContactAccuracyMin',
+    value: 'NON_MATCH_BY_CONTACT_ACCURACY_MIN',
+    label: 'Below Accuracy Threshold',
+    color: 'amber',
+    position: 7,
+  },
+  {
+    key: 'optOut',
+    value: 'OPT_OUT',
+    label: 'Opted Out',
+    color: 'purple',
+    position: 8,
+  },
+  {
+    key: 'limitExceeded',
+    value: 'LIMIT_EXCEEDED',
+    label: 'Limit Exceeded',
+    color: 'orange',
+    position: 9,
+  },
+  {
+    key: 'invalidInput',
+    value: 'INVALID_INPUT',
+    label: 'Invalid Input',
+    color: 'red',
+    position: 10,
+  },
+];
