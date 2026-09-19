@@ -1,0 +1,32 @@
+import { defineFrontComponent } from 'twenty-sdk/define';
+import { Command, useSelectedRecordIds } from 'twenty-sdk/front-component';
+
+import {
+  CRUSTDATA_FRONT_COMPONENT_UNIVERSAL_IDENTIFIERS,
+  CRUSTDATA_LOGIC_FUNCTION_CONSTANTS,
+} from 'src/constants/universal-identifiers';
+import { execute } from 'src/front-components/utils/call-enrich-logic-function.utils';
+
+const Enrich = () => {
+  const recordIds = useSelectedRecordIds();
+
+  return (
+    <Command
+      execute={() =>
+        execute({
+          path: CRUSTDATA_LOGIC_FUNCTION_CONSTANTS.enrichPeople.path,
+          recordIds,
+        })
+      }
+    />
+  );
+};
+
+export default defineFrontComponent({
+  universalIdentifier:
+    CRUSTDATA_FRONT_COMPONENT_UNIVERSAL_IDENTIFIERS.enrichPeople,
+  name: 'enrich-people-effect',
+  description: 'Enrich people effect',
+  component: Enrich,
+  isHeadless: true,
+});

@@ -1,0 +1,22 @@
+import { type CoreApiClient } from 'twenty-client-sdk/core';
+
+export const updatePeopleStatus = async ({
+  client,
+  recordIds,
+  data,
+}: {
+  client: CoreApiClient;
+  recordIds: string[];
+  data: Record<string, unknown>;
+}): Promise<void> => {
+  if (recordIds.length === 0) {
+    return;
+  }
+
+  await client.mutation({
+    updatePeople: {
+      __args: { filter: { id: { in: recordIds } }, data },
+      id: true,
+    },
+  });
+};
