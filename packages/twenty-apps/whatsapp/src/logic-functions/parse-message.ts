@@ -1,5 +1,4 @@
 import { defineLogicFunction } from 'twenty-sdk/define';
-import { MessageParticipantType } from "src/logic-functions/types/message-participant.type";
 import { CoreApiClient } from "twenty-client-sdk/core";
 import { MetadataApiClient } from "twenty-client-sdk/metadata";
 import {
@@ -15,6 +14,7 @@ import { WhatsappFile } from "src/logic-functions/types/whatsapp-file.type";
 import { updateMessage } from "src/logic-functions/data/update-message.util";
 import { findMessageById } from "src/logic-functions/data/find-message-by-id.util";
 import { updatePerson } from "src/logic-functions/data/update-person.util";
+import { type IngestMessageParticipant, ingestMessages } from "twenty-sdk/logic-function";
 
 const handler = async (params: {
   businessData: WhatsappWebhookMessageBusinessData,
@@ -37,10 +37,6 @@ const handler = async (params: {
 
   /*
   Questions:
-     are message participants reused? NO
-     is messageChannelMessageAssociation actually used somewhere?
-     how to link a message to workspace available connected account?
-     change logic so messages are stored and added to store (when exactly? when webhook arrives or when adding it fails due to throttle limit?)
      fix downloading file
      check if all variables are added (should they be application or server variables?)
      add upload file (how to get API key served by app?)
@@ -58,12 +54,11 @@ const handler = async (params: {
   // find a thread by whatsapp id, if group id is present, use that
   let messageThread: string = '';
 
-  const participants: MessageParticipantType[] = [];
+  const participants: IngestMessageParticipant[] = [];
   participants.push({
     role: "TO",
     handle: businessData.display_phone_number,
     displayName: ''/* relatedConnectedAccount */,
-    personId: null
   })
   let whatsAppPerson = await findPersonByFilter(coreClient, contacts.wa_id);
   if (!whatsAppPerson.people?.totalCount || whatsAppPerson.people?.totalCount === 0) {
@@ -87,8 +82,8 @@ const handler = async (params: {
         await createPerson(coreClient, groupParticipant);
       }
     }
-
   }
+  let text: string = '';
   // messageParticipants are not reused
   switch (messages.type) {
     case 'audio': {
@@ -100,7 +95,7 @@ const handler = async (params: {
       break;
     }
     case 'button': {
-      const text = messages.button.text;
+      text = messages.button.text;
       break;
     }
     case 'contacts': {
@@ -108,7 +103,7 @@ const handler = async (params: {
       break;
     }
     case 'document': {
-      const text = messages.document.caption;
+      text = messages.document.caption;
       const file: WhatsappFile = {
         mimeType: messages.document.mime_type,
         sha256: messages.document.sha256,
@@ -121,7 +116,7 @@ const handler = async (params: {
       break;
     }
     case 'image': {
-      const text = messages.image.caption;
+      text = messages.image.caption;
       const file: WhatsappFile = {
         mimeType: messages.image.mime_type,
         sha256: messages.image.sha256,
@@ -131,15 +126,15 @@ const handler = async (params: {
     }
     case 'interactive': {
       // TODO: check
-      const text = messages.interactive.type === 'list_reply' ? `${messages.interactive?.list_reply?.title} - ${messages.interactive?.list_reply?.description}` : <string>messages.interactive?.button_reply?.title;
+      text = messages.interactive.type === 'list_reply' ? `${messages.interactive?.list_reply?.title} - ${messages.interactive?.list_reply?.description}` : <string>messages.interactive?.button_reply?.title;
       break;
     }
     case 'location': {
-      const text = `Place: ${messages.location?.name}\nAddress: ${messages.location?.address}\nLat: ${messages.location?.latitude}\nLong: ${messages.location?.longitude}\nURL: <a href='${messages.location?.url}'>${messages.location?.url}</a>`;
+      text = `Place: ${messages.location?.name}\nAddress: ${messages.location?.address}\nLat: ${messages.location?.latitude}\nLong: ${messages.location?.longitude}\nURL: <a href='${messages.location?.url}'>${messages.location?.url}</a>`;
       break;
     }
     case 'order': {
-      const text = messages.order.text; // TODO ???
+      text = messages.order.text; // TODO ???
       break;
     }
     case 'reaction': {
@@ -165,11 +160,11 @@ const handler = async (params: {
       break;
     }
     case 'text': {
-      const text = messages.text.body;
+      text = messages.text.body;
       break;
     }
     case 'video': {
-      const text = messages.video.caption;
+      text = messages.video.caption;
       const file: WhatsappFile = {
         mimeType: messages.video.mime_type,
         sha256: messages.video.sha256,
@@ -181,6 +176,17 @@ const handler = async (params: {
       return;
     }
   }
+  // TODO: arbitrally create message channels or wait until connection provider accepts API
+  await ingestMessages({
+    messageChannelId: '', // find
+    messages: [{
+      externalId: messages.id,
+      threadExternalId: '',
+      text,
+      participants: [],
+      receivedAt: new Date(messages.timestamp),
+    }]
+  })
 }
 
 export default defineLogicFunction({

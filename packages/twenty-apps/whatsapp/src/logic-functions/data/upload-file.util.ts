@@ -22,8 +22,7 @@ await coreClient.mutation({
         name: 'invoice.pdf',
         file: [{ fileId: uploadedFile.id, label: 'invoice.pdf'
         }],
-        targetPersonId: personRecordId, // or targetCompanyId /
-        targetOpportunityId / etc.
+        targetPersonId: personRecordId, // or targetCompanyId /targetOpportunityId / etc.
     },
   },
   id: true,
