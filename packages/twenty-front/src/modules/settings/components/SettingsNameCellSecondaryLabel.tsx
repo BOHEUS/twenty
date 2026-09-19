@@ -1,5 +1,4 @@
 import { styled } from '@linaria/react';
-import { type ReactNode } from 'react';
 
 import { themeCssVariables } from 'twenty-ui/theme-constants';
 
@@ -19,16 +18,5 @@ const StyledSettingsNameCellSecondaryLabel = styled.span`
   }
 `;
 
-type SettingsNameCellSecondaryLabelProps = {
-  children: ReactNode;
-  title?: string;
-};
-
-export const SettingsNameCellSecondaryLabel = ({
-  children,
-  title,
-}: SettingsNameCellSecondaryLabelProps) => (
-  <StyledSettingsNameCellSecondaryLabel title={title}>
-    {children}
-  </StyledSettingsNameCellSecondaryLabel>
-);
+export const SettingsNameCellSecondaryLabel =
+  StyledSettingsNameCellSecondaryLabel;

@@ -4,15 +4,30 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { convergeDivergedCallRecordings } from 'src/logic-functions/flows/converge-diverged-call-recordings.util';
 
 const getRecallBotMock = vi.hoisted(() => vi.fn());
+const getCurrentWorkspaceIdMock = vi.hoisted(() => vi.fn());
+const listScheduledRecallBotsMock = vi.hoisted(() => vi.fn());
 const listRecallTranscriptsMock = vi.hoisted(() => vi.fn());
 const createAsyncRecallTranscriptMock = vi.hoisted(() => vi.fn());
 const downloadTranscriptMock = vi.hoisted(() => vi.fn());
-const ingestCallRecordingMediaMock = vi.hoisted(() => vi.fn());
+const importCallRecordingMediaMock = vi.hoisted(() => vi.fn());
 const chargeCompletedCallRecordingMock = vi.hoisted(() => vi.fn());
+const claimArtifactsImportMock = vi.hoisted(() => vi.fn());
+const releaseArtifactsImportClaimMock = vi.hoisted(() => vi.fn());
 
 vi.mock('src/logic-functions/recall-api/get-recall-bot.util', () => ({
   getRecallBot: getRecallBotMock,
 }));
+
+vi.mock('src/logic-functions/data/get-current-workspace-id.util', () => ({
+  getCurrentWorkspaceId: getCurrentWorkspaceIdMock,
+}));
+
+vi.mock(
+  'src/logic-functions/recall-api/list-scheduled-recall-bots.util',
+  () => ({
+    listScheduledRecallBots: listScheduledRecallBotsMock,
+  }),
+);
 
 vi.mock('src/logic-functions/recall-api/list-recall-transcripts.util', () => ({
   listRecallTranscripts: listRecallTranscriptsMock,
@@ -29,14 +44,22 @@ vi.mock('src/logic-functions/flows/download-transcript.util', () => ({
   downloadTranscript: downloadTranscriptMock,
 }));
 
-vi.mock('src/logic-functions/flows/ingest-call-recording-media.util', () => ({
-  ingestCallRecordingMedia: ingestCallRecordingMediaMock,
+vi.mock('src/logic-functions/flows/import-call-recording-media.util', () => ({
+  importCallRecordingMedia: importCallRecordingMediaMock,
 }));
 
 vi.mock(
   'src/logic-functions/flows/charge-completed-call-recording.util',
   () => ({
     chargeCompletedCallRecording: chargeCompletedCallRecordingMock,
+  }),
+);
+
+vi.mock(
+  'src/logic-functions/data/claim-call-recording-artifacts-import.util',
+  () => ({
+    claimCallRecordingArtifactsImport: claimArtifactsImportMock,
+    releaseCallRecordingArtifactsImportClaim: releaseArtifactsImportClaimMock,
   }),
 );
 
@@ -49,11 +72,21 @@ class FakeCoreApiClient {
 
   constructor(private callRecordingNodes: CallRecordingNode[]) {}
 
-  async query(_query: any): Promise<any> {
+  async query(query: {
+    callRecordings?: {
+      __args?: { filter?: { id?: { eq?: string } } };
+    };
+  }) {
+    const requestedId = query.callRecordings?.__args?.filter?.id?.eq;
+    const nodes =
+      requestedId === undefined
+        ? this.callRecordingNodes
+        : this.callRecordingNodes.filter((node) => node.id === requestedId);
+
     return {
       callRecordings: {
         pageInfo: { hasNextPage: false, endCursor: undefined },
-        edges: this.callRecordingNodes.map((node) => ({ node })),
+        edges: nodes.map((node) => ({ node: { ...node } })),
       },
     };
   }
@@ -62,8 +95,18 @@ class FakeCoreApiClient {
     if (mutation.updateCallRecordings !== undefined) {
       const { filter, data } = mutation.updateCallRecordings.__args;
       const id = filter.id.eq;
+      const node = this.findNode(id);
+
+      if (
+        node === undefined ||
+        (filter.status?.in !== undefined &&
+          !filter.status.in.includes(node.status))
+      ) {
+        return { updateCallRecordings: [] };
+      }
 
       this.mutations.push({ id, data });
+      Object.assign(node, data);
 
       return { updateCallRecordings: [{ id }] };
     }
@@ -71,8 +114,13 @@ class FakeCoreApiClient {
     const { id, data } = mutation.updateCallRecording.__args;
 
     this.mutations.push({ id, data });
+    Object.assign(this.findNode(id) ?? {}, data);
 
     return { updateCallRecording: { id } };
+  }
+
+  private findNode(id: string): CallRecordingNode | undefined {
+    return this.callRecordingNodes.find((node) => node.id === id);
   }
 }
 
@@ -103,6 +151,14 @@ describe('convergeDivergedCallRecordings', () => {
   beforeEach(() => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     getRecallBotMock.mockReset();
+    getCurrentWorkspaceIdMock.mockReset();
+    getCurrentWorkspaceIdMock.mockReturnValue('workspace-1');
+    listScheduledRecallBotsMock.mockReset();
+    listScheduledRecallBotsMock.mockResolvedValue({
+      ok: true,
+      bots: [],
+      truncated: false,
+    });
     listRecallTranscriptsMock.mockReset();
     listRecallTranscriptsMock.mockResolvedValue({
       ok: true,
@@ -115,26 +171,138 @@ describe('convergeDivergedCallRecordings', () => {
     });
     downloadTranscriptMock.mockReset();
     downloadTranscriptMock.mockResolvedValue({ outcome: 'pending' });
-    ingestCallRecordingMediaMock.mockReset();
-    ingestCallRecordingMediaMock.mockResolvedValue({});
+    importCallRecordingMediaMock.mockReset();
+    importCallRecordingMediaMock.mockResolvedValue({
+      updateData: {},
+      hasRetryableFailure: false,
+    });
     chargeCompletedCallRecordingMock.mockReset();
     chargeCompletedCallRecordingMock.mockResolvedValue(undefined);
+    claimArtifactsImportMock.mockReset();
+    claimArtifactsImportMock.mockResolvedValue(true);
+    releaseArtifactsImportClaimMock.mockReset();
+    releaseArtifactsImportClaimMock.mockResolvedValue(undefined);
+  });
+
+  it('does not call Recall when there are no stale database candidates', async () => {
+    const result = await convergeDivergedCallRecordings({
+      client: buildClient([]) as unknown as CoreApiClient,
+      now: NOW,
+    });
+
+    expect(listScheduledRecallBotsMock).not.toHaveBeenCalled();
+    expect(getRecallBotMock).not.toHaveBeenCalled();
+    expect(result.candidateCount).toBe(0);
+  });
+
+  it('uses a listed workspace bot without issuing a per-recording read', async () => {
+    listScheduledRecallBotsMock.mockResolvedValue({
+      ok: true,
+      truncated: false,
+      bots: [
+        {
+          id: 'recall-bot-1',
+          metadata: { twentyWorkspaceId: 'workspace-1' },
+          statusChanges: [
+            {
+              code: 'in_call_recording',
+              createdAt: '2026-06-09T13:02:00.000Z',
+            },
+          ],
+          recordings: [],
+        },
+      ],
+    });
+    const client = buildClient([buildStuckRecordingNode()]);
+
+    const result = await convergeDivergedCallRecordings({
+      client: client as unknown as CoreApiClient,
+      now: NOW,
+    });
+
+    expect(listScheduledRecallBotsMock).toHaveBeenCalledWith({
+      joinAtAfter: '2026-06-02T12:00:00.000Z',
+      joinAtBefore: '2026-06-10T13:00:00.000Z',
+      metadata: { twentyWorkspaceId: 'workspace-1' },
+    });
+    expect(getRecallBotMock).not.toHaveBeenCalled();
+    expect(result.updatedCallRecordingIds).toEqual(['call-recording-1']);
+  });
+
+  it('defers convergence without per-recording fan-out when the bot list fails', async () => {
+    listScheduledRecallBotsMock.mockResolvedValue({
+      ok: false,
+      status: 429,
+      errorMessage: 'Recall API responded with HTTP 429',
+    });
+    const client = buildClient([buildStuckRecordingNode()]);
+
+    const result = await convergeDivergedCallRecordings({
+      client: client as unknown as CoreApiClient,
+      now: NOW,
+    });
+
+    expect(getRecallBotMock).not.toHaveBeenCalled();
+    expect(client.mutations).toEqual([]);
+    expect(result.candidateCount).toBe(1);
+  });
+
+  it('advances the capped fallback by a full batch on each interval', async () => {
+    const candidateNodes = Array.from({ length: 27 }, (_, index) =>
+      buildStuckRecordingNode({
+        id: `call-recording-${index + 1}`,
+        externalBotId: `recall-bot-${index + 1}`,
+        calendarEvent: null,
+        createdAt: null,
+      }),
+    );
+    getRecallBotMock.mockResolvedValue({
+      ok: false,
+      status: 400,
+      errorMessage: 'Recall API responded with HTTP 400',
+    });
+
+    await convergeDivergedCallRecordings({
+      client: buildClient(candidateNodes) as unknown as CoreApiClient,
+      now: new Date(0),
+    });
+
+    expect(
+      getRecallBotMock.mock.calls.map(([input]) => input.externalBotId),
+    ).toEqual(
+      Array.from({ length: 25 }, (_, index) => `recall-bot-${index + 1}`),
+    );
+
+    getRecallBotMock.mockClear();
+
+    await convergeDivergedCallRecordings({
+      client: buildClient(candidateNodes) as unknown as CoreApiClient,
+      now: new Date(15 * 60 * 1000),
+    });
+
+    expect(
+      getRecallBotMock.mock.calls.map(([input]) => input.externalBotId),
+    ).toEqual([
+      'recall-bot-26',
+      'recall-bot-27',
+      ...Array.from({ length: 23 }, (_, index) => `recall-bot-${index + 1}`),
+    ]);
   });
 
   it('heals a stuck RECORDING record from the Recall bot state', async () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'in_call_recording', created_at: '2026-06-09T13:02:30.000Z' },
-          { code: 'call_ended', created_at: '2026-06-09T14:00:30.000Z' },
-          { code: 'done', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'in_call_recording', createdAt: '2026-06-09T13:02:30.000Z' },
+          { code: 'call_ended', createdAt: '2026-06-09T14:00:30.000Z' },
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-09T13:02:00.000Z',
-            completed_at: '2026-06-09T14:00:00.000Z',
+            startedAt: '2026-06-09T13:02:00.000Z',
+            completedAt: '2026-06-09T14:00:00.000Z',
           },
         ],
       },
@@ -149,7 +317,7 @@ describe('convergeDivergedCallRecordings', () => {
     expect(getRecallBotMock).toHaveBeenCalledWith({
       externalBotId: 'recall-bot-1',
     });
-    expect(ingestCallRecordingMediaMock).toHaveBeenCalledWith({
+    expect(importCallRecordingMediaMock).toHaveBeenCalledWith({
       callRecordingId: 'call-recording-1',
       externalRecordingId: 'recall-recording-1',
       hasAudio: false,
@@ -165,12 +333,15 @@ describe('convergeDivergedCallRecordings', () => {
       expect.objectContaining({
         id: 'call-recording-1',
         data: expect.objectContaining({
-          status: 'PROCESSING',
           startedAt: '2026-06-09T13:02:00.000Z',
           endedAt: '2026-06-09T14:00:00.000Z',
           externalRecordingId: 'recall-recording-1',
         }),
       }),
+      {
+        id: 'call-recording-1',
+        data: { status: 'PROCESSING' },
+      },
     ]);
     expect(chargeCompletedCallRecordingMock).not.toHaveBeenCalled();
     expect(result).toEqual({
@@ -183,12 +354,12 @@ describe('convergeDivergedCallRecordings', () => {
     });
   });
 
-  it('marks FAILED when Recall is done but has no recording artifact path', async () => {
+  it('marks NOT_RECORDED when Recall is done but never produced a recording', async () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'done', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [],
       },
@@ -201,38 +372,70 @@ describe('convergeDivergedCallRecordings', () => {
     });
 
     expect(listRecallTranscriptsMock).not.toHaveBeenCalled();
-    expect(ingestCallRecordingMediaMock).not.toHaveBeenCalled();
+    expect(importCallRecordingMediaMock).not.toHaveBeenCalled();
     expect(client.mutations).toEqual([
       {
         id: 'call-recording-1',
         data: {
-          status: 'FAILED',
-          callRecorderFailureReason: 'recording_artifacts_unavailable',
+          status: 'NOT_RECORDED',
+          callRecorderFailureReason: 'recall_bot_did_not_record',
         },
       },
     ]);
     expect(result.updatedCallRecordingIds).toEqual(['call-recording-1']);
   });
 
+  it('does not fail a completed bot sync when a persisted artifact remains reachable', async () => {
+    getRecallBotMock.mockResolvedValue({
+      ok: true,
+      bot: {
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
+        ],
+        recordings: [],
+      },
+    });
+    const client = buildClient([
+      buildStuckRecordingNode({
+        audio: [{ fileId: 'file-audio-1', label: 'audio.mp3' }],
+      }),
+    ]);
+
+    await convergeDivergedCallRecordings({
+      client: client as unknown as CoreApiClient,
+      now: NOW,
+    });
+
+    expect(client.mutations).toEqual([
+      {
+        id: 'call-recording-1',
+        data: { status: 'PROCESSING' },
+      },
+    ]);
+  });
+
   it('completes and charges when convergence lands the last artifact', async () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'done', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-09T13:02:00.000Z',
-            completed_at: '2026-06-09T14:00:00.000Z',
+            startedAt: '2026-06-09T13:02:00.000Z',
+            completedAt: '2026-06-09T14:00:00.000Z',
           },
         ],
       },
     });
-    ingestCallRecordingMediaMock.mockResolvedValue({
-      audio: [{ fileId: 'file-audio-1', label: 'audio.mp3' }],
-      video: [{ fileId: 'file-video-1', label: 'video.mp4' }],
+    importCallRecordingMediaMock.mockResolvedValue({
+      updateData: {
+        audio: [{ fileId: 'file-audio-1', label: 'audio.mp3' }],
+        video: [{ fileId: 'file-video-1', label: 'video.mp4' }],
+      },
+      hasRetryableFailure: false,
     });
     const client = buildClient([
       buildStuckRecordingNode({
@@ -283,21 +486,24 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'done', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-09T13:02:00.000Z',
-            completed_at: '2026-06-09T14:00:00.000Z',
+            startedAt: '2026-06-09T13:02:00.000Z',
+            completedAt: '2026-06-09T14:00:00.000Z',
           },
         ],
       },
     });
-    ingestCallRecordingMediaMock.mockResolvedValue({
-      audio: [{ fileId: 'file-audio-1', label: 'audio.mp3' }],
-      callRecorderFailureReason: 'video_file_too_large',
+    importCallRecordingMediaMock.mockResolvedValue({
+      updateData: {
+        audio: [{ fileId: 'file-audio-1', label: 'audio.mp3' }],
+        callRecorderFailureReason: 'video_file_too_large',
+      },
+      hasRetryableFailure: false,
     });
     const client = buildClient([
       buildStuckRecordingNode({
@@ -319,8 +525,11 @@ describe('convergeDivergedCallRecordings', () => {
         id: 'call-recording-1',
         data: {
           audio: [{ fileId: 'file-audio-1', label: 'audio.mp3' }],
-          callRecorderFailureReason: 'video_file_too_large',
         },
+      },
+      {
+        id: 'call-recording-1',
+        data: { callRecorderFailureReason: 'video_file_too_large' },
       },
       {
         id: 'call-recording-1',
@@ -339,14 +548,14 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'done', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-09T13:02:00.000Z',
-            completed_at: '2026-06-09T14:00:00.000Z',
+            startedAt: '2026-06-09T13:02:00.000Z',
+            completedAt: '2026-06-09T14:00:00.000Z',
           },
         ],
       },
@@ -368,7 +577,7 @@ describe('convergeDivergedCallRecordings', () => {
       now: NOW,
     });
 
-    expect(ingestCallRecordingMediaMock).toHaveBeenCalledWith({
+    expect(importCallRecordingMediaMock).toHaveBeenCalledWith({
       callRecordingId: 'call-recording-1',
       externalRecordingId: 'recall-recording-1',
       hasAudio: true,
@@ -392,21 +601,24 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'fatal', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'fatal', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-09T13:02:00.000Z',
-            completed_at: '2026-06-09T14:00:00.000Z',
+            startedAt: '2026-06-09T13:02:00.000Z',
+            completedAt: '2026-06-09T14:00:00.000Z',
           },
         ],
       },
     });
-    ingestCallRecordingMediaMock.mockResolvedValue({
-      audio: [{ fileId: 'file-audio-1', label: 'audio.mp3' }],
-      callRecorderFailureReason: 'video_file_too_large',
+    importCallRecordingMediaMock.mockResolvedValue({
+      updateData: {
+        audio: [{ fileId: 'file-audio-1', label: 'audio.mp3' }],
+        callRecorderFailureReason: 'video_file_too_large',
+      },
+      hasRetryableFailure: false,
     });
     const client = buildClient([
       buildStuckRecordingNode({
@@ -429,6 +641,11 @@ describe('convergeDivergedCallRecordings', () => {
         data: {
           status: 'FAILED',
           callRecorderFailureReason: 'fatal',
+        },
+      },
+      {
+        id: 'call-recording-1',
+        data: {
           audio: [{ fileId: 'file-audio-1', label: 'audio.mp3' }],
         },
       },
@@ -462,14 +679,14 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'done', created_at: '2026-06-10T11:30:00.000Z' },
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-10T11:30:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-10T11:05:00.000Z',
-            completed_at: '2026-06-10T11:25:00.000Z',
+            startedAt: '2026-06-10T11:05:00.000Z',
+            completedAt: '2026-06-10T11:25:00.000Z',
           },
         ],
       },
@@ -566,9 +783,10 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'in_call_recording', created_at: '2026-06-09T13:02:00.000Z' },
+        statusChanges: [
+          { code: 'in_call_recording', createdAt: '2026-06-09T13:02:00.000Z' },
         ],
+        recordings: [],
       },
     });
     const client = buildClient([
@@ -593,11 +811,11 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'in_call_recording', created_at: '2026-06-09T13:02:00.000Z' },
+        statusChanges: [
+          { code: 'in_call_recording', createdAt: '2026-06-09T13:02:00.000Z' },
         ],
         recordings: [
-          { id: 'recall-recording-1', started_at: '2026-06-09T13:02:00.000Z' },
+          { id: 'recall-recording-1', startedAt: '2026-06-09T13:02:00.000Z' },
         ],
       },
     });
@@ -625,14 +843,14 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'done', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-09T13:02:00.000Z',
-            completed_at: '2026-06-09T14:00:00.000Z',
+            startedAt: '2026-06-09T13:02:00.000Z',
+            completedAt: '2026-06-09T14:00:00.000Z',
           },
         ],
       },
@@ -662,7 +880,7 @@ describe('convergeDivergedCallRecordings', () => {
           transcript: {
             recallTranscriptId: 'recall-transcript-1',
             status: 'PENDING',
-            requestedAt: NOW.toISOString(),
+            requestedAt: expect.any(String),
           },
         },
       },
@@ -676,14 +894,14 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'done', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-09T13:02:00.000Z',
-            completed_at: '2026-06-09T14:00:00.000Z',
+            startedAt: '2026-06-09T13:02:00.000Z',
+            completedAt: '2026-06-09T14:00:00.000Z',
           },
         ],
       },
@@ -711,11 +929,14 @@ describe('convergeDivergedCallRecordings', () => {
       {
         id: 'call-recording-1',
         data: {
-          status: 'PROCESSING',
           startedAt: '2026-06-09T13:02:00.000Z',
           endedAt: '2026-06-09T14:00:00.000Z',
           externalRecordingId: 'recall-recording-1',
         },
+      },
+      {
+        id: 'call-recording-1',
+        data: { status: 'PROCESSING' },
       },
     ]);
     expect(result.requestedTranscriptCallRecordingIds).toEqual([]);
@@ -732,14 +953,14 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'done', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-09T13:02:00.000Z',
-            completed_at: '2026-06-09T14:00:00.000Z',
+            startedAt: '2026-06-09T13:02:00.000Z',
+            completedAt: '2026-06-09T14:00:00.000Z',
           },
         ],
       },
@@ -805,14 +1026,14 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'done', created_at: '2026-06-09T14:05:00.000Z' },
+        statusChanges: [
+          { code: 'done', createdAt: '2026-06-09T14:05:00.000Z' },
         ],
         recordings: [
           {
             id: 'recall-recording-1',
-            started_at: '2026-06-09T13:02:00.000Z',
-            completed_at: '2026-06-09T14:00:00.000Z',
+            startedAt: '2026-06-09T13:02:00.000Z',
+            completedAt: '2026-06-09T14:00:00.000Z',
           },
         ],
       },
@@ -847,12 +1068,17 @@ describe('convergeDivergedCallRecordings', () => {
       {
         id: 'call-recording-1',
         data: {
-          status: 'FAILED',
           transcript: {
             recallTranscriptId: 'recall-transcript-1',
             status: 'FAILED',
             subCode: 'audio_missing',
           },
+        },
+      },
+      {
+        id: 'call-recording-1',
+        data: {
+          status: 'FAILED',
           callRecorderFailureReason: 'transcript_failed:audio_missing',
         },
       },
@@ -864,9 +1090,10 @@ describe('convergeDivergedCallRecordings', () => {
     getRecallBotMock.mockResolvedValue({
       ok: true,
       bot: {
-        status_changes: [
-          { code: 'in_call_recording', created_at: '2026-06-09T13:02:00.000Z' },
+        statusChanges: [
+          { code: 'in_call_recording', createdAt: '2026-06-09T13:02:00.000Z' },
         ],
+        recordings: [],
       },
     });
     const client = buildClient([

@@ -16,6 +16,7 @@ import { TableRow } from '@/ui/layout/table/components/TableRow';
 import { useContext, useMemo } from 'react';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
+import { TooltipDelay } from '@/ui/layout/tooltip/constants/TooltipDelay';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomFamilyState } from '@/ui/utilities/state/jotai/hooks/useSetAtomFamilyState';
 import { FieldMetadataType, SettingsPath } from 'twenty-shared/types';
@@ -26,8 +27,9 @@ import {
   IconPlus,
   useIcons,
 } from 'twenty-ui/icon';
-import { LightIconButton } from 'twenty-ui/input';
-import { UndecoratedLink } from 'twenty-ui/navigation';
+import { LightIconButton } from 'twenty-ui/primitives/input';
+import { UndecoratedLink } from 'twenty-ui/primitives/navigation';
+import { Tooltip } from 'twenty-ui/primitives/surfaces';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 import { RelationType } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
@@ -38,6 +40,7 @@ type SettingsObjectFieldItemTableRowProps = {
   settingsObjectDetailTableItem: SettingsObjectDetailTableItem;
   status: 'active' | 'disabled';
   mode: 'view' | 'new-field';
+  isMostlyEmpty?: boolean;
 };
 
 export const OBJECT_FIELD_TABLE_ROW_GRID_TEMPLATE_COLUMNS =
@@ -67,6 +70,7 @@ export const SettingsObjectFieldItemTableRow = ({
   settingsObjectDetailTableItem,
   mode,
   status,
+  isMostlyEmpty = false,
 }: SettingsObjectFieldItemTableRowProps) => {
   const { theme } = useContext(ThemeContext);
   const { t } = useLingui();
@@ -105,6 +109,8 @@ export const SettingsObjectFieldItemTableRow = ({
     fieldMetadataItem,
     objectMetadataItem,
   });
+
+  const mostlyEmptyLabelId = `mostly-empty-field-${fieldMetadataItem.id}`;
 
   const canToggleField = !isLabelIdentifier;
 
@@ -188,6 +194,16 @@ export const SettingsObjectFieldItemTableRow = ({
               <SettingsNameCellSecondaryLabel>
                 {t`Deactivated`}
               </SettingsNameCellSecondaryLabel>
+            )}
+            {fieldMetadataItem.isActive && isMostlyEmpty && (
+              <Tooltip
+                content={t`Appears filled in fewer than 5% of ${objectMetadataItem.labelPlural}. Fields that stay empty can be deactivated.`}
+                delay={TooltipDelay.shortDelay}
+              >
+                <SettingsNameCellSecondaryLabel id={mostlyEmptyLabelId}>
+                  {t`Mostly empty`}
+                </SettingsNameCellSecondaryLabel>
+              </Tooltip>
             )}
           </StyledNameContainer>
         </TableCell>

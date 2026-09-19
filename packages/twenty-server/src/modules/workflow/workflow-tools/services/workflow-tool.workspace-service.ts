@@ -3,14 +3,15 @@ import { Injectable } from '@nestjs/common';
 import { type ToolSet } from 'ai';
 
 import { RecordPositionService } from 'src/engine/core-modules/record-position/services/record-position.service';
+import { WorkflowVersionCoreSyncService } from 'src/engine/core-modules/workflow/services/workflow-version-core-sync.service';
 import { AgentService } from 'src/engine/metadata-modules/ai/ai-agent/agent.service';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { LogicFunctionFromSourceService } from 'src/engine/metadata-modules/logic-function/services/logic-function-from-source.service';
-import { GlobalWorkspaceOrmManager } from 'src/engine/twenty-orm/global-workspace-datasource/global-workspace-orm.manager';
+import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
 import { type RolePermissionConfig } from 'src/engine/twenty-orm/types/role-permission-config';
 import { WorkflowCommonWorkspaceService } from 'src/modules/workflow/common/workspace-services/workflow-common.workspace-service';
 import { WorkflowSchemaWorkspaceService } from 'src/modules/workflow/workflow-builder/workflow-schema/workflow-schema.workspace-service';
-import { WorkflowValidationWorkspaceService } from 'src/modules/workflow/workflow-builder/workflow-validation/workflow-validation.workspace-service';
+import { WorkflowVersionValidationWorkspaceService } from 'src/modules/workflow/workflow-builder/workflow-validation/workflow-version-validation.workspace-service';
 import { WorkflowVersionEdgeWorkspaceService } from 'src/modules/workflow/workflow-builder/workflow-version-edge/workflow-version-edge.workspace-service';
 import { WorkflowVersionStepHelpersWorkspaceService } from 'src/modules/workflow/workflow-builder/workflow-version-step/workflow-version-step-helpers.workspace-service';
 import { WorkflowVersionStepWorkspaceService } from 'src/modules/workflow/workflow-builder/workflow-version-step/workflow-version-step.workspace-service';
@@ -25,6 +26,7 @@ import { createDeactivateWorkflowVersionTool } from 'src/modules/workflow/workfl
 import { createDeleteWorkflowTool } from 'src/modules/workflow/workflow-tools/tools/delete-workflow.tool';
 import { createDeleteWorkflowVersionEdgeTool } from 'src/modules/workflow/workflow-tools/tools/delete-workflow-version-edge.tool';
 import { createDeleteWorkflowVersionStepTool } from 'src/modules/workflow/workflow-tools/tools/delete-workflow-version-step.tool';
+import { createGetLogicFunctionSourceTool } from 'src/modules/workflow/workflow-tools/tools/get-logic-function-source.tool';
 import { createGetWorkflowCurrentVersionTool } from 'src/modules/workflow/workflow-tools/tools/get-workflow-current-version.tool';
 import { createGetWorkflowRunTool } from 'src/modules/workflow/workflow-tools/tools/get-workflow-run.tool';
 import { createListLogicFunctionToolsTool } from 'src/modules/workflow/workflow-tools/tools/list-logic-function-tools.tool';
@@ -50,13 +52,14 @@ export class WorkflowToolWorkspaceService {
     workflowVersionService: WorkflowVersionWorkspaceService,
     workflowTriggerService: WorkflowTriggerWorkspaceService,
     workflowSchemaService: WorkflowSchemaWorkspaceService,
-    workflowValidationService: WorkflowValidationWorkspaceService,
-    globalWorkspaceOrmManager: GlobalWorkspaceOrmManager,
+    workflowVersionValidationWorkspaceService: WorkflowVersionValidationWorkspaceService,
+    workspaceOrmManager: WorkspaceOrmManager,
     recordPositionService: RecordPositionService,
     logicFunctionFromSourceService: LogicFunctionFromSourceService,
     flatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
     agentService: AgentService,
     workflowCommonService: WorkflowCommonWorkspaceService,
+    workflowVersionCoreSyncService: WorkflowVersionCoreSyncService,
   ) {
     this.deps = {
       workflowVersionStepService,
@@ -65,17 +68,17 @@ export class WorkflowToolWorkspaceService {
       workflowVersionService,
       workflowTriggerService,
       workflowSchemaService,
-      workflowValidationService,
-      globalWorkspaceOrmManager,
+      workflowVersionValidationWorkspaceService,
+      workspaceOrmManager,
       recordPositionService,
       logicFunctionFromSourceService,
       flatEntityMapsCacheService,
       agentService,
       workflowCommonService,
+      workflowVersionCoreSyncService,
     };
   }
 
-  // Generates static workflow tools that don't depend on workspace objects
   generateWorkflowTools(
     workspaceId: string,
     rolePermissionConfig: RolePermissionConfig,
@@ -147,6 +150,10 @@ export class WorkflowToolWorkspaceService {
       this.deps,
       contextWithPermissions,
     );
+    const getLogicFunctionSource = createGetLogicFunctionSourceTool(
+      this.deps,
+      context,
+    );
     const updateLogicFunctionSource = createUpdateLogicFunctionSourceTool(
       this.deps,
       context,
@@ -176,6 +183,7 @@ export class WorkflowToolWorkspaceService {
       [deleteWorkflow.name]: deleteWorkflow,
       [getWorkflowRun.name]: getWorkflowRun,
       [listWorkflowRuns.name]: listWorkflowRuns,
+      [getLogicFunctionSource.name]: getLogicFunctionSource,
       [updateLogicFunctionSource.name]: updateLogicFunctionSource,
       [listLogicFunctionTools.name]: listLogicFunctionTools,
       [updateAgent.name]: updateAgent,

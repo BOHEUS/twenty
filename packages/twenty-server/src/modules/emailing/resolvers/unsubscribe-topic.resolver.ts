@@ -10,9 +10,7 @@ import { UnsubscribeTopicDTO } from 'src/engine/core-modules/emailing-domain/dto
 import { UpdateUnsubscribeTopicInput } from 'src/engine/core-modules/emailing-domain/dtos/update-unsubscribe-topic.input';
 import { EmailGroupAccessGraphqlApiExceptionFilter } from 'src/engine/core-modules/emailing-domain/filters/email-group-access-graphql-api-exception.filter';
 import { EmailGroupAccessService } from 'src/engine/core-modules/emailing-domain/services/email-group-access.service';
-import { UnsubscribeTokenService } from 'src/engine/core-modules/emailing-domain/services/unsubscribe-token.service';
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
-import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import {
@@ -22,27 +20,27 @@ import {
 import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
 import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { UnsubscribeTopicService } from 'src/modules/emailing/services/unsubscribe-topic.service';
-
-const UNSUBSCRIBE_PREVIEW_PLACEHOLDER_EMAIL = 'preview@example.com';
+import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
 
 @UseGuards(
   WorkspaceAuthGuard,
   FeatureFlagGuard,
   SettingsPermissionGuard(PermissionFlagType.WORKSPACE),
 )
-@UseFilters(EmailGroupAccessGraphqlApiExceptionFilter)
+@UseFilters(
+  EmailGroupAccessGraphqlApiExceptionFilter,
+  AuthGraphqlApiExceptionFilter,
+)
 @UsePipes(ResolverValidationPipe)
 @MetadataResolver(() => UnsubscribeTopicDTO)
 export class UnsubscribeTopicResolver {
   constructor(
     private readonly unsubscribeTopicService: UnsubscribeTopicService,
-    private readonly unsubscribeTokenService: UnsubscribeTokenService,
-    private readonly twentyConfigService: TwentyConfigService,
     private readonly emailGroupAccessService: EmailGroupAccessService,
   ) {}
 
   @Query(() => [UnsubscribeTopicDTO])
-  @RequireFeatureFlag(FeatureFlagKey.IS_EMAIL_GROUP_ENABLED)
+  @RequireFeatureFlag(FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED)
   async unsubscribeTopics(
     @AuthWorkspace() currentWorkspace: WorkspaceEntity,
   ): Promise<UnsubscribeTopicDTO[]> {
@@ -53,24 +51,8 @@ export class UnsubscribeTopicResolver {
     );
   }
 
-  @Query(() => String)
-  @RequireFeatureFlag(FeatureFlagKey.IS_EMAIL_GROUP_ENABLED)
-  unsubscribePagePreviewUrl(
-    @AuthWorkspace() currentWorkspace: WorkspaceEntity,
-  ): string {
-    this.emailGroupAccessService.validateEmailGroupAccessOrThrow();
-
-    const token = this.unsubscribeTokenService.sign({
-      workspaceId: currentWorkspace.id,
-      emailAddress: UNSUBSCRIBE_PREVIEW_PLACEHOLDER_EMAIL,
-      preview: true,
-    });
-
-    return `${this.twentyConfigService.get('SERVER_URL')}/emailing/unsubscribe?t=${token}`;
-  }
-
   @Mutation(() => UnsubscribeTopicDTO)
-  @RequireFeatureFlag(FeatureFlagKey.IS_EMAIL_GROUP_ENABLED)
+  @RequireFeatureFlag(FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED)
   async createUnsubscribeTopic(
     @Args('input') input: CreateUnsubscribeTopicInput,
     @AuthWorkspace() currentWorkspace: WorkspaceEntity,
@@ -84,7 +66,7 @@ export class UnsubscribeTopicResolver {
   }
 
   @Mutation(() => UnsubscribeTopicDTO)
-  @RequireFeatureFlag(FeatureFlagKey.IS_EMAIL_GROUP_ENABLED)
+  @RequireFeatureFlag(FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED)
   async updateUnsubscribeTopic(
     @Args('input') input: UpdateUnsubscribeTopicInput,
     @AuthWorkspace() currentWorkspace: WorkspaceEntity,
@@ -98,7 +80,7 @@ export class UnsubscribeTopicResolver {
   }
 
   @Mutation(() => Boolean)
-  @RequireFeatureFlag(FeatureFlagKey.IS_EMAIL_GROUP_ENABLED)
+  @RequireFeatureFlag(FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED)
   async deleteUnsubscribeTopic(
     @Args('id') id: string,
     @AuthWorkspace() currentWorkspace: WorkspaceEntity,

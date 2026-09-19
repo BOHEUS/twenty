@@ -1,13 +1,12 @@
-import { type DropResult } from '@hello-pangea/dnd';
-
 import { useUpdateOneRecord } from '@/object-record/hooks/useUpdateOneRecord';
 
 import { useTriggerTableWithoutGroupDragAndDropOptimisticUpdate } from '@/object-record/record-drag/hooks/useTriggerTableWithoutGroupDragAndDropOptimisticUpdate';
+import { type RecordDragDropResult } from '@/object-record/record-drag/types/RecordDragDropResult';
 import { originalDragSelectionComponentState } from '@/object-record/record-drag/states/originalDragSelectionComponentState';
 import { getDragOperationType } from '@/object-record/record-drag/utils/getDragOperationType';
 import { processMultiDrag } from '@/object-record/record-drag/utils/processMultiDrag';
 import { processSingleDrag } from '@/object-record/record-drag/utils/processSingleDrag';
-import { RECORD_INDEX_REMOVE_SORTING_MODAL_ID } from '@/object-record/record-index/constants/RecordIndexRemoveSortingModalId';
+import { getRecordIndexRemoveSortingModalId } from '@/object-record/record-index/utils/getRecordIndexRemoveSortingModalId';
 import { allRecordIdsWithoutGroupsComponentSelector } from '@/object-record/record-index/states/selectors/allRecordIdsWithoutGroupsComponentSelector';
 import { currentRecordSortsComponentState } from '@/object-record/record-sort/states/currentRecordSortsComponentState';
 import { useStore } from 'jotai';
@@ -17,7 +16,7 @@ import { useRecordIndexContextOrThrow } from '@/object-record/record-index/conte
 import { useRecordTableContextOrThrow } from '@/object-record/record-table/contexts/RecordTableContext';
 import { selectedRowIdsComponentSelector } from '@/object-record/record-table/states/selectors/selectedRowIdsComponentSelector';
 import { type RecordWithPosition } from '@/object-record/utils/computeNewPositionOfDraggedRecord';
-import { useModal } from '@/ui/layout/modal/hooks/useModal';
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { useAtomComponentStateCallbackState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateCallbackState';
 import { useAtomComponentSelectorCallbackState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorCallbackState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
@@ -48,17 +47,17 @@ export const useProcessTableWithoutGroupRecordDrop = () => {
     currentRecordSortsComponentState,
   );
 
-  const { openModal } = useModal();
+  const { openDialog } = useDialog();
 
   const { triggerTableWithoutGroupDragAndDropOptimisticUpdate } =
     useTriggerTableWithoutGroupDragAndDropOptimisticUpdate();
 
   const processTableWithoutGroupRecordDrop = useCallback(
-    async (tableRecordDropResult: DropResult) => {
+    async (tableRecordDropResult: RecordDragDropResult) => {
       if (!tableRecordDropResult.destination) return;
 
       if (currentRecordSorts.length > 0) {
-        openModal(RECORD_INDEX_REMOVE_SORTING_MODAL_ID);
+        openDialog(getRecordIndexRemoveSortingModalId(recordIndexId));
         return;
       }
 
@@ -158,10 +157,11 @@ export const useProcessTableWithoutGroupRecordDrop = () => {
     },
     [
       objectNameSingular,
+      recordIndexId,
       selectedRowIds,
       store,
       updateOneRecord,
-      openModal,
+      openDialog,
       currentRecordSorts,
       originalDragSelection,
       allRecordIdsWithoutGroup,

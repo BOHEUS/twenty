@@ -5,11 +5,13 @@ import { useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { FormProvider } from 'react-hook-form';
-import { ClickToActionLink, UndecoratedLink } from 'twenty-ui/navigation';
+import {
+  ClickToActionLink,
+  UndecoratedLink,
+} from 'twenty-ui/primitives/navigation';
 
 import { StyledOnboardingContentContainer } from '@/auth/components/StyledOnboardingContentContainer';
 import { OnboardingStepAnimatedItem } from '@/onboarding/components/OnboardingStepAnimatedItem';
-import { ONBOARDING_CONTENT_BLOCK_WIDTH } from '@/onboarding/constants/OnboardingContentBlockWidth';
 import { SignInUpWithCredentials } from '@/auth/sign-in-up/components/internal/SignInUpWithCredentials';
 import { SignInUpWithGoogle } from '@/auth/sign-in-up/components/internal/SignInUpWithGoogle';
 import { SignInUpWithMicrosoft } from '@/auth/sign-in-up/components/internal/SignInUpWithMicrosoft';
@@ -27,9 +29,9 @@ import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomState
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useContext } from 'react';
-import { Avatar } from 'twenty-ui/data-display';
+import { Avatar } from 'twenty-ui/primitives/data-display';
 import { IconChevronRight, IconPlus } from 'twenty-ui/icon';
-import { HorizontalSeparator } from 'twenty-ui/layout';
+import { HorizontalSeparator } from 'twenty-ui/primitives/layout';
 import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
 import {
   type AvailableWorkspace,
@@ -38,14 +40,9 @@ import {
 import { getWorkspaceUrl } from '~/utils/getWorkspaceUrl';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 
-const StyledContentContainer = styled(StyledOnboardingContentContainer)`
-  max-width: 100%;
-  width: ${ONBOARDING_CONTENT_BLOCK_WIDTH}px;
-`;
-
 const StyledWorkspaceContainer = styled.div`
-  background-color: ${themeCssVariables.background.secondary};
-  border: 1px solid ${themeCssVariables.border.color.light};
+  background-color: ${themeCssVariables.background.primary};
+  border: 1px solid ${themeCssVariables.border.color.medium};
   border-radius: ${themeCssVariables.border.radius.md};
   display: flex;
   flex-direction: column;
@@ -171,7 +168,7 @@ export const SignInUpGlobalScopeForm = () => {
   return (
     <>
       {signInUpStep === SignInUpStep.WorkspaceSelection && (
-        <StyledContentContainer>
+        <StyledOnboardingContentContainer>
           <StyledWorkspaceContainer>
             {availableWorkspacesList.map((availableWorkspace, index) => (
               <OnboardingStepAnimatedItem
@@ -184,8 +181,8 @@ export const SignInUpGlobalScopeForm = () => {
                   <StyledWorkspaceItem>
                     <StyledWorkspaceContent>
                       <Avatar
-                        placeholder={availableWorkspace.displayName || ''}
-                        avatarUrl={getAbsoluteImageUrl(
+                        name={availableWorkspace.displayName || ''}
+                        src={getAbsoluteImageUrl(
                           availableWorkspace.logo ?? DEFAULT_WORKSPACE_LOGO,
                         )}
                         size="lg"
@@ -235,10 +232,10 @@ export const SignInUpGlobalScopeForm = () => {
               </OnboardingStepAnimatedItem>
             )}
           </StyledWorkspaceContainer>
-        </StyledContentContainer>
+        </StyledOnboardingContentContainer>
       )}
       {signInUpStep !== SignInUpStep.WorkspaceSelection && (
-        <StyledContentContainer>
+        <StyledOnboardingContentContainer>
           {authProviders.google && (
             <SignInUpWithGoogle
               action="list-available-workspaces"
@@ -269,7 +266,7 @@ export const SignInUpGlobalScopeForm = () => {
               </ClickToActionLink>
             </StyledForgotPasswordLinkContainer>
           )}
-        </StyledContentContainer>
+        </StyledOnboardingContentContainer>
       )}
     </>
   );

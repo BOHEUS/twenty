@@ -10,14 +10,14 @@ const FIND_MARKETPLACE_APP_DETAIL_QUERY = `
       name
       sourcePackage
       latestAvailableVersion
-      isFeatured
+      isVetted
       description
       author
       category
-      logo
+      logoUrl
       websiteUrl
       aboutDescription
-      screenshots
+      galleryImages
     }
   }
 `;
@@ -27,14 +27,14 @@ type ApiMarketplaceAppDetail = {
   name: string;
   sourcePackage?: string | null;
   latestAvailableVersion?: string | null;
-  isFeatured: boolean;
+  isVetted: boolean;
   description?: string | null;
   author?: string | null;
   category?: string | null;
-  logo?: string | null;
+  logoUrl?: string | null;
   websiteUrl?: string | null;
   aboutDescription?: string | null;
-  screenshots?: string[] | null;
+  galleryImages?: string[] | null;
 };
 
 type FindMarketplaceAppDetailData = {
@@ -69,11 +69,11 @@ export async function fetchMarketplaceAppDetailBySlug(
       tagline: app.tagline,
       author: detail.author ?? app.author,
       category: detail.category ?? app.category,
-      logoUrl: detail.logo ?? app.logoUrl,
+      logoUrl: detail.logoUrl ?? app.logoUrl,
       sourcePackage: detail.sourcePackage ?? undefined,
-      isFeatured: detail.isFeatured,
+      isVetted: detail.isVetted,
       description: detail.aboutDescription ?? detail.description ?? app.tagline,
-      screenshots: detail.screenshots ?? [],
+      screenshots: detail.galleryImages ?? [],
       websiteUrl: detail.websiteUrl ?? undefined,
       latestAvailableVersion: detail.latestAvailableVersion ?? undefined,
     };

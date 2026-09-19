@@ -16,8 +16,11 @@ import { TestHttpRequestInput } from 'src/engine/core-modules/workflow/dtos/test
 import { TestHttpRequestDTO } from 'src/engine/core-modules/workflow/dtos/test-http-request.dto';
 import { UpdateWorkflowRunStepInput } from 'src/engine/core-modules/workflow/dtos/update-workflow-run-step.input';
 import { UpdateWorkflowVersionStepInput } from 'src/engine/core-modules/workflow/dtos/update-workflow-version-step.input';
+import { UpdateWorkflowVersionTriggerInput } from 'src/engine/core-modules/workflow/dtos/update-workflow-version-trigger.input';
 import { WorkflowActionDTO } from 'src/engine/core-modules/workflow/dtos/workflow-action.dto';
 import { WorkflowVersionStepChangesDTO } from 'src/engine/core-modules/workflow/dtos/workflow-version-step-changes.dto';
+import { WorkflowVersionTriggerDTO } from 'src/engine/core-modules/workflow/dtos/workflow-version-trigger.dto';
+import { WorkflowVersionValidationGraphqlApiExceptionFilter } from 'src/engine/core-modules/workflow/filters/workflow-version-validation-graphql-api-exception.filter';
 import { WorkflowVersionStepGraphqlApiExceptionFilter } from 'src/engine/core-modules/workflow/filters/workflow-version-step-graphql-api-exception.filter';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
@@ -30,6 +33,7 @@ import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/metadata-module
 import { WorkflowVersionStepWorkspaceService } from 'src/modules/workflow/workflow-builder/workflow-version-step/workflow-version-step.workspace-service';
 import { WorkflowRunWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run/workflow-run.workspace-service';
 import { WorkflowRunnerWorkspaceService } from 'src/modules/workflow/workflow-runner/workspace-services/workflow-runner.workspace-service';
+import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
 
 @CoreResolver()
 @UsePipes(ResolverValidationPipe)
@@ -42,6 +46,8 @@ import { WorkflowRunnerWorkspaceService } from 'src/modules/workflow/workflow-ru
   PermissionsGraphqlApiExceptionFilter,
   PreventNestToAutoLogGraphqlErrorsFilter,
   WorkflowVersionStepGraphqlApiExceptionFilter,
+  WorkflowVersionValidationGraphqlApiExceptionFilter,
+  AuthGraphqlApiExceptionFilter,
 )
 export class WorkflowVersionStepResolver {
   constructor(
@@ -71,6 +77,7 @@ export class WorkflowVersionStepResolver {
       id: account.id,
       handle: account.handle,
       provider: account.provider,
+      handleAliases: account.handleAliases,
     };
   }
 
@@ -97,6 +104,21 @@ export class WorkflowVersionStepResolver {
       workflowVersionId,
       step,
     });
+  }
+
+  @Mutation(() => WorkflowVersionTriggerDTO)
+  async updateWorkflowVersionTrigger(
+    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @Args('input')
+    { trigger, workflowVersionId }: UpdateWorkflowVersionTriggerInput,
+  ): Promise<WorkflowVersionTriggerDTO> {
+    return this.workflowVersionStepWorkspaceService.updateWorkflowVersionTrigger(
+      {
+        workspaceId,
+        workflowVersionId,
+        trigger,
+      },
+    );
   }
 
   @Mutation(() => WorkflowVersionStepChangesDTO)

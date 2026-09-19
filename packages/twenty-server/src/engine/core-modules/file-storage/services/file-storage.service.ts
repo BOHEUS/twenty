@@ -1,14 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 
 import { basename, dirname, join } from 'path';
 import { type Readable } from 'stream';
 
 import { FileFolder } from 'twenty-shared/types';
-import { Like, Repository, type QueryRunner } from 'typeorm';
+import { isDefined } from 'twenty-shared/utils';
+import { Like, type QueryRunner } from 'typeorm';
 
 import { ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
+import { findActiveFlatApplicationById } from 'src/engine/core-modules/application/utils/find-active-flat-application-by-id.util';
+import { findActiveFlatApplicationByUniversalIdentifier } from 'src/engine/core-modules/application/utils/find-active-flat-application-by-universal-identifier.util';
+import { type FileStorageMetadata } from 'src/engine/core-modules/file-storage/types/file-storage-metadata.type';
 import { FileStorageDriverFactory } from 'src/engine/core-modules/file-storage/file-storage-driver.factory';
+import { type ByteRange } from 'src/engine/core-modules/file-storage/types/byte-range.type';
 import {
   FileStorageException,
   FileStorageExceptionCode,
@@ -23,6 +27,7 @@ import { FILE_STATUS } from 'src/engine/core-modules/file/types/file-status.type
 import { removeFileFolderFromFileEntityPath } from 'src/engine/core-modules/file/utils/remove-file-folder-from-file-entity-path.utils';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
+import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 export type ResourceIdentifier = {
   workspaceId: string;
   applicationUniversalIdentifier: string;
@@ -36,9 +41,100 @@ export class FileStorageService {
     private readonly fileStorageDriverFactory: FileStorageDriverFactory,
     @InjectWorkspaceScopedRepository(FileEntity)
     private readonly fileRepository: WorkspaceScopedRepository<FileEntity>,
-    @InjectRepository(ApplicationEntity)
-    private readonly applicationRepository: Repository<ApplicationEntity>,
+    private readonly workspaceCacheService: WorkspaceCacheService,
   ) {}
+
+  private async resolveFileIdKeepingExistingRow({
+    fileRepository,
+    workspaceId,
+    filePath,
+    applicationId,
+    fileId,
+  }: {
+    fileRepository: WorkspaceScopedRepository<FileEntity>;
+    workspaceId: string;
+    filePath: string;
+    applicationId: string;
+    fileId: string | undefined;
+  }): Promise<string | undefined> {
+    const existingFile = await fileRepository.findOne(workspaceId, {
+      where: { path: filePath, applicationId },
+      withDeleted: true,
+    });
+
+    return existingFile?.id ?? fileId;
+  }
+
+  private async resolveApplicationIdOrThrow({
+    applicationUniversalIdentifier,
+    workspaceId,
+    queryRunner,
+  }: {
+    applicationUniversalIdentifier: string;
+    workspaceId: string;
+    queryRunner?: QueryRunner;
+  }): Promise<string> {
+    const { flatApplicationMaps } =
+      await this.workspaceCacheService.getOrRecompute(workspaceId, [
+        'flatApplicationMaps',
+      ]);
+
+    const cachedApplication = findActiveFlatApplicationByUniversalIdentifier(
+      flatApplicationMaps,
+      applicationUniversalIdentifier,
+    );
+
+    if (isDefined(cachedApplication)) {
+      return cachedApplication.id;
+    }
+
+    if (isDefined(queryRunner)) {
+      const application = await queryRunner.manager
+        .getRepository(ApplicationEntity)
+        .findOne({
+          where: {
+            universalIdentifier: applicationUniversalIdentifier,
+            workspaceId,
+          },
+        });
+
+      if (isDefined(application)) {
+        return application.id;
+      }
+    }
+
+    throw new FileStorageException(
+      `Application with universalIdentifier "${applicationUniversalIdentifier}" not found`,
+      FileStorageExceptionCode.FILE_NOT_FOUND,
+    );
+  }
+
+  private async resolveApplicationUniversalIdentifierOrThrow({
+    applicationId,
+    workspaceId,
+  }: {
+    applicationId: string;
+    workspaceId: string;
+  }): Promise<string> {
+    const { flatApplicationMaps } =
+      await this.workspaceCacheService.getOrRecompute(workspaceId, [
+        'flatApplicationMaps',
+      ]);
+
+    const application = findActiveFlatApplicationById(
+      flatApplicationMaps,
+      applicationId,
+    );
+
+    if (!isDefined(application)) {
+      throw new FileStorageException(
+        `Application with id "${applicationId}" not found`,
+        FileStorageExceptionCode.FILE_NOT_FOUND,
+      );
+    }
+
+    return application.universalIdentifier;
+  }
 
   private buildStoragePathWithinWorkspaceOrThrow({
     workspaceId,
@@ -124,6 +220,7 @@ export class FileStorageService {
     sourceFile,
     fileFolder,
     applicationUniversalIdentifier,
+    applicationId,
     workspaceId,
     resourcePath,
     fileId,
@@ -131,25 +228,24 @@ export class FileStorageService {
     queryRunner,
   }: ResourceIdentifier & {
     sourceFile: string | Buffer | Uint8Array;
+    applicationId?: string;
     fileId?: string;
     settings: FileSettings;
     queryRunner?: QueryRunner;
   }): Promise<FileEntity> {
     const driver = this.fileStorageDriverFactory.getCurrentDriver();
 
-    const applicationRepository = queryRunner
-      ? queryRunner.manager.getRepository(ApplicationEntity)
-      : this.applicationRepository;
-    const fileRepository = queryRunner
+    const resolvedApplicationId =
+      applicationId ??
+      (await this.resolveApplicationIdOrThrow({
+        applicationUniversalIdentifier,
+        workspaceId,
+        queryRunner,
+      }));
+
+    const fileRepository = isDefined(queryRunner)
       ? this.fileRepository.withManager(queryRunner.manager)
       : this.fileRepository;
-
-    const application = await applicationRepository.findOneOrFail({
-      where: {
-        universalIdentifier: applicationUniversalIdentifier,
-        workspaceId,
-      },
-    });
 
     const { onStorageFilePath, filePath } =
       this.validateAndBuildFileStoragePathOrThrow({
@@ -175,8 +271,14 @@ export class FileStorageService {
       workspaceId,
       {
         path: filePath,
-        applicationId: application.id,
-        id: fileId,
+        applicationId: resolvedApplicationId,
+        id: await this.resolveFileIdKeepingExistingRow({
+          fileRepository,
+          workspaceId,
+          filePath,
+          applicationId: resolvedApplicationId,
+          fileId,
+        }),
         mimeType,
         size:
           typeof persistedSourceFile === 'string'
@@ -194,6 +296,7 @@ export class FileStorageService {
   async createPendingFile({
     fileFolder,
     applicationUniversalIdentifier,
+    applicationId,
     workspaceId,
     resourcePath,
     fileId,
@@ -201,17 +304,18 @@ export class FileStorageService {
     mimeType,
     settings,
   }: ResourceIdentifier & {
+    applicationId?: string;
     fileId: string;
     size: number;
     mimeType: string;
     settings: FileSettings;
   }): Promise<FileEntity> {
-    const application = await this.applicationRepository.findOneOrFail({
-      where: {
-        universalIdentifier: applicationUniversalIdentifier,
+    const resolvedApplicationId =
+      applicationId ??
+      (await this.resolveApplicationIdOrThrow({
+        applicationUniversalIdentifier,
         workspaceId,
-      },
-    });
+      }));
 
     const { filePath } = this.validateAndBuildFileStoragePathOrThrow({
       workspaceId,
@@ -224,8 +328,14 @@ export class FileStorageService {
       workspaceId,
       {
         path: filePath,
-        applicationId: application.id,
-        id: fileId,
+        applicationId: resolvedApplicationId,
+        id: await this.resolveFileIdKeepingExistingRow({
+          fileRepository: this.fileRepository,
+          workspaceId,
+          filePath,
+          applicationId: resolvedApplicationId,
+          fileId,
+        }),
         mimeType,
         size,
         settings,
@@ -254,7 +364,7 @@ export class FileStorageService {
 
   async getFileMetadata(
     params: ResourceIdentifier,
-  ): Promise<{ size: number } | null> {
+  ): Promise<FileStorageMetadata | null> {
     const driver = this.fileStorageDriverFactory.getCurrentDriver();
     const { onStorageFilePath } =
       this.validateAndBuildFileStoragePathOrThrow(params);
@@ -302,13 +412,32 @@ export class FileStorageService {
     });
   }
 
-  readFile(params: ResourceIdentifier): Promise<Readable> {
+  readFile(
+    params: ResourceIdentifier & { byteRange?: ByteRange },
+  ): Promise<Readable> {
     const driver = this.fileStorageDriverFactory.getCurrentDriver();
 
     const { onStorageFilePath } =
       this.validateAndBuildFileStoragePathOrThrow(params);
 
-    return driver.readFile({ filePath: onStorageFilePath });
+    return driver.readFile({
+      filePath: onStorageFilePath,
+      byteRange: params.byteRange,
+    });
+  }
+
+  readFilePrefix(
+    params: ResourceIdentifier & { byteCount: number },
+  ): Promise<Buffer> {
+    const driver = this.fileStorageDriverFactory.getCurrentDriver();
+
+    const { onStorageFilePath } =
+      this.validateAndBuildFileStoragePathOrThrow(params);
+
+    return driver.readFilePrefix({
+      filePath: onStorageFilePath,
+      byteCount: params.byteCount,
+    });
   }
 
   downloadFile(
@@ -354,7 +483,9 @@ export class FileStorageService {
     });
   }
 
-  async deleteFile(params: ResourceIdentifier): Promise<void> {
+  async deleteFile(
+    params: ResourceIdentifier & { applicationId?: string },
+  ): Promise<void> {
     const driver = this.fileStorageDriverFactory.getCurrentDriver();
     const { onStorageFilePath, filePath } =
       this.validateAndBuildFileStoragePathOrThrow(params);
@@ -364,21 +495,37 @@ export class FileStorageService {
       filename: basename(onStorageFilePath),
     });
 
-    const application = await this.applicationRepository.findOneOrFail({
-      where: {
-        universalIdentifier: params.applicationUniversalIdentifier,
+    const applicationId =
+      params.applicationId ??
+      (await this.resolveApplicationIdOrThrow({
+        applicationUniversalIdentifier: params.applicationUniversalIdentifier,
         workspaceId: params.workspaceId,
-      },
-    });
+      }));
 
     await this.fileRepository.delete(params.workspaceId, {
       path: filePath,
-      applicationId: application.id,
+      applicationId,
+    });
+  }
+
+  // Removes only the stored object. deleteFile also drops any row sitting at
+  // that path, which is wrong once the row is gone or belongs to a later
+  // upload that reused the same resource path.
+  async deleteFileObject(params: ResourceIdentifier): Promise<void> {
+    const driver = this.fileStorageDriverFactory.getCurrentDriver();
+    const { onStorageFilePath } =
+      this.validateAndBuildFileStoragePathOrThrow(params);
+
+    await driver.delete({
+      folderPath: dirname(onStorageFilePath),
+      filename: basename(onStorageFilePath),
     });
   }
 
   async deleteFolder(
-    params: Omit<ResourceIdentifier, 'resourcePath'> & { folderPath: string },
+    params: Omit<ResourceIdentifier, 'resourcePath'> & {
+      folderPath: string;
+    },
   ): Promise<void> {
     const {
       workspaceId,
@@ -399,16 +546,14 @@ export class FileStorageService {
 
     await driver.delete({ folderPath: onStorageFolderPath });
 
-    const application = await this.applicationRepository.findOneOrFail({
-      where: {
-        universalIdentifier: applicationUniversalIdentifier,
-        workspaceId,
-      },
+    const applicationId = await this.resolveApplicationIdOrThrow({
+      applicationUniversalIdentifier,
+      workspaceId,
     });
 
     await this.fileRepository.delete(workspaceId, {
       path: Like(`${validatedFolderPath}%`),
-      applicationId: application.id,
+      applicationId,
     });
   }
 
@@ -428,13 +573,16 @@ export class FileStorageService {
       },
     });
 
-    const application = await this.applicationRepository.findOneOrFail({
-      where: { id: file.applicationId, workspaceId },
-    });
+    const applicationUniversalIdentifier =
+      await this.resolveApplicationUniversalIdentifierOrThrow({
+        applicationId: file.applicationId,
+        workspaceId,
+      });
 
     await this.deleteFile({
       workspaceId,
-      applicationUniversalIdentifier: application.universalIdentifier,
+      applicationUniversalIdentifier,
+      applicationId: file.applicationId,
       fileFolder,
       resourcePath: removeFileFolderFromFileEntityPath(file.path),
     });
@@ -487,6 +635,29 @@ export class FileStorageService {
     return driver.copy({
       from: { folderPath: fromPath },
       to: { folderPath: toPath },
+    });
+  }
+
+  async move({
+    from,
+    to,
+    ifMatchChecksum,
+  }: {
+    from: ResourceIdentifier;
+    to: ResourceIdentifier;
+    ifMatchChecksum?: string;
+  }): Promise<void> {
+    const driver = this.fileStorageDriverFactory.getCurrentDriver();
+
+    const { onStorageFilePath: fromPath } =
+      this.validateAndBuildFileStoragePathOrThrow(from);
+    const { onStorageFilePath: toPath } =
+      this.validateAndBuildFileStoragePathOrThrow(to);
+
+    return driver.move({
+      from: { folderPath: dirname(fromPath), filename: basename(fromPath) },
+      to: { folderPath: dirname(toPath), filename: basename(toPath) },
+      ifMatchChecksum,
     });
   }
 

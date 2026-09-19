@@ -28,7 +28,7 @@ import {
   type EnterpriseKeyPayload,
   type EnterpriseLicenseInfo,
   type EnterpriseValidityPayload,
-} from 'src/engine/core-modules/enterprise/types/enterprise-key-payload.type';
+} from 'src/engine/core-modules/enterprise/types/organization-key-payload.type';
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
 import {
   ConfigVariableException,
@@ -335,6 +335,18 @@ export class EnterprisePlanService implements OnModuleInit {
 
       return false;
     }
+  }
+
+  // Self-hosted pricing is per user: a user who belongs to several workspaces
+  // on the same instance only counts as one seat.
+  async getBillableSeatCount(): Promise<number> {
+    const result = await this.userWorkspaceRepository
+      .createQueryBuilder('userWorkspace')
+      .select('COUNT(DISTINCT "userWorkspace"."userId")', 'distinctUserCount')
+      .where('"userWorkspace"."deletedAt" IS NULL')
+      .getRawOne<{ distinctUserCount: string }>();
+
+    return Math.max(1, Number(result?.distinctUserCount ?? 0));
   }
 
   async reportSeats(seatCount: number): Promise<boolean> {

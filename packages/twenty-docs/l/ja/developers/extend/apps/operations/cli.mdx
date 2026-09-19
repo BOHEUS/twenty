@@ -16,7 +16,7 @@ icon: terminal
 | `dev:add`                                       | 新しいエンティティのスキャフォールドを作成                                          | [スキャフォールディング](/l/ja/developers/extend/apps/getting-started/scaffolding)                                 |
 | `dev:generate-client`                           | 型付き API クライアントを再生成                                             | このページ                                                                                              |
 | `dev:function:exec` / `dev:function:logs`       | 関数を実行し、そのログをストリーミング                                            | このページ                                                                                              |
-| `dev:translations-extract`                      | 翻訳可能な文字列を `locales/` カタログに抽出                                   | [翻訳](/l/ja/developers/extend/apps/translations/overview)                                                |
+| `dev:translations-extract`                      | 翻訳可能な文字列を `locales/` カタログに抽出                                   | [翻訳](/l/ja/developers/extend/apps/operations/translations)                                                |
 | `dev:catalog-sync`                              | マーケットプレイスのカタログ同期をトリガー                                          | [公開](/l/ja/developers/extend/apps/operations/publishing#how-marketplace-discovery-works)                |
 | `app:publish` / `app:install` / `app:uninstall` | リリースライフサイクル                                                    | [公開](/l/ja/developers/extend/apps/operations/publishing) とこのページ                                         |
 | `docker:*`                                      | ローカルの Twenty サーバーコンテナを管理                                       | [ローカルサーバー](/l/ja/developers/extend/apps/getting-started/local-server)                                   |
@@ -38,9 +38,10 @@ yarn twenty dev:function:exec -u e56d363b-0bdc-4d8a-a393-6f0d1c75bdcf
 # Pass a JSON payload
 yarn twenty dev:function:exec -n create-new-post-card -p '{"name": "Hello"}'
 
-# Execute the install hooks
+# Execute the install and uninstall hooks
 yarn twenty dev:function:exec --postInstall
 yarn twenty dev:function:exec --preInstall
+yarn twenty dev:function:exec --uninstall
 ```
 
 ## 関数ログの表示（`yarn twenty dev:function:logs`）

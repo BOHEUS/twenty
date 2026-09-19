@@ -15,7 +15,7 @@ import { t } from '@lingui/core/macro';
 import { useMemo, useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 import { IconChevronLeft, useIcons } from 'twenty-ui/icon';
-import { MenuItem } from 'twenty-ui/navigation';
+import { MenuItem } from 'twenty-ui/primitives/navigation';
 import { RelationType } from '~/generated-metadata/graphql';
 
 type MorphRelationTarget = {
@@ -34,6 +34,7 @@ type ChartGroupByFieldSelectionMorphRelationFieldViewProps = {
     perTargetFieldId: string;
     subFieldName: string;
   }) => void;
+  onSelectTargetRecord: (params: { perTargetFieldId: string }) => void;
 };
 
 export const ChartGroupByFieldSelectionMorphRelationFieldView = ({
@@ -42,6 +43,7 @@ export const ChartGroupByFieldSelectionMorphRelationFieldView = ({
   currentSubFieldName,
   onBack,
   onSelectTargetSubField,
+  onSelectTargetRecord,
 }: ChartGroupByFieldSelectionMorphRelationFieldViewProps) => {
   const { getIcon } = useIcons();
 
@@ -92,11 +94,19 @@ export const ChartGroupByFieldSelectionMorphRelationFieldView = ({
             ? currentSubFieldName
             : undefined
         }
+        isCurrentGroupByField={
+          selectedTarget.perTargetFieldId === currentFieldMetadataId
+        }
         onBack={() => setSelectedTarget(null)}
         onSelectSubField={(subFieldName) =>
           onSelectTargetSubField({
             perTargetFieldId: selectedTarget.perTargetFieldId,
             subFieldName,
+          })
+        }
+        onSelectRecord={() =>
+          onSelectTargetRecord({
+            perTargetFieldId: selectedTarget.perTargetFieldId,
           })
         }
       />

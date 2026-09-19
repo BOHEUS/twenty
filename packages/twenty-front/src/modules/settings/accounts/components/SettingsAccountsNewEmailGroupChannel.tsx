@@ -4,8 +4,6 @@ import { z } from 'zod';
 
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { H2Title } from 'twenty-ui/typography';
-import { Section } from 'twenty-ui/layout';
 
 import { useCreateEmailGroupChannel } from '@/settings/accounts/hooks/useCreateEmailGroupChannel';
 import { SaveAndCancelButtons } from '@/settings/components/SaveAndCancelButtons/SaveAndCancelButtons';
@@ -13,6 +11,7 @@ import { SettingsPageContainer } from '@/settings/components/SettingsPageContain
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import { Section } from 'twenty-ui/components';
 
 export const SettingsAccountsNewEmailGroupChannel = () => {
   const { t } = useLingui();
@@ -20,12 +19,17 @@ export const SettingsAccountsNewEmailGroupChannel = () => {
   const { createEmailGroupChannel, loading } = useCreateEmailGroupChannel();
 
   const [handle, setHandle] = useState('');
+  const [displayName, setDisplayName] = useState('');
 
   const isHandleValidEmail = z.email().safeParse(handle).success;
   const canSave = isHandleValidEmail && !loading;
 
   const handleSave = useCallback(async () => {
-    const result = await createEmailGroupChannel(handle);
+    const trimmedDisplayName = displayName.trim();
+    const result = await createEmailGroupChannel(
+      handle,
+      trimmedDisplayName.length > 0 ? trimmedDisplayName : undefined,
+    );
     const messageChannelId =
       result.data?.createEmailGroupChannel.messageChannel.id;
 
@@ -34,7 +38,7 @@ export const SettingsAccountsNewEmailGroupChannel = () => {
         messageChannelId,
       });
     }
-  }, [createEmailGroupChannel, handle, navigate]);
+  }, [createEmailGroupChannel, displayName, handle, navigate]);
 
   return (
     <SettingsPageLayout
@@ -45,7 +49,7 @@ export const SettingsAccountsNewEmailGroupChannel = () => {
           href: getSettingsPath(SettingsPath.General),
         },
         {
-          children: t`Communications`,
+          children: t`Communication`,
           href: getSettingsPath(SettingsPath.WorkspaceCommunications),
         },
         { children: t`New Email Channel` },
@@ -61,8 +65,8 @@ export const SettingsAccountsNewEmailGroupChannel = () => {
       }
     >
       <SettingsPageContainer>
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Email Address`}
             description={t`The address your workspace will send and receive email from (e.g. support@mycompany.com). Outbound sending requires the domain to be verified in Outbound Domains.`}
           />
@@ -79,7 +83,27 @@ export const SettingsAccountsNewEmailGroupChannel = () => {
             }}
             disabled={loading}
           />
-        </Section>
+        </Section.Root>
+        <Section.Root>
+          <Section.Header
+            title={t`Display Name`}
+            description={t`The name recipients see next to your address in their inbox, instead of the address alone.`}
+          />
+          <SettingsTextInput
+            instanceId="email-group-display-name"
+            label={t`Display Name`}
+            placeholder={t`Support Team`}
+            value={displayName}
+            maxLength={255}
+            onChange={setDisplayName}
+            onInputEnter={() => {
+              if (canSave) {
+                handleSave();
+              }
+            }}
+            disabled={loading}
+          />
+        </Section.Root>
       </SettingsPageContainer>
     </SettingsPageLayout>
   );

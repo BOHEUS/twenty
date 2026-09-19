@@ -1,10 +1,11 @@
+import { WorkflowVisualizerComponentInstanceContext } from '@/workflow/workflow-diagram/states/contexts/WorkflowVisualizerComponentInstanceContext';
 import { useUpdateWorkflowVersionStep } from '@/workflow/workflow-steps/hooks/useUpdateWorkflowVersionStep';
 import { act, renderHook } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
 
 const mockMutate = jest.fn();
 const mockGetRecordFromCache = jest.fn();
 const mockMarkStepForRecomputation = jest.fn();
-const mockEnqueueErrorSnackBar = jest.fn();
 
 jest.mock('@/object-metadata/hooks/useApolloCoreClient', () => ({
   useApolloCoreClient: () => ({ cache: {} }),
@@ -22,8 +23,11 @@ jest.mock('@/object-record/hooks/useObjectPermissions', () => ({
   useObjectPermissions: () => ({ objectPermissionsByObjectMetadataId: {} }),
 }));
 
-jest.mock('@/ui/feedback/snack-bar-manager/hooks/useSnackBar', () => ({
-  useSnackBar: () => ({ enqueueErrorSnackBar: mockEnqueueErrorSnackBar }),
+const mockEnqueueToast = jest.fn();
+
+jest.mock('twenty-ui/primitives/feedback', () => ({
+  ...jest.requireActual('twenty-ui/primitives/feedback'),
+  useToast: () => ({ enqueueToast: mockEnqueueToast }),
 }));
 
 jest.mock('@/object-record/cache/hooks/useGetRecordFromCache', () => ({
@@ -43,6 +47,13 @@ jest.mock('@/workflow/workflow-variables/hooks/useStepsOutputSchema', () => ({
 jest.mock('@apollo/client/react', () => ({
   useMutation: () => [mockMutate],
 }));
+
+const Wrapper = ({ children }: { children: ReactNode }) =>
+  createElement(
+    WorkflowVisualizerComponentInstanceContext.Provider,
+    { value: { instanceId: 'workflow-visualizer-test' } },
+    children,
+  );
 
 describe('useUpdateWorkflowVersionStep', () => {
   beforeEach(() => {
@@ -65,7 +76,9 @@ describe('useUpdateWorkflowVersionStep', () => {
       steps: [{ id: 'step-1', name: 'Create Record', type: 'CREATE_RECORD' }],
     });
 
-    const { result } = renderHook(() => useUpdateWorkflowVersionStep());
+    const { result } = renderHook(() => useUpdateWorkflowVersionStep(), {
+      wrapper: Wrapper,
+    });
 
     await act(async () => {
       await result.current.updateWorkflowVersionStep({
@@ -83,7 +96,9 @@ describe('useUpdateWorkflowVersionStep', () => {
   it('should not mark step for recomputation when mutation returns no data', async () => {
     mockMutate.mockResolvedValue({ data: null });
 
-    const { result } = renderHook(() => useUpdateWorkflowVersionStep());
+    const { result } = renderHook(() => useUpdateWorkflowVersionStep(), {
+      wrapper: Wrapper,
+    });
 
     await act(async () => {
       await result.current.updateWorkflowVersionStep({
@@ -108,7 +123,9 @@ describe('useUpdateWorkflowVersionStep', () => {
 
     mockGetRecordFromCache.mockReturnValue(undefined);
 
-    const { result } = renderHook(() => useUpdateWorkflowVersionStep());
+    const { result } = renderHook(() => useUpdateWorkflowVersionStep(), {
+      wrapper: Wrapper,
+    });
 
     await act(async () => {
       await result.current.updateWorkflowVersionStep({

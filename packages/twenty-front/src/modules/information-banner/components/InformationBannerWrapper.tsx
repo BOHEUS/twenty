@@ -3,16 +3,17 @@ import { isDefined } from 'twenty-shared/utils';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 
 import { InformationBannerBillingSubscriptionPaused } from '@/information-banner/components/billing/InformationBannerBillingSubscriptionPaused';
-import { InformationBannerNonProductionInstance } from '@/information-banner/components/enterprise/InformationBannerNonProductionInstance';
 import { InformationBannerEndTrialPeriod } from '@/information-banner/components/billing/InformationBannerEndTrialPeriod';
 import { InformationBannerFailPaymentInfo } from '@/information-banner/components/billing/InformationBannerFailPaymentInfo';
 import { InformationBannerNoBillingSubscription } from '@/information-banner/components/billing/InformationBannerNoBillingSubscription';
+import { InformationBannerNonProductionInstance } from '@/information-banner/components/enterprise/InformationBannerNonProductionInstance';
 import { InformationBannerMaintenance } from '@/information-banner/components/maintenance/InformationBannerMaintenance';
 import { InformationBannerReconnectAccountEmailAliases } from '@/information-banner/components/reconnect-account/InformationBannerReconnectAccountEmailAliases';
 import { InformationBannerReconnectAccountInsufficientPermissions } from '@/information-banner/components/reconnect-account/InformationBannerReconnectAccountInsufficientPermissions';
 import { usePermissionFlagMap } from '@/settings/roles/hooks/usePermissionFlagMap';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useIsWorkspaceActivationStatusEqualsTo } from '@/workspace/hooks/useIsWorkspaceActivationStatusEqualsTo';
+import { isSubscriptionPaymentOverdue } from '@/settings/billing/utils/isSubscriptionPaymentOverdue';
 import { useSubscriptionStatus } from '@/workspace/hooks/useSubscriptionStatus';
 import { hasReachedCurrentBillingPeriodCapSelector } from '@/workspace/states/hasReachedCurrentBillingPeriodCapSelector';
 
@@ -49,8 +50,7 @@ export const InformationBannerWrapper = () => {
     isWorkspaceSuspended && !isDefined(subscriptionStatus);
 
   const displayFailPaymentInfoBanner =
-    subscriptionStatus === SubscriptionStatus.PastDue ||
-    subscriptionStatus === SubscriptionStatus.Unpaid;
+    isSubscriptionPaymentOverdue(subscriptionStatus);
 
   const displayEndTrialPeriodBanner =
     hasReachedCurrentBillingPeriodCap &&
