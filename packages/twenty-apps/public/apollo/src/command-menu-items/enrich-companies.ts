@@ -18,6 +18,5 @@ export default defineCommandMenuItem({
     APOLLO_FRONT_COMPONENT_UNIVERSAL_IDENTIFIERS.enrichCompanies,
   label: 'Enrich with Apollo',
   availabilityType: 'RECORD_SELECTION',
-  // Select-all hands over no ids, so the command would have nothing to enrich.
   conditionalAvailabilityExpression: !isSelectAll,
 });
