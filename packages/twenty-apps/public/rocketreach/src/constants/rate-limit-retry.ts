@@ -1,0 +1,3 @@
+export const RATE_LIMIT_MAX_RETRIES = 3;
+export const RATE_LIMIT_FALLBACK_DELAY_MS = 2_000;
+export const RATE_LIMIT_MAX_DELAY_MS = 30_000;

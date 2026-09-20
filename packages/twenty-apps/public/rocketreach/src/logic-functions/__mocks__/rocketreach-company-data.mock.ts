@@ -1,0 +1,37 @@
+import { type RocketReachCompanyData } from 'src/types/rocketreach-company-data';
+
+export const rocketReachCompanyDataMock: RocketReachCompanyData = {
+  id: 987,
+  name: 'Analytical Engines Ltd',
+  domain: 'https://www.analytical-engines.com/',
+  email_domain: 'analytical-engines.com',
+  rr_profile_url: 'https://rocketreach.co/analytical-engines',
+  links: {
+    linkedin: 'https://www.linkedin.com/company/analytical-engines',
+    twitter: 'https://x.com/analyticalengines',
+  },
+  address: {
+    street: '1 Difference Way',
+    city: 'London',
+    region: 'England',
+    postal_code: 'EC1A 1AA',
+    country: 'United Kingdom',
+  },
+  phone: '+442079460000',
+  fax: '+442079460001',
+  description: 'Builders of analytical engines.',
+  industry: 'Computing',
+  industries: ['Computing', 'Research'],
+  industry_keywords: ['engines', 'computation'],
+  sic_codes: [3571],
+  naics_codes: [334111],
+  techstack: ['Punch Cards'],
+  competitors: ['Difference Engines Inc'],
+  departments: { engineering: 42 },
+  company_growth: [{ year: 2026, quarter: 1, values: [1, 2, 3] }],
+  num_employees: 120,
+  year_founded: 1843,
+  revenue: 2500000,
+  ticker_symbol: 'AENG',
+  funding_investors: ['Royal Society'],
+};

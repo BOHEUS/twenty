@@ -1,0 +1,20 @@
+import {
+  defineField,
+  FieldType,
+  STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS,
+} from 'twenty-sdk/define';
+
+import { ROCKETREACH_FIELD_UNIVERSAL_IDENTIFIERS } from 'src/constants/universal-identifiers';
+
+export default defineField({
+  universalIdentifier:
+    ROCKETREACH_FIELD_UNIVERSAL_IDENTIFIERS.person.rocketReachId,
+  objectUniversalIdentifier:
+    STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.person.universalIdentifier,
+  type: FieldType.TEXT,
+  name: 'rocketReachId',
+  label: 'RocketReach ID',
+  description: 'RocketReach person profile identifier.',
+  icon: 'IconId',
+  isNullable: true,
+});

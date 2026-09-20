@@ -1,0 +1,60 @@
+import { type RocketReachPersonData } from 'src/types/rocketreach-person-data';
+
+export const rocketReachPersonDataMock: RocketReachPersonData = {
+  id: 1234,
+  status: 'complete',
+  name: 'ada lovelace',
+  linkedin_url: 'https://www.linkedin.com/in/adalovelace',
+  linkedin_url_active: true,
+  connections: 842,
+  links: { twitter: 'https://x.com/ada' },
+  city: 'London',
+  region: 'England',
+  country: 'United Kingdom',
+  region_latitude: 51.5,
+  region_longitude: -0.12,
+  birth_year: '1815',
+  current_title: 'Head of Analytical Engines',
+  current_employer: 'Analytical Engines Ltd',
+  current_employer_id: 987,
+  current_employer_domain: 'https://www.analytical-engines.com/about',
+  current_employer_linkedin_url: 'https://www.linkedin.com/company/analytical-engines/',
+  current_employer_industry: 'Computing',
+  job_history: [
+    {
+      company_name: 'Analytical Engines Ltd',
+      title: 'Head of Analytical Engines',
+      department: 'engineering',
+      sub_department: 'research',
+      highest_level: 'director',
+      is_current: true,
+    },
+    {
+      company_name: 'Royal Society',
+      title: 'Correspondent',
+      is_current: false,
+    },
+  ],
+  education: [{ school: 'Private tuition' }],
+  skills: ['mathematics', 'Mathematics', 'programming'],
+  recommended_professional_email: 'ada@analytical-engines.com',
+  recommended_personal_email: 'ada@example.com',
+  emails: [
+    {
+      email: 'ada@analytical-engines.com',
+      type: 'professional',
+      smtp_valid: 'valid',
+      grade: 'A',
+    },
+    { email: 'ada@example.com', type: 'personal', grade: 'A-' },
+  ],
+  phones: [
+    { number: '020 7946 0000', e164: '+442079460000', country_code: 'gb' },
+    {
+      number: '020 7946 1111',
+      e164: '+442079461111',
+      country_code: 'GB',
+      recommended: true,
+    },
+  ],
+};
