@@ -11,6 +11,7 @@ export default defineApplication({
   displayName: APP_DISPLAY_NAME,
   description: APP_DESCRIPTION,
   category: 'Enrichment',
+  logo: 'public/logo.jpeg',
   serverVariables: {
     APOLLO_CONNECTION_CLIENT_ID: {
       description:

@@ -56,10 +56,6 @@ export const fetchApolloOrganizationsBulk = async ({
     organizationByDomain.get(domain),
   );
 
-  // Apollo follows aliases, so an organization can come back under a domain
-  // other than the requested one. It also leaves the domains it missed out of
-  // the answer and promises no ordering, so a position is only trusted when
-  // every domain came back and nothing else already claimed that organization.
   const isAnswerComplete = organizations.length === domains.length;
   const claimedOrganizations = new Set(matchedByDomain.filter(isDefined));
 

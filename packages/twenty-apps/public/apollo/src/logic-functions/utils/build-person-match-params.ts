@@ -16,8 +16,6 @@ export const buildPersonMatchParams = (
     domain: normalizeDomain(person.company?.domainName?.primaryLinkUrl),
   }) as ApolloPersonMatchParams;
 
-  // Apollo needs an email, a LinkedIn profile, or a name paired with the
-  // employer domain; a bare name matches the wrong person too often.
   const hasStrongIdentifier =
     isDefined(params.email) || isDefined(params.linkedinUrl);
   const hasNameAndDomain =

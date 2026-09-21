@@ -20,8 +20,6 @@ export const fetchApolloPeopleBulk = async ({
     path: '/people/bulk_match',
     method: 'POST',
     accessToken,
-    // Apollo reads the reveal flags off the query string and the people off
-    // the body.
     query: { reveal_personal_emails: revealPersonalEmails },
     body: { details: params.map(toApolloPersonDetail) },
   });

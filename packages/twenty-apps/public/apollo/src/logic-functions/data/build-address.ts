@@ -1,5 +1,5 @@
 import { toText } from "src/logic-functions/data/to-text";
-import { isDefined } from "src/logic-functions/data/is-defined";
+import { isDefined } from "twenty-sdk/define";
 
 type AddressParts = {
   street?: unknown;

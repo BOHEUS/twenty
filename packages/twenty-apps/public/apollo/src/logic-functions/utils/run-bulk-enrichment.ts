@@ -58,9 +58,6 @@ const setResults = ({
   }
 };
 
-// Reads every requested record up front so the Apollo batches below are full:
-// batching the raw ids instead would spend a whole ten-record call on the one
-// record of a batch that turns out to be matchable.
 const collectMatchableRecords = async <
   TRecord extends { id: string },
   TMatchParams,
@@ -164,8 +161,6 @@ const enrichBatch = async <TRecord extends { id: string }, TMatchParams>({
   if (!matchResult.success) {
     const recordIds = matchableRecords.map(({ recordId }) => recordId);
 
-    // The records are already reported as errors, so a status write that fails
-    // on top of that has nothing left to change about the outcome.
     await writeStatus(recordIds, 'ERROR').catch(() => undefined);
     setResults({
       resultByRecordId,
@@ -202,8 +197,6 @@ const enrichBatch = async <TRecord extends { id: string }, TMatchParams>({
         message: adapter.notFoundMessage,
       });
     } catch (statusWriteError) {
-      // Unlike the paths above, nothing else reports these records, so a failed
-      // status write is the only thing that happened to them.
       setResults({
         resultByRecordId,
         recordIds: notFoundRecordIds,
@@ -304,8 +297,6 @@ export const runBulkEnrichment = async <
       });
 
       if (isAuthFailure) {
-        // Every remaining batch would be rejected the same way, so stop and
-        // let the platform show the connection as needing a reconnect.
         await reportConnectionAuthFailure({
           connectionId: connection.id,
           reason: 'Apollo rejected the access token.',

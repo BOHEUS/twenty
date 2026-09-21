@@ -9,22 +9,6 @@ export const APPLICATION_UNIVERSAL_IDENTIFIER =
 export const DEFAULT_ROLE_UNIVERSAL_IDENTIFIER =
   'b8faae3f-e174-43fa-ab94-715712ae26cb';
 
-export const MAIN_PAGE_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER =
-  '31b57683-bf40-4a0e-8985-791d1b58872e';
-
-export const MAIN_PAGE_LAYOUT_UNIVERSAL_IDENTIFIER =
-  '3b4e4b5c-bca2-4cfc-afa8-919fad91b95f';
-
-export const MAIN_PAGE_LAYOUT_TAB_UNIVERSAL_IDENTIFIER =
-  '87a7ec9f-4252-4653-970a-78fce26227ce';
-
-export const MAIN_PAGE_WIDGET_UNIVERSAL_IDENTIFIER =
-  'c6098b11-d125-4ddf-9d75-1e78f02340b4';
-
-export const MAIN_PAGE_NAVIGATION_MENU_ITEM_UNIVERSAL_IDENTIFIER =
-  'c48a6a4a-4849-4625-94e0-3bf5c75e355b';
-
-// Matches defineConnectionProvider({ name }); listConnections filters on it.
 export const APOLLO_CONNECTION_PROVIDER_NAME = 'apollo-connection';
 
 export const APOLLO_LOGIC_FUNCTION_UNIVERSAL_IDENTIFIERS = {
@@ -35,8 +19,6 @@ export const APOLLO_LOGIC_FUNCTION_UNIVERSAL_IDENTIFIERS = {
   onCompanyUpdated: '6248b3fe-a8af-404a-8e38-19df98f73d81',
 } as const;
 
-// The front components that back the record-selection commands reach the bulk
-// logic functions through these routes, served under the /s prefix.
 export const APOLLO_LOGIC_FUNCTION_ROUTE_PATHS = {
   enrichCompanies: '/apollo/enrich-companies',
   enrichPeople: '/apollo/enrich-people',

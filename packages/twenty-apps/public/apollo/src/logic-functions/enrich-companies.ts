@@ -17,8 +17,8 @@ import { companyBulkEnrichmentAdapter } from 'src/logic-functions/handlers/compa
 import { runBulkEnrichment } from 'src/logic-functions/utils/run-bulk-enrichment';
 import {
   toBulkEnrichmentInput,
-  type BulkEnrichmentFunctionInput,
 } from 'src/logic-functions/utils/to-bulk-enrichment-input';
+import { BulkEnrichmentFunctionInput } from "src/logic-functions/types/bulk-enrichment-input.type";
 
 const inputSchema: InputJsonSchema = {
   type: 'object',

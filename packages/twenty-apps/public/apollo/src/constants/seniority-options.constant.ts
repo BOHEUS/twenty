@@ -1,6 +1,3 @@
-// Apollo's `seniority` taxonomy, as used by the person_seniorities search
-// filter. Values Apollo adds later fall through unmapped rather than failing
-// the write — see pick-select-value.util.ts.
 export const APOLLO_SENIORITY_OPTIONS = [
   { value: 'OWNER', label: 'Owner', color: 'red', position: 0 },
   { value: 'FOUNDER', label: 'Founder', color: 'purple', position: 1 },
