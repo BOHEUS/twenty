@@ -16,8 +16,12 @@ import { RecordTransformerException } from 'src/engine/core-modules/record-trans
 import { recordTransformerGraphqlApiExceptionHandler } from 'src/engine/core-modules/record-transformer/utils/record-transformer-graphql-api-exception-handler.util';
 import { ThrottlerException } from 'src/engine/core-modules/throttler/throttler.exception';
 import { throttlerToGraphqlApiExceptionHandler } from 'src/engine/core-modules/throttler/utils/throttler-to-graphql-api-exception-handler.util';
+import { UsageLimitException } from 'src/engine/core-modules/usage-limit/exceptions/usage-limit.exception';
+import { usageLimitToGraphqlApiExceptionHandler } from 'src/engine/core-modules/usage-limit/utils/usage-limit-to-graphql-api-exception-handler.util';
 import { PermissionsException } from 'src/engine/metadata-modules/permissions/permissions.exception';
 import { permissionGraphqlApiExceptionHandler } from 'src/engine/metadata-modules/permissions/utils/permission-graphql-api-exception-handler.util';
+import { RecordShareException } from 'src/engine/core-modules/record-share/record-share.exception';
+import { recordShareGraphqlApiExceptionHandler } from 'src/engine/core-modules/record-share/utils/record-share-graphql-api-exception-handler.util';
 import { TwentyOrmException } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
 import { twentyOrmGraphqlApiExceptionHandler } from 'src/engine/twenty-orm/utils/twenty-orm-graphql-api-exception-handler.util';
 import { WorkflowQueryValidationException } from 'src/modules/workflow/common/exceptions/workflow-query-validation.exception';
@@ -43,10 +47,14 @@ export const workspaceQueryRunnerGraphqlApiExceptionHandler = (
       return twentyOrmGraphqlApiExceptionHandler(error);
     case error instanceof CommonQueryRunnerException:
       return commonQueryRunnerToGraphqlApiExceptionHandler(error);
+    case error instanceof RecordShareException:
+      return recordShareGraphqlApiExceptionHandler(error);
     case error instanceof AuthException:
       return authGraphqlApiExceptionHandler(error);
     case error instanceof ApiKeyException:
       return apiKeyGraphqlApiExceptionHandler(error);
+    case error instanceof UsageLimitException:
+      return usageLimitToGraphqlApiExceptionHandler(error);
     case error instanceof ThrottlerException:
       return throttlerToGraphqlApiExceptionHandler(error);
     case error instanceof GraphqlDirectExecutionException:

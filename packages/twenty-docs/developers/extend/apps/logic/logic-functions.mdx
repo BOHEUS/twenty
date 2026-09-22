@@ -79,6 +79,10 @@ yarn twenty dev:function:logs
 ```
 </Note>
 
+<Note>
+On the cloud, each run consumes workspace credits: a flat charge per invocation plus a per-millisecond charge for the time the function runs, so keeping `timeoutSeconds` tight and code fast keeps costs down. See [Credits](/user-guide/billing/capabilities/credits) for the rates.
+</Note>
+
 #### Route trigger payload
 
 When a route trigger invokes your logic function, it receives a `RoutePayload` object that follows the
@@ -305,7 +309,7 @@ const handler = async (event: RoutePayload) => {
 `httpMethods` replaces the default rather than adding to it, so `['GET']` alone makes the route reject `POST`. Only `GET` and `POST` are supported. Leave it unset unless the provider needs the second verb: a route that declares `GET` will have its resolver executed by any unauthenticated caller, including the crawlers and link unfurlers that send `GET` unprompted. Anything the platform does not have a method for is answered `405` without the resolver ever running.
 
 <Note>
-**The application must be claimed and installed on its owner workspace.** Because the resolver runs in the **owner workspace** (the workspace that owns the application registration), a server route trigger only works once the application has been *claimed* — i.e. it has an owner workspace — **and** that application is **installed on the owner workspace**. Until both are true the resolver has nowhere to run, so the route cannot be dispatched. An application that exposes a `serverRouteTriggerSettings` logic function therefore cannot be listed in the marketplace until it is claimed and installed on its owner workspace.
+**The application must be claimed and installed on its owner workspace.** Follow [Claiming your app](/developers/extend/apps/operations/publishing#claiming-your-app) to assign an owner, then install the app in that workspace. Until both are true, the resolver has nowhere to run and the server route returns `404` (`LOGIC_FUNCTION_NOT_FOUND`), even if the app is installed elsewhere. Marketplace search hides apps with server routes until this setup and all required server variables are complete. See [owner workspace costs and availability](/developers/extend/apps/operations/publishing#owner-workspace-costs-and-availability) for billing and operational details.
 </Note>
 
 **Resolver contract.** The SDK's `LogicFunctionConfig` type enforces this at compile time: as soon as you set `serverRouteTriggerSettings`, your handler is constrained to return either a `Response`, or `{ workspaceId: string; targetLogicFunctionUniversalIdentifier: string; payload?: object }` (or a `Promise` of either). On the dispatch path, the `workspaceId` must be a workspace where the target function is installed, otherwise the request is rejected with `404`. A result that matches neither shape — including one whose identifiers are not UUIDs — is rejected with `502`.
@@ -340,10 +344,11 @@ When the caller must read the response body on the same request (challenge hands
 
 #### Database event trigger payload
 
-When a database event trigger invokes your logic function, it receives one `DatabaseEventPayload` per changed record. The payload combines metadata about the source workspace and object with the record-level event.
+When a database event trigger invokes your logic function, it receives one `DatabaseEventPayload` per changed record (or a `DatabaseEventBatchPayload` covering several records when `batchMode` is enabled). The payload combines metadata about the source workspace and object with the record-level event.
 
 ```ts
 import type {
+  DatabaseEventBatchPayload,
   DatabaseEventPayload,
   ObjectRecordCreateEvent,
   ObjectRecordDestroyEvent,
@@ -380,6 +385,14 @@ For permanent deletes, use `.destroyed`.
 `databaseEventTriggerSettings.updatedFields` filters which update events trigger the function.
 `event.properties.updatedFields` tells you which fields actually changed on the current event.
 </Note>
+
+`databaseEventTriggerSettings` accepts:
+
+| Property | Description |
+|----------|-------------|
+| `eventName` | Event to listen on, such as `person.updated`. Supports `*` for the object name, the operation, or both. |
+| `updatedFields` | Optional list of field names. On `.updated` events, only changes touching one of them trigger the function. |
+| `batchMode` | Optional boolean. When `true`, the handler is called once per batch of records instead of once per record. The server decides how many records a batch holds, up to 200. |
 
 Created event example:
 
@@ -446,6 +459,44 @@ const handler = async (event: PersonDestroyedEvent) => {
   };
 };
 ```
+
+#### Batching database events
+
+A bulk write emits many events at once: importing a mailbox, for instance, can update thousands of records in a single operation, and one call per record floods the queue. Set `batchMode` to receive them together:
+
+```ts
+export default defineLogicFunction({
+  ...,
+  databaseEventTriggerSettings: {
+    eventName: 'person.updated',
+    batchMode: true,
+  },
+});
+```
+
+The handler then receives a `DatabaseEventBatchPayload`, which carries the same metadata as `DatabaseEventPayload` but replaces the record-level fields with an `events` array:
+
+```ts
+type PeopleUpdatedBatch = DatabaseEventBatchPayload<
+  ObjectRecordUpdateEvent<Person>
+>;
+
+const handler = async (batch: PeopleUpdatedBatch) => {
+  const updatedEmails = batch.events.map(
+    (event) => event.properties.after.emails?.primaryEmail,
+  );
+
+  return { workspaceId: batch.workspaceId, updatedEmails };
+};
+```
+
+<Note>
+Batch size is not something a handler can rely on. The server decides how many events a call carries, capped at 200, and a batch holds anything from a single event up to that ceiling depending on how many the originating write produced. Write the handler to loop over `events` whatever its length.
+</Note>
+
+Events are grouped by the user who caused them before being batched, so every call covers a single actor and `context.workspaceMemberId` stays meaningful. `updatedFields` filtering is applied before batching, so a batch only contains records you asked for.
+
+Without `batchMode`, the handler keeps receiving one `DatabaseEventPayload` per record.
 
 #### Execution context
 
@@ -517,7 +568,7 @@ const asApplication = new RestApiClient({ runAs: 'application' });
 Check `context.workspaceMemberId` when a function behaves differently depending on whether someone is behind it, for instance to attribute a record.
 </Note>
 
-The SDK helpers that reach your application's own resources always use its access and ignore `runAs`: the [key-value store](/developers/extend/apps/logic/key-value-store), [connections](/developers/extend/apps/logic/connections), `runAgent`, `getPublicAssetUrl` and credit charging.
+The SDK helpers that reach your application's own resources always use its access and ignore `runAs`: the [key-value store](/developers/extend/apps/logic/key-value-store), [connections](/developers/extend/apps/logic/connections), [messaging channels](/developers/extend/apps/logic/messaging-channels), `runAgent`, `getPublicAssetUrl` and [credit charging](/developers/extend/apps/logic/credits).
 
 #### Exposing a function as an AI tool or workflow action
 
@@ -616,6 +667,60 @@ export default defineLogicFunction({
   },
 });
 ```
+
+##### Rendering a tool call with a front component
+
+By default a tool call shows up in the AI chat as a step row: the tool's name, and a spinner until it returns. Point `toolTriggerSettings.frontComponentUniversalIdentifier` at one of your [front components](/developers/extend/apps/layout/front-components) and the chat renders that component inline instead, for every call to this tool.
+
+```ts
+export default defineLogicFunction({
+  ...,
+  toolTriggerSettings: {
+    frontComponentUniversalIdentifier: '74c526eb-cb68-4cf7-b05c-0dd8c288d948',
+  },
+});
+```
+
+The component reads the call it is rendering with `useToolCall()`:
+
+```tsx src/front-components/invoice-preview.tsx
+import { defineFrontComponent } from 'twenty-sdk/define';
+import { useToolCall } from 'twenty-sdk/front-component';
+
+const InvoicePreview = () => {
+  const toolCall = useToolCall();
+
+  if (toolCall === null) {
+    return null;
+  }
+
+  if (toolCall.status !== 'output-available') {
+    return <p>Generating the invoice...</p>;
+  }
+
+  const { invoiceUrl } = toolCall.output ?? {};
+
+  return typeof invoiceUrl === 'string' ? (
+    <a href={invoiceUrl}>Open the invoice</a>
+  ) : (
+    <p>The invoice could not be generated.</p>
+  );
+};
+
+export default defineFrontComponent({
+  universalIdentifier: '74c526eb-cb68-4cf7-b05c-0dd8c288d948',
+  name: 'invoice-preview',
+  component: InvoicePreview,
+});
+```
+
+The component mounts as soon as the agent has finished streaming its arguments, so it owns the whole call, not just the result. `toolCall.status` walks through `input-available`, the approval states when the tool needs one, and then `output-available`, `output-denied` or `output-error`; `input` is what the agent proposed, `output` what your handler returned. Render each state you care about, since the step row is no longer there to cover them.
+
+Both `input` and `output` are typed `Record<string, unknown>`, so narrow each field before you use it rather than casting. That matters most for anything you hand to the DOM: a value you drop into an `href` without checking it is a string is a link the tool's output controls.
+
+<Note>
+If the identifier matches no front component in the app, the chat falls back to the default step row. Front components in the AI chat run under the same [role your app declares](/developers/extend/apps/config/roles), so a widget can only read and write what the app itself is allowed to.
+</Note>
 
 ##### A complete workflow action example
 
@@ -799,7 +904,27 @@ const { createCompany } = await client.mutation({
     name: true,
   },
 });
+
+// Only on an object whose readability is PRIVATE: choose who can read the created record
+const { createContract } = await client.mutation({
+  createContract: {
+    __args: {
+      data: {
+        name: 'Acme Corp renewal',
+      },
+      shareWith: [
+        {
+          roleId: '7f0c1b6e-2d4a-4c8e-9b3f-5a6d7e8f9a0b',
+          accessLevel: 'READ_WRITE',
+        },
+      ],
+    },
+    id: true,
+  },
+});
 ```
+
+`shareWith` only matters on an object whose readability is `PRIVATE`; every object is `OPEN` by default, and on an `OPEN` object the argument is ignored. On a `PRIVATE` object it lists who gets access to the created record: each entry targets exactly one of `workspaceMemberId`, `roleId` or `everyone: true` with an `accessLevel` of `READ`, `READ_WRITE` or `FULL`. A workspace member creating a record always receives a `FULL` owner grant, so the argument is optional for them; a logic function acting as its application or an API key also receives a `FULL` grant for its role, and on a workspace where record sharing is enabled (`IS_RECORD_SHARING_ENABLED`) such callers, like a system caller, must pass `shareWith` or the create is rejected — while the flag is off a create without `shareWith` grants `FULL` access to everyone instead, so the record stays as open as it is today. Rows written while the flag is off are kept and take effect the moment the flag is turned on. Every entry must name a member or a role of the workspace. A logic function or API key shares through its role, so every holder of that role gets the same access to the records it creates; give a key whose records must stay private to it a role of its own.
 
 The client uses a selection-set syntax: pass `true` to include a field, use `__args` for arguments, and nest objects for relations. You get full autocompletion and type checking based on your workspace schema.
 
@@ -834,6 +959,8 @@ setCompany(result.company);
 <Accordion title="MetadataApiClient" description="Workspace config, applications, and file uploads">
 
 `MetadataApiClient` ships pre-built with the SDK (no generation required). It queries the `/metadata` endpoint for workspace configuration, applications, and file uploads. It takes the same `runAs` option as `CoreApiClient` — see [Whose access a call uses](#whose-access-a-call-uses).
+
+It is also how an app reads and updates its own [application variables](/developers/extend/apps/layout/front-components#reading-and-updating-variables-at-runtime), in a logic function as in a front component. An application token only ever reaches its own application, in its own workspace.
 
 ```ts
 import { MetadataApiClient } from 'twenty-client-sdk/metadata';

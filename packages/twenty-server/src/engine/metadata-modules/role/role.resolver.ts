@@ -61,6 +61,7 @@ import { UserRoleService } from 'src/engine/metadata-modules/user-role/user-role
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 import { WorkspaceMigrationGraphqlApiExceptionInterceptor } from 'src/engine/workspace-manager/workspace-migration/interceptors/workspace-migration-graphql-api-exception.interceptor';
 import { WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
+import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
 
 @MetadataResolver(() => RoleDTO)
 @UsePipes(ResolverValidationPipe)
@@ -72,6 +73,7 @@ import { WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/sta
   RowLevelPermissionPredicateGraphqlApiExceptionFilter,
   PermissionsGraphqlApiExceptionFilter,
   PreventNestToAutoLogGraphqlErrorsFilter,
+  AuthGraphqlApiExceptionFilter,
 )
 @UseInterceptors(WorkspaceMigrationGraphqlApiExceptionInterceptor)
 export class RoleResolver {
@@ -127,8 +129,6 @@ export class RoleResolver {
 
     return {
       ...workspaceMember,
-      // pre-2-32 workspaces lack the column until the upgrade command runs
-      uiScale: workspaceMember.uiScale ?? 'Default',
       userWorkspaceId,
       roles,
     } as WorkspaceMemberDTO;
@@ -319,17 +319,10 @@ export class RoleResolver {
     @Parent() role: RoleDTO,
     @AuthWorkspace() workspace: WorkspaceEntity,
   ): Promise<WorkspaceMemberWorkspaceEntity[]> {
-    const workspaceMembers =
-      await this.userRoleService.getWorkspaceMembersAssignedToRole(
-        role.id,
-        workspace.id,
-      );
-
-    // pre-2-32 workspaces lack the column until the upgrade command runs
-    return workspaceMembers.map((workspaceMember) => ({
-      ...workspaceMember,
-      uiScale: workspaceMember.uiScale ?? 'Default',
-    }));
+    return await this.userRoleService.getWorkspaceMembersAssignedToRole(
+      role.id,
+      workspace.id,
+    );
   }
 
   @ResolveField('agents', () => [AgentDTO])

@@ -101,11 +101,12 @@ export const USER_QUERY_FRAGMENT = gql`
       defaultRole {
         ...RoleFragment
       }
-      fastModel
-      smartModel
+      aiChatModelTier
+      aiAgentModelTier
+      isAutoModelSelectionEnabled
+      aiModelIdByTier
+      aiEvaluationModelId
       aiAdditionalInstructions
-      enabledAiModelIds
-      useRecommendedModels
       isTwoFactorAuthenticationEnforced
       trashRetentionDays
       eventLogRetentionDays

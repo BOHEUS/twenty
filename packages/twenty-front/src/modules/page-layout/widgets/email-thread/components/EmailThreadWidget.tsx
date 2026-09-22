@@ -15,10 +15,18 @@ import {
 } from '@/ui/layout/components/WidgetContentContainer';
 import { EmailThreadComposer } from '@/page-layout/widgets/email-thread/components/EmailThreadComposer';
 import { EmailThreadIntermediaryMessages } from '@/page-layout/widgets/email-thread/components/EmailThreadIntermediaryMessages';
-import { useLayoutRenderingContext } from '@/ui/layout/contexts/LayoutRenderingContext';
+import { WidgetRelationsHeader } from '@/page-layout/widgets/components/WidgetRelationsHeader';
 import { useTargetRecord } from '@/ui/layout/contexts/useTargetRecord';
+import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { t } from '@lingui/core/macro';
 import { isDefined } from 'twenty-shared/utils';
+import {
+  AnimatedPlaceholder,
+  AnimatedPlaceholderEmptyContainer,
+  AnimatedPlaceholderEmptySubTitle,
+  AnimatedPlaceholderEmptyTextContainer,
+  AnimatedPlaceholderEmptyTitle,
+} from 'twenty-ui/primitives/feedback';
 
 type EmailThreadWidgetProps = {
   widget: PageLayoutWidget;
@@ -28,7 +36,7 @@ export const EmailThreadWidget = ({
   widget: _widget,
 }: EmailThreadWidgetProps) => {
   const targetRecord = useTargetRecord();
-  const { isInSidePanel } = useLayoutRenderingContext();
+  const isInSidePanel = useWorkspaceSurface().type === 'side-panel';
 
   const { thread, messages, fetchMoreMessages, threadLoading } = useEmailThread(
     targetRecord.id,
@@ -90,9 +98,10 @@ export const EmailThreadWidget = ({
     composerIntent === 'opened' ||
     (composerIntent === null && isDefined(trailingDraft));
 
-  if (threadLoading || !thread || !messages.length) {
+  if (threadLoading) {
     return (
       <StyledWidgetContentContainer>
+        <WidgetRelationsHeader />
         <StyledWidgetScrollContainer>
           <EmailLoader loadingText={t`Loading thread`} />
         </StyledWidgetScrollContainer>
@@ -100,8 +109,30 @@ export const EmailThreadWidget = ({
     );
   }
 
+  if (!isDefined(thread) || !isDefined(lastMessage)) {
+    return (
+      <StyledWidgetContentContainer>
+        <WidgetRelationsHeader />
+        <StyledWidgetScrollContainer>
+          <AnimatedPlaceholderEmptyContainer>
+            <AnimatedPlaceholder type="emptyInbox" />
+            <AnimatedPlaceholderEmptyTextContainer>
+              <AnimatedPlaceholderEmptyTitle>
+                {t`No messages to show`}
+              </AnimatedPlaceholderEmptyTitle>
+              <AnimatedPlaceholderEmptySubTitle>
+                {t`The messages in this thread are missing or incomplete.`}
+              </AnimatedPlaceholderEmptySubTitle>
+            </AnimatedPlaceholderEmptyTextContainer>
+          </AnimatedPlaceholderEmptyContainer>
+        </StyledWidgetScrollContainer>
+      </StyledWidgetContentContainer>
+    );
+  }
+
   return (
     <StyledWidgetContentContainer>
+      <WidgetRelationsHeader />
       <StyledWidgetScrollContainer>
         {firstMessages.map((message) => (
           <EmailThreadMessage

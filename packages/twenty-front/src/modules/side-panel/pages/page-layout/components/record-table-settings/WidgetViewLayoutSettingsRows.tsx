@@ -1,5 +1,5 @@
 import { CommandMenuItemDropdown } from '@/command-menu/components/CommandMenuItemDropdown';
-import { CommandMenuItemToggle } from '@/command-menu/components/CommandMenuItemToggle';
+import { CommandMenuItemSwitch } from '@/command-menu/components/CommandMenuItemSwitch';
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { useRecordTableWidgetLayoutCallbacks } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetLayoutCallbacks';
 import { useRecordTableWidgetViewForDisplay } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetViewForDisplay';
@@ -13,7 +13,6 @@ import { RecordTableGroupByDropdownContent } from '@/side-panel/pages/page-layou
 import { RecordTableLayoutDropdownContent } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableLayoutDropdownContent';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { SelectableListItem } from '@/ui/layout/selectable-list/components/SelectableListItem';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
 import {
@@ -22,11 +21,7 @@ import {
   IconEyeOff,
   IconLayoutList,
 } from 'twenty-ui/icon';
-import {
-  FeatureFlagKey,
-  ViewCalendarLayout,
-  ViewType,
-} from '~/generated-metadata/graphql';
+import { ViewCalendarLayout, ViewType } from '~/generated-metadata/graphql';
 
 type WidgetViewLayoutSettingsRowsProps = {
   pageLayoutId: string;
@@ -51,10 +46,6 @@ export const WidgetViewLayoutSettingsRows = ({
   isLayoutRowHidden = false,
 }: WidgetViewLayoutSettingsRowsProps) => {
   const { t } = useLingui();
-
-  const isCalendarWeekViewEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_CALENDAR_WEEK_VIEW_ENABLED,
-  );
 
   const { handleShouldHideEmptyGroupsChange } =
     useRecordTableWidgetLayoutCallbacks({
@@ -164,7 +155,7 @@ export const WidgetViewLayoutSettingsRows = ({
           />
         </SelectableListItem>
       )}
-      {isCalendarLayout && isCalendarWeekViewEnabled && (
+      {isCalendarLayout && (
         <SelectableListItem itemId="record-table-calendar-layout">
           <CommandMenuItemDropdown
             Icon={IconCalendar}
@@ -214,12 +205,12 @@ export const WidgetViewLayoutSettingsRows = ({
       )}
       {!isCalendarLayout && hasGroupBy && (
         <SelectableListItem itemId="record-table-hide-empty-groups">
-          <CommandMenuItemToggle
+          <CommandMenuItemSwitch
             LeftIcon={IconEyeOff}
             text={t`Hide empty groups`}
             id="record-table-hide-empty-groups"
-            toggled={shouldHideEmptyGroups}
-            onToggleChange={handleShouldHideEmptyGroupsChange}
+            checked={shouldHideEmptyGroups}
+            onCheckedChange={handleShouldHideEmptyGroupsChange}
           />
         </SelectableListItem>
       )}

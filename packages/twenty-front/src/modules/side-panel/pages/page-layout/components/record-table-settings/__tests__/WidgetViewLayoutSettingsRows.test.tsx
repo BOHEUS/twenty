@@ -47,11 +47,8 @@ jest.mock('@/ui/layout/dropdown/components/DropdownContent', () => ({
 jest.mock('@/ui/layout/selectable-list/components/SelectableListItem', () => ({
   SelectableListItem: ({ children }: { children: React.ReactNode }) => children,
 }));
-jest.mock('@/workspace/hooks/useIsFeatureEnabled', () => ({
-  useIsFeatureEnabled: jest.fn(() => false),
-}));
-jest.mock('@/command-menu/components/CommandMenuItemToggle', () => ({
-  CommandMenuItemToggle: () => null,
+jest.mock('@/command-menu/components/CommandMenuItemSwitch', () => ({
+  CommandMenuItemSwitch: () => null,
 }));
 jest.mock('@/command-menu/components/CommandMenuItemDropdown', () => ({
   CommandMenuItemDropdown: ({
@@ -91,6 +88,12 @@ const renderLayoutRows = (widgetViewType: ViewType) => {
 
 describe('WidgetViewLayoutSettingsRows', () => {
   beforeEach(() => jest.clearAllMocks());
+
+  it('includes calendar layout settings without a feature flag', () => {
+    renderLayoutRows(ViewType.CALENDAR_WIDGET);
+
+    expect(screen.getByTestId('row-Calendar view')).toHaveTextContent('Month');
+  });
 
   // The layout row used to fall through to Table for anything that was not
   // kanban or calendar, so a list widget described itself as a table.
