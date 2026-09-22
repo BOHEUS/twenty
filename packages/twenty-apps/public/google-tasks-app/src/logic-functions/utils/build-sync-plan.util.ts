@@ -36,7 +36,6 @@ const diffTask = (
     fields.dueAt = dueAt;
   }
 
-  // Google has no in-progress state, so only the DONE boundary is comparable.
   const isCompletedInGoogle = !isUndefined(googleTask.completed);
 
   if (isCompletedInGoogle !== (existingTask.status === 'DONE')) {

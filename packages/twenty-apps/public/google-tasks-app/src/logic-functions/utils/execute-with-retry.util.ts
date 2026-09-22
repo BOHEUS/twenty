@@ -11,9 +11,6 @@ const RETRYABLE_ERROR_PATTERN =
 const sleep = (durationMs: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, durationMs));
 
-// Last resort for callers with no structured error to inspect, such as the
-// GraphQL client: prefer passing an explicit classifier, since a message match
-// also fires on an error whose text merely quotes a record containing "429".
 const hasRetryableErrorMessage = (error: unknown): boolean =>
   RETRYABLE_ERROR_PATTERN.test(getErrorMessage(error));
 
