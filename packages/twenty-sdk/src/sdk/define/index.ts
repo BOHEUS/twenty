@@ -40,37 +40,37 @@ export type { TimelineActivityTypeConfig } from '@/sdk/define/timeline-activity-
 export type { TimelineActivityTypeManifest } from 'twenty-shared/application';
 
 export {
-  pageType,
-  isInSidePanel,
-  isDashboardPageLayoutInEditMode,
-  isLayoutCustomizationModeEnabled,
-  favoriteRecordIds,
-  isSelectAll,
-  hasAnySoftDeleteFilterOnView,
-  numberOfSelectedRecords,
-  objectPermissions,
-  selectedRecords,
-  featureFlags,
-  targetObjectReadPermissions,
-  targetObjectWritePermissions,
-  canImpersonate,
   canAccessFullAdminPanel,
-  isDefined,
-  isNonEmptyString,
-  includes,
+  canImpersonate,
   every,
   everyDefined,
   everyEquals,
-  some,
-  someDefined,
-  someEquals,
+  favoriteRecordIds,
+  featureFlags,
+  hasAnySoftDeleteFilterOnView,
+  includes,
+  includesEvery,
+  isDashboardPageLayoutInEditMode,
+  isDefined,
+  isInSidePanel,
+  isLayoutCustomizationModeEnabled,
+  isNonEmptyString,
+  isSelectAll,
   none,
   noneDefined,
   noneEquals,
-  someNonEmptyString,
-  includesEvery,
+  numberOfSelectedRecords,
   objectMetadataItem,
   objectMetadataLabel,
+  objectPermissions,
+  pageType,
+  selectedRecords,
+  some,
+  someDefined,
+  someEquals,
+  someNonEmptyString,
+  targetObjectReadPermissions,
+  targetObjectWritePermissions,
 } from '@/sdk/define/conditional-availability/conditional-availability-variables';
 
 export { defineFrontComponent } from '@/sdk/define/front-component/define-front-component';
@@ -108,6 +108,7 @@ export type {
 export type { ServerRouteDispatchResult } from 'twenty-shared/application';
 export type { CronPayload } from '@/sdk/define/logic-functions/triggers/cron-payload-type';
 export type {
+  DatabaseEventBatchPayload,
   DatabaseEventPayload,
   ObjectRecordBaseEvent,
   ObjectRecordCreateEvent,
@@ -134,6 +135,7 @@ export type { TwentyRecord } from '@/sdk/define/objects/twenty-record.type';
 
 export { definePageLayout } from '@/sdk/define/page-layouts/define-page-layout';
 export { definePageLayoutTab } from '@/sdk/define/page-layouts/define-page-layout-tab';
+export { definePageLayoutWidget } from '@/sdk/define/page-layouts/define-page-layout-widget';
 export type { PageLayoutConfig } from '@/sdk/define/page-layouts/page-layout-config';
 export type { PageLayoutTabConfig } from '@/sdk/define/page-layouts/page-layout-tab-config';
 export {
@@ -144,6 +146,7 @@ export type {
   PageLayoutManifest,
   PageLayoutTabManifest,
   PageLayoutWidgetManifest,
+  StandalonePageLayoutWidgetManifest,
 } from 'twenty-shared/application';
 
 export { definePermissionFlag } from '@/sdk/define/permission-flags/define-permission-flag';
@@ -170,6 +173,8 @@ export { defineSkill } from '@/sdk/define/skills/define-skill';
 export { defineView } from '@/sdk/define/views/define-view';
 export { defineViewField } from '@/sdk/define/view-fields/define-view-field';
 export {
+  getSystemPageLayoutTabUniversalIdentifier,
+  getSystemRecordPageLayoutUniversalIdentifier,
   getSystemViewFieldUniversalIdentifier,
   getSystemViewUniversalIdentifier,
   SYSTEM_VIEW_KEYS,
@@ -190,15 +195,19 @@ export type {
 
 export {
   AggregateOperations,
+  CommandMenuItemAvailabilityType,
   DateDisplayFormat,
   FieldMetadataSettingsOnClickAction,
   HTTPMethod,
+  IndexType,
+  MetadataReadability,
   MetadataWritability,
   NavigationMenuItemType,
   NumberDataType,
   ObjectOpenRecordIn,
   ObjectRecordGroupByDateGranularity,
   PageLayoutTabLayoutMode,
+  PageLayoutWidgetVerticalListHeightBehavior,
   PageLayoutType,
   ViewCalendarLayout,
   ViewFilterGroupLogicalOperator,
@@ -207,9 +216,13 @@ export {
   ViewSortDirection,
   ViewType,
   ViewVisibility,
+  WidgetType,
 } from 'twenty-shared/types';
 export type {
-  GridPosition,
+  PageLayoutWidgetCanvasPosition,
   PageLayoutWidgetConditionalDisplay,
+  PageLayoutWidgetGridPosition,
+  PageLayoutWidgetPosition,
   PageLayoutWidgetUniversalConfiguration,
+  PageLayoutWidgetVerticalListPosition,
 } from 'twenty-shared/types';

@@ -5,6 +5,7 @@ import { ApplicationModule } from 'src/engine/core-modules/application/applicati
 import { ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { ApplicationManifestApplyService } from 'src/engine/core-modules/application/application-manifest/application-manifest-apply.service';
 import { ApplicationManifestMigrationService } from 'src/engine/core-modules/application/application-manifest/application-manifest-migration.service';
+import { ApplicationManifestExportService } from 'src/engine/core-modules/application/application-manifest/services/application-manifest-export.service';
 import { ApplicationUninstallService } from 'src/engine/core-modules/application/application-manifest/services/application-uninstall.service';
 import { ComputeApplicationManifestAllUniversalFlatEntityMapsService } from 'src/engine/core-modules/application/application-manifest/services/compute-application-manifest-all-universal-flat-entity-maps.service';
 import { ApplicationSyncService } from 'src/engine/core-modules/application/application-manifest/application-sync.service';
@@ -20,6 +21,7 @@ import { FrontComponentEntity } from 'src/engine/metadata-modules/front-componen
 import { PermissionsModule } from 'src/engine/metadata-modules/permissions/permissions.module';
 import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
 import { WorkspaceMigrationModule } from 'src/engine/workspace-manager/workspace-migration/workspace-migration.module';
+import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/provide-workspace-scoped-repository';
 
 @Module({
   imports: [
@@ -38,17 +40,20 @@ import { WorkspaceMigrationModule } from 'src/engine/workspace-manager/workspace
     WorkspaceMigrationModule,
   ],
   providers: [
+    provideWorkspaceScopedRepository(FrontComponentEntity),
     ApplicationManifestApplyService,
     ApplicationManifestMigrationService,
     ApplicationSyncService,
     ApplicationUninstallService,
     ComputeApplicationManifestAllUniversalFlatEntityMapsService,
+    ApplicationManifestExportService,
   ],
   exports: [
     ApplicationManifestApplyService,
     ApplicationManifestMigrationService,
     ApplicationSyncService,
     ApplicationUninstallService,
+    ApplicationManifestExportService,
   ],
 })
 export class ApplicationManifestModule {}

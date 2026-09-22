@@ -1,7 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { IconDotsVertical, IconTrash } from 'twenty-ui/icon';
-import { LightIconButton } from 'twenty-ui/input';
-import { MenuItem } from 'twenty-ui/navigation';
+import { LightIconButton } from 'twenty-ui/components';
+import { MenuItem } from 'twenty-ui/primitives/navigation';
 
 import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
@@ -26,7 +26,9 @@ export const SettingsAdminWorkspaceCreditGrantRowDropdownMenu = ({
       dropdownId={dropdownId}
       dropdownPlacement="right-start"
       clickableComponent={
-        <LightIconButton Icon={IconDotsVertical} accent="tertiary" />
+        <LightIconButton emphasis="subtle" aria-label={t`More options`}>
+          <IconDotsVertical />
+        </LightIconButton>
       }
       dropdownComponents={
         <DropdownContent>

@@ -11,8 +11,8 @@ import {
   IconPencil,
   IconTrash,
 } from 'twenty-ui/icon';
-import { LightIconButton } from 'twenty-ui/input';
-import { MenuItem } from 'twenty-ui/navigation';
+import { LightIconButton } from 'twenty-ui/components';
+import { MenuItem } from 'twenty-ui/primitives/navigation';
 
 type SettingsObjectInactiveMenuDropDownProps = {
   isCustomObject: boolean;
@@ -58,9 +58,10 @@ export const SettingsObjectInactiveMenuDropDown = ({
       clickableComponent={
         <LightIconButton
           aria-label={t`Inactive Object Options`}
-          Icon={IconDotsVertical}
-          accent="tertiary"
-        />
+          emphasis="subtle"
+        >
+          <IconDotsVertical />
+        </LightIconButton>
       }
       dropdownComponents={
         <DropdownContent widthInPixels={GenericDropdownContentWidth.Narrow}>

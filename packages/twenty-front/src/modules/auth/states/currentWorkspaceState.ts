@@ -36,12 +36,13 @@ export type CurrentWorkspace = Pick<
   | 'isTwoFactorAuthenticationEnforced'
   | 'trashRetentionDays'
   | 'eventLogRetentionDays'
-  | 'fastModel'
-  | 'smartModel'
+  | 'aiChatModelTier'
+  | 'aiAgentModelTier'
+  | 'isAutoModelSelectionEnabled'
+  | 'aiModelIdByTier'
+  | 'aiEvaluationModelId'
   | 'aiAdditionalInstructions'
   | 'editableProfileFields'
-  | 'enabledAiModelIds'
-  | 'useRecommendedModels'
   | 'isInternalMessagesImportEnabled'
 > & {
   defaultRole?: Omit<Role, 'workspaceMembers' | 'agents' | 'apiKeys'> | null;
