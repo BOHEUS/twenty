@@ -1,34 +1,39 @@
-# My Twenty App
+# FullEnrich
 
-Describe your app in one or two sentences.
+Enriches Twenty People and Companies with [FullEnrich](https://fullenrich.com) contact and profile data.
 
 ## Features
 
-List the top things your app does, for example:
+- Select people, then run "Enrich with FullEnrich" from the command menu.
+- Fills the person's work email, personal email and phone number, plus their profile: headline, about, location, skills, languages, education, seniority, job function and employment history.
+- Fills the linked company: description, industry, headcount, headcount range, company type, specialties, founded year, headquarters address and office locations.
+- Every field this app adds carries a `fullEnrich` prefix, so it never collides with a standard Twenty field or with another enrichment app's.
+- All 26 fields are attached to the standard People and Companies index views, hidden by default: pick the ones you want from the view's field menu without the default table growing 26 columns.
 
-- Feature one
-- Feature two
-- Feature three
+## How it works
+
+Running the command menu item does not wait for FullEnrich. The `enrich` route splits the selected records into batches of 100 (the API's per-request limit), enqueues one background job per batch, and answers immediately; each `enrich-batch` job then sends its own bulk request. A batch that is rate limited or hits an outage is redelivered by the job runner, so the 60 requests per minute limit needs no pacing in the app.
+
+FullEnrich answers asynchronously and calls the app's webhook back when a batch finishes. The webhook is unauthenticated, so every payload's `X-Signature-SHA1` HMAC is verified against the API key before anything is written.
+
+Results only reach records the request itself named, and the company is only updated when the employer FullEnrich reports still matches the company the person is linked to in Twenty.
+
+## Settings
+
+| Variable | Purpose |
+| --- | --- |
+| `FULLENRICH_API_KEY` | API key from the [FullEnrich dashboard](https://app.fullenrich.com/app/), for this workspace. Also verifies incoming webhook signatures. Falls back to `FULLENRICH_ADMIN_API_KEY` when left empty. |
+| `FULLENRICH_DATA_REQUIREMENTS` | Which contact data to request: work emails, personal emails, phones. Each selection is billed separately. |
+| `FULLENRICH_REQUEST_CONSTRAINTS` | Skip a record that already holds all of the selected data. Empty means always enrich. |
+
+`FULLENRICH_ADMIN_API_KEY` is a server variable rather than a workspace one: set it once on the instance and every workspace that has not entered its own key uses it.
 
 ## Getting started
 
 Setup instructions live in [SETUP.md](SETUP.md).
 
-## Publishing
-
-The `Publish` workflow (`.github/workflows/publish.yml`) publishes the app to npm with provenance using [npm trusted publishing](https://docs.npmjs.com/trusted-publishers). To publish:
-
-1. On npmjs.com register this repository as a trusted publisher of your package, pointing at the `publish.yml` workflow.
-2. Bump the version in `package.json`, then push a version tag (e.g. `git tag v1.0.0 && git push --tags`) or run the workflow manually from the Actions tab.
-
-Publishing with provenance is also how you prove ownership when claiming your app in a Twenty marketplace.
-
-## Changelog
-
-Notable changes are documented in [CHANGELOG.md](CHANGELOG.md).
-
 ## Learn more
 
 - [Twenty Apps documentation](https://docs.twenty.com/developers/extend/apps/getting-started/quick-start)
-- [twenty-sdk CLI reference](https://www.npmjs.com/package/twenty-sdk)
+- [FullEnrich API reference](https://docs.fullenrich.com/api/v2/general/introduction)
 - [Discord](https://discord.gg/cx5n4Jzs57)

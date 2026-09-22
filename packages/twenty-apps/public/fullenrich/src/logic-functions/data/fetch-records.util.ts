@@ -1,9 +1,18 @@
 import { CoreApiClient } from 'twenty-client-sdk/core';
-import { twentyCompany, twentyPerson } from 'src/logic-functions/shared/types';
-import { chunk } from 'src/logic-functions/utils/chunk.util';
 
-// Matches QUERY_MAX_RECORDS on the server: a single page cannot return more
+import { chunk } from 'src/logic-functions/utils/chunk.util';
+import { type TwentyCompany, type TwentyPerson } from 'src/logic-functions/types/twenty.types';
+
 const QUERY_PAGE_SIZE = 200;
+
+const ADDRESS_SELECTION = {
+  addressStreet1: true,
+  addressStreet2: true,
+  addressCity: true,
+  addressState: true,
+  addressPostcode: true,
+  addressCountry: true,
+};
 
 const PERSON_SELECTION = {
   id: true,
@@ -18,27 +27,20 @@ const PERSON_SELECTION = {
     additionalPhones: true,
   },
   companyId: true,
-  headline: true,
-  about: true,
-  location: {
-    addressStreet1: true,
-    addressStreet2: true,
-    addressCity: true,
-    addressState: true,
-    addressCountry: true,
-    addressZipCode: true,
-  },
-  skills: true,
-  languages: true,
-  educations: true,
-  seniority: true,
-  jobFunction: true,
-  jobSubFunction: true,
-  employmentHistory: true,
-  currentRoleStartedAt: true,
-  linkedinConnectionCount: true,
+  fullEnrichHeadline: true,
+  fullEnrichAbout: true,
+  fullEnrichLocation: ADDRESS_SELECTION,
+  fullEnrichSkills: true,
+  fullEnrichLanguages: true,
+  fullEnrichEducations: true,
+  fullEnrichSeniority: true,
+  fullEnrichJobFunction: true,
+  fullEnrichJobSubFunction: true,
+  fullEnrichEmploymentHistory: true,
+  fullEnrichCurrentRoleStartedAt: true,
+  fullEnrichLinkedinConnectionCount: true,
   fullEnrichPersonId: true,
-  enrichedAt: true,
+  fullEnrichEnrichedAt: true,
 };
 
 const COMPANY_SELECTION = {
@@ -46,26 +48,19 @@ const COMPANY_SELECTION = {
   name: true,
   domainName: { primaryLinkLabel: true, primaryLinkUrl: true },
   linkedinLink: { primaryLinkLabel: true, primaryLinkUrl: true },
-  address: {
-    addressStreet1: true,
-    addressStreet2: true,
-    addressCity: true,
-    addressState: true,
-    addressCountry: true,
-    addressZipCode: true,
-  },
-  description: true,
-  yearFounded: true,
-  headcount: true,
-  headcountRange: true,
-  companyType: true,
-  industry: true,
-  specialties: true,
-  logo: { primaryLinkLabel: true, primaryLinkUrl: true },
-  officeLocations: true,
-  linkedinFollowerCount: true,
+  address: ADDRESS_SELECTION,
+  fullEnrichDescription: true,
+  fullEnrichYearFounded: true,
+  fullEnrichHeadcount: true,
+  fullEnrichHeadcountRange: true,
+  fullEnrichCompanyType: true,
+  fullEnrichIndustry: true,
+  fullEnrichSpecialties: true,
+  fullEnrichLogo: { primaryLinkLabel: true, primaryLinkUrl: true },
+  fullEnrichOfficeLocations: true,
+  fullEnrichLinkedinFollowerCount: true,
   fullEnrichCompanyId: true,
-  enrichedAt: true,
+  fullEnrichEnrichedAt: true,
 };
 
 const fetchRecordsByIds = async <TRecord>(
@@ -110,22 +105,17 @@ const fetchRecordsByIds = async <TRecord>(
 
 export const fetchTwentyPeople = (
   recordIds: string[],
-): Promise<twentyPerson[]> =>
-  fetchRecordsByIds<twentyPerson>('people', PERSON_SELECTION, recordIds);
+): Promise<TwentyPerson[]> =>
+  fetchRecordsByIds<TwentyPerson>('people', PERSON_SELECTION, recordIds);
 
 export const fetchTwentyCompanies = (
   recordIds: string[],
-): Promise<twentyCompany[]> =>
-  fetchRecordsByIds<twentyCompany>('companies', COMPANY_SELECTION, recordIds);
+): Promise<TwentyCompany[]> =>
+  fetchRecordsByIds<TwentyCompany>('companies', COMPANY_SELECTION, recordIds);
 
 // Deleted or inaccessible ids are simply absent from the response, so callers
 // that need a specific record must handle the undefined case
-export const fetchTwentyPerson = async (
-  recordId: string,
-): Promise<twentyPerson | undefined> =>
-  (await fetchTwentyPeople([recordId]))[0];
-
 export const fetchTwentyCompany = async (
   recordId: string,
-): Promise<twentyCompany | undefined> =>
+): Promise<TwentyCompany | undefined> =>
   (await fetchTwentyCompanies([recordId]))[0];

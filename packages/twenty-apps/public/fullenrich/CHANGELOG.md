@@ -4,4 +4,5 @@ All notable changes to this application are documented in this file.
 
 ## 0.1.0
 
-- Initial application scaffolded with [`create-twenty-app`](https://www.npmjs.com/package/create-twenty-app)
+- Enrich people and their linked company with FullEnrich from the command menu.
+- Verify the `X-Signature-SHA1` HMAC on incoming FullEnrich webhooks before writing any record.

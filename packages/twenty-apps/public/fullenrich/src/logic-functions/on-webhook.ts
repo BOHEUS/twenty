@@ -1,87 +1,161 @@
-import {
-  EnrichmentResponse,
-  fullEnrichTwentyCompany,
-} from './shared/types';
+import { isNonEmptyString } from '@sniptt/guards';
 import { CoreApiClient } from 'twenty-client-sdk/core';
-import { HTTPMethod } from 'twenty-shared/types';
-import { defineLogicFunction, RoutePayload } from "twenty-sdk/define";
-import { buildTwentyCompany } from "src/logic-functions/data/build-twenty-company.util";
-import { buildTwentyPerson } from "src/logic-functions/data/build-twenty-person.util";
-import { updatePersonInTwenty } from "src/logic-functions/data/update-person.util";
-import { WEBHOOK_FUNCTION_PATH } from "src/constants/universal-identifiers";
+import { defineLogicFunction, type RoutePayload } from 'twenty-sdk/define';
 
-const updateCompanyInTwenty = async (
-  companyId: string,
-  updateData: fullEnrichTwentyCompany,
-): Promise<void> => {
-  const client = new CoreApiClient();
+import { FULLENRICH_SIGNATURE_HEADER } from 'src/constants/fullenrich-api';
+import { WEBHOOK_FUNCTION_PATH } from 'src/constants/universal-identifiers';
+import { buildTwentyCompany } from 'src/logic-functions/data/build-twenty-company.util';
+import { buildTwentyPerson } from 'src/logic-functions/data/build-twenty-person.util';
+import { fetchTwentyCompanies } from 'src/logic-functions/data/fetch-records.util';
+import {
+  updateCompanyInTwenty,
+  updatePersonInTwenty,
+} from 'src/logic-functions/data/update-records.util';
+import { getFullEnrichApiKey } from 'src/logic-functions/shared/get-application-variables';
+import { verifyWebhookSignature } from 'src/logic-functions/shared/verify-webhook-signature';
+import { sanitizeDomain } from 'src/logic-functions/utils/sanitize-domain.util';
+import { type FullEnrichWebhookPayload } from 'src/logic-functions/types/fullenrich.types';
+import { type TwentyCompany } from 'src/logic-functions/types/twenty.types';
+import { isDefined } from 'src/logic-functions/utils/is-defined';
 
-  const result = await client.mutation({
-    updateCompany: {
-      __args: {
-        id: companyId,
-        data: updateData,
-      },
-      id: true,
-    },
-  });
+type WebhookResult = { updatedPeople: number; updatedCompanies: number };
 
-  if (!result.updateCompany) {
-    throw new Error(`Failed to update company ${companyId}: no result`);
+const isSameCompany = ({
+  linkedCompany,
+  returnedDomain,
+  returnedName,
+}: {
+  linkedCompany: TwentyCompany;
+  returnedDomain: string | undefined;
+  returnedName: string | undefined;
+}): boolean => {
+  const linkedDomain = sanitizeDomain(linkedCompany.domainName?.primaryLinkUrl);
+  const enrichedDomain = sanitizeDomain(returnedDomain);
+
+  if (isNonEmptyString(linkedDomain) && isNonEmptyString(enrichedDomain)) {
+    return linkedDomain === enrichedDomain;
   }
+
+  return (
+    isNonEmptyString(linkedCompany.name) &&
+    isNonEmptyString(returnedName) &&
+    linkedCompany.name.trim().toLowerCase() === returnedName.trim().toLowerCase()
+  );
 };
 
-const handler = async (event: RoutePayload<EnrichmentResponse>): Promise<object | undefined> => {
-  const { body } = event;
-  const client = new CoreApiClient();
-  if (!body) {
-    throw new Error('Error parsing webhook data from FullEnrich');
+const handler = async (
+  event: RoutePayload<FullEnrichWebhookPayload>,
+): Promise<WebhookResult | { error: string }> => {
+  const apiKeyResult = getFullEnrichApiKey();
+
+  if (!apiKeyResult.success) {
+    return { error: apiKeyResult.error };
   }
-  // FullEnrich does not timestamp its response, so receipt time is the best
-  // available answer for when enrichment came back
+
+  const { rawBody } = event;
+
+  if (!isDefined(rawBody)) {
+    return {
+      error:
+        'Invalid webhook signature: raw request body was not forwarded by the server, cannot verify HMAC',
+    };
+  }
+
+  const signatureCheck = verifyWebhookSignature({
+    rawBody,
+    signatureHeader: event.headers[FULLENRICH_SIGNATURE_HEADER],
+    apiKey: apiKeyResult.apiKey,
+  });
+
+  if (!signatureCheck.valid) {
+    return { error: `Invalid webhook signature: ${signatureCheck.error}` };
+  }
+
+  const body = event.body;
+
+  if (!isDefined(body) || !isDefined(body.data)) {
+    return { error: 'Webhook payload carried no enrichment data' };
+  }
+
+  // One query for every linked company, rather than one per record: a batch
+  // webhook carries up to 100 records
+  const linkedCompaniesById = new Map(
+    (
+      await fetchTwentyCompanies(
+        body.data
+          .map(({ custom }) => custom?.companyId)
+          .filter(isNonEmptyString),
+      )
+    ).map((company) => [company.id, company]),
+  );
+
+  const client = new CoreApiClient();
   const enrichedAt = new Date().toISOString();
+  let updatedPeople = 0;
+  let updatedCompanies = 0;
+
   for (const record of body.data) {
     const { custom, contact_info: contactInfo, profile } = record;
 
-    if (!custom?.personId) {
+    if (!isNonEmptyString(custom?.personId)) {
       console.warn('Skipping FullEnrich record without a Twenty person id.');
       continue;
     }
 
-    const twentyCompanyData = profile
-      ? buildTwentyCompany(profile, enrichedAt)
-      : null;
-    if (twentyCompanyData) {
-      await updateCompanyInTwenty(custom.companyId, twentyCompanyData);
-      console.log(
-        `Successfully updated ${twentyCompanyData.name} company in Twenty.`,
-      );
-    } else {
-      console.warn(`No company data returned for person ${custom.personId}.`);
+    await updatePersonInTwenty({
+      personId: custom.personId,
+      updateData: buildTwentyPerson({ profile, contactInfo, enrichedAt }),
+      client,
+    });
+    updatedPeople += 1;
+
+    const enrichedCompany = profile?.employment?.current?.company;
+
+    if (!isNonEmptyString(custom.companyId) || !isDefined(enrichedCompany)) {
+      continue;
     }
 
-    const twentyPersonData = buildTwentyPerson({
-      profile,
-      contactInfo,
+    const linkedCompany = linkedCompaniesById.get(custom.companyId);
+
+    if (!isDefined(linkedCompany)) {
+      console.warn(`Company ${custom.companyId} not found.`);
+      continue;
+    }
+
+    if (
+      !isSameCompany({
+        linkedCompany,
+        returnedDomain: enrichedCompany.domain ?? enrichedCompany.website,
+        returnedName: enrichedCompany.name,
+      })
+    ) {
+      console.warn(
+        `Skipping company ${custom.companyId}: FullEnrich returned "${enrichedCompany.name}" as the current employer of person ${custom.personId}.`,
+      );
+      continue;
+    }
+
+    await updateCompanyInTwenty({
       companyId: custom.companyId,
-      enrichedAt,
+      updateData: buildTwentyCompany({ company: enrichedCompany, enrichedAt }),
+      client,
     });
-    await updatePersonInTwenty(custom.personId, twentyPersonData, client);
-    console.log(`Person ${custom.personId} has been updated successfully.`);
+    updatedCompanies += 1;
   }
 
-  return {};
+  return { updatedPeople, updatedCompanies };
 };
 
 export default defineLogicFunction({
   universalIdentifier: '8672b95c-949c-421a-9aa8-085ddea5bb2f',
   name: 'on-webhook',
-  description: 'Updates records based on webhook data',
+  description: 'Writes FullEnrich enrichment results back onto Twenty records',
   timeoutSeconds: 900,
   handler,
   httpRouteTriggerSettings: {
     path: WEBHOOK_FUNCTION_PATH,
-    httpMethod: HTTPMethod.POST,
+    httpMethod: 'POST',
     isAuthRequired: false,
+    forwardedRequestHeaders: [FULLENRICH_SIGNATURE_HEADER],
   },
 });

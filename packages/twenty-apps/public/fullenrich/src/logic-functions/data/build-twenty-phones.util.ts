@@ -1,35 +1,49 @@
 import {
-  ContactInfo,
-  PhoneInfo,
-  twentyAdditionalPhone,
-  twentyPersonPhones,
-} from "src/logic-functions/shared/types";
+  type FullEnrichContactInfo,
+  type FullEnrichPhone,
+} from 'src/logic-functions/types/fullenrich.types';
+import {
+  type TwentyAdditionalPhone,
+  type TwentyPhones,
+} from 'src/logic-functions/types/twenty.types';
 
-const parsePhone = (phone: PhoneInfo): twentyAdditionalPhone => {
+const parsePhone = (phone: FullEnrichPhone): TwentyAdditionalPhone => {
   const [callingCode, ...rest] = phone.number.trim().split(' ');
+
   return rest.length > 0
     ? { number: rest.join(' '), callingCode, countryCode: phone.region }
     : { number: phone.number, callingCode: '', countryCode: phone.region };
 };
 
-export const buildTwentyPhones = (contactInfo: ContactInfo): twentyPersonPhones => {
+// `phones` may also carry numbers FullEnrich itself refused to promote to
+// most_probable_phone, so the ones it flagged as dead or misattributed are dropped
+const isUsable = (phone: FullEnrichPhone): boolean =>
+  !!phone.number &&
+  phone.line_status !== 'INACTIVE' &&
+  phone.ownership_match !== 'MISMATCH';
+
+export const buildTwentyPhones = (
+  contactInfo: FullEnrichContactInfo,
+): TwentyPhones | undefined => {
+  const usablePhones = (contactInfo.phones ?? []).filter(isUsable);
   const mostProbablePhone = contactInfo.most_probable_phone;
-  if (!mostProbablePhone) {
-    return {
-      primaryPhoneNumber: '',
-      primaryPhoneCallingCode: '',
-      primaryPhoneCountryCode: '',
-      additionalPhones: null,
-    };
+  const primaryPhone = mostProbablePhone?.number
+    ? mostProbablePhone
+    : usablePhones[0];
+
+  if (!primaryPhone) {
+    return undefined;
   }
-  const primaryPhone = parsePhone(mostProbablePhone);
-  const additionalPhones = (contactInfo.phones ?? [])
-    .filter((phone) => phone.number !== mostProbablePhone.number)
+
+  const parsedPrimaryPhone = parsePhone(primaryPhone);
+  const additionalPhones = usablePhones
+    .filter((phone) => phone.number !== primaryPhone.number)
     .map(parsePhone);
+
   return {
-    primaryPhoneNumber: primaryPhone.number,
-    primaryPhoneCallingCode: primaryPhone.callingCode,
-    primaryPhoneCountryCode: primaryPhone.countryCode,
+    primaryPhoneNumber: parsedPrimaryPhone.number,
+    primaryPhoneCallingCode: parsedPrimaryPhone.callingCode,
+    primaryPhoneCountryCode: parsedPrimaryPhone.countryCode,
     additionalPhones: additionalPhones.length > 0 ? additionalPhones : null,
   };
 };
