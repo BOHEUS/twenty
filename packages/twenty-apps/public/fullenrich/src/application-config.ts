@@ -11,11 +11,6 @@ export default defineApplication({
   displayName: APP_DISPLAY_NAME,
   description: APP_DESCRIPTION,
   applicationVariables: {
-    TWENTY_API_URL: {
-      universalIdentifier: '',
-      isSecret: false,
-      description: 'Required for webhooks',
-    },
     FULLENRICH_API_KEY: {
       universalIdentifier: '8977420d-6a54-48e7-9d64-348e90b2bb5f',
       isSecret: true,
@@ -51,4 +46,5 @@ export default defineApplication({
   author: 'Twenty',
   emailSupport: 'contact@twenty.com',
   category: 'Enrichment',
+  logo: 'public/logo.png',
 });

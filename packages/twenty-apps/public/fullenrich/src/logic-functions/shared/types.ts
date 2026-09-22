@@ -17,8 +17,6 @@ type fullEnrichRequestDataBase = {
   custom?: fullEnrichCustomProperties;
 }
 
-// FullEnrich accepts a contact identified either by name plus company, or by
-// its professional network URL alone
 type fullEnrichRequestDataFromName = fullEnrichRequestDataBase & {
   first_name: string;
   last_name: string;
@@ -337,10 +335,6 @@ export const HEAD_COUNT_RANGES = [
 
 export type HeadCountRange = (typeof HEAD_COUNT_RANGES)[number];
 
-// FullEnrich may return no profile at all, so company fields are only sent when
-// enrichment actually produced them
 export type fullEnrichTwentyCompany = Partial<Omit<twentyCompany, "id">>;
 
-// FullEnrich may return no profile at all, so person fields are only sent when
-// enrichment actually produced them
 export type fullEnrichTwentyPerson = Partial<Omit<twentyPerson, "id">>;

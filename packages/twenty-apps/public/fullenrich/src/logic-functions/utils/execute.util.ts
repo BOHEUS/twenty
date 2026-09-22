@@ -5,7 +5,6 @@ export const execute = async ({path, recordIds}:{ path: string; recordIds: strin
   try {
     const client = new RestApiClient();
 
-
     await client.post(`/s${path}`, { recordIds });
 
     await enqueueSnackbar({
