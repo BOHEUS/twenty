@@ -34,8 +34,11 @@ import { viewPickerIsPersistingComponentState } from '@/views/view-picker/states
 import { viewPickerMainGroupByFieldMetadataIdComponentState } from '@/views/view-picker/states/viewPickerMainGroupByFieldMetadataIdComponentState';
 import { viewPickerSelectedIconComponentState } from '@/views/view-picker/states/viewPickerSelectedIconComponentState';
 import { viewPickerTypeComponentState } from '@/views/view-picker/states/viewPickerTypeComponentState';
+import { getRecordMapAddressFieldMetadataItem } from '@/object-record/record-map/utils/getRecordMapAddressFieldMetadataItem';
+import { useIsMapViewEnabled } from '@/object-record/record-map/hooks/useIsMapViewEnabled';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { useMemo, useState } from 'react';
+import { isDefined } from 'twenty-shared/utils';
 import { IconX } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme';
 
@@ -61,6 +64,10 @@ export const ViewPickerContentCreateMode = () => {
   const { objectMetadataItem } = useObjectMetadataItemById({
     objectId: viewObjectMetadataId ?? '',
   });
+  const isMapViewEnabled = useIsMapViewEnabled();
+  const isMapViewAvailable =
+    isMapViewEnabled &&
+    isDefined(getRecordMapAddressFieldMetadataItem(objectMetadataItem));
 
   const [viewPickerInputName, setViewPickerInputName] = useAtomComponentState(
     viewPickerInputNameComponentState,
@@ -188,7 +195,9 @@ export const ViewPickerContentCreateMode = () => {
                 setViewPickerSelectedIcon(viewTypeIconKeyMapping(value));
               }
             }}
-            options={VIEW_PICKER_TYPE_SELECT_OPTIONS.map((option) => ({
+            options={VIEW_PICKER_TYPE_SELECT_OPTIONS.filter(
+              (option) => option.value !== ViewType.MAP || isMapViewAvailable,
+            ).map((option) => ({
               ...option,
               label: t(option.label),
             }))}

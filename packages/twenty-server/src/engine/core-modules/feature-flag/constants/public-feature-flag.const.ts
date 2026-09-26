@@ -22,6 +22,14 @@ export const PUBLIC_FEATURE_FLAGS: PublicFeatureFlag[] = [
       icon: 'IconRelationManyToMany',
     },
   },
+  {
+    key: FeatureFlagKey.IS_MAP_VIEW_ENABLED,
+    metadata: {
+      label: 'Map View',
+      description: 'Display records on a map based on their address',
+      icon: 'IconMap',
+    },
+  },
   ...(process.env.CLOUDFLARE_API_KEY
     ? [
         // {

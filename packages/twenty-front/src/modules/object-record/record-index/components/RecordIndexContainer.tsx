@@ -9,6 +9,7 @@ import { useRecordIndexContextOrThrow } from '@/object-record/record-index/conte
 
 import { RecordIndexCalendarContainer } from '@/object-record/record-index/components/RecordIndexCalendarContainer';
 import { RecordIndexEmptyStateNotShared } from '@/object-record/record-index/components/RecordIndexEmptyStateNotShared';
+import { RecordIndexMapContainer } from '@/object-record/record-index/components/RecordIndexMapContainer';
 import { RecordIndexFiltersToContextStoreEffect } from '@/object-record/record-index/components/RecordIndexFiltersToContextStoreEffect';
 import { useHasCurrentViewNonReadableFields } from '@/object-record/record-index/hooks/useHasCurrentViewNonReadableFields';
 import { RecordListContainer } from '@/object-record/record-list/components/RecordListContainer';
@@ -75,6 +76,7 @@ export const RecordIndexContainer = () => {
               />
             </StyledContainerWithPadding>
           )}
+          {recordIndexViewType === ViewType.MAP && <RecordIndexMapContainer />}
         </>
       )}
     </StyledContainer>

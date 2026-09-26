@@ -70,6 +70,8 @@ export class ClientConfigService {
     const calendarBookingPageId = this.twentyConfigService.get(
       'CALENDAR_BOOKING_PAGE_ID',
     );
+    const mapStyleUrl = this.twentyConfigService.get('MAP_STYLE_URL');
+    const mapDarkStyleUrl = this.twentyConfigService.get('MAP_DARK_STYLE_URL');
     const isBookCallOnboardingStepEnabled = isDefined(
       readBookCallStepMinEmployeeCount(this.twentyConfigService),
     );
@@ -293,6 +295,10 @@ export class ClientConfigService {
       ),
       calendarBookingPageId: isNonEmptyString(calendarBookingPageId)
         ? calendarBookingPageId
+        : undefined,
+      mapStyleUrl: isNonEmptyString(mapStyleUrl) ? mapStyleUrl : undefined,
+      mapDarkStyleUrl: isNonEmptyString(mapDarkStyleUrl)
+        ? mapDarkStyleUrl
         : undefined,
       isBookCallOnboardingStepEnabled,
       isCompanyEnrichmentEnabled,

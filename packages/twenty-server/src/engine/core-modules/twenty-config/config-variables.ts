@@ -2284,6 +2284,24 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'MapLibre style URL for the map view in light mode. Map tiles are loaded from it by every browser that opens a map view. Leave empty to disable the map view.',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'MapLibre style URL for the map view in dark mode. Falls back to MAP_STYLE_URL when empty.',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  MAP_DARK_STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
     isSensitive: true,
     description:
       'API key for People Data Labs company enrichment. When unset, workspace company enrichment is skipped.',

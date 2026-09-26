@@ -1184,6 +1184,8 @@ export type ClientConfig = {
   isOnboardingAiChatEnabled: Scalars['Boolean']['output'];
   isWorkspaceSchemaDDLLocked: Scalars['Boolean']['output'];
   maintenance?: Maybe<ClientConfigMaintenanceMode>;
+  mapDarkStyleUrl?: Maybe<Scalars['String']['output']>;
+  mapStyleUrl?: Maybe<Scalars['String']['output']>;
   publicFeatureFlags: Array<PublicFeatureFlag>;
   publicFunctionDomain?: Maybe<Scalars['String']['output']>;
   sentry: Sentry;
@@ -2116,6 +2118,7 @@ export enum FeatureFlagKey {
   IS_JSON_FILTER_ENABLED = 'IS_JSON_FILTER_ENABLED',
   IS_JUNCTION_RELATIONS_ENABLED = 'IS_JUNCTION_RELATIONS_ENABLED',
   IS_LOGIC_FUNCTION_PREBUILT_MODE_ENABLED = 'IS_LOGIC_FUNCTION_PREBUILT_MODE_ENABLED',
+  IS_MAP_VIEW_ENABLED = 'IS_MAP_VIEW_ENABLED',
   IS_MESSAGE_CAMPAIGN_ENABLED = 'IS_MESSAGE_CAMPAIGN_ENABLED',
   IS_RECORD_CREATION_FORM_ENABLED = 'IS_RECORD_CREATION_FORM_ENABLED',
   IS_RECORD_SHARING_ENABLED = 'IS_RECORD_SHARING_ENABLED',
@@ -7509,6 +7512,7 @@ export enum ViewType {
   KANBAN_WIDGET = 'KANBAN_WIDGET',
   LIST = 'LIST',
   LIST_WIDGET = 'LIST_WIDGET',
+  MAP = 'MAP',
   TABLE = 'TABLE',
   TABLE_WIDGET = 'TABLE_WIDGET'
 }

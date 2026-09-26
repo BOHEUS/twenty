@@ -808,6 +808,7 @@ enum ViewType {
   KANBAN
   CALENDAR
   LIST
+  MAP
   FIELDS_WIDGET
   TABLE_WIDGET
   KANBAN_WIDGET
@@ -2067,6 +2068,7 @@ enum FeatureFlagKey {
   IS_DEFERRED_WORKSPACE_MIGRATION_ACTIONS_ENABLED
   IS_EXECUTION_QUOTA_ENABLED
   IS_RECORD_CREATION_FORM_ENABLED
+  IS_MAP_VIEW_ENABLED
 }
 
 type WorkspaceUrls {
@@ -2297,6 +2299,8 @@ type ClientConfig {
   isEmailingDomainInDemoMode: Boolean!
   allowRequestsToTwentyIcons: Boolean!
   calendarBookingPageId: String
+  mapStyleUrl: String
+  mapDarkStyleUrl: String
   isBookCallOnboardingStepEnabled: Boolean!
   isCompanyEnrichmentEnabled: Boolean!
   isCloudflareIntegrationEnabled: Boolean!

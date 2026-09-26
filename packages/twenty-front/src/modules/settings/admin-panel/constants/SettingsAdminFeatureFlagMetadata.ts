@@ -66,4 +66,8 @@ export const SETTINGS_ADMIN_FEATURE_FLAG_METADATA: Partial<
     label: msg`Record creation form`,
     description: msg`Use a dedicated form when creating records.`,
   },
+  [FeatureFlagKey.IS_MAP_VIEW_ENABLED]: {
+    label: msg`Map view`,
+    description: msg`Display records on a map based on their address.`,
+  },
 };

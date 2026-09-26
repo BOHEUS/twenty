@@ -6,6 +6,7 @@ import {
   IconLayoutKanban,
   IconList,
   IconListDetails,
+  IconMap,
   IconTable,
 } from 'twenty-ui/icon';
 import { VIEW_TYPE_DEFAULT_ICONS } from 'twenty-shared/constants';
@@ -20,6 +21,7 @@ export const VIEW_TYPE_LABELS = {
   [ViewType.KANBAN]: msg`Kanban`,
   [ViewType.CALENDAR]: msg`Calendar`,
   [ViewType.LIST]: msg`List`,
+  [ViewType.MAP]: msg`Map`,
   [ViewType.FIELDS_WIDGET]: msg`Fields widget`,
   [ViewType.TABLE_WIDGET]: msg`Table widget`,
   [ViewType.KANBAN_WIDGET]: msg`Kanban widget`,
@@ -40,6 +42,7 @@ const VIEW_TYPE_ICON_COMPONENTS = {
   IconLayoutKanban,
   IconList,
   IconListDetails,
+  IconMap,
   IconTable,
 } satisfies Record<ViewTypeIconKey, IconComponent>;
 

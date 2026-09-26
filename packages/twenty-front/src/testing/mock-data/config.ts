@@ -65,6 +65,7 @@ export const mockedClientConfig: ClientConfig = {
   isTwoFactorAuthenticationEnabled: false,
   isEmailingDomainInDemoMode: false,
   allowRequestsToTwentyIcons: true,
+  mapStyleUrl: 'https://tiles.openfreemap.org/styles/positron',
   isCloudflareIntegrationEnabled: false,
   isClickHouseConfigured: false,
   isWorkspaceSchemaDDLLocked: false,

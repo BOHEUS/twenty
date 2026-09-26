@@ -436,6 +436,12 @@ export class ClientConfig {
   @Field(() => String, { nullable: true })
   calendarBookingPageId?: string;
 
+  @Field(() => String, { nullable: true })
+  mapStyleUrl?: string;
+
+  @Field(() => String, { nullable: true })
+  mapDarkStyleUrl?: string;
+
   @Field(() => Boolean)
   isBookCallOnboardingStepEnabled: boolean;
 

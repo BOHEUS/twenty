@@ -4486,6 +4486,12 @@ export default {
             "calendarBookingPageId": [
                 1
             ],
+            "mapStyleUrl": [
+                1
+            ],
+            "mapDarkStyleUrl": [
+                1
+            ],
             "isBookCallOnboardingStepEnabled": [
                 8
             ],

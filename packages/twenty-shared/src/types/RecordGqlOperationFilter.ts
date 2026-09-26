@@ -104,6 +104,8 @@ export type AddressFilter = {
   addressState?: StringFilter;
   addressCountry?: StringFilter;
   addressPostcode?: StringFilter;
+  addressLat?: FloatFilter;
+  addressLng?: FloatFilter;
 };
 
 export type LinksFilter = {

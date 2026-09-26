@@ -7,6 +7,7 @@ import { appVersionState } from '@/client-config/states/appVersionState';
 import { authProvidersState } from '@/client-config/states/authProvidersState';
 import { billingState } from '@/client-config/states/billingState';
 import { calendarBookingPageIdState } from '@/client-config/states/calendarBookingPageIdState';
+import { mapStyleUrlsState } from '@/client-config/states/mapStyleUrlsState';
 import { canManageFeatureFlagsState } from '@/client-config/states/canManageFeatureFlagsState';
 import { captchaState } from '@/client-config/states/captchaState';
 import { isBookCallOnboardingStepEnabledState } from '@/client-config/states/isBookCallOnboardingStepEnabledState';
@@ -42,6 +43,7 @@ import { allowRequestsToTwentyIconsState } from '@/client-config/states/allowReq
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
 import { ENTERPRISE_INSTANCE_TYPE } from 'twenty-shared/constants';
+import { isDefined } from 'twenty-shared/utils';
 
 type UseClientConfigResult = {
   data: { clientConfig: ClientConfig } | undefined;
@@ -111,6 +113,8 @@ export const useClientConfig = (): UseClientConfigResult => {
   );
 
   const setCalendarBookingPageId = useSetAtomState(calendarBookingPageIdState);
+
+  const setMapStyleUrls = useSetAtomState(mapStyleUrlsState);
 
   const setIsBookCallOnboardingStepEnabled = useSetAtomState(
     isBookCallOnboardingStepEnabledState,
@@ -233,6 +237,14 @@ export const useClientConfig = (): UseClientConfigResult => {
         }));
 
         setCalendarBookingPageId(clientConfig?.calendarBookingPageId ?? null);
+        setMapStyleUrls(
+          isDefined(clientConfig?.mapStyleUrl)
+            ? {
+                light: clientConfig.mapStyleUrl,
+                dark: clientConfig.mapDarkStyleUrl ?? clientConfig.mapStyleUrl,
+              }
+            : null,
+        );
         setIsBookCallOnboardingStepEnabled(
           clientConfig?.isBookCallOnboardingStepEnabled ?? false,
         );
@@ -283,6 +295,7 @@ export const useClientConfig = (): UseClientConfigResult => {
       setAuthProviders,
       setBilling,
       setCalendarBookingPageId,
+      setMapStyleUrls,
       setCanManageFeatureFlags,
       setCaptcha,
       setClientConfigApiStatus,

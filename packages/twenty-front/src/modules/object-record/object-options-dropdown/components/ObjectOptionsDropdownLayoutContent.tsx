@@ -1,5 +1,7 @@
 import { useObjectOptionsDropdown } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsDropdown';
 import { useSetViewTypeFromLayoutOptionsMenu } from '@/object-record/object-options-dropdown/hooks/useSetViewTypeFromLayoutOptionsMenu';
+import { useIsMapViewEnabled } from '@/object-record/record-map/hooks/useIsMapViewEnabled';
+import { getRecordMapAddressFieldMetadataItem } from '@/object-record/record-map/utils/getRecordMapAddressFieldMetadataItem';
 import { recordIndexCalendarLayoutComponentState } from '@/object-record/record-index/states/recordIndexCalendarLayoutComponentState';
 import { recordIndexGroupFieldMetadataItemComponentState } from '@/object-record/record-index/states/recordIndexGroupFieldMetadataComponentState';
 import { SelectOptionIcon } from '@/ui/input/components/SelectOptionIcon';
@@ -108,6 +110,20 @@ export const ObjectOptionsDropdownLayoutContent = () => {
     }
   };
 
+  const isMapViewEnabled = useIsMapViewEnabled();
+  const hasAddressField = isDefined(
+    getRecordMapAddressFieldMetadataItem(objectMetadataItem),
+  );
+
+  const handleSelectMapViewType = async () => {
+    if (!hasAddressField) {
+      return;
+    }
+    if (currentView?.type !== ViewType.MAP) {
+      await setAndPersistViewType(ViewType.MAP);
+    }
+  };
+
   const isDefaultView = currentView?.key === 'INDEX';
   const nbsp = '\u00A0';
 
@@ -116,12 +132,14 @@ export const ObjectOptionsDropdownLayoutContent = () => {
     ViewType.LIST,
     ...(!isDefaultView ? [ViewType.CALENDAR] : []),
     ...(isDefaultView ? [] : [ViewType.KANBAN]),
+    ...(isMapViewEnabled ? [ViewType.MAP] : []),
     ...(currentView?.type === ViewType.KANBAN ? ['Group'] : []),
     ...(currentView?.type === ViewType.CALENDAR
       ? ['CalendarView', 'CalendarDateField']
       : []),
     ...(currentView?.type !== ViewType.TABLE &&
-    currentView?.type !== ViewType.LIST
+    currentView?.type !== ViewType.LIST &&
+    currentView?.type !== ViewType.MAP
       ? ['Compact view']
       : []),
   ];
@@ -255,6 +273,33 @@ export const ObjectOptionsDropdownLayoutContent = () => {
                 {t(getViewTypeLabel(ViewType.KANBAN))}
               </ListItem>
             </SelectableListItem>
+            {isMapViewEnabled && (
+              <SelectableListItem
+                itemId={ViewType.MAP}
+                onEnter={handleSelectMapViewType}
+              >
+                <ListItem
+                  disabled={!hasAddressField}
+                  focused={selectedItemId === ViewType.MAP}
+                  onClick={handleSelectMapViewType}
+                  role="option"
+                  aria-selected={currentView?.type === ViewType.MAP}
+                  selected={currentView?.type === ViewType.MAP}
+                  indicator="check"
+                  description={
+                    hasAddressField ? undefined : t`No address field`
+                  }
+                  descriptionPlacement={'end'}
+                  startIcon={
+                    <SelectOptionIcon
+                      Icon={viewTypeIconMapping(ViewType.MAP)}
+                    />
+                  }
+                >
+                  {t(getViewTypeLabel(ViewType.MAP))}
+                </ListItem>
+              </SelectableListItem>
+            )}
           </DropdownMenuItemsContainer>
           <DropdownMenuSeparator />
           <DropdownMenuItemsContainer scrollable={false}>
@@ -318,7 +363,8 @@ export const ObjectOptionsDropdownLayoutContent = () => {
               </SelectableListItem>
             )}
             {currentView?.type !== ViewType.TABLE &&
-              currentView?.type !== ViewType.LIST && (
+              currentView?.type !== ViewType.LIST &&
+              currentView?.type !== ViewType.MAP && (
                 <SelectableListItem
                   itemId="Compact view"
                   onEnter={() => {

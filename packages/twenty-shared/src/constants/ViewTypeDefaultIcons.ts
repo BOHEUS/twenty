@@ -7,6 +7,7 @@ export const VIEW_TYPE_DEFAULT_ICONS = {
   [ViewType.KANBAN]: 'IconLayoutKanban',
   [ViewType.CALENDAR]: 'IconCalendar',
   [ViewType.LIST]: 'IconList',
+  [ViewType.MAP]: 'IconMap',
   [ViewType.FIELDS_WIDGET]: 'IconListDetails',
   [ViewType.TABLE_WIDGET]: 'IconTable',
   [ViewType.KANBAN_WIDGET]: 'IconLayoutKanban',
