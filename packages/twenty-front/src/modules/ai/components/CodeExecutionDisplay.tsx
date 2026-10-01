@@ -1,8 +1,9 @@
 import { TerminalOutput } from '@/ai/components/TerminalOutput';
 import { styled } from '@linaria/react';
-import { useContext, useState } from 'react';
 import { useLingui } from '@lingui/react/macro';
-import { Tag } from 'twenty-ui/primitives/data-display';
+import { useState } from 'react';
+import { LightIconButton } from 'twenty-ui/components';
+import { CodeEditor } from 'twenty-ui/components/code-editor';
 import {
   IconChevronDown,
   IconChevronUp,
@@ -11,10 +12,9 @@ import {
   IconDownload,
   IconFile,
 } from 'twenty-ui/icon';
-import { LightIconButton } from 'twenty-ui/components';
-import { CodeEditor } from 'twenty-ui/components/code-editor';
-import { AnimatedExpandableContainer } from 'twenty-ui/primitives/layout';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { Tag } from 'twenty-ui/primitives/data-display';
+import { Collapsible } from 'twenty-ui/primitives/layout';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { useCopyToClipboard } from '~/hooks/useCopyToClipboard';
 
 const StyledContainer = styled.div`
@@ -176,7 +176,7 @@ export const CodeExecutionDisplay = ({
   files = [],
   isRunning = false,
 }: CodeExecutionDisplayProps) => {
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const { t } = useLingui();
   const { copyToClipboard } = useCopyToClipboard();
   const [isCodeExpanded, setIsCodeExpanded] = useState(false);
@@ -248,10 +248,7 @@ export const CodeExecutionDisplay = ({
             )}
           </StyledHeaderRight>
         </StyledSectionHeader>
-        <AnimatedExpandableContainer
-          isExpanded={isCodeExpanded}
-          mode="fit-content"
-        >
+        <Collapsible isExpanded={isCodeExpanded}>
           <StyledCodeEditorContainer>
             <CodeEditor
               value={code}
@@ -264,7 +261,7 @@ export const CodeExecutionDisplay = ({
               }}
             />
           </StyledCodeEditorContainer>
-        </AnimatedExpandableContainer>
+        </Collapsible>
       </StyledSection>
 
       {(hasOutput || isRunning) && (
@@ -279,16 +276,13 @@ export const CodeExecutionDisplay = ({
               <IconChevronDown size={theme.icon.size.sm} />
             )}
           </StyledSectionHeader>
-          <AnimatedExpandableContainer
-            isExpanded={isOutputExpanded}
-            mode="fit-content"
-          >
+          <Collapsible isExpanded={isOutputExpanded}>
             <TerminalOutput
               stdout={stdout}
               stderr={stderr}
               isRunning={isRunning}
             />
-          </AnimatedExpandableContainer>
+          </Collapsible>
         </StyledSection>
       )}
 
@@ -307,10 +301,7 @@ export const CodeExecutionDisplay = ({
               <IconChevronDown size={theme.icon.size.sm} />
             )}
           </StyledSectionHeader>
-          <AnimatedExpandableContainer
-            isExpanded={isFilesExpanded}
-            mode="fit-content"
-          >
+          <Collapsible isExpanded={isFilesExpanded}>
             <StyledFilesGrid>
               {files.map((file) => {
                 const filename = file.filename;
@@ -346,7 +337,7 @@ export const CodeExecutionDisplay = ({
                 );
               })}
             </StyledFilesGrid>
-          </AnimatedExpandableContainer>
+          </Collapsible>
         </StyledSection>
       )}
     </StyledContainer>

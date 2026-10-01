@@ -14,6 +14,7 @@ import { CommandMenuItemContainerType } from '@/command-menu-item/types/CommandM
 import { CoreObjectTable } from '@/object-core/components/CoreObjectTable';
 import { CoreObjectTableAddNewRow } from '@/object-core/components/CoreObjectTableAddNewRow';
 import { useCoreWorkflowsSelection } from '@/object-core/workflows/hooks/useCoreWorkflowsSelection';
+import { useListenToCoreWorkflowEvents } from '@/object-core/workflows/hooks/useListenToCoreWorkflowEvents';
 import { useCreateCoreWorkflow } from '@/object-core/workflows/hooks/useCreateCoreWorkflow';
 import { coreWorkflowsFilterSettingsState } from '@/object-core/workflows/states/coreWorkflowsFilterSettingsState';
 import { isUsableCoreWorkflowFilterRule } from '@/object-core/workflows/utils/isUsableCoreWorkflowFilterRule';
@@ -57,8 +58,15 @@ export const WorkflowCoreIndexPage = () => {
     objectNameSingular: CoreObjectNameSingular.Workflow,
   });
 
-  const { coreWorkflows, hasNextPage, loading, error, fetchNextPage } =
-    useCoreWorkflows({ tableId });
+  const {
+    coreWorkflows,
+    hasNextPage,
+    loading,
+    isInitialLoading,
+    error,
+    fetchNextPage,
+    refetchLoadedCoreWorkflows,
+  } = useCoreWorkflows({ tableId });
 
   const { ref: fetchMoreRef, inView } = useInView();
 
@@ -67,6 +75,8 @@ export const WorkflowCoreIndexPage = () => {
 
   const { displayedCoreWorkflows, selectedRowIds, toggleRow, selectRows } =
     useCoreWorkflowsSelection({ coreWorkflows });
+
+  useListenToCoreWorkflowEvents({ refetch: refetchLoadedCoreWorkflows });
 
   const coreWorkflowsFilterSettings = useAtomStateValue(
     coreWorkflowsFilterSettingsState,
@@ -79,7 +89,7 @@ export const WorkflowCoreIndexPage = () => {
   const hasError = isDefined(error);
 
   const isEmpty =
-    !loading &&
+    !isInitialLoading &&
     !hasError &&
     !hasNextPage &&
     displayedCoreWorkflows.length === 0;
@@ -151,7 +161,7 @@ export const WorkflowCoreIndexPage = () => {
               }
             />
           )}
-          {!hasError && !isEmpty && (
+          {!isInitialLoading && !hasError && !isEmpty && (
             <>
               <CoreObjectTable
                 tableId={tableId}

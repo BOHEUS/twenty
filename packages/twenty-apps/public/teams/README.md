@@ -1,34 +1,19 @@
-# Microsoft Teams for Twenty
+# Microsoft Teams
 
-Package scaffold for the Microsoft Teams app, alongside the Slack app that
-shipped as 1.0.0.
+**Microsoft Teams chat and meeting transcripts, right inside your CRM.**
 
-## Status
+## ✨ What you get
 
-Scaffolding only. The package declares its application manifest, a default role
-with no CRM data access, and the universal identifiers reserved for the entities
-the app will declare. There are no logic functions, objects or workflow tools
-yet, so installing it adds nothing to a workspace.
+- **A Microsoft connection** for your work or school account
+- **List My Teams Transcripts**, an AI and workflow action for the meetings you organized
 
-## Server variables
+## 📌 Heads up
 
-The bot's identity is an Entra app registration behind an Azure Bot resource.
-An admin fills these in under **Settings → Applications → Microsoft Teams**.
+- **Still in development.** Chat and transcript import are off by default and
+  not available in this version. Connecting an account only stores its
+  credentials; nothing is imported.
+- **Work or school accounts only.** Personal Microsoft accounts are not
+  supported.
 
-| Variable | Secret | Where it comes from |
-|---|---|---|
-| `TEAMS_BOT_APP_ID` | no | Application (client) ID of the Entra app registration. Public in the Bot Framework protocol, and the expected audience when verifying inbound activities. |
-| `TEAMS_BOT_APP_PASSWORD` | yes | Client secret of that app registration. Used to mint Bot Connector tokens. |
-| `TEAMS_BOT_TENANT_ID` | no | Directory (tenant) ID that owns the Azure Bot. Microsoft stopped issuing multi-tenant bots after 2025-07-31, so token minting is tenant-scoped rather than going through the shared `botframework.com` authority. |
-
-## Development
-
-This package is a standalone project rather than a root workspace, so run yarn
-from this directory.
-
-```bash
-yarn install
-yarn lint
-yarn typecheck
-yarn twenty dev:build
-```
+**Self-hosting?** Your admin registers the Microsoft app first: see the
+[setup guide](https://github.com/twentyhq/twenty/blob/main/packages/twenty-apps/public/teams/SETUP.md).

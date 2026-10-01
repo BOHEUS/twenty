@@ -10,16 +10,17 @@ import { useFullScreenModal } from '@/ui/layout/fullscreen/hooks/useFullScreenMo
 import { type BreadcrumbProps } from '@/ui/navigation/bread-crumb/components/Breadcrumb';
 import { usePushFocusItemToFocusStack } from '@/ui/utilities/focus/hooks/usePushFocusItemToFocusStack';
 import { useRemoveFocusItemFromFocusStackById } from '@/ui/utilities/focus/hooks/useRemoveFocusItemFromFocusStackById';
+import { useRemoveFocusItemFromFocusStackOnUnmount } from '@/ui/utilities/focus/hooks/useRemoveFocusItemFromFocusStackOnUnmount';
 import { FocusComponentType } from '@/ui/utilities/focus/types/FocusComponentType';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { type Editor } from '@tiptap/core';
 import { type ComponentType, useEffect, useId, useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { LightIconButton } from 'twenty-ui/components';
 import { IconMaximize } from 'twenty-ui/icon';
 import { Field } from 'twenty-ui/primitives/input';
-import { LightIconButton } from 'twenty-ui/components';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { useIsMobile } from 'twenty-ui/utilities';
 
 const StyledAdvancedTextFieldContainerWrapper = styled.div<{
@@ -138,6 +139,10 @@ export const FormAdvancedTextFieldInput = ({
   const { pushFocusItemToFocusStack } = usePushFocusItemToFocusStack();
   const { removeFocusItemFromFocusStackById } =
     useRemoveFocusItemFromFocusStackById();
+  useRemoveFocusItemFromFocusStackOnUnmount({
+    focusId: instanceId,
+    isEnabled: true,
+  });
 
   const editor = useAdvancedTextEditor({
     profile,
@@ -189,7 +194,14 @@ export const FormAdvancedTextFieldInput = ({
       );
     }
 
-    editor.commands.insertVariableTag(variableName);
+    const focusedHtmlEditor = editor.storage.html?.focusedHtmlEditor;
+
+    const variableTargetEditor =
+      isDefined(focusedHtmlEditor) && !focusedHtmlEditor.isDestroyed
+        ? focusedHtmlEditor
+        : editor;
+
+    variableTargetEditor.commands.insertVariableTag(variableName);
   };
 
   const defaultBreadcrumbs: BreadcrumbProps['links'] = [

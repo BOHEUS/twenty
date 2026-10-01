@@ -4,12 +4,14 @@ import { CodeExecutionDisplay } from '@/ai/components/CodeExecutionDisplay';
 import { RoutingStatusDisplay } from '@/ai/components/RoutingStatusDisplay';
 import { ThinkingStepsDisplay } from '@/ai/components/ThinkingStepsDisplay';
 
+import { AiChatEmailApprovalStatusRenderer } from '@/ai/components/AiChatEmailApprovalStatusRenderer';
+import { AiChatFormStatusRenderer } from '@/ai/components/AiChatFormStatusRenderer';
 import { AiChatQuestionStatusRenderer } from '@/ai/components/AiChatQuestionStatusRenderer';
 import { AiChatToolPartRenderer } from '@/ai/components/AiChatToolPartRenderer';
 import { LazyMarkdownContent } from '@/ai/components/LazyMarkdownRenderer';
 import { ToolStepRenderer } from '@/ai/components/ToolStepRenderer';
 import { useToolWidgetByName } from '@/ai/hooks/useToolWidgetByName';
-import { type ToolWidget } from '@/ai/types/tool-widget.type';
+import { type ToolWidget } from '@/ai/types/ToolWidget';
 import { getEffectiveToolName } from '@/ai/utils/getEffectiveToolName';
 import { shouldToolPartRenderStandalone } from '@/ai/utils/shouldToolPartRenderStandalone';
 import { groupContiguousThinkingStepParts } from '@/ai/utils/groupContiguousThinkingStepParts';
@@ -21,8 +23,10 @@ import {
   ASK_QUESTIONS_TOOL_NAME,
   type ExtendedUIMessagePart,
   isSucceededCompleteWorkspaceSetupToolPart,
+  PROPOSE_EMAIL_TOOL_NAME,
+  REQUEST_FORM_TOOL_NAME,
 } from 'twenty-shared/ai';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledMessagePartsContainer = styled.div`
   display: flex;
@@ -64,6 +68,24 @@ const MessagePartRenderer = ({
         if (getToolName(part) === ASK_QUESTIONS_TOOL_NAME) {
           return (
             <AiChatQuestionStatusRenderer
+              toolPart={part}
+              isStreaming={isStreaming}
+            />
+          );
+        }
+
+        if (getToolName(part) === PROPOSE_EMAIL_TOOL_NAME) {
+          return (
+            <AiChatEmailApprovalStatusRenderer
+              toolPart={part}
+              isStreaming={isStreaming}
+            />
+          );
+        }
+
+        if (getToolName(part) === REQUEST_FORM_TOOL_NAME) {
+          return (
+            <AiChatFormStatusRenderer
               toolPart={part}
               isStreaming={isStreaming}
             />

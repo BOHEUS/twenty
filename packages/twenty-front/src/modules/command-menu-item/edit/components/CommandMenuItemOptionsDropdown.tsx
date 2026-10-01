@@ -1,16 +1,12 @@
 import { useResetCommandMenuItemToDefault } from '@/command-menu-item/edit/hooks/useResetCommandMenuItemToDefault';
 import { useUpdateCommandMenuItemInDraft } from '@/command-menu-item/edit/hooks/useUpdateCommandMenuItemInDraft';
-import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
-import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
-import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
-import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
+import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { useLingui } from '@lingui/react/macro';
 import { type ReactElement } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { SettingsRow } from 'twenty-ui/components';
+import { Dropdown, SettingsRow } from 'twenty-ui/components';
 import { IconRefresh, IconTag } from 'twenty-ui/icon';
-import { MenuItem } from 'twenty-ui/primitives/navigation';
 import { type CommandMenuItemFieldsFragment } from '~/generated-metadata/graphql';
 
 type CommandMenuItemOptionsDropdownProps = Pick<
@@ -34,7 +30,6 @@ export const CommandMenuItemOptionsDropdown = ({
   const { t } = useLingui();
 
   const dropdownId = getCommandMenuItemOptionsDropdownId(itemId);
-  const { closeDropdown } = useCloseDropdown();
   const { updateCommandMenuItemInDraft } = useUpdateCommandMenuItemInDraft();
   const { resetCommandMenuItemToDefault } = useResetCommandMenuItemToDefault();
 
@@ -50,34 +45,23 @@ export const CommandMenuItemOptionsDropdown = ({
     });
   };
 
-  const handleResetToDefault = async () => {
-    closeDropdown(dropdownId);
-    await resetCommandMenuItemToDefault(itemId);
-  };
-
   return (
-    <Dropdown
-      dropdownId={dropdownId}
-      clickableComponent={iconButton}
-      dropdownPlacement="bottom-end"
-      dropdownComponents={
-        <DropdownContent widthInPixels={GenericDropdownContentWidth.Medium}>
-          <DropdownMenuItemsContainer>
-            <SettingsRow
-              startIcon={<IconTag />}
-              disabled={hasNoShortLabel}
-              checked={isLabelHidden || hasNoShortLabel}
-              onCheckedChange={handleHiddenLabelChange}
-            >{t`Hide label`}</SettingsRow>
-            <MenuItem
-              LeftIcon={IconRefresh}
-              onClick={handleResetToDefault}
-              accent="default"
-              text={t`Reset to default`}
-            />
-          </DropdownMenuItemsContainer>
-        </DropdownContent>
-      }
-    />
+    <DropdownRoot dropdownId={dropdownId} type="panel">
+      <Dropdown.Trigger render={iconButton} />
+      <DropdownContent align="end">
+        <Dropdown.Section>
+          <SettingsRow
+            startIcon={<IconTag />}
+            disabled={hasNoShortLabel}
+            checked={isLabelHidden || hasNoShortLabel}
+            onCheckedChange={handleHiddenLabelChange}
+          >{t`Hide label`}</SettingsRow>
+          <Dropdown.ActionItem
+            startIcon={<IconRefresh />}
+            onClick={() => resetCommandMenuItemToDefault(itemId)}
+          >{t`Reset to default`}</Dropdown.ActionItem>
+        </Dropdown.Section>
+      </DropdownContent>
+    </DropdownRoot>
   );
 };

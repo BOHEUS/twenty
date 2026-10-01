@@ -133,6 +133,7 @@ export { combineFilters } from './filter/utils/combineFilters';
 export { compareSelectOptionValues } from './filter/utils/compareSelectOptionValues';
 export { COMPOSITE_FIELD_FILTER_OPERANDS_MAP } from './filter/utils/compositeFieldFilterOperandsMap';
 export { convertViewFilterOperandToCoreOperand } from './filter/utils/convert-view-filter-operand-to-core-operand.util';
+export { convertLikePatternToRegexOrThrow } from './filter/utils/convertLikePatternToRegexOrThrow';
 export { convertViewFilterValueToString } from './filter/utils/convertViewFilterValueToString';
 export { createAnyFieldRecordFilterBaseProperties } from './filter/utils/createAnyFieldRecordFilterBaseProperties';
 export {
@@ -187,6 +188,7 @@ export {
   relationFilterValueSchemaObject,
   jsonRelationFilterValueSchema,
 } from './filter/utils/validation-schemas/jsonRelationFilterValueSchema';
+export { formatBytes } from './format/formatBytes';
 export { formatToShortNumber } from './format/formatToShortNumber';
 export { fromArrayToUniqueKeyRecord } from './from-array-to-unique-key-record.util';
 export { fromArrayToValuesByKeyRecord } from './fromArrayToValuesByKeyRecord.util';
@@ -299,11 +301,28 @@ export { isSafeUrl } from './url/isSafeUrl';
 export { isValidDomain } from './url/isValidDomain';
 export { isValidHostname } from './url/isValidHostname';
 export { isValidUrl } from './url/isValidUrl';
+export { normalizeAllowedIframeOrigin } from './url/normalizeAllowedIframeOrigin';
 export { normalizeDomain } from './url/normalizeDomain';
 export { normalizeUrl } from './url/normalizeUrl';
 export { normalizeUrlOrigin } from './url/normalizeUrlOrigin';
 export { safeDecodeURIComponent } from './url/safeDecodeURIComponent';
 export { uuidToBase36 } from './uuidToBase36';
+export { buildValidationRuleEvaluationContext } from './validation-rule/buildValidationRuleEvaluationContext';
+export { compileValidationRuleExpression } from './validation-rule/compileValidationRuleExpression';
+export { createValidationRuleEvaluator } from './validation-rule/createValidationRuleEvaluator';
+export { evaluateValidationRuleExpression } from './validation-rule/evaluateValidationRuleExpression';
+export { hasValidationRuleBracketAccess } from './validation-rule/hasValidationRuleBracketAccess';
+export { isValidationRuleReservedName } from './validation-rule/isValidationRuleReservedName';
+export { isValidationRuleValueDefined } from './validation-rule/isValidationRuleValueDefined';
+export { isValidationRuleValueEmpty } from './validation-rule/isValidationRuleValueEmpty';
+export { parseValidationRuleExpression } from './validation-rule/parseValidationRuleExpression';
+export { resolveValidationRuleIdentifierPath } from './validation-rule/resolveValidationRuleIdentifierPath';
+export { tokenizeValidationRuleExpression } from './validation-rule/tokenizeValidationRuleExpression';
+export { validationRuleParser } from './validation-rule/validationRuleParser';
+export {
+  validationRuleNullPlaceholders,
+  validationRuleCompositeFieldTypeByValue,
+} from './validation-rule/validationRuleValueRegistry';
 export { assertIsDefinedOrThrow } from './validation/assertIsDefinedOrThrow';
 export { emailSchema } from './validation/emailSchema';
 export { escapeForIlike } from './validation/escapeForIlike';
@@ -313,6 +332,7 @@ export { isImageIdentifierFieldMetadataType } from './validation/isImageIdentifi
 export { isLabelIdentifierFieldMetadataTypes } from './validation/isLabelIdentifierFieldMetadataTypes';
 export type { SearchableFieldType } from './validation/isSearchableFieldType';
 export { isSearchableFieldType } from './validation/isSearchableFieldType';
+export { isSupportedViewGroupLoadLimit } from './validation/isSupportedViewGroupLoadLimit';
 export { isTagColor } from './validation/isTagColor';
 export { isValidLocale } from './validation/isValidLocale';
 export { isValidTwentySubdomain } from './validation/isValidTwentySubdomain';

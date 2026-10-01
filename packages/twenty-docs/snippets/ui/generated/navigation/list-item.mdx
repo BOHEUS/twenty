@@ -15,6 +15,10 @@
   Trailing content, such as buttons, rendered after the content.
 </ParamField>
 
+<ParamField body="actionsVisibility" type="&quot;always&quot; | &quot;hover&quot;" default="hover">
+  When trailing actions are visible: on hover and focus, or always.
+</ParamField>
+
 <ParamField body="color" type="&quot;danger&quot; | &quot;neutral&quot;" default="neutral">
   Color of the text and icons. `danger` marks a destructive action.
 </ParamField>
@@ -47,6 +51,10 @@
 <ParamField body="hotkeys" type="string[]">
   Keyboard shortcut keys displayed at the end of the row. Registering the
   shortcut is up to the application.
+</ParamField>
+
+<ParamField body="hotkeysJoinLabel" type="string">
+  Text between shortcut keys. Defaults to `then`; pass an empty string to omit it.
 </ParamField>
 
 <ParamField body="indicator" type="&quot;check&quot; | &quot;checkbox&quot; | &quot;none&quot;" default="none">

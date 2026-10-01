@@ -14,6 +14,7 @@ import { WorkflowRunStatus } from 'src/modules/workflow/common/standard-objects/
 import { WorkflowVersionCoreSyncService } from 'src/engine/core-modules/workflow/services/workflow-version-core-sync.service';
 import { CodeStepBuildService } from 'src/modules/workflow/workflow-builder/workflow-version-step/code-step/services/code-step-build.service';
 import { stepIsAwaitingRetry } from 'src/modules/workflow/workflow-executor/utils/step-is-awaiting-retry.util';
+import { workflowShouldKeepRunning } from 'src/modules/workflow/workflow-executor/utils/workflow-should-keep-running.util';
 import { WorkflowExecutorWorkspaceService } from 'src/modules/workflow/workflow-executor/workspace-services/workflow-executor.workspace-service';
 import { RUN_WORKFLOW_JOB_NAME } from 'src/modules/workflow/workflow-runner/constants/run-workflow-job-name';
 import {
@@ -42,6 +43,7 @@ export class RunWorkflowJob {
     workflowRunId,
     lastExecutedStepId,
     stepIdsToRetry,
+    stepToResume,
     workspaceId,
   }: RunWorkflowJobData): Promise<void> {
     this.logger.log(
@@ -51,7 +53,13 @@ export class RunWorkflowJob {
 
     await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
       try {
-        if (isDefined(stepIdsToRetry)) {
+        if (isDefined(stepToResume)) {
+          await this.resumeAnsweredStep({
+            workspaceId,
+            workflowRunId,
+            stepToResume,
+          });
+        } else if (isDefined(stepIdsToRetry)) {
           await this.retryWorkflowExecution({
             workspaceId,
             workflowRunId,
@@ -214,6 +222,39 @@ export class RunWorkflowJob {
     });
   }
 
+  // An answered step stays PENDING until here, which keeps its run from
+  // completing while the resume waits in the queue. Claiming it out of PENDING
+  // is what makes a second resume of the same step do nothing.
+  private async resumeAnsweredStep({
+    workflowRunId,
+    stepToResume: { stepId, threadId },
+    workspaceId,
+  }: {
+    workflowRunId: string;
+    stepToResume: { stepId: string; threadId: string };
+    workspaceId: string;
+  }): Promise<void> {
+    const isClaimed =
+      await this.workflowRunWorkspaceService.updateStepInfoIfPending({
+        stepId,
+        stepInfo: { status: StepStatus.RUNNING },
+        expectedThreadId: threadId,
+        workflowRunId,
+        workspaceId,
+      });
+
+    if (!isClaimed) {
+      return;
+    }
+
+    await this.workflowExecutorWorkspaceService.executeFromSteps({
+      stepIds: [stepId],
+      workflowRunId,
+      workspaceId,
+      resumedThreadId: threadId,
+    });
+  }
+
   private async resumeWorkflowExecution({
     workflowRunId,
     lastExecutedStepId,
@@ -259,7 +300,22 @@ export class RunWorkflowJob {
     const hasStepsToExecute =
       isDefined(nextStepIdsToExecute) && nextStepIdsToExecute.length > 0;
 
-    if (!hasStepsToSkipOrFailSafely && !hasStepsToExecute) {
+    const steps = workflowRun.state?.flow?.steps ?? [];
+
+    const hasNoMoreStepsToRun =
+      !hasStepsToSkipOrFailSafely && !hasStepsToExecute;
+
+    if (
+      hasNoMoreStepsToRun &&
+      workflowShouldKeepRunning({
+        stepInfos: workflowRun.state?.stepInfos ?? {},
+        steps,
+      })
+    ) {
+      return;
+    }
+
+    if (hasNoMoreStepsToRun) {
       await this.workflowRunWorkspaceService.endWorkflowRun({
         workflowRunId,
         workspaceId,
@@ -268,8 +324,6 @@ export class RunWorkflowJob {
 
       return;
     }
-
-    const steps = workflowRun.state?.flow?.steps ?? [];
 
     if (hasStepsToSkipOrFailSafely) {
       await this.workflowExecutorWorkspaceService.skipAndFailSafelyStepsThenContinue(

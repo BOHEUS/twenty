@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { defineFrontComponent } from 'twenty-sdk/define';
 import {
+  AnimatedIconCrossfade,
   IconButton,
-  LightIconButton,
   LightButton,
+  LightIconButton,
   MainButton,
+  MenuItem,
+  MenuItemDraggable,
 } from 'twenty-ui/components';
-import { Button, ButtonGroup } from 'twenty-ui/primitives/input';
-import { MenuItem, MenuItemDraggable } from 'twenty-ui/primitives/navigation';
 import { IconPencil, IconPlus, IconX } from 'twenty-ui/icon';
-import { AnimatedIconCrossfade } from 'twenty-ui/primitives/layout';
-import { ThemeProvider } from 'twenty-ui/theme-constants';
+import { Button, ButtonGroup } from 'twenty-ui/primitives/input';
 import 'twenty-ui/style.css';
+import { ThemeProvider } from 'twenty-ui/theme';
 
 const ButtonControls = () => {
   const [activations, setActivations] = useState(0);
@@ -51,7 +52,12 @@ const ButtonControls = () => {
       <LightButton onClick={() => setLoading(false)}>
         Complete request
       </LightButton>
-      <Button href="https://twenty.com" target="_blank" rel="noreferrer">
+      <Button
+        variant="link"
+        href="https://twenty.com"
+        target="_blank"
+        rel="noreferrer"
+      >
         Documentation
       </Button>
       <ButtonGroup aria-label="Actions" size="sm">
@@ -114,6 +120,9 @@ const ButtonControls = () => {
           </LightIconButton>
         }
       />
+      <Button variant="link" onClick={handleClick}>
+        Log out
+      </Button>
       <output aria-label="Activations">{activations}</output>
     </ThemeProvider>
   );

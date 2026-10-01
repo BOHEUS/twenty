@@ -4,27 +4,22 @@ import {
   LightButton,
   LightIconButton,
   MainButton,
+  SearchInput,
   TabButton,
 } from 'twenty-ui/components';
-import { IconPlus, IconSearch, IconStar, IconTrash } from 'twenty-ui/icon';
 import { CodeEditorHeader } from 'twenty-ui/components/code-editor';
+import { IconPlus, IconSearch, IconStar, IconTrash } from 'twenty-ui/icon';
 import {
   Button,
   ButtonGroup,
-  ColorSchemeCard,
-  ColorSchemePicker,
-  IconListViewGrip,
-  SearchInput,
-  SegmentedControl,
-  CardPicker,
   Checkbox,
   Radio,
   RadioGroup,
+  SegmentedControl,
   Slider,
   Switch,
 } from 'twenty-ui/primitives/input';
-import { ThemeProvider } from 'twenty-ui/theme-constants';
-
+import { ThemeProvider } from 'twenty-ui/theme';
 import {
   ComponentGallery,
   type GalleryEntry,
@@ -44,10 +39,12 @@ const INPUT_ENTRIES: GalleryEntry[] = [
     ),
   },
   {
-    name: 'CardPicker',
+    name: 'Radio (card)',
     node: (
       <RadioGroup defaultValue="card" aria-label="Card selection">
-        <CardPicker value="card">Card</CardPicker>
+        <Radio variant="card" value="card">
+          Card
+        </Radio>
       </RadioGroup>
     ),
   },
@@ -64,22 +61,6 @@ const INPUT_ENTRIES: GalleryEntry[] = [
   {
     name: 'CodeEditorHeader',
     node: <CodeEditorHeader title="Editor" />,
-  },
-  {
-    name: 'ColorSchemeCard',
-    node: <ColorSchemeCard variant="Light" />,
-  },
-  {
-    name: 'ColorSchemePicker',
-    node: (
-      <ColorSchemePicker
-        value="Light"
-        onChange={() => {}}
-        lightLabel="Light"
-        darkLabel="Dark"
-        systemLabel="System"
-      />
-    ),
   },
   {
     name: 'IconButton (elevated)',
@@ -107,10 +88,6 @@ const INPUT_ENTRIES: GalleryEntry[] = [
         </LightIconButton>
       </ButtonGroup>
     ),
-  },
-  {
-    name: 'IconListViewGrip',
-    node: <IconListViewGrip />,
   },
   {
     name: 'LightButton',
@@ -147,15 +124,14 @@ const INPUT_ENTRIES: GalleryEntry[] = [
   },
   {
     name: 'SearchInput',
-    node: <SearchInput value="" onChange={() => {}} placeholder="Search" />,
+    node: <SearchInput defaultValue="" placeholder="Search" />,
   },
   {
     name: 'SegmentedControl',
     node: (
       <SegmentedControl
-        ariaLabel="Choose"
-        value="left"
-        onChange={() => {}}
+        aria-label="Choose"
+        defaultValue="left"
         options={[
           { value: 'left', label: 'Left' },
           { value: 'right', label: 'Right' },
