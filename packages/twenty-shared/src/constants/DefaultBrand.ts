@@ -1,3 +1,4 @@
+import { DOCUMENTATION_BASE_URL } from '@/constants/DocumentationBaseUrl';
 import { type Brand } from '@/types/Brand';
 
 export const DEFAULT_BRAND: Brand = {
@@ -9,6 +10,6 @@ export const DEFAULT_BRAND: Brand = {
   privacyUrl: null,
   dpaUrl: null,
   websiteUrl: 'https://twenty.com',
-  docsUrl: 'https://docs.twenty.com',
+  docsUrl: DOCUMENTATION_BASE_URL,
   supportEmail: 'felix@twenty.com',
 };
