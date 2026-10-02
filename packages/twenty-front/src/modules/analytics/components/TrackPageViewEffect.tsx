@@ -7,6 +7,8 @@ import {
 } from '@/analytics/hooks/useEventTracker';
 import { AnalyticsType } from '~/generated-metadata/graphql';
 import { getPageTitleFromPath } from '~/utils/title-utils';
+import { brandState } from '@/client-config/states/brandState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 
 const PAGEVIEW_TRACKING_DELAY_IN_MS = 500;
 
@@ -22,12 +24,13 @@ const stripQueryAndHash = (url: string): string => {
 export const TrackPageViewEffect = () => {
   const location = useLocation();
   const eventTracker = useEventTracker();
+  const brand = useAtomStateValue(brandState);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setSessionId();
       eventTracker(AnalyticsType['PAGEVIEW'], {
-        name: getPageTitleFromPath(location.pathname),
+        name: getPageTitleFromPath(location.pathname, brand.name),
         properties: {
           pathname: location.pathname,
           locale: navigator.language,
@@ -40,7 +43,7 @@ export const TrackPageViewEffect = () => {
     }, PAGEVIEW_TRACKING_DELAY_IN_MS);
 
     return () => clearTimeout(timeoutId);
-  }, [eventTracker, location.pathname]);
+  }, [eventTracker, location.pathname, brand.name]);
 
   return null;
 };

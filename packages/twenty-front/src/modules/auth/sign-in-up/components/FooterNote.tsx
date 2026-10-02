@@ -2,9 +2,13 @@ import { styled } from '@linaria/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 
 import { useWorkspaceBypass } from '@/auth/sign-in-up/hooks/useWorkspaceBypass';
-import { getTwentyWebsiteUrl } from '@/auth/utils/getTwentyWebsiteUrl';
+import { getBrandLegalUrl } from '@/auth/utils/getBrandLegalUrl';
+import { brandState } from '@/client-config/states/brandState';
 import { useIsCurrentLocationOnAWorkspace } from '@/domain-manager/hooks/useIsCurrentLocationOnAWorkspace';
 import { ONBOARDING_CONTENT_BLOCK_WIDTH } from '@/onboarding/constants/OnboardingContentBlockWidth';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { Fragment } from 'react';
+import { isDefined } from 'twenty-shared/utils';
 import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledCopyContainer = styled.div`
@@ -66,69 +70,91 @@ export const FooterNote = ({
 }: FooterNoteProps) => {
   const { isOnAWorkspace } = useIsCurrentLocationOnAWorkspace();
   const { i18n } = useLingui();
+  const brand = useAtomStateValue(brandState);
 
   const { shouldOfferBypass, shouldUseBypass, enableBypass } =
     useWorkspaceBypass();
 
+  const termsUrl = getBrandLegalUrl({
+    brand,
+    locale: i18n.locale,
+    page: 'terms',
+  });
+  const privacyUrl = getBrandLegalUrl({
+    brand,
+    locale: i18n.locale,
+    page: 'privacy',
+  });
+  const dpaUrl = getBrandLegalUrl({ brand, locale: i18n.locale, page: 'dpa' });
+
+  const isDataProcessingAgreement =
+    secondaryAgreement === 'dataProcessingAgreement';
+  const secondaryAgreementUrl = isDataProcessingAgreement ? dpaUrl : privacyUrl;
+  const brandName = brand.name;
+
   if (!isOnAWorkspace) {
+    if (!isDefined(termsUrl) || !isDefined(secondaryAgreementUrl)) {
+      return null;
+    }
+
     return (
       <StyledCopyContainer>
-        <Trans>By using Twenty, you agree to the</Trans>{' '}
-        <a
-          href={getTwentyWebsiteUrl(i18n.locale, 'terms')}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <Trans>By using {brandName}, you agree to the</Trans>{' '}
+        <a href={termsUrl} target="_blank" rel="noopener noreferrer">
           <Trans>Terms of Service</Trans>
         </a>{' '}
         <Trans>and</Trans>{' '}
-        {secondaryAgreement === 'dataProcessingAgreement' ? (
-          <a
-            href="https://twenty.com/legal/dpa"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+        <a
+          href={secondaryAgreementUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {isDataProcessingAgreement ? (
             <Trans>Data Processing Agreement</Trans>
-          </a>
-        ) : (
-          <a
-            href={getTwentyWebsiteUrl(i18n.locale, 'privacy-policy')}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          ) : (
             <Trans>Privacy Policy</Trans>
-          </a>
-        )}
+          )}
+        </a>
         .
       </StyledCopyContainer>
     );
   }
 
-  return (
-    <StyledLinksContainer>
-      {shouldOfferBypass && !shouldUseBypass && (
-        <>
-          <button type="button" onClick={enableBypass}>
-            <Trans>Bypass SSO</Trans>
-          </button>
-          <StyledSeparator>•</StyledSeparator>
-        </>
-      )}
+  const links = [
+    shouldOfferBypass && !shouldUseBypass && (
+      <button key="bypass" type="button" onClick={enableBypass}>
+        <Trans>Bypass SSO</Trans>
+      </button>
+    ),
+    isDefined(privacyUrl) && (
       <a
-        href={getTwentyWebsiteUrl(i18n.locale, 'privacy-policy')}
+        key="privacy"
+        href={privacyUrl}
         target="_blank"
         rel="noopener noreferrer"
       >
         <Trans>Privacy Policy</Trans>
       </a>
-      <StyledSeparator>•</StyledSeparator>
-      <a
-        href={getTwentyWebsiteUrl(i18n.locale, 'terms')}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+    ),
+    isDefined(termsUrl) && (
+      <a key="terms" href={termsUrl} target="_blank" rel="noopener noreferrer">
         <Trans>Terms of Service</Trans>
       </a>
+    ),
+  ].filter(Boolean);
+
+  if (links.length === 0) {
+    return null;
+  }
+
+  return (
+    <StyledLinksContainer>
+      {links.map((link, index) => (
+        <Fragment key={index}>
+          {index > 0 && <StyledSeparator>•</StyledSeparator>}
+          {link}
+        </Fragment>
+      ))}
     </StyledLinksContainer>
   );
 };

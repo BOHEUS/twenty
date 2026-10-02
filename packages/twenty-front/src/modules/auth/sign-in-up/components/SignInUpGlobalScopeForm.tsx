@@ -22,7 +22,7 @@ import { getAvailableWorkspacePathAndSearchParams } from '@/auth/utils/available
 import { authProvidersState } from '@/client-config/states/authProvidersState';
 import { isDDLLockedState } from '@/client-config/states/isDDLLockedState';
 import { OnboardingStepAnimatedItem } from '@/onboarding/components/OnboardingStepAnimatedItem';
-import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { useDefaultWorkspaceLogo } from '@/ui/navigation/navigation-drawer/hooks/useDefaultWorkspaceLogo';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
@@ -132,6 +132,7 @@ export const SignInUpGlobalScopeForm = () => {
   const setSignInUpStep = useSetAtomState(signInUpStepState);
   const { buildWorkspaceUrl } = useBuildWorkspaceUrl();
   const availableWorkspaces = useAtomStateValue(availableWorkspacesState);
+  const defaultWorkspaceLogo = useDefaultWorkspaceLogo();
   const { t } = useLingui();
 
   const { form } = useSignInUpForm();
@@ -184,7 +185,7 @@ export const SignInUpGlobalScopeForm = () => {
                           availableWorkspace.displayName,
                         )}
                         src={getAbsoluteImageUrl(
-                          availableWorkspace.logo ?? DEFAULT_WORKSPACE_LOGO,
+                          availableWorkspace.logo ?? defaultWorkspaceLogo,
                         )}
                         size="lg"
                       />

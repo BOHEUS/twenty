@@ -2,7 +2,7 @@ import { getAvailableWorkspacePathAndSearchParams } from '@/auth/utils/available
 import { useBuildWorkspaceUrl } from '@/domain-manager/hooks/useBuildWorkspaceUrl';
 import { useRedirectToWorkspaceDomain } from '@/domain-manager/hooks/useRedirectToWorkspaceDomain';
 import { UndecoratedLink } from '@/ui/navigation/link/components/UndecoratedLink/UndecoratedLink';
-import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { useDefaultWorkspaceLogo } from '@/ui/navigation/navigation-drawer/hooks/useDefaultWorkspaceLogo';
 import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
 import { t } from '@lingui/core/macro';
 import { Avatar } from 'twenty-ui/primitives/data-display';
@@ -19,6 +19,7 @@ export const AvailableWorkspaceItem = ({
   isSelected: boolean;
 }) => {
   const { buildWorkspaceUrl } = useBuildWorkspaceUrl();
+  const defaultWorkspaceLogo = useDefaultWorkspaceLogo();
 
   const { redirectToWorkspaceDomain } = useRedirectToWorkspaceDomain();
 
@@ -58,7 +59,7 @@ export const AvailableWorkspaceItem = ({
               availableWorkspace.displayName,
             )}
             src={getAbsoluteImageUrl(
-              availableWorkspace.logo ?? DEFAULT_WORKSPACE_LOGO,
+              availableWorkspace.logo ?? defaultWorkspaceLogo,
             )}
           />
         }

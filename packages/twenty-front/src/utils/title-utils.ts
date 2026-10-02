@@ -24,7 +24,10 @@ const getPathnameOrPrefix = (pathname: string) => {
   return pathname;
 };
 
-export const getPageTitleFromPath = (pathname: string): string => {
+export const getPageTitleFromPath = (
+  pathname: string,
+  brandName: string,
+): string => {
   const pathnameOrPrefix = getPathnameOrPrefix(pathname);
   switch (pathnameOrPrefix) {
     case AppPath.Verify:
@@ -60,6 +63,6 @@ export const getPageTitleFromPath = (pathname: string): string => {
     case SettingsPathPrefixes.Community:
       return t`Community - Settings`;
     default:
-      return 'Twenty';
+      return brandName;
   }
 };

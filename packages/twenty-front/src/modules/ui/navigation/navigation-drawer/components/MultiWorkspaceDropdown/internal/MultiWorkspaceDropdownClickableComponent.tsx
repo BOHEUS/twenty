@@ -6,7 +6,7 @@ import {
   StyledLabelWrapper,
 } from '@/ui/navigation/navigation-drawer/components/MultiWorkspaceDropdown/internal/MultiWorkspacesDropdownStyles';
 import { NavigationDrawerAnimatedCollapseWrapper } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerAnimatedCollapseWrapper';
-import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { useDefaultWorkspaceLogo } from '@/ui/navigation/navigation-drawer/hooks/useDefaultWorkspaceLogo';
 import { useIsNavigationDrawerContentExpanded } from '@/navigation/hooks/useIsNavigationDrawerContentExpanded';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
@@ -25,6 +25,7 @@ export const MultiWorkspaceDropdownClickableComponent = ({
 }: MultiWorkspaceDropdownClickableComponentProps) => {
   const theme = useTheme();
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
+  const defaultWorkspaceLogo = useDefaultWorkspaceLogo();
 
   const isNavigationDrawerExpanded = useIsNavigationDrawerContentExpanded();
   return (
@@ -37,7 +38,7 @@ export const MultiWorkspaceDropdownClickableComponent = ({
         name={currentWorkspace?.displayName || ''}
         colorSeed={getWorkspaceAvatarColorSeed(currentWorkspace?.displayName)}
         src={getAbsoluteImageUrl(
-          currentWorkspace?.logo ?? DEFAULT_WORKSPACE_LOGO,
+          currentWorkspace?.logo ?? defaultWorkspaceLogo,
         )}
       />
       {!shouldHideLabel && (

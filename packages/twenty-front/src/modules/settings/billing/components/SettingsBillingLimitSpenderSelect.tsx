@@ -9,7 +9,7 @@ import { useUsageLimitSpenderOptions } from '@/settings/billing/hooks/useUsageLi
 import { type UsageLimitSpenderType } from '@/settings/billing/types/UsageLimitSpenderType';
 import { getUsageLimitSpenderGroups } from '@/settings/billing/utils/getUsageLimitSpenderGroups';
 import { SelectOptionIcon } from '@/ui/input/components/SelectOptionIcon';
-import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { useDefaultWorkspaceLogo } from '@/ui/navigation/navigation-drawer/hooks/useDefaultWorkspaceLogo';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
 import { useLingui } from '@lingui/react/macro';
@@ -47,6 +47,7 @@ export const SettingsBillingLimitSpenderSelect = ({
 }: SettingsBillingLimitSpenderSelectProps) => {
   const { t } = useLingui();
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
+  const defaultWorkspaceLogo = useDefaultWorkspaceLogo();
 
   const groups = getUsageLimitSpenderGroups(allowedSpenderTypes);
 
@@ -60,7 +61,7 @@ export const SettingsBillingLimitSpenderSelect = ({
 
   const workspaceName = currentWorkspace?.displayName ?? t`Workspace`;
   const workspaceAvatarUrl = getAbsoluteImageUrl(
-    currentWorkspace?.logo ?? DEFAULT_WORKSPACE_LOGO,
+    currentWorkspace?.logo ?? defaultWorkspaceLogo,
   );
   const workspaceAvatarColorSeed = getWorkspaceAvatarColorSeed(workspaceName);
 

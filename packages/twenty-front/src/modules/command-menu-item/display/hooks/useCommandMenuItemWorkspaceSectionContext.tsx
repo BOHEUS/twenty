@@ -2,7 +2,7 @@ import { Avatar } from 'twenty-ui/primitives/data-display';
 
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { type CommandMenuItemSectionContext } from '@/command-menu-item/types/CommandMenuItemSectionContext';
-import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { useDefaultWorkspaceLogo } from '@/ui/navigation/navigation-drawer/hooks/useDefaultWorkspaceLogo';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
@@ -10,6 +10,7 @@ import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvata
 export const useCommandMenuItemWorkspaceSectionContext =
   (): CommandMenuItemSectionContext => {
     const currentWorkspace = useAtomStateValue(currentWorkspaceState);
+    const defaultWorkspaceLogo = useDefaultWorkspaceLogo();
 
     return {
       icon: (
@@ -18,7 +19,7 @@ export const useCommandMenuItemWorkspaceSectionContext =
           name={currentWorkspace?.displayName ?? ''}
           colorSeed={getWorkspaceAvatarColorSeed(currentWorkspace?.displayName)}
           src={getAbsoluteImageUrl(
-            currentWorkspace?.logo ?? DEFAULT_WORKSPACE_LOGO,
+            currentWorkspace?.logo ?? defaultWorkspaceLogo,
           )}
         />
       ),

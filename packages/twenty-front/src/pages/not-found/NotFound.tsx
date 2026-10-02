@@ -1,3 +1,5 @@
+import { brandState } from '@/client-config/states/brandState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { EmptyState } from '@/ui/feedback/empty-state/components/EmptyState';
 import { ErrorState } from '@/ui/feedback/empty-state/components/ErrorState';
 import { NavigationButton } from '@/ui/input/components/NavigationButton';
@@ -39,10 +41,12 @@ const StyledButtonContainer = styled.div`
 
 export const NotFound = () => {
   const { t } = useLingui();
+  const brand = useAtomStateValue(brandState);
+  const brandName = brand.name;
 
   return (
     <>
-      <PageTitle title={t`Page Not Found | Twenty`} />
+      <PageTitle title={t`Page Not Found | ${brandName}`} />
       <StyledBackDrop>
         <ErrorState.Root>
           <AnimatedPlaceholder type="error404" />

@@ -7,7 +7,7 @@ import { USAGE_LIMIT_SPENDER_TYPE_ICONS } from '@/settings/billing/constants/Usa
 import { type UsageLimitRow } from '@/settings/billing/types/UsageLimitRow';
 import { isKeyOfRecord } from '@/settings/billing/utils/isKeyOfRecord';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { useDefaultWorkspaceLogo } from '@/ui/navigation/navigation-drawer/hooks/useDefaultWorkspaceLogo';
 import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 
@@ -39,6 +39,7 @@ export const SettingsBillingLimitSpenderCell = ({
 }: SettingsBillingLimitSpenderCellProps) => {
   const theme = useTheme();
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
+  const defaultWorkspaceLogo = useDefaultWorkspaceLogo();
 
   const isWorkspaceWide = row.spenderType === 'workspace';
   const name = row.spenderName;
@@ -57,7 +58,7 @@ export const SettingsBillingLimitSpenderCell = ({
           name={name}
           colorSeed={getWorkspaceAvatarColorSeed(name)}
           src={getAbsoluteImageUrl(
-            currentWorkspace?.logo ?? DEFAULT_WORKSPACE_LOGO,
+            currentWorkspace?.logo ?? defaultWorkspaceLogo,
           )}
           shape="square"
           size="sm"

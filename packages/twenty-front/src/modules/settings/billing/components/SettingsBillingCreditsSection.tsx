@@ -1,3 +1,5 @@
+import { brandState } from '@/client-config/states/brandState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { NavigationButton } from '@/ui/input/components/NavigationButton';
 
 import { type CurrentWorkspace } from '@/auth/states/currentWorkspaceState';
@@ -133,6 +135,7 @@ export const SettingsBillingCreditsSection = ({
   isUpdatePaymentDisabled: boolean;
 }) => {
   const theme = useTheme();
+  const brand = useAtomStateValue(brandState);
   const subscriptionStatus = useSubscriptionStatus();
   const { openDialog } = useDialog();
   const { formatNumber } = useNumberFormat();
@@ -212,6 +215,7 @@ export const SettingsBillingCreditsSection = ({
     currentBillingSubscription.interval,
   );
   const creditsDocumentationUrl = getDocumentationUrl({
+    docsUrl: brand.docsUrl,
     path: DOCUMENTATION_PATHS.USER_GUIDE_BILLING_CAPABILITIES_CREDITS,
   });
 

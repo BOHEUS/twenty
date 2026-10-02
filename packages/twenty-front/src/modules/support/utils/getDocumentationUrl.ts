@@ -7,12 +7,19 @@ import {
 } from 'twenty-shared/constants';
 
 export const getDocumentationUrl = ({
+  docsUrl,
   locale,
   path = DOCUMENTATION_DEFAULT_PATH,
 }: {
+  docsUrl: string;
   locale?: string | null;
   path?: DocumentationPath | string;
 }): string => {
+  // Paths and locales only exist on Twenty's documentation, so a custom docs site gets its root.
+  if (docsUrl !== DOCUMENTATION_BASE_URL) {
+    return docsUrl;
+  }
+
   if (!locale) {
     return `${DOCUMENTATION_BASE_URL}${path}`;
   }

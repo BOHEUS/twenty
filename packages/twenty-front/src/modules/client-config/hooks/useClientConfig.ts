@@ -6,6 +6,7 @@ import { onboardingConfigState } from '@/client-config/states/onboardingConfigSt
 import { appVersionState } from '@/client-config/states/appVersionState';
 import { authProvidersState } from '@/client-config/states/authProvidersState';
 import { billingState } from '@/client-config/states/billingState';
+import { brandState } from '@/client-config/states/brandState';
 import { calendarBookingPageIdState } from '@/client-config/states/calendarBookingPageIdState';
 import { canManageFeatureFlagsState } from '@/client-config/states/canManageFeatureFlagsState';
 import { captchaState } from '@/client-config/states/captchaState';
@@ -71,6 +72,7 @@ export const useClientConfig = (): UseClientConfigResult => {
 
   const setBilling = useSetAtomState(billingState);
   const setSupportChat = useSetAtomState(supportChatState);
+  const setBrand = useSetAtomState(brandState);
 
   const setSentryConfig = useSetAtomState(sentryConfigState);
   const [clientConfigApiStatus, setClientConfigApiStatus] = useAtomState(
@@ -195,6 +197,7 @@ export const useClientConfig = (): UseClientConfigResult => {
         );
         setBilling(clientConfig.billing);
         setSupportChat(clientConfig.support);
+        setBrand(clientConfig.brand);
 
         setSentryConfig({
           dsn: clientConfig?.sentry?.dsn,
@@ -310,6 +313,7 @@ export const useClientConfig = (): UseClientConfigResult => {
       setIsMicrosoftMessagingEnabled,
       setSentryConfig,
       setSupportChat,
+      setBrand,
       setAllowRequestsToTwentyIcons,
     ],
   );

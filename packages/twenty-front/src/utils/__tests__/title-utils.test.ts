@@ -7,52 +7,59 @@ i18n.activate('en');
 
 describe('title-utils', () => {
   it('should return the correct title for a given path', () => {
-    expect(getPageTitleFromPath('/verify')).toBe('Verify');
-    expect(getPageTitleFromPath('/welcome')).toBe(
+    expect(getPageTitleFromPath('/verify', 'Twenty')).toBe('Verify');
+    expect(getPageTitleFromPath('/welcome', 'Twenty')).toBe(
       'Sign in or Create an account',
     );
-    expect(getPageTitleFromPath('/invite/:workspaceInviteHash')).toBe('Invite');
-    expect(getPageTitleFromPath('/workspace-activation')).toBe(
+    expect(getPageTitleFromPath('/invite/:workspaceInviteHash', 'Twenty')).toBe(
+      'Invite',
+    );
+    expect(getPageTitleFromPath('/workspace-activation', 'Twenty')).toBe(
       'Create Workspace',
     );
-    expect(getPageTitleFromPath('/create/profile')).toBe('Create Profile');
-    expect(getPageTitleFromPath('/settings/objects/opportunities')).toBe(
-      'Data model - Settings',
+    expect(getPageTitleFromPath('/create/profile', 'Twenty')).toBe(
+      'Create Profile',
     );
-    expect(getPageTitleFromPath('/settings/profile')).toBe(
+    expect(
+      getPageTitleFromPath('/settings/objects/opportunities', 'Twenty'),
+    ).toBe('Data model - Settings');
+    expect(getPageTitleFromPath('/settings/profile', 'Twenty')).toBe(
       'Profile - Settings',
     );
-    expect(getPageTitleFromPath('/settings/experience')).toBe(
+    expect(getPageTitleFromPath('/settings/experience', 'Twenty')).toBe(
       'Experience - Settings',
     );
-    expect(getPageTitleFromPath('/settings/accounts')).toBe(
+    expect(getPageTitleFromPath('/settings/accounts', 'Twenty')).toBe(
       'Account - Settings',
     );
-    expect(getPageTitleFromPath('/settings/accounts/new')).toBe(
+    expect(getPageTitleFromPath('/settings/accounts/new', 'Twenty')).toBe(
       'Account - Settings',
     );
-    expect(getPageTitleFromPath('/settings/accounts/calendars')).toBe(
+    expect(getPageTitleFromPath('/settings/accounts/calendars', 'Twenty')).toBe(
       'Account - Settings',
     );
     expect(
-      getPageTitleFromPath('/settings/accounts/calendars/:accountUuid'),
+      getPageTitleFromPath(
+        '/settings/accounts/calendars/:accountUuid',
+        'Twenty',
+      ),
     ).toBe('Account - Settings');
-    expect(getPageTitleFromPath('/settings/accounts/emails')).toBe(
+    expect(getPageTitleFromPath('/settings/accounts/emails', 'Twenty')).toBe(
       'Account - Settings',
     );
-    expect(getPageTitleFromPath('/settings/accounts/emails/:accountUuid')).toBe(
-      'Account - Settings',
-    );
-    expect(getPageTitleFromPath('/settings/billing/plans')).toBe(
+    expect(
+      getPageTitleFromPath('/settings/accounts/emails/:accountUuid', 'Twenty'),
+    ).toBe('Account - Settings');
+    expect(getPageTitleFromPath('/settings/billing/plans', 'Twenty')).toBe(
       'Billing - Settings',
     );
-    expect(getPageTitleFromPath('/settings/members')).toBe(
+    expect(getPageTitleFromPath('/settings/members', 'Twenty')).toBe(
       'Members - Settings',
     );
-    expect(getPageTitleFromPath('/settings/general')).toBe(
+    expect(getPageTitleFromPath('/settings/general', 'Twenty')).toBe(
       'General - Settings',
     );
-    expect(getPageTitleFromPath('/')).toBe('Twenty');
-    expect(getPageTitleFromPath('/random')).toBe('Twenty');
+    expect(getPageTitleFromPath('/', 'Twenty')).toBe('Twenty');
+    expect(getPageTitleFromPath('/random', 'Acme CRM')).toBe('Acme CRM');
   });
 });

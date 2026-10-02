@@ -26,7 +26,7 @@ import { SettingsTableCard } from '@/settings/components/SettingsTableCard';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { SettingsTabBar } from '@/settings/components/layout/SettingsTabBar';
 import { activeTabIdComponentState } from '@/ui/layout/tab-list/states/activeTabIdComponentState';
-import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { useDefaultWorkspaceLogo } from '@/ui/navigation/navigation-drawer/hooks/useDefaultWorkspaceLogo';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { Section } from 'twenty-ui/components';
@@ -70,6 +70,7 @@ export const SettingsAdminUserDetail = () => {
   const userLookupResult = userLookupData?.userLookupAdminPanel;
 
   const currentUser = useAtomStateValue(currentUserState);
+  const defaultWorkspaceLogo = useDefaultWorkspaceLogo();
   const { handleImpersonate, impersonatingUserId } = useHandleImpersonate();
 
   const effectiveTabId = activeTabId || userLookupResult?.workspaces?.[0]?.id;
@@ -91,7 +92,7 @@ export const SettingsAdminUserDetail = () => {
         getImageAbsoluteURI({
           imageUrl: isNonEmptyString(workspace.logo)
             ? workspace.logo
-            : DEFAULT_WORKSPACE_LOGO,
+            : defaultWorkspaceLogo,
           baseUrl: REACT_APP_SERVER_BASE_URL,
         }) ?? '',
     })) ?? [];

@@ -1,3 +1,4 @@
+import { brandState } from '@/client-config/states/brandState';
 import { ApplicationDisplay } from '@/applications/components/ApplicationDisplay';
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
@@ -83,6 +84,7 @@ export const SettingsClaimApplicationSection = () => {
   const { enqueueToast } = useToast();
 
   const currentWorkspaceMember = useAtomStateValue(currentWorkspaceMemberState);
+  const brand = useAtomStateValue(brandState);
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -234,6 +236,7 @@ export const SettingsClaimApplicationSection = () => {
               onClick: () =>
                 window.open(
                   getDocumentationUrl({
+                    docsUrl: brand.docsUrl,
                     locale: currentWorkspaceMember?.locale,
                     path: claimError.docPath,
                   }),

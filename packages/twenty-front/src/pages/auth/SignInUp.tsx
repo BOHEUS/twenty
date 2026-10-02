@@ -32,6 +32,7 @@ import { SignInUpSsoExchangeTokenEffect } from '@/auth/sign-in-up/components/int
 import { SignInUpTwoFactorAuthenticationProvision } from '@/auth/sign-in-up/components/internal/SignInUpTwoFactorAuthenticationProvision';
 import { SignInUpTOTPVerification } from '@/auth/sign-in-up/components/internal/SignInUpTwoFactorAuthenticationVerification';
 import { useWorkspaceFromInviteHash } from '@/auth/sign-in-up/hooks/useWorkspaceFromInviteHash';
+import { brandState } from '@/client-config/states/brandState';
 import { clientConfigApiStatusState } from '@/client-config/states/clientConfigApiStatusState';
 import { useLingui } from '@lingui/react/macro';
 import { useSearchParams } from 'react-router-dom';
@@ -68,6 +69,7 @@ export const SignInUp = () => {
   const { isDefaultDomain } = useIsCurrentLocationOnDefaultDomain();
   const { isOnAWorkspace } = useIsCurrentLocationOnAWorkspace();
   const workspacePublicData = useAtomStateValue(workspacePublicDataState);
+  const brand = useAtomStateValue(brandState);
   const { loading: getPublicWorkspaceDataLoading } =
     useGetPublicWorkspaceDataByDomain();
   const isMultiWorkspaceEnabled = useAtomStateValue(
@@ -117,7 +119,8 @@ export const SignInUp = () => {
     }
 
     if (isGlobalScope) {
-      return t`Welcome to Twenty`;
+      const brandName = brand.name;
+      return t`Welcome to ${brandName}`;
     }
 
     const workspaceName = workspacePublicData?.displayName;
@@ -134,6 +137,7 @@ export const SignInUp = () => {
     isGlobalScope,
     t,
     workspaceFromInviteHash?.displayName,
+    brand.name,
   ]);
 
   const signInUpForm = useMemo(() => {

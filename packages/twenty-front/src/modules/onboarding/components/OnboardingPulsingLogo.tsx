@@ -1,3 +1,6 @@
+import { brandState } from '@/client-config/states/brandState';
+import { TWENTY_ONBOARDING_LOGO_URL } from '@/onboarding/constants/TwentyOnboardingLogoUrl';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
 import { themeCssVariables } from 'twenty-ui/theme';
 
@@ -22,6 +25,10 @@ const StyledLogo = styled.img`
   }
 `;
 
-export const OnboardingPulsingLogo = () => (
-  <StyledLogo src="/images/integrations/twenty-logo.svg" alt="" />
-);
+export const OnboardingPulsingLogo = () => {
+  const brand = useAtomStateValue(brandState);
+
+  return (
+    <StyledLogo src={brand.logoUrl ?? TWENTY_ONBOARDING_LOGO_URL} alt="" />
+  );
+};

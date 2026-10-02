@@ -18,10 +18,13 @@ import { PageFavicon } from '@/ui/utilities/page-favicon/components/PageFavicon'
 import { PageTitle } from '@/ui/utilities/page-title/components/PageTitle';
 import { WorkspaceProviderEffect } from '@/workspace/components/WorkspaceProviderEffect';
 import { getPageTitleFromPath } from '~/utils/title-utils';
+import { brandState } from '@/client-config/states/brandState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 
 export const RootAppProviders = () => {
   const { pathname } = useLocation();
-  const pageTitle = getPageTitleFromPath(pathname);
+  const brand = useAtomStateValue(brandState);
+  const pageTitle = getPageTitleFromPath(pathname, brand.name);
 
   return (
     <SharedAppProviders>

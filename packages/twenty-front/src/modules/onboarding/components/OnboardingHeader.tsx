@@ -1,3 +1,6 @@
+import { brandState } from '@/client-config/states/brandState';
+import { TWENTY_ONBOARDING_LOGO_URL } from '@/onboarding/constants/TwentyOnboardingLogoUrl';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { ONBOARDING_CONTENT_BLOCK_WIDTH } from '@/onboarding/constants/OnboardingContentBlockWidth';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
@@ -55,9 +58,7 @@ const StyledRightSide = styled(StyledSide)`
   padding-left: ${themeCssVariables.spacing[1]};
 `;
 
-const StyledLogo = styled.div`
-  background-image: url('/images/integrations/twenty-logo.svg');
-  background-size: cover;
+const StyledLogo = styled.img`
   height: ${themeCssVariables.spacing[6]};
   opacity: 0.4;
   width: ${themeCssVariables.spacing[6]};
@@ -75,6 +76,7 @@ export const OnboardingHeader = ({
   rightComponent,
 }: OnboardingHeaderProps) => {
   const { t } = useLingui();
+  const brand = useAtomStateValue(brandState);
 
   return (
     <StyledHeader>
@@ -92,7 +94,7 @@ export const OnboardingHeader = ({
         )}
       </StyledLeftSide>
       <StyledCenter>
-        <StyledLogo />
+        <StyledLogo src={brand.logoUrl ?? TWENTY_ONBOARDING_LOGO_URL} alt="" />
       </StyledCenter>
       <StyledRightSide>{rightComponent}</StyledRightSide>
     </StyledHeader>

@@ -28,7 +28,7 @@ import { TableBody } from '@/ui/layout/table/components/TableBody';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
-import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { useDefaultWorkspaceLogo } from '@/ui/navigation/navigation-drawer/hooks/useDefaultWorkspaceLogo';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -97,6 +97,7 @@ export const SettingsAdminWorkspaceDetail = () => {
   );
 
   const currentUser = useAtomStateValue(currentUserState);
+  const defaultWorkspaceLogo = useDefaultWorkspaceLogo();
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
   const billing = useAtomStateValue(billingState);
   const labPublicFeatureFlags = useAtomStateValue(labPublicFeatureFlagsState);
@@ -223,7 +224,7 @@ export const SettingsAdminWorkspaceDetail = () => {
   const workspaceName = workspace?.name || workspaceId || '';
   const workspaceLogo = isNonEmptyString(workspace?.logo)
     ? workspace.logo
-    : DEFAULT_WORKSPACE_LOGO;
+    : defaultWorkspaceLogo;
 
   const featureFlagItems = (workspace?.featureFlags ?? []).flatMap((flag) => {
     if (!isDefined(flag.key)) {

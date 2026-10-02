@@ -1,3 +1,4 @@
+import { brandState } from '@/client-config/states/brandState';
 import { useRefetchOnApplicationRegistrationChange } from '@/applications/hooks/useRefetchOnApplicationRegistrationChange';
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
@@ -47,6 +48,7 @@ export const SettingsApplicationsDeveloperTab = () => {
   const { t } = useLingui();
   const theme = useTheme();
   const currentWorkspaceMember = useAtomStateValue(currentWorkspaceMemberState);
+  const brand = useAtomStateValue(brandState);
 
   const { copyToClipboard } = useCopyToClipboard();
 
@@ -105,6 +107,7 @@ export const SettingsApplicationsDeveloperTab = () => {
             onClick={() =>
               window.open(
                 getDocumentationUrl({
+                  docsUrl: brand.docsUrl,
                   locale: currentWorkspaceMember?.locale,
                   path: '/developers/extend/apps/getting-started',
                 }),

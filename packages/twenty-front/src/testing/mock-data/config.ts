@@ -1,4 +1,5 @@
 import { type ClientConfig } from '@/client-config/types/ClientConfig';
+import { DEFAULT_BRAND } from 'twenty-shared/constants';
 import { CaptchaDriverType, SupportDriver } from '~/generated-metadata/graphql';
 
 export const mockedClientConfig: ClientConfig = {
@@ -18,6 +19,7 @@ export const mockedClientConfig: ClientConfig = {
   frontDomain: 'localhost',
   defaultSubdomain: 'app',
   analyticsEnabled: true,
+  brand: DEFAULT_BRAND,
   support: {
     supportDriver: SupportDriver.FRONT,
     supportFrontChatId: null,

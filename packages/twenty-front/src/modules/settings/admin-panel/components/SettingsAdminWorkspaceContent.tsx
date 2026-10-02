@@ -5,7 +5,7 @@ import { getWorkspaceSchemaName } from '@/settings/admin-panel/utils/getWorkspac
 import { SettingsTableCard } from '@/settings/components/SettingsTableCard';
 import { AvatarOrIcon } from '@/ui/field/display/components/internal/AvatarOrIcon/AvatarOrIcon';
 import { LinkChip } from '@/ui/navigation/link/components/LinkChip/LinkChip';
-import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { useDefaultWorkspaceLogo } from '@/ui/navigation/navigation-drawer/hooks/useDefaultWorkspaceLogo';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { UserContext } from '@/users/contexts/UserContext';
 import { styled } from '@linaria/react';
@@ -53,6 +53,7 @@ export const SettingsAdminWorkspaceContent = ({
 }: SettingsAdminWorkspaceContentProps) => {
   const { t } = useLingui();
   const { formatNumber } = useNumberFormat();
+  const defaultWorkspaceLogo = useDefaultWorkspaceLogo();
   const { dateFormat, timeFormat, timeZone } = useContext(UserContext);
   const { localeCatalog } = useAtomStateValue(dateLocaleState);
 
@@ -87,7 +88,7 @@ export const SettingsAdminWorkspaceContent = ({
               src={getAbsoluteImageUrl(
                 isNonEmptyString(activeWorkspace?.logo)
                   ? activeWorkspace?.logo
-                  : DEFAULT_WORKSPACE_LOGO,
+                  : defaultWorkspaceLogo,
               )}
             />
           }

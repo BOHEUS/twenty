@@ -40,10 +40,13 @@ import { PageTitle } from '@/ui/utilities/page-title/components/PageTitle';
 import { UserContextProvider } from '@/users/components/UserContextProvider';
 import { WorkspaceProviderEffect } from '@/workspace/components/WorkspaceProviderEffect';
 import { getPageTitleFromPath } from '~/utils/title-utils';
+import { brandState } from '@/client-config/states/brandState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 
 export const WorkspaceAppProviders = () => {
   const { pathname } = useLocation();
-  const pageTitle = getPageTitleFromPath(pathname);
+  const brand = useAtomStateValue(brandState);
+  const pageTitle = getPageTitleFromPath(pathname, brand.name);
 
   return (
     <SharedAppProviders>

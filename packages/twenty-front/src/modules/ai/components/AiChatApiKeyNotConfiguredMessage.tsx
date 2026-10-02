@@ -1,3 +1,4 @@
+import { brandState } from '@/client-config/states/brandState';
 import { AiChatInlineBanner } from '@/ai/components/AiChatInlineBanner';
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { getDocumentationUrl } from '@/support/utils/getDocumentationUrl';
@@ -8,9 +9,11 @@ import { IconExternalLink } from 'twenty-ui/icon';
 
 export const AiChatApiKeyNotConfiguredMessage = () => {
   const currentWorkspaceMember = useAtomStateValue(currentWorkspaceMemberState);
+  const brand = useAtomStateValue(brandState);
 
   const handleDocsClick = () => {
     const docsUrl = getDocumentationUrl({
+      docsUrl: brand.docsUrl,
       locale: currentWorkspaceMember?.locale,
       path: DOCUMENTATION_PATHS.DEVELOPERS_SELF_HOST_CAPABILITIES_SETUP,
     });

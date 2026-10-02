@@ -1,3 +1,4 @@
+import { brandState } from '@/client-config/states/brandState';
 import { SettingsPath } from 'twenty-shared/types';
 
 import { useAuth } from '@/auth/hooks/useAuth';
@@ -59,6 +60,7 @@ const useSettingsNavigationItems = (): SettingsNavigationSection[] => {
   const { signOut } = useAuth();
   const supportChat = useAtomStateValue(supportChatState);
   const currentWorkspaceMember = useAtomStateValue(currentWorkspaceMemberState);
+  const brand = useAtomStateValue(brandState);
 
   const isBillingEnabled = billing?.isBillingEnabled ?? false;
   const currentUser = useAtomStateValue(currentUserState);
@@ -200,7 +202,10 @@ const useSettingsNavigationItems = (): SettingsNavigationSection[] => {
           label: t`Documentation`,
           onClick: () =>
             window.open(
-              getDocumentationUrl({ locale: currentWorkspaceMember?.locale }),
+              getDocumentationUrl({
+                docsUrl: brand.docsUrl,
+                locale: currentWorkspaceMember?.locale,
+              }),
               '_blank',
             ),
           Icon: IconHelpCircle,
