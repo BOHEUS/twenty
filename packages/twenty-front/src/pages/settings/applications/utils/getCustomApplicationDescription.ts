@@ -1,17 +1,11 @@
 import { t } from '@lingui/core/macro';
 import { type Brand } from 'twenty-shared/types';
 
-import { getDocumentationUrl } from '@/support/utils/getDocumentationUrl';
+import { getAppDevelopmentDocumentationUrls } from '~/pages/settings/applications/utils/getAppDevelopmentDocumentationUrls';
 
 export const getCustomApplicationDescription = (brand: Brand): string => {
-  const gettingStartedUrl = getDocumentationUrl({
-    docsUrl: brand.docsUrl,
-    path: '/developers/extend/apps/getting-started',
-  });
-  const buildingAppsUrl = getDocumentationUrl({
-    docsUrl: brand.docsUrl,
-    path: '/developers/extend/apps/building',
-  });
+  const { gettingStartedUrl, buildingAppsUrl } =
+    getAppDevelopmentDocumentationUrls(brand.docsUrl);
 
   return t`Host your workspace's customizations and overrides.
 
