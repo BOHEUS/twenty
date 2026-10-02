@@ -1,8 +1,11 @@
-import { BlockNoteFormRecordRichTextFieldInput } from '@/object-record/record-field/ui/form-types/components/BlockNoteFormRecordRichTextFieldInput';
-import { TiptapFormRecordRichTextFieldInput } from '@/object-record/record-field/ui/form-types/components/TiptapFormRecordRichTextFieldInput';
+import { FormAdvancedTextFieldInput } from '@/advanced-text-editor/components/FormAdvancedTextFieldInput';
+import { buildRichTextFieldValueFromTiptap } from '@/object-record/record-field/ui/utils/buildRichTextFieldValueFromTiptap';
+import { getRichTextFieldTiptapDocument } from '@/object-record/record-field/ui/utils/getRichTextFieldTiptapDocument';
+import { RECORD_RICH_TEXT_FORM_FIELD_EDITOR_PROFILE } from '@/object-record/record-field/ui/form-types/constants/RecordRichTextFormFieldEditorProfile';
 import { type FieldRichTextValue } from '@/object-record/record-field/ui/types/FieldMetadata';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
-import { FeatureFlagKey } from 'twenty-shared/types';
+import { useLingui } from '@lingui/react/macro';
+import { useState } from 'react';
+import { isDefined } from 'twenty-shared/utils';
 
 type FormRecordRichTextFieldInputProps = {
   label?: string;
@@ -19,25 +22,26 @@ export const FormRecordRichTextFieldInput = ({
   readonly,
   placeholder,
 }: FormRecordRichTextFieldInputProps) => {
-  const isTiptapRichTextEditorEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_TIPTAP_RICH_TEXT_EDITOR_ENABLED,
-  );
+  const { t } = useLingui();
 
-  return isTiptapRichTextEditorEnabled ? (
-    <TiptapFormRecordRichTextFieldInput
+  const [serializedDefaultDocument] = useState(() => {
+    const document = getRichTextFieldTiptapDocument(defaultValue);
+
+    return isDefined(document) ? JSON.stringify(document) : null;
+  });
+
+  const handleChange = (tiptap: string) => {
+    onChange(buildRichTextFieldValueFromTiptap(tiptap));
+  };
+
+  return (
+    <FormAdvancedTextFieldInput
       label={label}
-      defaultValue={defaultValue}
-      onChange={onChange}
+      defaultValue={serializedDefaultDocument}
+      placeholder={placeholder ?? t`Type '/' for commands`}
+      onChange={handleChange}
       readonly={readonly}
-      placeholder={placeholder}
-    />
-  ) : (
-    <BlockNoteFormRecordRichTextFieldInput
-      label={label}
-      defaultValue={defaultValue}
-      onChange={onChange}
-      readonly={readonly}
-      placeholder={placeholder}
+      profile={RECORD_RICH_TEXT_FORM_FIELD_EDITOR_PROFILE}
     />
   );
 };

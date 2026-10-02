@@ -1,11 +1,37 @@
 import { type Editor } from '@tiptap/core';
-import { FeatureFlagKey } from 'twenty-shared/types';
+import { useAtom, useStore } from 'jotai';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { type BLOCK_SCHEMA } from '@/blocknote-editor/blocks/Schema';
-import { BlockNoteRichTextFieldEditor } from '@/object-record/record-field/ui/meta-types/input/components/BlockNoteRichTextFieldEditor';
-import { TiptapRichTextFieldEditor } from '@/object-record/record-field/ui/meta-types/input/components/TiptapRichTextFieldEditor';
+import { useUploadAttachmentFile } from '@/activities/files/hooks/useUploadAttachmentFile';
+import { type Attachment } from '@/activities/files/types/Attachment';
+import { getActivityTargetObjectFieldIdName } from '@/activities/utils/getActivityTargetObjectFieldIdName';
+import { AdvancedTextEditor } from '@/advanced-text-editor/components/AdvancedTextEditor';
+import { useAdvancedTextEditor } from '@/advanced-text-editor/hooks/useAdvancedTextEditor';
+import { serializeAdvancedTextEditorDocument } from '@/advanced-text-editor/utils/serializeAdvancedTextEditorDocument';
+import { RICH_TEXT_EDITOR_GLOBAL_HOTKEYS_CONFIG } from '@/advanced-text-editor/constants/RichTextEditorGlobalHotkeysConfig';
+import { useAttachmentSync } from '@/activities/files/hooks/useAttachmentSync';
+import { useMentionSearch } from '@/mention/hooks/useMentionSearch';
+import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
+import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
+import { modifyRecordFromCache } from '@/object-record/cache/utils/modifyRecordFromCache';
+import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
+import { useUpdateOneRecord } from '@/object-record/hooks/useUpdateOneRecord';
+import { useIsRecordFieldReadOnly } from '@/object-record/read-only/hooks/useIsRecordFieldReadOnly';
+import { RECORD_RICH_TEXT_FIELD_EDITOR_PROFILE } from '@/object-record/record-field/ui/meta-types/input/constants/RecordRichTextFieldEditorProfile';
+import { buildRichTextFieldValueFromTiptap } from '@/object-record/record-field/ui/utils/buildRichTextFieldValueFromTiptap';
+import { getRichTextFieldTiptapDocument } from '@/object-record/record-field/ui/utils/getRichTextFieldTiptapDocument';
 import { type FieldRichTextValue } from '@/object-record/record-field/ui/types/FieldMetadata';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
+import { useRecordSeededDraft } from '@/object-record/record-seeded-draft/hooks/useRecordSeededDraft';
+import { recordStoreFamilyState } from '@/object-record/record-store/states/recordStoreFamilyState';
+import { usePushFocusItemToFocusStack } from '@/ui/utilities/focus/hooks/usePushFocusItemToFocusStack';
+import { useRemoveFocusItemFromFocusStackById } from '@/ui/utilities/focus/hooks/useRemoveFocusItemFromFocusStackById';
+import { FocusComponentType } from '@/ui/utilities/focus/types/FocusComponentType';
+import { useHotkeysOnFocusedElement } from '@/ui/utilities/hotkey/hooks/useHotkeysOnFocusedElement';
+import { t } from '@lingui/core/macro';
+import { Key } from 'ts-key-enum';
+import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
+import { useDebouncedCallback } from 'use-debounce';
 
 type RichTextFieldEditorProps = {
   recordId: string;
@@ -14,10 +40,7 @@ type RichTextFieldEditorProps = {
   onPersistBody?: (body: FieldRichTextValue) => void;
   onFocus?: () => void;
   onBlur?: () => void;
-  blockNoteEditorRef?: React.MutableRefObject<
-    typeof BLOCK_SCHEMA.BlockNoteEditor | null
-  >;
-  tiptapEditorRef?: React.MutableRefObject<Editor | null>;
+  editorRef?: React.MutableRefObject<Editor | null>;
 };
 
 export const RichTextFieldEditor = ({
@@ -25,34 +48,227 @@ export const RichTextFieldEditor = ({
   objectNameSingular,
   fieldName,
   onPersistBody,
-  onFocus,
-  onBlur,
-  blockNoteEditorRef,
-  tiptapEditorRef,
+  onFocus: onFocusOverride,
+  onBlur: onBlurOverride,
+  editorRef,
 }: RichTextFieldEditorProps) => {
-  const isTiptapRichTextEditorEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_TIPTAP_RICH_TEXT_EDITOR_ENABLED,
+  const store = useStore();
+  const [recordInStore] = useAtom(recordStoreFamilyState.atomFamily(recordId));
+
+  const cache = useApolloCoreClient().cache;
+
+  const { objectMetadataItem } = useObjectMetadataItem({
+    objectNameSingular,
+  });
+
+  const fieldMetadataItem = objectMetadataItem.fields.find(
+    (field) => field.name === fieldName,
   );
 
-  return isTiptapRichTextEditorEnabled ? (
-    <TiptapRichTextFieldEditor
-      recordId={recordId}
-      objectNameSingular={objectNameSingular}
-      fieldName={fieldName}
-      onPersistBody={onPersistBody}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      editorRef={tiptapEditorRef}
-    />
-  ) : (
-    <BlockNoteRichTextFieldEditor
-      recordId={recordId}
-      objectNameSingular={objectNameSingular}
-      fieldName={fieldName}
-      onPersistBody={onPersistBody}
-      onFocus={onFocus}
-      onBlur={onBlur}
-      editorRef={blockNoteEditorRef}
+  const { updateOneRecord } = useUpdateOneRecord();
+
+  const isRecordFieldReadOnly = useIsRecordFieldReadOnly({
+    recordId,
+    objectMetadataId: objectMetadataItem.id,
+    fieldMetadataId: fieldMetadataItem?.id ?? '',
+  });
+
+  const { pushFocusItemToFocusStack } = usePushFocusItemToFocusStack();
+  const { removeFocusItemFromFocusStackById } =
+    useRemoveFocusItemFromFocusStackById();
+
+  const focusId = `${recordId}-${fieldName}`;
+
+  const { records: attachments } = useFindManyRecords<Attachment>({
+    objectNameSingular: CoreObjectNameSingular.Attachment,
+    filter: {
+      [getActivityTargetObjectFieldIdName({
+        nameSingular: objectNameSingular,
+      })]: {
+        eq: recordId,
+      },
+    },
+  });
+
+  const { syncAttachments } = useAttachmentSync(attachments);
+  const { uploadAttachmentFile } = useUploadAttachmentFile();
+  const { searchMentionRecords } = useMentionSearch();
+
+  const handleAttachmentUpload = async (file: File) => {
+    const { attachmentAbsoluteURL, attachmentFileId } =
+      await uploadAttachmentFile(file, {
+        id: recordId,
+        targetObjectNameSingular: objectNameSingular,
+      });
+
+    return { url: attachmentAbsoluteURL, fileId: attachmentFileId };
+  };
+
+  const fieldValue = isDefined(recordInStore)
+    ? (recordInStore as Record<string, Partial<FieldRichTextValue> | null>)[
+        fieldName
+      ]
+    : null;
+
+  // Converting legacy values is costly on large notes, so only redo it when
+  // the stored value changes.
+  const upstreamDocument = useMemo(
+    () => getRichTextFieldTiptapDocument(fieldValue),
+    [fieldValue],
+  );
+
+  const { updateDraft, markDirty, flush, draftResyncKey } =
+    useRecordSeededDraft({
+      upstreamDraft: {
+        tiptap: isDefined(upstreamDocument)
+          ? JSON.stringify(upstreamDocument)
+          : '',
+      },
+      persistDebounceMs: 300,
+      resetKey: recordId,
+      onPersist: ({ tiptap }) => {
+        if (isRecordFieldReadOnly === true) return;
+
+        const body = buildRichTextFieldValueFromTiptap(tiptap);
+
+        if (onPersistBody) {
+          onPersistBody(body);
+          return;
+        }
+
+        updateOneRecord({
+          idToUpdate: recordId,
+          objectNameSingular,
+          updateOneRecordInput: { [fieldName]: body },
+        });
+      },
+    });
+
+  const handleBodyChange = async (tiptap: string) => {
+    const oldRecord = store.get(recordStoreFamilyState.atomFamily(recordId));
+    const body = buildRichTextFieldValueFromTiptap(tiptap);
+
+    store.set(
+      recordStoreFamilyState.atomFamily(recordId),
+      (prev: typeof oldRecord) => ({
+        ...prev,
+        id: recordId,
+        [fieldName]: body,
+        __typename: prev?.__typename ?? objectNameSingular,
+      }),
+    );
+
+    modifyRecordFromCache({
+      recordId,
+      fieldModifiers: {
+        [fieldName]: () => body,
+      },
+      cache,
+      objectMetadataItem,
+    });
+
+    const oldDocument = getRichTextFieldTiptapDocument(
+      oldRecord?.[fieldName] as Partial<FieldRichTextValue> | undefined,
+    );
+
+    updateDraft({ tiptap });
+
+    await syncAttachments(
+      tiptap,
+      isDefined(oldDocument) ? JSON.stringify(oldDocument) : undefined,
+    );
+  };
+
+  const handleBodyChangeDebounced = useDebouncedCallback(handleBodyChange, 500);
+
+  const handleEditorUpdate = (editor: Editor) => {
+    // Serialization is debounced, so mark dirty now or a remote adoption
+    // could replace in-progress typing.
+    markDirty();
+
+    handleBodyChangeDebounced(serializeAdvancedTextEditorDocument(editor));
+  };
+
+  const handleFocus = useCallback(() => {
+    if (onFocusOverride) {
+      onFocusOverride();
+      return;
+    }
+
+    pushFocusItemToFocusStack({
+      component: {
+        instanceId: focusId,
+        type: FocusComponentType.ACTIVITY_RICH_TEXT_EDITOR,
+      },
+      focusId,
+      globalHotkeysConfig: RICH_TEXT_EDITOR_GLOBAL_HOTKEYS_CONFIG,
+    });
+  }, [focusId, pushFocusItemToFocusStack, onFocusOverride]);
+
+  const handleBlur = () => {
+    handleBodyChangeDebounced.flush();
+    flush();
+
+    if (onBlurOverride) {
+      onBlurOverride();
+      return;
+    }
+
+    removeFocusItemFromFocusStackById({ focusId });
+  };
+
+  const editor = useAdvancedTextEditor(
+    {
+      profile: RECORD_RICH_TEXT_FIELD_EDITOR_PROFILE,
+      placeholder: t`Type '/' for commands, '@' for mentions`,
+      readonly: isRecordFieldReadOnly,
+      defaultValue: null,
+      content: upstreamDocument,
+      onUpdate: handleEditorUpdate,
+      onFocus: handleFocus,
+      onBlur: handleBlur,
+      onImageUpload: handleAttachmentUpload,
+      onFileUpload: handleAttachmentUpload,
+      searchMentionRecords,
+    },
+    [recordId, isRecordFieldReadOnly],
+  );
+
+  if (isDefined(editorRef)) {
+    editorRef.current = editor;
+  }
+
+  const [lastAppliedResyncKey, setLastAppliedResyncKey] =
+    useState(draftResyncKey);
+
+  // Replace the editor content in place when another client changed the body.
+  useEffect(() => {
+    if (draftResyncKey === lastAppliedResyncKey || !isDefined(editor)) {
+      return;
+    }
+
+    setLastAppliedResyncKey(draftResyncKey);
+    editor.commands.setContent(upstreamDocument ?? '', { emitUpdate: false });
+  }, [draftResyncKey, lastAppliedResyncKey, editor, upstreamDocument]);
+
+  useHotkeysOnFocusedElement({
+    keys: Key.Escape,
+    callback: () => {
+      editor?.commands.blur();
+    },
+    focusId,
+    dependencies: [editor],
+  });
+
+  if (!isDefined(editor)) {
+    return null;
+  }
+
+  return (
+    <AdvancedTextEditor
+      editor={editor}
+      readonly={isRecordFieldReadOnly}
+      minHeight={RECORD_RICH_TEXT_FIELD_EDITOR_PROFILE.minHeight}
     />
   );
 };

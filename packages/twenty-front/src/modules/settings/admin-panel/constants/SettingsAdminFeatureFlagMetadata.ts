@@ -82,8 +82,4 @@ export const SETTINGS_ADMIN_FEATURE_FLAG_METADATA: Partial<
     label: msg`Workflow chat messages`,
     description: msg`Add a workflow step that posts a message in a member's AI chat.`,
   },
-  [FeatureFlagKey.IS_TIPTAP_RICH_TEXT_EDITOR_ENABLED]: {
-    label: msg`Tiptap rich text editor`,
-    description: msg`Edit notes, tasks and rich text fields with the Tiptap editor instead of BlockNote.`,
-  },
 };

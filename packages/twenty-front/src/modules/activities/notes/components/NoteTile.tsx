@@ -76,7 +76,7 @@ export const NoteTile = ({
 }) => {
   const { openRecordInSidePanel } = useOpenRecordInSidePanel();
 
-  const body = getActivityPreview(note?.bodyV2?.blocknote ?? null);
+  const body = getActivityPreview(note?.bodyV2);
 
   const junctionFieldName = useObjectMorphJunctionConfigOrThrow({
     objectNameSingular: CoreObjectNameSingular.Note,

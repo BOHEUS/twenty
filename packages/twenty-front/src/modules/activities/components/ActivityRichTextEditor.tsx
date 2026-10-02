@@ -6,8 +6,7 @@ import { useUpsertActivity } from '@/activities/hooks/useUpsertActivity';
 import { canCreateActivityState } from '@/activities/states/canCreateActivityState';
 import { type Note } from '@/activities/types/Note';
 import { type Task } from '@/activities/types/Task';
-import { type BLOCK_SCHEMA } from '@/blocknote-editor/blocks/Schema';
-import { BLOCK_EDITOR_GLOBAL_HOTKEYS_CONFIG } from '@/blocknote-editor/constants/BlockEditorGlobalHotkeysConfig';
+import { RICH_TEXT_EDITOR_GLOBAL_HOTKEYS_CONFIG } from '@/advanced-text-editor/constants/RichTextEditorGlobalHotkeysConfig';
 import { useLabelIdentifierFieldMetadataItem } from '@/object-metadata/hooks/useLabelIdentifierFieldMetadataItem';
 import { type FieldRichTextValue } from '@/object-record/record-field/ui/types/FieldMetadata';
 import { RichTextFieldEditor } from '@/object-record/record-field/ui/meta-types/input/components/RichTextFieldEditor';
@@ -36,11 +35,7 @@ export const ActivityRichTextEditor = ({
   const store = useStore();
 
   // oxlint-disable-next-line twenty/no-state-useref
-  const blockNoteEditorRef = useRef<typeof BLOCK_SCHEMA.BlockNoteEditor | null>(
-    null,
-  );
-  // oxlint-disable-next-line twenty/no-state-useref
-  const tiptapEditorRef = useRef<Editor | null>(null);
+  const editorRef = useRef<Editor | null>(null);
 
   const { upsertActivity } = useUpsertActivity({
     activityObjectNameSingular,
@@ -101,8 +96,7 @@ export const ActivityRichTextEditor = ({
     );
 
     if (isRecordTitleCellOpen) {
-      blockNoteEditorRef.current?.domElement?.blur();
-      tiptapEditorRef.current?.commands.blur();
+      editorRef.current?.commands.blur();
       return;
     }
 
@@ -112,7 +106,7 @@ export const ActivityRichTextEditor = ({
         type: FocusComponentType.ACTIVITY_RICH_TEXT_EDITOR,
       },
       focusId: activityId,
-      globalHotkeysConfig: BLOCK_EDITOR_GLOBAL_HOTKEYS_CONFIG,
+      globalHotkeysConfig: RICH_TEXT_EDITOR_GLOBAL_HOTKEYS_CONFIG,
     });
   }, [recordTitleCellId, activityId, pushFocusItemToFocusStack, store]);
 
@@ -138,8 +132,7 @@ export const ActivityRichTextEditor = ({
       onPersistBody={handlePersistBody}
       onFocus={handleFocus}
       onBlur={handleBlur}
-      blockNoteEditorRef={blockNoteEditorRef}
-      tiptapEditorRef={tiptapEditorRef}
+      editorRef={editorRef}
     />
   );
 };

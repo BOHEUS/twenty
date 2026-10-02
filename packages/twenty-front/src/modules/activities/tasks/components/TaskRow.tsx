@@ -90,7 +90,7 @@ export const TaskRow = ({ task }: { task: Task }) => {
   const theme = useTheme();
   const { openRecordInSidePanel } = useOpenRecordInSidePanel();
 
-  const body = getActivitySummary(task?.bodyV2?.blocknote ?? null);
+  const body = getActivitySummary(task?.bodyV2);
 
   const { completeTask } = useCompleteTask(task);
 

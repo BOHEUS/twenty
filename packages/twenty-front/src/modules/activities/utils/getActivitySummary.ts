@@ -1,8 +1,6 @@
-import { parseInitialBlocknote } from '@/blocknote-editor/utils/parseInitialBlocknote';
-import { getFirstNonEmptyLineOfRichText } from '@/blocknote-editor/utils/getFirstNonEmptyLineOfRichText';
+import { getRichTextPreviewLines } from '@/activities/utils/getRichTextPreviewLines';
+import { type FieldRichTextValue } from '@/object-record/record-field/ui/types/FieldMetadata';
 
-export const getActivitySummary = (activityBody: string | null): string => {
-  const blocks = parseInitialBlocknote(activityBody) ?? null;
-
-  return getFirstNonEmptyLineOfRichText(blocks);
-};
+export const getActivitySummary = (
+  activityBody: Partial<FieldRichTextValue> | null | undefined,
+): string => getRichTextPreviewLines(activityBody)[0] ?? '';

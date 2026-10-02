@@ -3,11 +3,14 @@ import { getActivityAttachmentPathsToRestore } from '@/activities/utils/getActiv
 
 describe('getActivityAttachmentPathsToRestore', () => {
   it('should not return any attachment paths to restore if there are no paths in body', () => {
-    const newActivityBody = JSON.stringify([
-      {
-        type: 'paragraph',
-      },
-    ]);
+    const newActivityBody = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+        },
+      ],
+    });
     const oldActivityAttachments = [
       {
         id: '1',
@@ -22,16 +25,19 @@ describe('getActivityAttachmentPathsToRestore', () => {
   });
 
   it('should return the attachment paths to restore if paths in body are not present in attachments', () => {
-    const newActivityBody = JSON.stringify([
-      {
-        type: 'file',
-        props: { url: 'https://example.com/files/images/test.txt' },
-      },
-      {
-        type: 'file',
-        props: { url: 'https://example.com/files/images/test2.txt' },
-      },
-    ]);
+    const newActivityBody = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'file',
+          attrs: { url: 'https://example.com/files/images/test.txt' },
+        },
+        {
+          type: 'file',
+          attrs: { url: 'https://example.com/files/images/test2.txt' },
+        },
+      ],
+    });
 
     const oldActivityAttachments = [
       {
