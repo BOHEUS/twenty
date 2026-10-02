@@ -11,6 +11,8 @@ import {
   tipTapDocumentToMarkdown,
 } from 'twenty-shared/utils';
 
+import { sanitizeRichTextDocumentReferences } from 'src/engine/core-modules/record-transformer/utils/sanitize-rich-text-document-references.util';
+
 // Until the blocknote subfield is removed, every write stores all three
 // formats so readers on either editor see the same content. A TipTap input
 // wins; a genuine BlockNote input is kept as sent so the BlockNote editor
@@ -31,7 +33,10 @@ export const transformRichTextValue = (
     return { blocknote: null, markdown: null, tiptap: null };
   }
 
-  const { document, source } = normalizedDocument;
+  const { source } = normalizedDocument;
+  const document = sanitizeRichTextDocumentReferences(
+    normalizedDocument.document,
+  );
 
   const isGenuineBlockNoteInput =
     source === 'blocknote' &&
