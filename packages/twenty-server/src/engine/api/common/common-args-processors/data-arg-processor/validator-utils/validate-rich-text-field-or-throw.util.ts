@@ -2,8 +2,11 @@ import { inspect } from 'util';
 
 import { msg } from '@lingui/core/macro';
 import { isNonEmptyString, isNull } from '@sniptt/guards';
-import { isSafeUrl } from 'twenty-shared/utils';
+import { isDefined } from 'twenty-shared/utils';
 
+import { type RichTextDocumentViolation } from 'src/engine/api/common/common-args-processors/data-arg-processor/types/rich-text-document-violation.type';
+import { findBlockNoteDocumentViolation } from 'src/engine/api/common/common-args-processors/data-arg-processor/utils/find-blocknote-document-violation.util';
+import { findTipTapDocumentViolation } from 'src/engine/api/common/common-args-processors/data-arg-processor/utils/find-tiptap-document-violation.util';
 import { validateRawJsonFieldOrThrow } from 'src/engine/api/common/common-args-processors/data-arg-processor/validator-utils/validate-raw-json-field-or-throw.util';
 import { validateTextFieldOrThrow } from 'src/engine/api/common/common-args-processors/data-arg-processor/validator-utils/validate-text-field-or-throw.util';
 import {
@@ -11,28 +14,41 @@ import {
   CommonQueryRunnerExceptionCode,
 } from 'src/engine/api/common/common-query-runners/errors/common-query-runner.exception';
 
-const URL_VALUE_PATTERN = /"(?:url|href)"\s*:\s*"([^"]*)"/gi;
-
-const hasDangerousUrl = (json: string): boolean => {
-  URL_VALUE_PATTERN.lastIndex = 0;
-
-  let match;
-
-  while ((match = URL_VALUE_PATTERN.exec(json)) !== null) {
-    const url = match[1].trim();
-
-    if (url.length > 0 && !isSafeUrl(url)) {
-      return true;
-    }
-  }
-
-  return false;
+type RichTextFieldValue = {
+  blocknote?: string | null;
+  markdown?: string | null;
+  tiptap?: string | null;
 };
 
-const validateBlocknoteFieldOrThrow = (
-  value: unknown,
-  fieldName: string,
-): string | null => {
+const RICH_TEXT_DOCUMENT_VIOLATION_MESSAGES: Record<
+  RichTextDocumentViolation,
+  string
+> = {
+  invalidShape: 'has an invalid structure',
+  unsupportedNode: 'contains a node type that is not allowed',
+  unsupportedMark: 'contains a mark type that is not allowed',
+  unsafeUrl: 'contains a URL with a dangerous protocol',
+  tooDeep: 'is nested too deeply',
+  tooLarge: 'contains too many nodes',
+};
+
+const throwInvalidRichTextValue = (message: string): never => {
+  throw new CommonQueryRunnerException(
+    message,
+    CommonQueryRunnerExceptionCode.INVALID_ARGS_DATA,
+    { userFriendlyMessage: msg`Invalid value for rich text.` },
+  );
+};
+
+const validateSerializedDocumentOrThrow = ({
+  value,
+  fieldName,
+  findViolation,
+}: {
+  value: unknown;
+  fieldName: string;
+  findViolation: (document: unknown) => RichTextDocumentViolation | undefined;
+}): string | null => {
   const textValue = validateTextFieldOrThrow(value, fieldName);
 
   if (!isNonEmptyString(textValue)) return textValue;
@@ -42,24 +58,22 @@ const validateBlocknoteFieldOrThrow = (
   try {
     parsed = JSON.parse(textValue);
   } catch {
-    throw new CommonQueryRunnerException(
-      `Invalid blocknote value for field "${fieldName}" - must contain valid JSON`,
-      CommonQueryRunnerExceptionCode.INVALID_ARGS_DATA,
-      { userFriendlyMessage: msg`Invalid value for rich text.` },
+    return throwInvalidRichTextValue(
+      `Invalid value for field "${fieldName}" - must contain valid JSON`,
     );
   }
 
-  if (!Array.isArray(parsed)) {
-    throw new CommonQueryRunnerException(
-      `Invalid blocknote value for field "${fieldName}" - must be a JSON array of blocks`,
-      CommonQueryRunnerExceptionCode.INVALID_ARGS_DATA,
-      { userFriendlyMessage: msg`Invalid value for rich text.` },
-    );
+  const violation = findViolation(parsed);
+
+  if (!isDefined(violation)) {
+    return textValue;
   }
 
-  if (hasDangerousUrl(textValue)) {
+  const message = `Invalid value for field "${fieldName}" - ${RICH_TEXT_DOCUMENT_VIOLATION_MESSAGES[violation]}`;
+
+  if (violation === 'unsafeUrl') {
     throw new CommonQueryRunnerException(
-      `Dangerous URL protocol in blocknote content for field "${fieldName}"`,
+      message,
       CommonQueryRunnerExceptionCode.INVALID_ARGS_DATA,
       {
         userFriendlyMessage: msg`Content contains a URL with a dangerous protocol.`,
@@ -67,30 +81,37 @@ const validateBlocknoteFieldOrThrow = (
     );
   }
 
-  return textValue;
+  return throwInvalidRichTextValue(message);
 };
 
 export const validateRichTextFieldOrThrow = (
   value: unknown,
   fieldName: string,
-): {
-  blocknote?: string | null;
-  markdown?: string | null;
-} | null => {
+): RichTextFieldValue | null => {
   const preValidatedValue = validateRawJsonFieldOrThrow(value, fieldName);
 
   if (isNull(preValidatedValue)) return null;
 
   for (const [subField, subFieldValue] of Object.entries(preValidatedValue)) {
+    const subFieldName = `${fieldName}.${subField}`;
+
     switch (subField) {
       case 'blocknote':
-        validateBlocknoteFieldOrThrow(
-          subFieldValue,
-          `${fieldName}.${subField}`,
-        );
+        validateSerializedDocumentOrThrow({
+          value: subFieldValue,
+          fieldName: subFieldName,
+          findViolation: findBlockNoteDocumentViolation,
+        });
+        break;
+      case 'tiptap':
+        validateSerializedDocumentOrThrow({
+          value: subFieldValue,
+          fieldName: subFieldName,
+          findViolation: findTipTapDocumentViolation,
+        });
         break;
       case 'markdown':
-        validateTextFieldOrThrow(subFieldValue, `${fieldName}.${subField}`);
+        validateTextFieldOrThrow(subFieldValue, subFieldName);
         break;
       default:
         throw new CommonQueryRunnerException(
@@ -101,8 +122,5 @@ export const validateRichTextFieldOrThrow = (
     }
   }
 
-  return value as {
-    blocknote?: string | null;
-    markdown?: string | null;
-  };
+  return value as RichTextFieldValue;
 };

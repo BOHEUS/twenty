@@ -115,7 +115,7 @@ export class PageLayoutWidgetService {
     try {
       return {
         ...configuration,
-        body: await transformRichTextValue(configuration.body),
+        body: transformRichTextValue(configuration.body),
       };
     } catch {
       return configuration;

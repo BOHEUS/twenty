@@ -13,7 +13,11 @@ const richTextLeafFilter = new GraphQLInputObjectType({
 export const RichTextFilterType = new GraphQLInputObjectType({
   name: 'RichTextFilter',
   fields: {
-    blocknote: { type: richTextLeafFilter },
+    blocknote: {
+      type: richTextLeafFilter,
+      deprecationReason: 'Filter on markdown instead.',
+    },
     markdown: { type: richTextLeafFilter },
+    tiptap: { type: richTextLeafFilter },
   },
 });

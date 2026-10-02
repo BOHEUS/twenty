@@ -7,12 +7,21 @@ export const richTextCompositeType: CompositeType = {
   properties: [
     {
       name: 'blocknote',
+      description:
+        'Deprecated: BlockNote JSON, derived from tiptap. Use tiptap or markdown instead.',
       type: FieldMetadataType.TEXT,
       hidden: false,
       isRequired: false,
     },
     {
       name: 'markdown',
+      type: FieldMetadataType.TEXT,
+      hidden: false,
+      isRequired: false,
+    },
+    {
+      name: 'tiptap',
+      description: 'TipTap JSON document, the source of truth for rich text.',
       type: FieldMetadataType.TEXT,
       hidden: false,
       isRequired: false,
@@ -24,6 +33,7 @@ export const richTextCompositeType: CompositeType = {
 export const richTextValueSchema = z.object({
   blocknote: z.string().nullable().optional(),
   markdown: z.string().nullable(),
+  tiptap: z.string().nullable().optional(),
 });
 
 export type RichTextMetadata = z.infer<typeof richTextValueSchema>;

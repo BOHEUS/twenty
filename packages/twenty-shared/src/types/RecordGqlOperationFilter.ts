@@ -169,6 +169,7 @@ export type RichTextLeafFilter = {
 export type RichTextFilter = {
   blocknote?: RichTextLeafFilter;
   markdown?: RichTextLeafFilter;
+  tiptap?: RichTextLeafFilter;
 };
 
 export type TSVectorFilter = {
