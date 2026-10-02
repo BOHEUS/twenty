@@ -43,10 +43,12 @@ const throwInvalidRichTextValue = (message: string): never => {
 const validateSerializedDocumentOrThrow = ({
   value,
   fieldName,
+  documentFormat,
   findViolation,
 }: {
   value: unknown;
   fieldName: string;
+  documentFormat: 'blocknote' | 'tiptap';
   findViolation: (document: unknown) => RichTextDocumentViolation | undefined;
 }): string | null => {
   const textValue = validateTextFieldOrThrow(value, fieldName);
@@ -59,7 +61,7 @@ const validateSerializedDocumentOrThrow = ({
     parsed = JSON.parse(textValue);
   } catch {
     return throwInvalidRichTextValue(
-      `Invalid value for field "${fieldName}" - must contain valid JSON`,
+      `Invalid ${documentFormat} value for field "${fieldName}" - must contain valid JSON`,
     );
   }
 
@@ -69,7 +71,7 @@ const validateSerializedDocumentOrThrow = ({
     return textValue;
   }
 
-  const message = `Invalid value for field "${fieldName}" - ${RICH_TEXT_DOCUMENT_VIOLATION_MESSAGES[violation]}`;
+  const message = `Invalid ${documentFormat} value for field "${fieldName}" - ${RICH_TEXT_DOCUMENT_VIOLATION_MESSAGES[violation]}`;
 
   if (violation === 'unsafeUrl') {
     throw new CommonQueryRunnerException(
@@ -100,6 +102,7 @@ export const validateRichTextFieldOrThrow = (
         validateSerializedDocumentOrThrow({
           value: subFieldValue,
           fieldName: subFieldName,
+          documentFormat: 'blocknote',
           findViolation: findBlockNoteDocumentViolation,
         });
         break;
@@ -107,6 +110,7 @@ export const validateRichTextFieldOrThrow = (
         validateSerializedDocumentOrThrow({
           value: subFieldValue,
           fieldName: subFieldName,
+          documentFormat: 'tiptap',
           findViolation: findTipTapDocumentViolation,
         });
         break;
