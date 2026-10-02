@@ -16,7 +16,6 @@ export type FieldMetadataDefaultValueNowFunction =
   typeof fieldMetadataDefaultValueFunctionName.NOW;
 
 export type FieldMetadataDefaultValueRichText = {
-  blocknote: string | null;
   markdown: string | null;
   tiptap?: string | null;
 };

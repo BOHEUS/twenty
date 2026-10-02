@@ -1,13 +1,17 @@
-// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+// Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`Create input validation - RICH_TEXT Gql create input - failure RICH_TEXT - should fail with : {"richTextField":"not-a-rich-text"} 1`] = `"Invalid object value 'not-a-rich-text' for field "richTextField""`;
 
-exports[`Create input validation - RICH_TEXT Gql create input - failure RICH_TEXT - should fail with : {"richTextField":{"blocknote":"[{\\"id\\":\\"1\\",\\"type\\":\\"paragraph\\",\\"props\\":{},\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"test\\"},\\"children\\":[]}]"}} 1`] = `"Invalid blocknote value for field "richTextField.blocknote" - must contain valid JSON"`;
+exports[`Create input validation - RICH_TEXT Gql create input - failure RICH_TEXT - should fail with : {"richTextField":{"blocknote":"[]"}} 1`] = `"Invalid subfield 'blocknote' for rich text field "richTextField""`;
 
-exports[`Create input validation - RICH_TEXT Gql create input - failure RICH_TEXT - should fail with : {"richTextField":{"blocknote":"invalid-json"}} 1`] = `"Invalid blocknote value for field "richTextField.blocknote" - must contain valid JSON"`;
+exports[`Create input validation - RICH_TEXT Gql create input - failure RICH_TEXT - should fail with : {"richTextField":{"tiptap":"[{\\"type\\":\\"paragraph\\"}]"}} 1`] = `"Invalid tiptap value for field "richTextField.tiptap" - has an invalid structure"`;
+
+exports[`Create input validation - RICH_TEXT Gql create input - failure RICH_TEXT - should fail with : {"richTextField":{"tiptap":"invalid-json"}} 1`] = `"Invalid tiptap value for field "richTextField.tiptap" - must contain valid JSON"`;
 
 exports[`Create input validation - RICH_TEXT Rest create input - failure RICH_TEXT - should fail with : {"richTextField":"not-a-rich-text"} 1`] = `"["Invalid object value 'not-a-rich-text' for field \\"richTextField\\""]"`;
 
-exports[`Create input validation - RICH_TEXT Rest create input - failure RICH_TEXT - should fail with : {"richTextField":{"blocknote":"[{\\"id\\":\\"1\\",\\"type\\":\\"paragraph\\",\\"props\\":{},\\"content\\":[{\\"type\\":\\"text\\",\\"text\\":\\"test\\"},\\"children\\":[]}]"}} 1`] = `"["Invalid blocknote value for field \\"richTextField.blocknote\\" - must contain valid JSON"]"`;
+exports[`Create input validation - RICH_TEXT Rest create input - failure RICH_TEXT - should fail with : {"richTextField":{"blocknote":"[]"}} 1`] = `"["Invalid subfield 'blocknote' for rich text field \\"richTextField\\""]"`;
 
-exports[`Create input validation - RICH_TEXT Rest create input - failure RICH_TEXT - should fail with : {"richTextField":{"blocknote":"invalid-json"}} 1`] = `"["Invalid blocknote value for field \\"richTextField.blocknote\\" - must contain valid JSON"]"`;
+exports[`Create input validation - RICH_TEXT Rest create input - failure RICH_TEXT - should fail with : {"richTextField":{"tiptap":"[{\\"type\\":\\"paragraph\\"}]"}} 1`] = `"["Invalid tiptap value for field \\"richTextField.tiptap\\" - has an invalid structure"]"`;
+
+exports[`Create input validation - RICH_TEXT Rest create input - failure RICH_TEXT - should fail with : {"richTextField":{"tiptap":"invalid-json"}} 1`] = `"["Invalid tiptap value for field \\"richTextField.tiptap\\" - must contain valid JSON"]"`;

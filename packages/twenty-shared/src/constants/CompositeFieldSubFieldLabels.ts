@@ -47,7 +47,6 @@ export const COMPOSITE_FIELD_SUB_FIELD_LABELS: {
     context: 'Context',
   },
   [FieldMetadataType.RICH_TEXT]: {
-    blocknote: 'BlockNote',
     markdown: 'Markdown',
     tiptap: 'TipTap',
   },

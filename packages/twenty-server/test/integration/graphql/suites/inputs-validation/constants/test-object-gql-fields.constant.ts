@@ -61,7 +61,7 @@ export const TEST_OBJECT_GQL_FIELDS = `
     rawJsonField
     arrayField
     richTextField {
-        blocknote
+        tiptap
         markdown
     }
 `;

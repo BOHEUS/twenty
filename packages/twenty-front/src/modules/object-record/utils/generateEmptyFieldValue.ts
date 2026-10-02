@@ -97,8 +97,8 @@ export const generateEmptyFieldValue = ({
     }
     case FieldMetadataType.RICH_TEXT: {
       return {
-        blocknote: null,
         markdown: null,
+        tiptap: null,
       };
     }
     case FieldMetadataType.ACTOR: {

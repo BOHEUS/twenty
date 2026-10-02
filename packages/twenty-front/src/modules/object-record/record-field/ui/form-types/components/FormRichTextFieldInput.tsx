@@ -1,4 +1,5 @@
 import { FormAdvancedTextFieldInput } from '@/advanced-text-editor/components/FormAdvancedTextFieldInput';
+import { buildRichTextFieldValueFromTiptap } from '@/object-record/record-field/ui/utils/buildRichTextFieldValueFromTiptap';
 import { RECORD_RICH_TEXT_EDITOR_PROFILE } from '@/object-record/record-field/ui/form-types/constants/RecordRichTextEditorProfile';
 import { type VariablePickerComponent } from '@/object-record/record-field/ui/form-types/types/VariablePickerComponent';
 import { type FieldRichTextValue } from '@/object-record/record-field/ui/types/FieldMetadata';
@@ -26,7 +27,7 @@ export const FormRichTextFieldInput = ({
   VariablePicker,
 }: FormRichTextFieldInputProps) => {
   const handleChange = (value: string) => {
-    onChange({ tiptap: value, blocknote: null, markdown: null });
+    onChange(buildRichTextFieldValueFromTiptap(value));
   };
 
   return (
@@ -34,11 +35,7 @@ export const FormRichTextFieldInput = ({
       label={label}
       error={error}
       hint={hint}
-      defaultValue={
-        defaultValue?.tiptap ??
-        defaultValue?.blocknote ??
-        defaultValue?.markdown
-      }
+      defaultValue={defaultValue?.tiptap ?? defaultValue?.markdown}
       placeholder={placeholder}
       onChange={handleChange}
       readonly={readonly}

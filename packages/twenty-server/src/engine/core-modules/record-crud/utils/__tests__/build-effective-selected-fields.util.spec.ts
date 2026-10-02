@@ -82,7 +82,7 @@ const defaultSelectedFields: CommonSelectedFields = {
   name: true,
   email: true,
   searchVector: true,
-  body: { blocknote: true, markdown: true },
+  body: { tiptap: true, markdown: true },
 };
 
 describe('buildEffectiveSelectedFields', () => {
@@ -249,8 +249,8 @@ describe('buildEffectiveSelectedFields', () => {
     });
   });
 
-  describe('blocknote sub-field exclusion for RICH_TEXT fields', () => {
-    it('should strip blocknote from RICH_TEXT field sub-fields', () => {
+  describe('tiptap sub-field exclusion for RICH_TEXT fields', () => {
+    it('should strip tiptap from RICH_TEXT field sub-fields', () => {
       const { effectiveSelectedFields } = buildEffectiveSelectedFields({
         select: ['*'],
         filter: undefined,
@@ -261,7 +261,7 @@ describe('buildEffectiveSelectedFields', () => {
         flatFieldMetadataMaps: defaultFlatFieldMetadataMaps,
         selectedFields: {
           id: true,
-          richText: { blocknote: true, markdown: true },
+          richText: { tiptap: true, markdown: true },
         },
         selectableRelationFields: {},
         objectsPermissions: {},
@@ -270,11 +270,11 @@ describe('buildEffectiveSelectedFields', () => {
       const richTextFields =
         effectiveSelectedFields.richText as CommonSelectedFields;
 
-      expect(richTextFields).not.toHaveProperty('blocknote');
+      expect(richTextFields).not.toHaveProperty('tiptap');
       expect(richTextFields).toHaveProperty('markdown');
     });
 
-    it('should keep blocknote when the field type is not RICH_TEXT', () => {
+    it('should keep tiptap when the field type is not RICH_TEXT', () => {
       const nonRichTextMaps = buildFlatFieldMetadataMaps([
         { id: FIELD_IDS.name, name: 'name', type: FieldMetadataType.TEXT },
         {
@@ -299,7 +299,7 @@ describe('buildEffectiveSelectedFields', () => {
         selectedFields: {
           id: true,
           name: true,
-          richText: { blocknote: true, markdown: true },
+          richText: { tiptap: true, markdown: true },
         },
         selectableRelationFields: {},
         objectsPermissions: {},
@@ -308,7 +308,7 @@ describe('buildEffectiveSelectedFields', () => {
       const richTextFields =
         effectiveSelectedFields.richText as CommonSelectedFields;
 
-      expect(richTextFields).toHaveProperty('blocknote');
+      expect(richTextFields).toHaveProperty('tiptap');
       expect(richTextFields).toHaveProperty('markdown');
     });
   });

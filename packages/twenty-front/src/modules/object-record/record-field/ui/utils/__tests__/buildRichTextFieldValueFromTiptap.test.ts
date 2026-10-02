@@ -1,33 +1,27 @@
 import { buildRichTextFieldValueFromTiptap } from '@/object-record/record-field/ui/utils/buildRichTextFieldValueFromTiptap';
 
 describe('buildRichTextFieldValueFromTiptap', () => {
-  it('should derive the BlockNote value from the TipTap document', () => {
+  it('should derive markdown from the TipTap document', () => {
     const tiptap = JSON.stringify({
       type: 'doc',
       content: [
-        { type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] },
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: 'Hello' }],
+        },
       ],
     });
 
     expect(buildRichTextFieldValueFromTiptap(tiptap)).toEqual({
       tiptap,
-      blocknote: JSON.stringify([
-        {
-          type: 'paragraph',
-          props: {},
-          content: [{ type: 'text', text: 'Hello', styles: {} }],
-          children: [],
-        },
-      ]),
-      markdown: null,
+      markdown: '## Hello',
     });
   });
 
-  it('should leave blocknote empty when the document is invalid', () => {
-    expect(buildRichTextFieldValueFromTiptap('not json')).toEqual({
-      tiptap: 'not json',
-      blocknote: null,
-      markdown: null,
-    });
+  it('should derive an empty markdown from an empty document', () => {
+    expect(
+      buildRichTextFieldValueFromTiptap('{"type":"doc"}').markdown,
+    ).toEqual('');
   });
 });

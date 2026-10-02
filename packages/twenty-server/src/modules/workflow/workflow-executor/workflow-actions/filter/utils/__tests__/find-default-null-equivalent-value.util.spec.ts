@@ -176,12 +176,12 @@ describe('findDefaultNullEquivalentValue', () => {
   });
 
   describe('RICH_TEXT', () => {
-    it('should return undefined for blocknote', () => {
+    it('should return undefined for tiptap', () => {
       expect(
         findDefaultNullEquivalentValue({
           value: {},
           fieldMetadataType: FieldMetadataType.RICH_TEXT,
-          key: 'blocknote',
+          key: 'tiptap',
         }),
       ).toBe(undefined);
     });

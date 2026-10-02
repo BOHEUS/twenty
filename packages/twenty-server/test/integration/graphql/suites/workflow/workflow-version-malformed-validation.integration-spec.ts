@@ -158,7 +158,7 @@ describe('Workflow version malformed validation (e2e)', () => {
       workflowVersionId,
       stepWithInput({
         objectName: 'note',
-        objectRecord: { bodyV2: { markdown: 'hello', blocknote: null } },
+        objectRecord: { bodyV2: { markdown: 'hello' } },
       }),
     );
 

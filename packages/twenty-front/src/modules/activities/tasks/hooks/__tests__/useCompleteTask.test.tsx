@@ -13,7 +13,7 @@ const task: Task = {
   status: 'DONE',
   title: 'Test',
   bodyV2: {
-    blocknote: 'Test',
+    tiptap: null,
     markdown: 'Test',
   },
   dueAt: '2024-03-15T07:33:14.212Z',
@@ -48,7 +48,7 @@ const mocks: MockedResponse[] = [
           assigneeId: '123',
           attachments: { edges: [] },
           bodyV2: {
-            blocknote: 'Test',
+            tiptap: null,
             markdown: 'Test',
           },
           createdAt: '2024-03-15T07:33:14.212Z',

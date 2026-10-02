@@ -49,9 +49,15 @@ const NOTE_WIDGET = createDefaultStandaloneRichTextWidget({
   pageLayoutTabId: 'tab-1',
   title: 'Note',
   body: {
-    blocknote: JSON.stringify([
-      { id: 'instructions', type: 'paragraph', content: 'Shared instructions' },
-    ]),
+    tiptap: JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Shared instructions' }],
+        },
+      ],
+    }),
     markdown: null,
   },
   position: { layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST, index: 0 },
@@ -272,7 +278,7 @@ export const SelectAndFormatText: Story = {
       expect(
         jotaiStore.get(DRAFT_ATOM).tabs[0].widgets[0].configuration,
       ).toMatchObject({
-        body: { blocknote: expect.stringContaining('"bold":true') },
+        body: { tiptap: expect.stringContaining('"type":"bold"') },
       }),
     );
     if (args.layoutType === PageLayoutType.RECORD_PAGE) {

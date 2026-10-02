@@ -30,7 +30,7 @@ const mockActivity = {
   assigneeId: '1',
   id: '234',
   bodyV2: {
-    blocknote: 'My Body',
+    tiptap: null,
     markdown: 'My Body',
   },
   assignee: null,

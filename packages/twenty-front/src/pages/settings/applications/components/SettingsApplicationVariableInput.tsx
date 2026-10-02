@@ -49,18 +49,17 @@ const parseRichTextValue = (value: string): FieldRichTextValue => {
     const parsed = JSON.parse(value) as Partial<FieldRichTextValue>;
 
     if (isDefined(parsed) && typeof parsed === 'object') {
-      const blocknote =
-        typeof parsed.blocknote === 'string' ? parsed.blocknote : null;
+      const tiptap = typeof parsed.tiptap === 'string' ? parsed.tiptap : null;
       const markdown =
         typeof parsed.markdown === 'string' ? parsed.markdown : null;
 
-      return { blocknote, markdown };
+      return { tiptap, markdown };
     }
   } catch {
-    return { blocknote: null, markdown: value === '' ? null : value };
+    return { markdown: value === '' ? null : value };
   }
 
-  return { blocknote: null, markdown: value === '' ? null : value };
+  return { markdown: value === '' ? null : value };
 };
 
 export const SettingsApplicationVariableInput = ({

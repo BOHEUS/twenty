@@ -11,20 +11,20 @@ export const nullifyEmptyRichTextDefaultValue = (
   }
 
   const v = defaultValue as {
-    blocknote?: string | null;
     markdown?: string | null;
+    tiptap?: string | null;
   };
 
-  const blocknote = isNullEquivalentTextDefaultValue(v.blocknote)
-    ? null
-    : (v.blocknote ?? null);
   const markdown = isNullEquivalentTextDefaultValue(v.markdown)
     ? null
     : (v.markdown ?? null);
+  const tiptap = isNullEquivalentTextDefaultValue(v.tiptap)
+    ? null
+    : (v.tiptap ?? null);
 
-  if (blocknote === null && markdown === null) {
+  if (markdown === null && tiptap === null) {
     return null;
   }
 
-  return { blocknote, markdown };
+  return { markdown, tiptap };
 };

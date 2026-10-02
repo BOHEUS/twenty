@@ -105,7 +105,7 @@ describe('Workflow AI tool validation (e2e)', () => {
 
   it('creates the workflow when the rich text is a valid object', async () => {
     const result = await createCompleteWorkflow(
-      buildCreateRecordStep({ bodyV2: { markdown: 'hello', blocknote: null } }),
+      buildCreateRecordStep({ bodyV2: { markdown: 'hello' } }),
     );
 
     const payload = parsePayload(result);

@@ -329,7 +329,7 @@ ${mapObjectMetadataToGraphQLQuery({
   if (fieldType === FieldMetadataType.RICH_TEXT) {
     return `${gqlField}
 {
-  blocknote
+  tiptap
   markdown
 }`;
   }

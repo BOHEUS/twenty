@@ -98,7 +98,7 @@ export const WIDGET_CONFIGURATION_GQL_FIELDS = `
   ... on StandaloneRichTextConfiguration {
     configurationType
     body {
-      blocknote
+      tiptap
       markdown
     }
   }

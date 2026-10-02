@@ -507,17 +507,6 @@ export const SETTINGS_COMPOSITE_FIELD_TYPE_CONFIGS = {
       {
         subFieldName:
           COMPOSITE_FIELD_TYPE_SUB_FIELDS_NAMES[FieldMetadataType.RICH_TEXT]
-            .blocknote,
-        subFieldLabel:
-          COMPOSITE_FIELD_SUB_FIELD_LABELS[FieldMetadataType.RICH_TEXT]
-            .blocknote,
-        isImportable: false,
-        isFilterable: false,
-        isIncludedInUniqueConstraint: false,
-      },
-      {
-        subFieldName:
-          COMPOSITE_FIELD_TYPE_SUB_FIELDS_NAMES[FieldMetadataType.RICH_TEXT]
             .markdown,
         subFieldLabel:
           COMPOSITE_FIELD_SUB_FIELD_LABELS[FieldMetadataType.RICH_TEXT]
@@ -539,15 +528,18 @@ export const SETTINGS_COMPOSITE_FIELD_TYPE_CONFIGS = {
     ],
     exampleValues: [
       {
-        blocknote: '[{"type":"heading","content":"Hello"}]',
+        tiptap:
+          '{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"Hello"}]}]}',
         markdown: '# Hello',
       },
       {
-        blocknote: '[{"type":"heading","content":"Hello World"}]',
+        tiptap:
+          '{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"Hello World"}]}]}',
         markdown: '# Hello World',
       },
       {
-        blocknote: '[{"type":"heading","content":"Hello Again"}]',
+        tiptap:
+          '{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"Hello Again"}]}]}',
         markdown: '# Hello Again',
       },
     ],

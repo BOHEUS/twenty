@@ -233,15 +233,21 @@ export const failingCreateInputByFieldMetadataType: {
     {
       input: {
         richTextField: {
-          blocknote: 'invalid-json',
+          tiptap: 'invalid-json',
         },
       },
     },
     {
       input: {
         richTextField: {
-          blocknote:
-            '[{"id":"1","type":"paragraph","props":{},"content":[{"type":"text","text":"test"},"children":[]}]',
+          tiptap: '[{"type":"paragraph"}]',
+        },
+      },
+    },
+    {
+      input: {
+        richTextField: {
+          blocknote: '[]',
         },
       },
     },

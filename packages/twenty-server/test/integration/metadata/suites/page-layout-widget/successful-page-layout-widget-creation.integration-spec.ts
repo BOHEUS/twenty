@@ -366,7 +366,7 @@ describe('Page layout widget creation should succeed', () => {
     },
   );
 
-  it('should store a tiptap rich text body as blocknote blocks', async () => {
+  it('should store a tiptap rich text body and derive its markdown', async () => {
     const { data } = await createOnePageLayoutWidget({
       expectToFail: false,
       input: {
@@ -385,12 +385,11 @@ describe('Page layout widget creation should succeed', () => {
 
     expect(body.markdown).toBe('Checklist:\n\n- call the client');
 
-    const storedBlocks = JSON.parse(body.blocknote ?? '[]');
-
-    expect(storedBlocks.map((block: { type: string }) => block.type)).toEqual([
-      'paragraph',
-      'bulletListItem',
-    ]);
+    expect(
+      JSON.parse(body.tiptap ?? '{}').content.map(
+        (node: { type: string }) => node.type,
+      ),
+    ).toEqual(['paragraph', 'bulletList']);
   });
 
   it.each(eachTestingContextFilter(graphTestCases))(

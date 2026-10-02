@@ -46,14 +46,14 @@ describe('getRecordCrudRichTextIssues', () => {
 
   it('flags arrays and malformed objects', () => {
     expect(getIssues({ body: ['x'] })).toHaveLength(1);
-    expect(getIssues({ body: { blocknote: 123 } })).toHaveLength(1);
+    expect(getIssues({ body: { tiptap: 123 } })).toHaveLength(1);
     expect(getIssues({ body: { unexpectedKey: 'x' } })).toHaveLength(1);
   });
 
   it('accepts valid rich text values and ignores non-rich-text fields', () => {
-    expect(getIssues({ body: { blocknote: '[]', markdown: null } })).toEqual(
-      [],
-    );
+    expect(
+      getIssues({ body: { tiptap: '{"type":"doc"}', markdown: null } }),
+    ).toEqual([]);
     expect(getIssues({ body: { markdown: 'text' } })).toEqual([]);
     expect(getIssues({ body: null })).toEqual([]);
     expect(getIssues({ title: 'a plain string' })).toEqual([]);

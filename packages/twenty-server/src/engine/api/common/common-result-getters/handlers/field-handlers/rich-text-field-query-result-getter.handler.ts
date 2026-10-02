@@ -18,25 +18,6 @@ import { type FileUrlService } from 'src/engine/core-modules/file/file-url/file-
 import { extractFileIdFromUrl } from 'src/engine/core-modules/file/files-field/utils/extract-file-id-from-url.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 
-// oxlint-disable-next-line typescript/no-explicit-any
-type RichTextBlock = Record<string, any>;
-
-const parseBlocknoteJsonSafely = (
-  blocknoteJson: string,
-): RichTextBlock[] | null => {
-  try {
-    const parsed = JSON.parse(blocknoteJson);
-
-    if (!Array.isArray(parsed)) {
-      return null;
-    }
-
-    return parsed;
-  } catch {
-    return null;
-  }
-};
-
 export class RichTextFieldQueryResultGetterHandler implements QueryResultGetterHandlerInterface {
   constructor(private readonly fileUrlService: FileUrlService) {}
 
@@ -62,34 +43,11 @@ export class RichTextFieldQueryResultGetterHandler implements QueryResultGetterH
 
       record[field.name] = {
         ...fieldValue,
-        ...(await this.signBlocknoteValue(fieldValue?.blocknote, workspaceId)),
         ...(await this.signTipTapValue(fieldValue?.tiptap, workspaceId)),
       };
     }
 
     return record;
-  }
-
-  private async signBlocknoteValue(
-    blocknoteJson: unknown,
-    workspaceId: string,
-  ): Promise<{ blocknote?: string }> {
-    if (!isNonEmptyString(blocknoteJson)) {
-      return {};
-    }
-
-    const blocknoteBlocks = parseBlocknoteJsonSafely(blocknoteJson);
-
-    if (!isDefined(blocknoteBlocks)) {
-      return {};
-    }
-
-    const signedBlocks = await this.signBlocknoteImageUrls(
-      blocknoteBlocks,
-      workspaceId,
-    );
-
-    return { blocknote: JSON.stringify(signedBlocks) };
   }
 
   private async signTipTapValue(
@@ -161,28 +119,5 @@ export class RichTextFieldQueryResultGetterHandler implements QueryResultGetterH
         : {}),
       ...(isDefined(signedContent) ? { content: signedContent } : {}),
     };
-  };
-
-  signBlocknoteImageUrls = async (
-    blocknoteBlocks: RichTextBlock[],
-    workspaceId: string,
-  ): Promise<RichTextBlock[]> => {
-    return Promise.all(
-      blocknoteBlocks.map(async (block: RichTextBlock) => {
-        const url = await this.signFileUrl(block.props?.url, workspaceId);
-
-        if (!isDefined(url)) {
-          return block;
-        }
-
-        return {
-          ...block,
-          props: {
-            ...block.props,
-            url,
-          },
-        };
-      }),
-    );
   };
 }

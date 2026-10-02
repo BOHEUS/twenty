@@ -4,7 +4,7 @@ type TaskDataSeed = {
   id: string;
   position: number;
   title: string;
-  bodyV2Blocknote: string;
+  bodyV2Tiptap: string;
   bodyV2Markdown: string;
   status: string;
   dueAt: string | null;
@@ -21,7 +21,7 @@ export const TASK_DATA_SEED_COLUMNS: (keyof TaskDataSeed)[] = [
   'id',
   'position',
   'title',
-  'bodyV2Blocknote',
+  'bodyV2Tiptap',
   'bodyV2Markdown',
   'status',
   'dueAt',
@@ -190,19 +190,15 @@ const GENERATE_TASK_SEEDS = (): TaskDataSeed[] => {
       id: TASK_DATA_SEED_IDS[`ID_${INDEX}`],
       position: INDEX,
       title: TEMPLATE.title,
-      bodyV2Blocknote: JSON.stringify([
-        {
-          id: `block-${INDEX}`,
-          type: 'paragraph',
-          props: {
-            textColor: 'default',
-            backgroundColor: 'default',
-            textAlignment: 'left',
+      bodyV2Tiptap: JSON.stringify({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: TEMPLATE.body }],
           },
-          content: [{ type: 'text', text: TEMPLATE.body, styles: {} }],
-          children: [],
-        },
-      ]),
+        ],
+      }),
       bodyV2Markdown: TEMPLATE.body,
       status: TEMPLATE.status,
       dueAt: FORMAT_DUE_DATE(TEMPLATE.daysFromNow),
@@ -225,19 +221,15 @@ const GENERATE_TASK_SEEDS = (): TaskDataSeed[] => {
       id: TASK_DATA_SEED_IDS[`ID_${INDEX}`],
       position: INDEX,
       title: TEMPLATE.title,
-      bodyV2Blocknote: JSON.stringify([
-        {
-          id: `block-${INDEX}`,
-          type: 'paragraph',
-          props: {
-            textColor: 'default',
-            backgroundColor: 'default',
-            textAlignment: 'left',
+      bodyV2Tiptap: JSON.stringify({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: TEMPLATE.body }],
           },
-          content: [{ type: 'text', text: TEMPLATE.body, styles: {} }],
-          children: [],
-        },
-      ]),
+        ],
+      }),
       bodyV2Markdown: TEMPLATE.body,
       status: TEMPLATE.status,
       dueAt: FORMAT_DUE_DATE(TEMPLATE.daysFromNow),

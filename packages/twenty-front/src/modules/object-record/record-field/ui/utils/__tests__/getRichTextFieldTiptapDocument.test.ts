@@ -12,26 +12,13 @@ describe('getRichTextFieldTiptapDocument', () => {
     expect(
       getRichTextFieldTiptapDocument({
         tiptap: JSON.stringify(document),
-        blocknote: '[]',
         markdown: 'old',
       }),
     ).toEqual(document);
   });
 
-  it('should convert values written before the backfill', () => {
-    expect(
-      getRichTextFieldTiptapDocument({
-        blocknote: JSON.stringify([
-          {
-            type: 'paragraph',
-            props: {},
-            content: [{ type: 'text', text: 'legacy', styles: {} }],
-            children: [],
-          },
-        ]),
-        markdown: null,
-      }),
-    ).toEqual({
+  it('should parse markdown-only values', () => {
+    expect(getRichTextFieldTiptapDocument({ markdown: 'legacy' })).toEqual({
       type: 'doc',
       content: [
         { type: 'paragraph', content: [{ type: 'text', text: 'legacy' }] },
@@ -41,8 +28,6 @@ describe('getRichTextFieldTiptapDocument', () => {
 
   it('should return undefined for empty values', () => {
     expect(getRichTextFieldTiptapDocument(null)).toBeUndefined();
-    expect(
-      getRichTextFieldTiptapDocument({ blocknote: null, markdown: null }),
-    ).toBeUndefined();
+    expect(getRichTextFieldTiptapDocument({ markdown: null })).toBeUndefined();
   });
 });

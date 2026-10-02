@@ -5,7 +5,6 @@ import { isNonEmptyString, isNull } from '@sniptt/guards';
 import { isDefined } from 'twenty-shared/utils';
 
 import { type RichTextDocumentViolation } from 'src/engine/api/common/common-args-processors/data-arg-processor/types/rich-text-document-violation.type';
-import { findBlockNoteDocumentViolation } from 'src/engine/api/common/common-args-processors/data-arg-processor/utils/find-blocknote-document-violation.util';
 import { findTipTapDocumentViolation } from 'src/engine/api/common/common-args-processors/data-arg-processor/utils/find-tiptap-document-violation.util';
 import { validateRawJsonFieldOrThrow } from 'src/engine/api/common/common-args-processors/data-arg-processor/validator-utils/validate-raw-json-field-or-throw.util';
 import { validateTextFieldOrThrow } from 'src/engine/api/common/common-args-processors/data-arg-processor/validator-utils/validate-text-field-or-throw.util';
@@ -15,7 +14,6 @@ import {
 } from 'src/engine/api/common/common-query-runners/errors/common-query-runner.exception';
 
 type RichTextFieldValue = {
-  blocknote?: string | null;
   markdown?: string | null;
   tiptap?: string | null;
 };
@@ -48,7 +46,7 @@ const validateSerializedDocumentOrThrow = ({
 }: {
   value: unknown;
   fieldName: string;
-  documentFormat: 'blocknote' | 'tiptap';
+  documentFormat: 'tiptap';
   findViolation: (document: unknown) => RichTextDocumentViolation | undefined;
 }): string | null => {
   const textValue = validateTextFieldOrThrow(value, fieldName);
@@ -98,14 +96,6 @@ export const validateRichTextFieldOrThrow = (
     const subFieldName = `${fieldName}.${subField}`;
 
     switch (subField) {
-      case 'blocknote':
-        validateSerializedDocumentOrThrow({
-          value: subFieldValue,
-          fieldName: subFieldName,
-          documentFormat: 'blocknote',
-          findViolation: findBlockNoteDocumentViolation,
-        });
-        break;
       case 'tiptap':
         validateSerializedDocumentOrThrow({
           value: subFieldValue,
