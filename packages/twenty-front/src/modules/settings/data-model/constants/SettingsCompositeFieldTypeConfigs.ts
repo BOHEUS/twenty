@@ -526,6 +526,16 @@ export const SETTINGS_COMPOSITE_FIELD_TYPE_CONFIGS = {
         isFilterable: false,
         isIncludedInUniqueConstraint: false,
       },
+      {
+        subFieldName:
+          COMPOSITE_FIELD_TYPE_SUB_FIELDS_NAMES[FieldMetadataType.RICH_TEXT]
+            .tiptap,
+        subFieldLabel:
+          COMPOSITE_FIELD_SUB_FIELD_LABELS[FieldMetadataType.RICH_TEXT].tiptap,
+        isImportable: false,
+        isFilterable: false,
+        isIncludedInUniqueConstraint: false,
+      },
     ],
     exampleValues: [
       {
