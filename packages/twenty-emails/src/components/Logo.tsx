@@ -1,8 +1,7 @@
 import { Img } from 'react-email';
 import { type Brand } from 'twenty-shared/types';
 
-const TWENTY_LOGO_URL =
-  'https://app.twenty.com/images/icons/windows11/Square150x150Logo.scale-100.png';
+import { TWENTY_LOGO_URL } from 'src/constants/TwentyLogoUrl';
 
 const logoStyle = {
   marginBottom: '40px',
