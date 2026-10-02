@@ -9,7 +9,7 @@ describe('createDefaultStandaloneRichTextWidget', () => {
     const widget = createDefaultStandaloneRichTextWidget({
       id: 'widget-1',
       pageLayoutTabId: 'tab-1',
-      body: { blocknote: '[{"type":"paragraph","content":"Test"}]' },
+      body: { markdown: 'Test' },
       position: {
         layoutMode: PageLayoutTabLayoutMode.GRID,
         row: 0,
@@ -26,7 +26,7 @@ describe('createDefaultStandaloneRichTextWidget', () => {
       type: WidgetType.STANDALONE_RICH_TEXT,
       title: 'Untitled Rich Text',
       configuration: {
-        body: { blocknote: '[{"type":"paragraph","content":"Test"}]' },
+        body: { markdown: 'Test' },
       },
       position: {
         __typename: 'PageLayoutWidgetGridPosition',
@@ -43,7 +43,7 @@ describe('createDefaultStandaloneRichTextWidget', () => {
     const withObjectId = createDefaultStandaloneRichTextWidget({
       id: 'w1',
       pageLayoutTabId: 't1',
-      body: { blocknote: '[]' },
+      body: { markdown: null },
       position: {
         layoutMode: PageLayoutTabLayoutMode.GRID,
         row: 0,
@@ -58,7 +58,7 @@ describe('createDefaultStandaloneRichTextWidget', () => {
     const withoutObjectId = createDefaultStandaloneRichTextWidget({
       id: 'w2',
       pageLayoutTabId: 't1',
-      body: { blocknote: '[]' },
+      body: { markdown: null },
       position: {
         layoutMode: PageLayoutTabLayoutMode.GRID,
         row: 0,
@@ -77,7 +77,7 @@ describe('createDefaultStandaloneRichTextWidget', () => {
     const widget = createDefaultStandaloneRichTextWidget({
       id: 'note-widget',
       pageLayoutTabId: 'record-tab',
-      body: { blocknote: '', markdown: null },
+      body: { markdown: null },
       position: {
         layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
         index: 2,
@@ -95,7 +95,7 @@ describe('createDefaultStandaloneRichTextWidget', () => {
         index: 2,
       },
       configuration: {
-        body: { blocknote: '', markdown: null },
+        body: { markdown: null },
       },
     });
   });

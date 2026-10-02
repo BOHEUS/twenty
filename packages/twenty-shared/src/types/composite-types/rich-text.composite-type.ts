@@ -6,14 +6,6 @@ export const richTextCompositeType: CompositeType = {
   type: FieldMetadataType.RICH_TEXT,
   properties: [
     {
-      name: 'blocknote',
-      description:
-        'Deprecated: BlockNote JSON, derived from tiptap. Use tiptap or markdown instead.',
-      type: FieldMetadataType.TEXT,
-      hidden: false,
-      isRequired: false,
-    },
-    {
       name: 'markdown',
       type: FieldMetadataType.TEXT,
       hidden: false,
@@ -29,9 +21,8 @@ export const richTextCompositeType: CompositeType = {
   ],
 };
 
-// with import only markdown subfield is filled, then blocknote is undefined
+// with import only markdown subfield is filled, then tiptap is undefined
 export const richTextValueSchema = z.object({
-  blocknote: z.string().nullable().optional(),
   markdown: z.string().nullable(),
   tiptap: z.string().nullable().optional(),
 });

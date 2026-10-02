@@ -653,7 +653,7 @@ describe('timeline activity write path (integration)', () => {
         objectMetadataSingularName: 'note',
         recordId: NOTE_ID,
         data: {
-          bodyV2: { blocknote: null, markdown: 'Body only change' },
+          bodyV2: { markdown: 'Body only change' },
         },
       });
 

@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 
 import { WorkspaceIteratorModule } from 'src/database/commands/command-runners/workspace-iterator.module';
+import { DropRichTextBlocknoteColumnsCommand } from 'src/database/commands/upgrade-version-command/2-45/2-45-workspace-command-1790963777000-drop-rich-text-blocknote-columns.command';
+import { ExportNoteToPdfOnMarkdownCommand } from 'src/database/commands/upgrade-version-command/2-45/2-45-workspace-command-1790963777001-export-note-to-pdf-on-markdown.command';
 import { BackfillRichTextTiptapInConfigurationsCommand } from 'src/database/commands/upgrade-version-command/2-45/2-45-workspace-command-1790952826000-backfill-rich-text-tiptap-in-configurations.command';
 import { BackfillRichTextTiptapCommand } from 'src/database/commands/upgrade-version-command/2-45/2-45-workspace-command-1790943726000-backfill-rich-text-tiptap.command';
 import { AddRichTextTiptapColumnsCommand } from 'src/database/commands/upgrade-version-command/2-45/2-45-workspace-command-1790943220000-add-rich-text-tiptap-columns.command';
@@ -31,6 +33,8 @@ import { WorkspaceMigrationModule } from 'src/engine/workspace-manager/workspace
     AddRichTextTiptapColumnsCommand,
     BackfillRichTextTiptapCommand,
     BackfillRichTextTiptapInConfigurationsCommand,
+    DropRichTextBlocknoteColumnsCommand,
+    ExportNoteToPdfOnMarkdownCommand,
   ],
 })
 export class V2_45_UpgradeVersionCommandModule {}

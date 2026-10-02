@@ -172,12 +172,12 @@ describe('findPostgresDefaultNullEquivalentValue', () => {
   });
 
   describe('RICH_TEXT', () => {
-    it('should return json default for blocknote', () => {
+    it('should return undefined for tiptap', () => {
       expect(
         findPostgresDefaultNullEquivalentValue(
           {},
           FieldMetadataType.RICH_TEXT,
-          'blocknote',
+          'tiptap',
         ),
       ).toBe(undefined);
     });

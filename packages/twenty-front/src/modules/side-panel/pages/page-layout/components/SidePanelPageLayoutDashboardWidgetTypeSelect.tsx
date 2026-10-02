@@ -176,7 +176,7 @@ export const SidePanelPageLayoutDashboardWidgetTypeSelect = () => {
         title: 'Untitled Rich Text',
         configuration: {
           configurationType: WidgetConfigurationType.STANDALONE_RICH_TEXT,
-          body: { blocknote: '', markdown: null },
+          body: { markdown: null },
         },
       });
       setPageLayoutEditingWidgetId(newWidget.id);

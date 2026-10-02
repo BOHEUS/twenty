@@ -4,7 +4,6 @@ import { postBackendGraphQL } from '../lib/requests/post-backend-graphql';
 type NoteBody = {
   note: {
     bodyV2: {
-      blocknote: string | null;
       markdown: string | null;
       tiptap: string | null;
     };
@@ -39,7 +38,7 @@ test.describe('Note body rich text editor', () => {
     }
   });
 
-  test('saves typed text in every rich text format', async ({ page }) => {
+  test('saves typed text as tiptap and markdown', async ({ page }) => {
     const text = 'Typed in the note body';
 
     await page.goto(`/object/note/${noteId}`);
@@ -56,7 +55,7 @@ test.describe('Note body rich text editor', () => {
           const { body } = await postBackendGraphQL<NoteBody>({
             page,
             data: {
-              query: `query FindNote($id: UUID!) { note(filter: { id: { eq: $id } }) { bodyV2 { blocknote markdown tiptap } } }`,
+              query: `query FindNote($id: UUID!) { note(filter: { id: { eq: $id } }) { bodyV2 { markdown tiptap } } }`,
               variables: { id: noteId },
             },
           });
@@ -66,7 +65,6 @@ test.describe('Note body rich text editor', () => {
         { timeout: 10_000 },
       )
       .toEqual({
-        blocknote: expect.stringContaining(text),
         markdown: expect.stringContaining(text),
         tiptap: expect.stringContaining(text),
       });

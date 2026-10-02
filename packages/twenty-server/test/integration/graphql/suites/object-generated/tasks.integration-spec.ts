@@ -14,7 +14,7 @@ describe('tasksResolver (e2e)', () => {
                 title
                 bodyV2 {
                   markdown
-                  blocknote
+                  tiptap
                 }
                 dueAt
                 status

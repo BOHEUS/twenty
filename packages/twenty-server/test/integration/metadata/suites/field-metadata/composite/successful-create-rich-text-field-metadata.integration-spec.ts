@@ -34,20 +34,19 @@ const SUCCESSFUL_TEST_CASES: EachTestingContext<{
         name: 'notes',
         label: 'Notes',
         defaultValue: {
-          blocknote: null,
           markdown: "'# Default Title'",
         },
       },
     },
   },
   {
-    title: 'rich text v2 field with default value containing blocknote',
+    title: 'rich text v2 field with default value containing tiptap',
     context: {
       input: {
         name: 'content',
         label: 'Content',
         defaultValue: {
-          blocknote: '\'{"blocks":[{"type":"paragraph"}]}\'',
+          tiptap: '\'{"type":"doc","content":[{"type":"paragraph"}]}\'',
           markdown: null,
         },
       },

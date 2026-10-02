@@ -23,105 +23,62 @@ const TIPTAP_DOCUMENT = {
   ],
 };
 
-const BLOCKNOTE_BLOCKS = [
-  {
-    id: 'block-id',
-    type: 'paragraph',
-    props: { textColor: 'default' },
-    content: [{ type: 'text', text: 'Hello', styles: { bold: true } }],
-    children: [],
-  },
-];
-
 describe('transformRichTextValue', () => {
-  it('should derive blocknote and markdown from tiptap, ignoring other inputs', () => {
+  it('should derive markdown from tiptap, ignoring a stale markdown', () => {
     const result = transformRichTextValue({
       tiptap: JSON.stringify(TIPTAP_DOCUMENT),
-      blocknote: JSON.stringify(BLOCKNOTE_BLOCKS),
       markdown: 'stale',
     });
 
-    expect(JSON.parse(result.tiptap ?? '')).toEqual(TIPTAP_DOCUMENT);
-    expect(result.markdown).toBe('# Title\n\n- [x] done');
-    expect(JSON.parse(result.blocknote ?? '')).toEqual([
-      {
-        type: 'heading',
-        props: { level: 1 },
-        content: [{ type: 'text', text: 'Title', styles: {} }],
-        children: [],
-      },
-      {
-        type: 'checkListItem',
-        props: { checked: true },
-        content: [{ type: 'text', text: 'done', styles: {} }],
-        children: [],
-      },
-    ]);
+    expect(result).toEqual({
+      tiptap: JSON.stringify(TIPTAP_DOCUMENT),
+      markdown: '# Title\n\n- [x] done',
+    });
   });
 
-  it('should keep BlockNote input as sent and derive tiptap and markdown', () => {
-    const blocknote = JSON.stringify(BLOCKNOTE_BLOCKS);
+  it('should keep markdown-only writes and parse them into tiptap', () => {
+    const result = transformRichTextValue({
+      markdown: '## Summary\n\n- point',
+    });
 
-    const result = transformRichTextValue({ blocknote, markdown: null });
-
-    expect(result.blocknote).toBe(blocknote);
-    expect(result.markdown).toBe('**Hello**');
+    expect(result.markdown).toBe('## Summary\n\n- point');
     expect(JSON.parse(result.tiptap ?? '')).toEqual({
       type: 'doc',
       content: [
         {
-          type: 'paragraph',
-          content: [{ type: 'text', text: 'Hello', marks: [{ type: 'bold' }] }],
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: 'Summary' }],
+        },
+        {
+          type: 'bulletList',
+          content: [
+            {
+              type: 'listItem',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'point' }],
+                },
+              ],
+            },
+          ],
         },
       ],
     });
   });
 
-  it('should convert legacy TipTap nodes stored in blocknote', () => {
-    const result = transformRichTextValue({
-      blocknote: JSON.stringify(TIPTAP_DOCUMENT.content),
-      markdown: null,
-    });
-
-    expect(JSON.parse(result.tiptap ?? '')).toEqual(TIPTAP_DOCUMENT);
-    expect(JSON.parse(result.blocknote ?? '')[1].type).toBe('checkListItem');
-  });
-
-  it('should derive tiptap and blocknote from markdown-only writes from apps', () => {
-    const result = transformRichTextValue({
-      markdown: '## Summary\n\n- point',
-      blocknote: null,
-    });
-
-    expect(result.markdown).toBe('## Summary\n\n- point');
-    expect(JSON.parse(result.tiptap ?? '').content[1].type).toBe('bulletList');
-    expect(JSON.parse(result.blocknote ?? '')).toEqual([
-      {
-        type: 'heading',
-        props: { level: 2 },
-        content: [{ type: 'text', text: 'Summary', styles: {} }],
-        children: [],
-      },
-      {
-        type: 'bulletListItem',
-        props: {},
-        content: [{ type: 'text', text: 'point', styles: {} }],
-        children: [],
-      },
-    ]);
-  });
-
   it('should clear every subfield when the field is set to null', () => {
     expect(transformRichTextValue(null)).toEqual({
-      blocknote: null,
       markdown: null,
       tiptap: null,
     });
   });
 
   it('should return empty subfields when nothing is set', () => {
-    expect(
-      transformRichTextValue({ blocknote: null, markdown: null, tiptap: null }),
-    ).toEqual({ blocknote: null, markdown: null, tiptap: null });
+    expect(transformRichTextValue({ markdown: null, tiptap: null })).toEqual({
+      markdown: null,
+      tiptap: null,
+    });
   });
 });

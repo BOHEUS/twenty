@@ -195,21 +195,23 @@ describe('evaluateValidationRuleExpression', () => {
     ).toEqual({ status: 'failed' });
   });
 
-  it('should treat a rich text as empty when its markdown is blank, whatever its blocknote holds', () => {
+  it('should treat a rich text as empty when its markdown is blank, whatever its tiptap holds', () => {
     expect(
-      evaluate('isEmpty(notes)', { notes: { markdown: '', blocknote: '[]' } }),
+      evaluate('isEmpty(notes)', {
+        notes: { markdown: '', tiptap: '{"type":"doc"}' },
+      }),
     ).toEqual({ status: 'passed' });
     expect(
       evaluate('isEmpty(notes)', {
         notes: {
           markdown: '\n',
-          blocknote: '[{"type":"paragraph","content":[]}]',
+          tiptap: '{"type":"doc","content":[{"type":"paragraph"}]}',
         },
       }),
     ).toEqual({ status: 'passed' });
     expect(
       evaluate('isEmpty(notes)', {
-        notes: { markdown: 'Signed', blocknote: '[{"type":"paragraph"}]' },
+        notes: { markdown: 'Signed', tiptap: '{"type":"doc"}' },
       }),
     ).toEqual({ status: 'failed' });
   });

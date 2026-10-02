@@ -39,7 +39,7 @@ describe('RichTextFieldQueryResultGetterHandler', () => {
     it('when no RICH_TEXT field metadata is present', async () => {
       const record = {
         ...baseRecord,
-        bodyV2: { blocknote: '[]', markdown: null },
+        bodyV2: { tiptap: '{"type":"doc"}', markdown: null },
       };
 
       const result = await handler.handle(record, 'ws-1', []);
@@ -47,10 +47,15 @@ describe('RichTextFieldQueryResultGetterHandler', () => {
       expect(result).toEqual(record);
     });
 
-    it('when blocknote is null', async () => {
+    it.each([
+      ['tiptap is null', null],
+      ['tiptap is not a string', 42],
+      ['tiptap is invalid JSON', 'not-json'],
+      ['tiptap is not a document', '[{"type":"paragraph"}]'],
+    ])('when %s', async (_, tiptap) => {
       const record = {
         ...baseRecord,
-        bodyV2: { blocknote: null, markdown: null },
+        bodyV2: { tiptap, markdown: null },
       };
 
       const result = await handler.handle(
@@ -60,90 +65,11 @@ describe('RichTextFieldQueryResultGetterHandler', () => {
       );
 
       expect(result).toEqual(record);
+      expect(mockFileUrlService.signFileByIdUrl).not.toHaveBeenCalled();
     });
 
-    it('when blocknote is not a string', async () => {
-      const record = {
-        ...baseRecord,
-        bodyV2: { blocknote: 123, markdown: null },
-      };
-
-      const result = await handler.handle(
-        record,
-        'ws-1',
-        richTextFieldMetadata,
-      );
-
-      expect(result).toEqual(record);
-    });
-
-    it('when blocknote is an invalid JSON string', async () => {
-      const record = {
-        ...baseRecord,
-        bodyV2: { blocknote: 'not-json', markdown: null },
-      };
-
-      const result = await handler.handle(
-        record,
-        'ws-1',
-        richTextFieldMetadata,
-      );
-
-      expect(result).toEqual(record);
-    });
-
-    it('when blocknote parses to a non-array value', async () => {
-      const record = {
-        ...baseRecord,
-        bodyV2: { blocknote: '{}', markdown: null },
-      };
-
-      const result = await handler.handle(
-        record,
-        'ws-1',
-        richTextFieldMetadata,
-      );
-
-      expect(result).toEqual(record);
-    });
-
-    it('when blocknote has no image blocks', async () => {
-      const record = {
-        ...baseRecord,
-        bodyV2: {
-          markdown: null,
-          blocknote: JSON.stringify([
-            {
-              type: 'paragraph',
-              props: {},
-              children: [{ text: 'Hello, world!' }],
-            },
-          ]),
-        },
-      };
-
-      const result = await handler.handle(
-        record,
-        'ws-1',
-        richTextFieldMetadata,
-      );
-
-      expect(result).toEqual(record);
-    });
-
-    it('when image block has external URL', async () => {
-      const record = {
-        ...baseRecord,
-        bodyV2: {
-          markdown: null,
-          blocknote: JSON.stringify([
-            {
-              type: 'image',
-              props: { url: 'https://external.com/image.jpg' },
-            },
-          ]),
-        },
-      };
+    it('when the field value is null', async () => {
+      const record = { ...baseRecord, bodyV2: null };
 
       const result = await handler.handle(
         record,
@@ -156,7 +82,8 @@ describe('RichTextFieldQueryResultGetterHandler', () => {
   });
 
   describe('should handle multiple RICH_TEXT fields', () => {
-    it('when record has multiple rich text fields', async () => {
+    it('when only some fields reference workspace files', async () => {
+      const fileId = '20202020-0000-4000-8000-000000000002';
       const multiFieldMetadata = [
         { type: FieldMetadataType.RICH_TEXT, name: 'bodyV2' },
         { type: FieldMetadataType.RICH_TEXT, name: 'description' },
@@ -165,22 +92,36 @@ describe('RichTextFieldQueryResultGetterHandler', () => {
       const record = {
         ...baseRecord,
         bodyV2: {
-          markdown: null,
-          blocknote: JSON.stringify([
-            { type: 'paragraph', props: {}, children: [{ text: 'Hello' }] },
-          ]),
+          markdown: 'Hello',
+          tiptap: JSON.stringify({
+            type: 'doc',
+            content: [
+              { type: 'paragraph', content: [{ type: 'text', text: 'Hello' }] },
+            ],
+          }),
         },
         description: {
           markdown: null,
-          blocknote: '{}',
+          tiptap: JSON.stringify({
+            type: 'doc',
+            content: [
+              {
+                type: 'image',
+                attrs: {
+                  src: `https://my-domain.twenty.com/file/files-field/${fileId}`,
+                },
+              },
+            ],
+          }),
         },
       };
 
       const result = await handler.handle(record, 'ws-1', multiFieldMetadata);
 
-      // bodyV2 should be unchanged (no images), description should be
-      // unchanged (non-array blocknote)
-      expect(result).toEqual(record);
+      expect(result.bodyV2).toEqual(record.bodyV2);
+      expect(JSON.parse(result.description.tiptap).content[0].attrs.src).toBe(
+        'signed-path',
+      );
     });
   });
 
@@ -192,7 +133,6 @@ describe('RichTextFieldQueryResultGetterHandler', () => {
         ...baseRecord,
         bodyV2: {
           markdown: null,
-          blocknote: null,
           tiptap: JSON.stringify({
             type: 'doc',
             content: [

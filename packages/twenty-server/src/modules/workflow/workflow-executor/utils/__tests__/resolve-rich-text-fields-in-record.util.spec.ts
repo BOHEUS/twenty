@@ -52,12 +52,12 @@ const context = {
 describe('resolveRichTextFieldsInRecord', () => {
   it('keeps a markdown that is exactly one variable a string', () => {
     const resolved = resolveRichTextFieldsInRecord(
-      { body: { markdown: '{{trigger.body.amount}}', blocknote: null } },
+      { body: { markdown: '{{trigger.body.amount}}' } },
       objectMetadataInfo,
       context,
     );
 
-    expect(resolved.body).toEqual({ markdown: '42', blocknote: null });
+    expect(resolved.body).toEqual({ markdown: '42' });
   });
 
   it('interpolates variables inside a markdown', () => {
@@ -66,7 +66,6 @@ describe('resolveRichTextFieldsInRecord', () => {
         body: {
           markdown:
             'Latest donation: {{trigger.body.amount}} {{trigger.body.currency}}',
-          blocknote: null,
         },
       },
       objectMetadataInfo,
@@ -75,20 +74,18 @@ describe('resolveRichTextFieldsInRecord', () => {
 
     expect(resolved.body).toEqual({
       markdown: 'Latest donation: 42 EUR',
-      blocknote: null,
     });
   });
 
   it('serializes an object resolved from a whole-string variable', () => {
     const resolved = resolveRichTextFieldsInRecord(
-      { body: { markdown: '{{trigger.body.meta}}', blocknote: null } },
+      { body: { markdown: '{{trigger.body.meta}}' } },
       objectMetadataInfo,
       context,
     );
 
     expect(resolved.body).toEqual({
       markdown: '{"source":"form"}',
-      blocknote: null,
     });
   });
 
@@ -106,7 +103,7 @@ describe('resolveRichTextFieldsInRecord', () => {
     const resolved = resolveRichTextFieldsInRecord(
       {
         title: '{{trigger.body.amount}}',
-        body: { markdown: 'a', blocknote: null },
+        body: { markdown: 'a' },
       },
       objectMetadataInfo,
       context,

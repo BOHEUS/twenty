@@ -1,27 +1,17 @@
 import { Command } from 'nest-commander';
-import { FieldMetadataType, richTextCompositeType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { type DataSource } from 'typeorm';
 
 import { ProvisionedWorkspaceCommandRunner } from 'src/database/commands/command-runners/provisioned-workspace.command-runner';
 import { WorkspaceIteratorService } from 'src/database/commands/command-runners/workspace-iterator.service';
 import { type RunOnWorkspaceArgs } from 'src/database/commands/command-runners/workspace.command-runner';
+import { type LegacyRichTextColumns } from 'src/database/commands/upgrade-version-command/2-45/types/legacy-rich-text-columns.type';
 import { buildRichTextTiptapBackfill } from 'src/database/commands/upgrade-version-command/2-45/utils/build-rich-text-tiptap-backfill.util';
+import { findLegacyRichTextColumns } from 'src/database/commands/upgrade-version-command/2-45/utils/find-legacy-rich-text-columns.util';
 import { RegisteredWorkspaceCommand } from 'src/engine/core-modules/upgrade/decorators/registered-workspace-command.decorator';
-import { computeCompositeColumnName } from 'src/engine/metadata-modules/field-metadata/utils/compute-column-name.util';
-import { findManyFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-many-flat-entity-by-id-in-flat-entity-maps.util';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
-import { escapeIdentifier } from 'src/engine/workspace-manager/workspace-migration/utils/remove-sql-injection.util';
-import { getWorkspaceSchemaContextForMigration } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/utils/get-workspace-schema-context-for-migration.util';
 
 const BATCH_SIZE = 200;
-
-type RichTextColumns = {
-  table: string;
-  blocknote: string;
-  markdown: string;
-  tiptap: string;
-};
 
 type BackfillCounts = {
   converted: number;
@@ -34,16 +24,6 @@ type RichTextRow = {
   id: string;
   blocknote: string | null;
   markdown: string | null;
-};
-
-const getRichTextColumnName = (fieldName: string, propertyName: string) => {
-  const property = richTextCompositeType.properties.find(
-    ({ name }) => name === propertyName,
-  );
-
-  return isDefined(property)
-    ? escapeIdentifier(computeCompositeColumnName(fieldName, property))
-    : undefined;
 };
 
 @RegisteredWorkspaceCommand('2.45.0', 1790943726000)
@@ -77,7 +57,10 @@ export class BackfillRichTextTiptapCommand extends ProvisionedWorkspaceCommandRu
       failed: 0,
     };
 
-    for (const columns of await this.getRichTextColumns(workspaceId)) {
+    for (const columns of await this.getLegacyRichTextColumns(
+      workspaceId,
+      dataSource,
+    )) {
       await this.backfillColumns({ dataSource, columns, counts, isDryRun });
     }
 
@@ -93,8 +76,9 @@ export class BackfillRichTextTiptapCommand extends ProvisionedWorkspaceCommandRu
       return;
     }
 
-    for (const { table, tiptap } of await this.getRichTextColumns(
+    for (const { table, tiptap } of await this.getLegacyRichTextColumns(
       workspaceId,
+      dataSource,
     )) {
       await dataSource.query(`UPDATE ${table} SET ${tiptap} = NULL`);
     }
@@ -107,7 +91,7 @@ export class BackfillRichTextTiptapCommand extends ProvisionedWorkspaceCommandRu
     isDryRun,
   }: {
     dataSource: DataSource;
-    columns: RichTextColumns;
+    columns: LegacyRichTextColumns;
     counts: BackfillCounts;
     isDryRun: boolean;
   }) {
@@ -171,48 +155,21 @@ export class BackfillRichTextTiptapCommand extends ProvisionedWorkspaceCommandRu
     }
   }
 
-  private async getRichTextColumns(
+  private async getLegacyRichTextColumns(
     workspaceId: string,
-  ): Promise<RichTextColumns[]> {
+    dataSource: DataSource,
+  ): Promise<LegacyRichTextColumns[]> {
     const { flatObjectMetadataMaps, flatFieldMetadataMaps } =
       await this.workspaceCacheService.getOrRecompute(workspaceId, [
         'flatObjectMetadataMaps',
         'flatFieldMetadataMaps',
       ]);
 
-    return Object.values(flatObjectMetadataMaps.byUniversalIdentifier)
-      .filter(isDefined)
-      .flatMap((flatObjectMetadata) => {
-        const { schemaName, tableName } = getWorkspaceSchemaContextForMigration(
-          {
-            workspaceId,
-            objectMetadata: flatObjectMetadata,
-          },
-        );
-
-        return findManyFlatEntityByIdInFlatEntityMaps({
-          flatEntityIds: flatObjectMetadata.fieldIds,
-          flatEntityMaps: flatFieldMetadataMaps,
-        })
-          .filter((field) => field.type === FieldMetadataType.RICH_TEXT)
-          .flatMap((field): RichTextColumns[] => {
-            const blocknote = getRichTextColumnName(field.name, 'blocknote');
-            const markdown = getRichTextColumnName(field.name, 'markdown');
-            const tiptap = getRichTextColumnName(field.name, 'tiptap');
-
-            return isDefined(blocknote) &&
-              isDefined(markdown) &&
-              isDefined(tiptap)
-              ? [
-                  {
-                    table: `${escapeIdentifier(schemaName)}.${escapeIdentifier(tableName)}`,
-                    blocknote,
-                    markdown,
-                    tiptap,
-                  },
-                ]
-              : [];
-          });
-      });
+    return findLegacyRichTextColumns({
+      workspaceId,
+      dataSource,
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
+    });
   }
 }

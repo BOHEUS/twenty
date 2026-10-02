@@ -317,7 +317,6 @@ describe('buildRecordFromImportedStructuredRow', () => {
       dateField: '2023-12-25',
       dateTimeField: '2023-12-25T10:30:00Z',
       ratingField: '4',
-      'BlockNote (richTextField)': 'Rich content in blocknote format',
       'Markdown (richTextField)': 'Content in markdown format',
       'First Name (fullNameField)': 'John',
       'Last Name (fullNameField)': 'Doe',
@@ -425,7 +424,6 @@ describe('buildRecordFromImportedStructuredRow', () => {
         ],
       },
       richTextField: {
-        blocknote: 'Rich content in blocknote format',
         markdown: 'Content in markdown format',
       },
       dateField: '2023-12-25',

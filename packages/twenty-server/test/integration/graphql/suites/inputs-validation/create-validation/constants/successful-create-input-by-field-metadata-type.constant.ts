@@ -402,15 +402,15 @@ export const successfulCreateInputByFieldMetadataType: {
     {
       input: {
         richTextField: {
-          blocknote:
-            '[{"type":"paragraph","content":[{"type":"text","text":"test"}]}]',
+          tiptap:
+            '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"test"}]}]}',
           markdown: 'test',
         },
       },
       validateInput: (record: Record<string, any>) => {
         return (
-          record.richTextField.blocknote ===
-            '[{"type":"paragraph","content":[{"type":"text","text":"test"}]}]' &&
+          record.richTextField.tiptap ===
+            '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"test"}]}]}' &&
           record.richTextField.markdown === 'test'
         );
       },

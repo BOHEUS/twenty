@@ -30,18 +30,17 @@ const SUCCESSFUL_TEST_CASES: EachTestingContext<{
     context: {
       input: {
         defaultValue: {
-          blocknote: null,
           markdown: "'# Default Title'",
         },
       },
     },
   },
   {
-    title: 'rich text v2 field default value with blocknote',
+    title: 'rich text v2 field default value with tiptap',
     context: {
       input: {
         defaultValue: {
-          blocknote: '\'{"blocks":[{"type":"paragraph"}]}\'',
+          tiptap: '\'{"type":"doc","content":[{"type":"paragraph"}]}\'',
           markdown: null,
         },
       },
@@ -52,7 +51,7 @@ const SUCCESSFUL_TEST_CASES: EachTestingContext<{
     context: {
       input: {
         defaultValue: {
-          blocknote: '\'{"blocks":[]}\'',
+          tiptap: '\'{"type":"doc"}\'',
           markdown: "'## Heading'",
         },
       },

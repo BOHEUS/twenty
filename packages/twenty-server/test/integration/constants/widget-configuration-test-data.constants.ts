@@ -31,8 +31,8 @@ export const TEST_STANDALONE_RICH_TEXT_CONFIG: StandaloneRichTextConfigurationDT
   {
     configurationType: WidgetConfigurationType.STANDALONE_RICH_TEXT,
     body: {
-      blocknote:
-        '[{"id":"5f4a1c1e-0000-4000-8000-000000000001","type":"paragraph","props":{},"content":[{"type":"text","text":"Hello world","styles":{}}],"children":[]}]',
+      tiptap:
+        '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Hello world"}]}]}',
       markdown: '# Hello world',
     },
   };
@@ -41,8 +41,8 @@ export const TEST_STANDALONE_RICH_TEXT_CONFIG_MINIMAL: StandaloneRichTextConfigu
   {
     configurationType: WidgetConfigurationType.STANDALONE_RICH_TEXT,
     body: {
-      blocknote:
-        '[{"id":"5f4a1c1e-0000-4000-8000-000000000002","type":"paragraph","props":{},"content":[{"type":"text","text":"Simple text","styles":{}}],"children":[]}]',
+      tiptap:
+        '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Simple text"}]}]}',
       markdown: null,
     },
   };
@@ -51,7 +51,7 @@ export const TEST_STANDALONE_RICH_TEXT_CONFIG_TIPTAP_BODY: StandaloneRichTextCon
   {
     configurationType: WidgetConfigurationType.STANDALONE_RICH_TEXT,
     body: {
-      blocknote:
+      tiptap:
         '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Checklist:"}]},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"call the client"}]}]}]}]}',
       markdown: null,
     },
@@ -66,7 +66,6 @@ export const INVALID_STANDALONE_RICH_TEXT_CONFIG_BODY_WRONG_TYPE = {
 export const INVALID_STANDALONE_RICH_TEXT_CONFIG_INVALID_SUBFIELDS = {
   configurationType: WidgetConfigurationType.STANDALONE_RICH_TEXT,
   body: {
-    blocknote: 'valid',
     markdown: 'valid',
     invalidField: 'should not be here',
   },

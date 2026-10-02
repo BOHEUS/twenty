@@ -4,19 +4,16 @@ import {
   richTextValueSchema,
 } from 'twenty-shared/types';
 import {
-  convertTipTapDocumentToBlockNote,
   isDefined,
   normalizeRichTextDocument,
-  parseLegacyTipTapBlocks,
   tipTapDocumentToMarkdown,
 } from 'twenty-shared/utils';
 
 import { sanitizeRichTextDocumentReferences } from 'src/engine/core-modules/record-transformer/utils/sanitize-rich-text-document-references.util';
 
-// Until the blocknote subfield is removed, every write stores all three
-// formats so readers on either editor see the same content. A TipTap input
-// wins; a genuine BlockNote input is kept as sent so the BlockNote editor
-// does not see its own blocks rewritten.
+// tiptap is the source of truth; markdown is regenerated on every write
+// because search, AI tools and workflows read it. A markdown-only input is
+// kept as sent and parsed into tiptap.
 export const transformRichTextValue = (
   // oxlint-disable-next-line typescript/no-explicit-any
   richTextValue: any,
@@ -26,29 +23,24 @@ export const transformRichTextValue = (
     : richTextValue;
 
   const normalizedDocument = isDefined(parsedValue)
-    ? normalizeRichTextDocument(parsedValue)
+    ? normalizeRichTextDocument({
+        tiptap: parsedValue.tiptap,
+        markdown: parsedValue.markdown,
+      })
     : null;
 
   if (!isDefined(normalizedDocument)) {
-    return { blocknote: null, markdown: null, tiptap: null };
+    return { markdown: null, tiptap: null };
   }
 
-  const { source } = normalizedDocument;
   const document = sanitizeRichTextDocumentReferences(
     normalizedDocument.document,
   );
 
-  const isGenuineBlockNoteInput =
-    source === 'blocknote' &&
-    !isDefined(parseLegacyTipTapBlocks(parsedValue.blocknote));
-
   return {
     tiptap: JSON.stringify(document),
-    blocknote: isGenuineBlockNoteInput
-      ? parsedValue.blocknote
-      : JSON.stringify(convertTipTapDocumentToBlockNote(document)),
     markdown:
-      source === 'markdown'
+      normalizedDocument.source === 'markdown'
         ? parsedValue.markdown
         : tipTapDocumentToMarkdown(document),
   };

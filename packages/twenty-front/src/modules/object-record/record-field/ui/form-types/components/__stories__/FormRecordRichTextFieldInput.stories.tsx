@@ -7,29 +7,25 @@ import { ObjectMetadataItemsDecorator } from '~/testing/decorators/ObjectMetadat
 import { ToastDecorator } from '~/testing/decorators/ToastDecorator';
 import { graphqlMocks } from '~/testing/graphqlMocks';
 
-const BLOCKNOTE_PARAGRAPH = JSON.stringify([
-  {
-    id: 'block-1',
-    type: 'paragraph',
-    props: {},
-    content: [{ type: 'text', text: 'Rich Text', styles: {} }],
-  },
-]);
+const TIPTAP_PARAGRAPH = JSON.stringify({
+  type: 'doc',
+  content: [
+    { type: 'paragraph', content: [{ type: 'text', text: 'Rich Text' }] },
+  ],
+});
 
-const BLOCKNOTE_BULLET_LIST = JSON.stringify([
-  {
-    id: 'block-1',
-    type: 'bulletListItem',
-    props: {},
-    content: [{ type: 'text', text: 'First item', styles: {} }],
-  },
-  {
-    id: 'block-2',
-    type: 'bulletListItem',
-    props: {},
-    content: [{ type: 'text', text: 'Second item', styles: {} }],
-  },
-]);
+const TIPTAP_BULLET_LIST = JSON.stringify({
+  type: 'doc',
+  content: [
+    {
+      type: 'bulletList',
+      content: ['First item', 'Second item'].map((text) => ({
+        type: 'listItem',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text }] }],
+      })),
+    },
+  ],
+});
 
 const meta: Meta<typeof FormRecordRichTextFieldInput> = {
   title: 'UI/Data/Field/Form/Input/FormRecordRichTextFieldInput',
@@ -69,7 +65,7 @@ export const WithLabel: Story = {
 
 export const WithBulletList: Story = {
   args: {
-    defaultValue: { blocknote: BLOCKNOTE_BULLET_LIST, markdown: null },
+    defaultValue: { tiptap: TIPTAP_BULLET_LIST, markdown: null },
     onChange: fn(),
   },
   play: async ({ canvasElement }) => {
@@ -80,7 +76,7 @@ export const WithBulletList: Story = {
   },
 };
 
-export const WritesBlockNoteBlocks: Story = {
+export const WritesTiptapDocument: Story = {
   args: {
     onChange: fn(),
   },
@@ -106,8 +102,8 @@ export const WritesBlockNoteBlocks: Story = {
 
     expect(args.onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        blocknote: expect.stringContaining('"styles"'),
-        markdown: null,
+        tiptap: expect.stringContaining('Hello'),
+        markdown: 'Hello',
       }),
     );
   },
@@ -153,7 +149,7 @@ export const KeepsContentAcrossFullScreen: Story = {
     expect(page.queryByText('Text Editor')).not.toBeInTheDocument();
     expect(args.onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({
-        blocknote: expect.stringContaining('Hello world'),
+        tiptap: expect.stringContaining('Hello world'),
       }),
     );
   },
@@ -161,7 +157,7 @@ export const KeepsContentAcrossFullScreen: Story = {
 
 export const Disabled: Story = {
   args: {
-    defaultValue: { blocknote: BLOCKNOTE_PARAGRAPH, markdown: null },
+    defaultValue: { tiptap: TIPTAP_PARAGRAPH, markdown: null },
     readonly: true,
     onChange: fn(),
   },

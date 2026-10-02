@@ -14,7 +14,7 @@ describe('notesResolver (e2e)', () => {
                 title
                 bodyV2 {
                   markdown
-                  blocknote
+                  tiptap
                 }
                 id
                 createdAt

@@ -2162,10 +2162,10 @@ export default {
             ]
         },
         "RichTextBody": {
-            "blocknote": [
+            "markdown": [
                 1
             ],
-            "markdown": [
+            "tiptap": [
                 1
             ],
             "__typename": [

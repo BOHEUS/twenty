@@ -24,7 +24,7 @@ describe('generateFieldFilterZodSchema', () => {
 
   describe('RICH_TEXT', () => {
     // Regression for the AI find-records bug: RICH_TEXT is a composite
-    // (`markdown` / `blocknote` sub-fields). Advertising root-level scalar
+    // (`markdown` / `tiptap` sub-fields). Advertising root-level scalar
     // operators made the agent emit `{ ilike }`, which the query layer rejects
     // with `Sub field "ilike" not found for composite type: RICH_TEXT`.
     it('routes pattern operators onto the markdown sub-field', () => {

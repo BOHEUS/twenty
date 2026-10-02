@@ -17,8 +17,8 @@ describe('validateRichTextFieldOrThrow', () => {
 
     it('should return the value when it has valid subfields', () => {
       const value = {
-        blocknote:
-          '[{"type":"paragraph","content":[{"type":"text","text":"test"}]}]',
+        tiptap:
+          '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"test"}]}]}',
         markdown: '# Heading\nContent',
       };
       const result = validateRichTextFieldOrThrow(value, 'testField');
@@ -26,8 +26,8 @@ describe('validateRichTextFieldOrThrow', () => {
       expect(result).toEqual(value);
     });
 
-    it('should return the value when blocknote is null', () => {
-      const value = { blocknote: null, markdown: 'test' };
+    it('should return the value when tiptap is null', () => {
+      const value = { tiptap: null, markdown: 'test' };
       const result = validateRichTextFieldOrThrow(value, 'testField');
 
       expect(result).toEqual(value);
@@ -65,26 +65,16 @@ describe('validateRichTextFieldOrThrow', () => {
       );
     });
 
-    it('should throw when blocknote contains invalid JSON', () => {
-      const value = { blocknote: 'not-valid-json' };
-
-      expect(() => validateRichTextFieldOrThrow(value, 'testField')).toThrow(
-        CommonQueryRunnerException,
-      );
-      expect(() => validateRichTextFieldOrThrow(value, 'testField')).toThrow(
-        /must contain valid JSON/,
-      );
+    it('should throw when tiptap contains invalid JSON', () => {
+      expect(() =>
+        validateRichTextFieldOrThrow({ tiptap: 'not-valid-json' }, 'testField'),
+      ).toThrow(/must contain valid JSON/);
     });
 
-    it('should throw when blocknote is valid JSON but not an array', () => {
-      const value = { blocknote: '{"type":"paragraph"}' };
-
-      expect(() => validateRichTextFieldOrThrow(value, 'testField')).toThrow(
-        CommonQueryRunnerException,
-      );
-      expect(() => validateRichTextFieldOrThrow(value, 'testField')).toThrow(
-        /has an invalid structure/,
-      );
+    it('should reject the removed blocknote subfield', () => {
+      expect(() =>
+        validateRichTextFieldOrThrow({ blocknote: '[]' }, 'testField'),
+      ).toThrow(/Invalid subfield.*blocknote/);
     });
   });
 
@@ -208,31 +198,6 @@ describe('validateRichTextFieldOrThrow', () => {
           'testField',
         ),
       ).toThrow(/nested too deeply/);
-    });
-  });
-
-  describe('blocknote subfield safety', () => {
-    it('should reject dangerous URLs at any depth and under any URL key', () => {
-      const blocks = [
-        {
-          type: 'bulletListItem',
-          content: [],
-          children: [
-            {
-              type: 'image',
-              props: { src: 'javascript:alert(1)' },
-              children: [],
-            },
-          ],
-        },
-      ];
-
-      expect(() =>
-        validateRichTextFieldOrThrow(
-          { blocknote: JSON.stringify(blocks) },
-          'testField',
-        ),
-      ).toThrow(/dangerous protocol/);
     });
   });
 });

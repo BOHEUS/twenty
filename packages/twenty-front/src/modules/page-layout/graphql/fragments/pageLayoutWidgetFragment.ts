@@ -146,7 +146,6 @@ export const PAGE_LAYOUT_WIDGET_FRAGMENT = gql`
       ... on StandaloneRichTextConfiguration {
         configurationType
         body {
-          blocknote
           markdown
           tiptap
         }

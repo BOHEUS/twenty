@@ -235,14 +235,11 @@ export { pascalToKebab } from './strings/pascalToKebab';
 export { stringifySafely } from './strings/stringifySafely';
 export { uncapitalize } from './strings/uncapitalize';
 export { getSubdomainSlugFromDisplayName } from './subdomain/getSubdomainSlugFromDisplayName';
-export type { BlockNoteBlock } from './tiptap/blocknote-block';
 export { BLOCKNOTE_LIST_ITEM_TYPE_TO_TIPTAP_LIST_TYPE } from './tiptap/blocknote-list-item-type-to-tiptap-list-type';
 export type { CanvasTheme } from './tiptap/canvas-theme';
 export { CANVAS_THEME_DEFAULTS } from './tiptap/canvas-theme';
 export { convertBlockNoteToTipTapDocument } from './tiptap/convert-blocknote-to-tiptap-document';
 export { convertMarkdownToTipTapDocument } from './tiptap/convert-markdown-to-tiptap-document';
-export { convertTipTapBlocksToMarkdown } from './tiptap/convert-tiptap-blocks-to-markdown';
-export { convertTipTapDocumentToBlockNote } from './tiptap/convert-tiptap-document-to-blocknote';
 export type { EmailDocumentMarkType } from './tiptap/email-document-mark-catalog';
 export {
   EMAIL_DOCUMENT_MARK_CATALOG,

@@ -4,7 +4,7 @@ type NoteDataSeed = {
   id: string;
   position: number;
   title: string;
-  bodyV2Blocknote: string;
+  bodyV2Tiptap: string;
   bodyV2Markdown: string;
   createdBySource: string;
   createdByWorkspaceMemberId: string;
@@ -19,7 +19,7 @@ export const NOTE_DATA_SEED_COLUMNS: (keyof NoteDataSeed)[] = [
   'id',
   'position',
   'title',
-  'bodyV2Blocknote',
+  'bodyV2Tiptap',
   'bodyV2Markdown',
   'createdBySource',
   'createdByWorkspaceMemberId',
@@ -148,19 +148,15 @@ const GENERATE_NOTE_SEEDS = (): NoteDataSeed[] => {
       id: NOTE_DATA_SEED_IDS[`ID_${INDEX}`],
       position: INDEX,
       title: TEMPLATE.title,
-      bodyV2Blocknote: JSON.stringify([
-        {
-          id: `block-${INDEX}`,
-          type: 'paragraph',
-          props: {
-            textColor: 'default',
-            backgroundColor: 'default',
-            textAlignment: 'left',
+      bodyV2Tiptap: JSON.stringify({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: TEMPLATE.content }],
           },
-          content: [{ type: 'text', text: TEMPLATE.content, styles: {} }],
-          children: [],
-        },
-      ]),
+        ],
+      }),
       bodyV2Markdown: TEMPLATE.content,
       createdBySource: 'MANUAL',
       createdByWorkspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.TIM,
@@ -181,19 +177,15 @@ const GENERATE_NOTE_SEEDS = (): NoteDataSeed[] => {
       id: NOTE_DATA_SEED_IDS[`ID_${INDEX}`],
       position: INDEX,
       title: TEMPLATE.title,
-      bodyV2Blocknote: JSON.stringify([
-        {
-          id: `block-${INDEX}`,
-          type: 'paragraph',
-          props: {
-            textColor: 'default',
-            backgroundColor: 'default',
-            textAlignment: 'left',
+      bodyV2Tiptap: JSON.stringify({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: TEMPLATE.content }],
           },
-          content: [{ type: 'text', text: TEMPLATE.content, styles: {} }],
-          children: [],
-        },
-      ]),
+        ],
+      }),
       bodyV2Markdown: TEMPLATE.content,
       createdBySource: 'MANUAL',
       createdByWorkspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.TIM,
