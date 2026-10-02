@@ -1,3 +1,5 @@
+import { brandState } from '@/client-config/states/brandState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { SettingsAccountsMessageChannelDetails } from '@/settings/accounts/components/SettingsAccountsMessageChannelDetails';
 import { useDeleteEmailGroupChannel } from '@/settings/accounts/hooks/useDeleteEmailGroupChannel';
 import { useMyMessageChannels } from '@/settings/accounts/hooks/useMyMessageChannels';
@@ -49,6 +51,8 @@ const StyledSendingDomainColumn = styled.div`
 
 export const SettingsWorkspaceCommunicationGroupChannelDetail = () => {
   const { t } = useLingui();
+  const brand = useAtomStateValue(brandState);
+  const brandName = brand.name;
   const navigateSettings = useNavigateSettings();
   const { messageChannelId } = useParams<{ messageChannelId: string }>();
   const { channels, loading } = useMyMessageChannels();
@@ -217,7 +221,7 @@ export const SettingsWorkspaceCommunicationGroupChannelDetail = () => {
           <Section.Root>
             <Section.Header
               title={t`Sending domain`}
-              description={t`Add these records at your DNS provider. Twenty checks them automatically.`}
+              description={t`Add these records at your DNS provider. ${brandName} checks them automatically.`}
             />
             <StyledSendingDomainColumn>
               <StyledInputRow>

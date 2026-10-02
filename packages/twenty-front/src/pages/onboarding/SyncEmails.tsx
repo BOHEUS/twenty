@@ -1,3 +1,4 @@
+import { brandState } from '@/client-config/states/brandState';
 import { isCurrentUserLoadedState } from '@/auth/states/isCurrentUserLoadedState';
 import { clientConfigApiStatusState } from '@/client-config/states/clientConfigApiStatusState';
 import { isGoogleCalendarEnabledState } from '@/client-config/states/isGoogleCalendarEnabledState';
@@ -31,6 +32,8 @@ import {
 
 export const SyncEmails = () => {
   const { t } = useLingui();
+  const brand = useAtomStateValue(brandState);
+  const brandName = brand.name;
   const { openDialog } = useDialog();
   const importContactsCreditsReward = useAtomStateValue(
     onboardingCreditsProgressSelector,
@@ -152,7 +155,7 @@ export const SyncEmails = () => {
           />
         }
         title={t`Start with your whole network`}
-        description={t`Twenty adds the people you email and meet, and keeps them up to date without manual data entry.`}
+        description={t`${brandName} adds the people you email and meet, and keeps them up to date without manual data entry.`}
         actions={providerActions}
         onSkip={() => void handleSkipConfirm()}
       />

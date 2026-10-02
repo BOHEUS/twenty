@@ -1,7 +1,9 @@
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
+import { brandState } from '@/client-config/states/brandState';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { SettingsOptionCardContentSwitch } from '@/settings/components/SettingsOptions/SettingsOptionCardContentSwitch';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useMutation } from '@apollo/client/react';
 import { t } from '@lingui/core/macro';
 import { IconClick } from 'twenty-ui/icon';
@@ -11,6 +13,8 @@ import { UpdateWorkspaceDocument } from '~/generated-metadata/graphql';
 
 export const ClickTrackingSwitch = () => {
   const { enqueueToast } = useToast();
+  const brand = useAtomStateValue(brandState);
+  const brandName = brand.name;
   const [currentWorkspace, setCurrentWorkspace] = useAtomState(
     currentWorkspaceState,
   );
@@ -50,7 +54,7 @@ export const ClickTrackingSwitch = () => {
           <SettingsOptionCardContentSwitch
             Icon={IconClick}
             title={t`Track link clicks`}
-            description={t`Count clicks by routing campaign links through Twenty before the original page.`}
+            description={t`Count clicks by routing campaign links through ${brandName} before the original page.`}
             checked={currentWorkspace.isCampaignClickTrackingEnabled}
             disabled={loading}
             onChange={handleChange}

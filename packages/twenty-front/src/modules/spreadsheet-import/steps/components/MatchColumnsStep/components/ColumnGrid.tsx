@@ -1,3 +1,5 @@
+import { brandState } from '@/client-config/states/brandState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { type SpreadsheetColumns } from '@/spreadsheet-import/types/SpreadsheetColumns';
 import { t } from '@lingui/core/macro';
 import { styled } from '@linaria/react';
@@ -96,13 +98,16 @@ export const ColumnGrid = ({
   renderTemplateColumn,
   renderUnmatchedColumn,
 }: ColumnGridProps) => {
+  const brand = useAtomStateValue(brandState);
+  const brandName = brand.name;
+
   return (
     <>
       <StyledGridContainer>
         <StyledGrid>
           <StyledGridRow height="32px">
             <StyledGridHeader position="left">{t`Imported data`}</StyledGridHeader>
-            <StyledGridHeader position="right">{t`Twenty fields`}</StyledGridHeader>
+            <StyledGridHeader position="right">{t`${brandName} fields`}</StyledGridHeader>
           </StyledGridRow>
           {columns.map((column, index) => {
             const userColumn = renderUserColumn(columns, index);

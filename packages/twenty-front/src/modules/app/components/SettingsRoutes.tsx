@@ -858,11 +858,17 @@ const createSettingsRouteElements = ({
         path={SettingsPath.ApplicationPublicDomainDetail}
         element={<SettingPublicDomain />}
       />
-      <Route path={SettingsPath.LegalDpa} element={<SettingsLegalDpa />} />
       <Route
-        path={SettingsPath.LegalDpaNew}
-        element={<SettingsLegalDpaNew />}
-      />
+        element={
+          <SettingsProtectedRouteWrapper isUnavailableWhenWhiteLabeled />
+        }
+      >
+        <Route path={SettingsPath.LegalDpa} element={<SettingsLegalDpa />} />
+        <Route
+          path={SettingsPath.LegalDpaNew}
+          element={<SettingsLegalDpaNew />}
+        />
+      </Route>
     </Route>
     <Route
       element={
