@@ -1,6 +1,7 @@
 import { HeadlessEngineCommandWrapperEffect } from '@/command-menu-item/engine-command/components/HeadlessEngineCommandWrapperEffect';
 import { useHeadlessCommandContextApi } from '@/command-menu-item/engine-command/hooks/useHeadlessCommandContextApi';
-import { isDefined } from 'twenty-shared/utils';
+import { getRichTextFieldTiptapDocument } from '@/object-record/record-field/ui/utils/getRichTextFieldTiptapDocument';
+import { isDefined, TIPTAP_NODE_TYPES } from 'twenty-shared/utils';
 
 export const ExportNoteSingleRecordCommand = () => {
   const { selectedRecords } = useHeadlessCommandContextApi();
@@ -17,26 +18,14 @@ export const ExportNoteSingleRecordCommand = () => {
   const filename = `${(selectedRecord.title || 'Untitled Note').replace(/[<>:"/\\|?*]/g, '-')}`;
 
   const handleExecute = async () => {
-    const initialBody = selectedRecord.bodyV2?.blocknote;
+    const document = getRichTextFieldTiptapDocument(selectedRecord.bodyV2) ?? {
+      type: TIPTAP_NODE_TYPES.DOCUMENT,
+    };
 
-    let parsedBody = [];
+    const { exportTipTapDocumentToPdf } =
+      await import('@/command-menu-item/record/single-record/utils/exportTipTapDocumentToPdf');
 
-    // TODO: Remove this once we have removed the old rich text
-    try {
-      parsedBody = JSON.parse(initialBody);
-    } catch {
-      // oxlint-disable-next-line no-console
-      console.warn(
-        `Failed to parse body for record ${recordId}, for rich text version 'v2'`,
-      );
-      // oxlint-disable-next-line no-console
-      console.warn(initialBody);
-    }
-
-    const { exportBlockNoteEditorToPdf } =
-      await import('@/command-menu-item/record/single-record/utils/exportBlockNoteEditorToPdf');
-
-    await exportBlockNoteEditorToPdf(parsedBody, filename);
+    await exportTipTapDocumentToPdf(document, filename);
   };
 
   return <HeadlessEngineCommandWrapperEffect execute={handleExecute} />;
