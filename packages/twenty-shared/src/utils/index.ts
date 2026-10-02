@@ -235,9 +235,14 @@ export { pascalToKebab } from './strings/pascalToKebab';
 export { stringifySafely } from './strings/stringifySafely';
 export { uncapitalize } from './strings/uncapitalize';
 export { getSubdomainSlugFromDisplayName } from './subdomain/getSubdomainSlugFromDisplayName';
+export type { BlockNoteBlock } from './tiptap/blocknote-block';
+export { BLOCKNOTE_LIST_ITEM_TYPE_TO_TIPTAP_LIST_TYPE } from './tiptap/blocknote-list-item-type-to-tiptap-list-type';
 export type { CanvasTheme } from './tiptap/canvas-theme';
 export { CANVAS_THEME_DEFAULTS } from './tiptap/canvas-theme';
+export { convertBlockNoteToTipTapDocument } from './tiptap/convert-blocknote-to-tiptap-document';
+export { convertMarkdownToTipTapDocument } from './tiptap/convert-markdown-to-tiptap-document';
 export { convertTipTapBlocksToMarkdown } from './tiptap/convert-tiptap-blocks-to-markdown';
+export { convertTipTapDocumentToBlockNote } from './tiptap/convert-tiptap-document-to-blocknote';
 export type { EmailDocumentMarkType } from './tiptap/email-document-mark-catalog';
 export {
   EMAIL_DOCUMENT_MARK_CATALOG,
@@ -257,20 +262,27 @@ export { EMAIL_DOCUMENT_SCHEMA_VERSION } from './tiptap/email-document-schema-ve
 export type { EmailDocument } from './tiptap/email-document-schema';
 export { emailDocumentSchema } from './tiptap/email-document-schema';
 export type { EmailDocumentStringContext } from './tiptap/email-document-string-context';
+export { extractPlainText } from './tiptap/extract-plain-text';
 export { isCanvasTheme } from './tiptap/is-canvas-theme';
 export { isEmailDocumentShape } from './tiptap/is-email-document-shape';
 export type { CampaignVariableDefinition } from './tiptap/list-campaign-variables-for-fields';
 export { listCampaignVariablesForFields } from './tiptap/list-campaign-variables-for-fields';
+export { normalizeRichTextDocument } from './tiptap/normalize-rich-text-document';
+export type { NormalizedRichTextDocument } from './tiptap/normalized-rich-text-document';
 export {
   parseEmailDocument,
   parseCanonicalEmailDocument,
 } from './tiptap/parse-email-document';
+export { parseLegacyTipTapBlocks } from './tiptap/parse-legacy-tiptap-blocks';
 export {
   isTipTapNode,
+  isTipTapDocument,
   parseTipTapJsonDocument,
   parseCanonicalTipTapJsonDocument,
 } from './tiptap/parse-tiptap-json-document';
 export { resolveCanvasTheme } from './tiptap/resolve-canvas-theme';
+export type { RichTextConversionResult } from './tiptap/rich-text-conversion-result';
+export { RICH_TEXT_DOCUMENT_LIMITS } from './tiptap/rich-text-document-limits';
 export { TIPTAP_DOCUMENT_SCHEMA_VERSION } from './tiptap/tiptap-document-schema-version';
 export { tipTapDocumentToMarkdown } from './tiptap/tiptap-document-to-markdown';
 export type { TipTapDocument } from './tiptap/tiptap-document';

@@ -34,7 +34,7 @@ export const isTipTapNode = (value: unknown): value is TipTapNode => {
   );
 };
 
-const isTipTapDocument = (value: unknown): value is TipTapDocument =>
+export const isTipTapDocument = (value: unknown): value is TipTapDocument =>
   isTipTapNode(value) && value.type === TIPTAP_NODE_TYPES.DOCUMENT;
 
 export const parseTipTapJsonDocument = (

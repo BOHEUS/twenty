@@ -102,9 +102,57 @@ const renderListItem = (item: TipTapNode, marker: string): string => {
   }\n`;
 };
 
+const renderInlineCode = (code: string): string => {
+  const fence = '`'.repeat(
+    Math.max(1, ...(code.match(/`+/g) ?? []).map((run) => run.length + 1)),
+  );
+  const padding = code.startsWith('`') || code.endsWith('`') ? ' ' : '';
+
+  return `${fence}${padding}${code}${padding}${fence}`;
+};
+
+const renderTableCell = (cell: TipTapNode): string =>
+  renderChildren(cell)
+    .trim()
+    .replace(/\s*\n+\s*/g, ' ');
+
+// GFM tables always have a header row, so a table without one gets an empty
+// header instead of promoting its first row.
+const renderTable = (table: TipTapNode): string => {
+  const rows = table.content ?? [];
+  const columnCount = Math.max(
+    1,
+    ...rows.map((row) => row.content?.length ?? 0),
+  );
+  const renderRow = (cells: string[]) =>
+    `| ${Array.from({ length: columnCount }, (_, index) => cells[index] ?? '').join(' | ')} |`;
+  const [firstRow] = rows;
+  const hasHeaderRow =
+    firstRow !== undefined &&
+    (firstRow.content ?? []).every(
+      (cell) => cell.type === TIPTAP_NODE_TYPES.TABLE_HEADER,
+    );
+  const headerCells = hasHeaderRow
+    ? (firstRow.content ?? []).map(renderTableCell)
+    : [];
+  const bodyRows = hasHeaderRow ? rows.slice(1) : rows;
+
+  return `${[
+    renderRow(headerCells),
+    renderRow(Array.from({ length: columnCount }, () => '---')),
+    ...bodyRows.map((row) =>
+      renderRow((row.content ?? []).map(renderTableCell)),
+    ),
+  ].join('\n')}\n\n`;
+};
+
 const renderTipTapNodeToMarkdown = (node: TipTapNode): string => {
   switch (node.type) {
-    case TIPTAP_NODE_TYPES.TEXT:
+    case TIPTAP_NODE_TYPES.TEXT: {
+      const isCode = (node.marks ?? []).some(
+        (mark) => mark.type === TIPTAP_MARK_TYPES.CODE,
+      );
+
       return [...(node.marks ?? [])]
         .sort(
           (firstMark, secondMark) =>
@@ -113,8 +161,11 @@ const renderTipTapNodeToMarkdown = (node: TipTapNode): string => {
         )
         .reduce(
           (text, mark) => applyMark(text, mark),
-          escapeMarkdownText(node.text ?? ''),
+          isCode
+            ? renderInlineCode(node.text ?? '')
+            : escapeMarkdownText(node.text ?? ''),
         );
+    }
     case TIPTAP_NODE_TYPES.HARD_BREAK:
       return '\n';
     case TIPTAP_NODE_TYPES.VARIABLE_TAG:
@@ -176,6 +227,34 @@ const renderTipTapNodeToMarkdown = (node: TipTapNode): string => {
       return typeof node.attrs?.html === 'string' ? node.attrs.html : '';
     case TIPTAP_NODE_TYPES.DIVIDER:
       return '---\n\n';
+    case TIPTAP_NODE_TYPES.BLOCKQUOTE:
+      return `${renderChildren(node)
+        .trim()
+        .split('\n')
+        .map((line) => (line === '' ? '>' : `> ${line}`))
+        .join('\n')}\n\n`;
+    case TIPTAP_NODE_TYPES.CODE_BLOCK: {
+      const code = (node.content ?? [])
+        .map((child) => child.text ?? '')
+        .join('');
+      const language =
+        typeof node.attrs?.language === 'string' ? node.attrs.language : '';
+      const fence = '`'.repeat(
+        Math.max(3, ...(code.match(/`+/g) ?? []).map((run) => run.length + 1)),
+      );
+
+      return `${fence}${language}\n${code}\n${fence}\n\n`;
+    }
+    case TIPTAP_NODE_TYPES.TABLE:
+      return renderTable(node);
+    case TIPTAP_NODE_TYPES.FILE: {
+      const name = typeof node.attrs?.name === 'string' ? node.attrs.name : '';
+      const url = typeof node.attrs?.url === 'string' ? node.attrs.url : '';
+
+      return url === ''
+        ? `${escapeMarkdownText(name)}\n\n`
+        : `[${escapeMarkdownText(name || url)}](${escapeMarkdownDestination(url)})\n\n`;
+    }
     default:
       return renderChildren(node);
   }

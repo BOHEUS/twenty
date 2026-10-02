@@ -19,6 +19,13 @@ export const TIPTAP_NODE_TYPES = {
   BUTTON: 'button',
   DIVIDER: 'divider',
   HTML: 'html',
+  BLOCKQUOTE: 'blockquote',
+  CODE_BLOCK: 'codeBlock',
+  TABLE: 'table',
+  TABLE_ROW: 'tableRow',
+  TABLE_HEADER: 'tableHeader',
+  TABLE_CELL: 'tableCell',
+  FILE: 'file',
 } as const;
 
 export type TipTapNodeType =
