@@ -57,7 +57,9 @@ describe('validateFlatFieldMetadataColumnLimit', () => {
     });
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].code).toBe(FieldMetadataExceptionCode.COLUMN_LIMIT_REACHED);
+    expect(errors[0].code).toBe(
+      FieldMetadataExceptionCode.COLUMN_LIMIT_REACHED,
+    );
   });
 
   it('should count every column of a composite field', () => {
