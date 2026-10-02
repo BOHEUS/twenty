@@ -111,6 +111,14 @@ describe('transformRichTextValue', () => {
     ]);
   });
 
+  it('should clear every subfield when the field is set to null', () => {
+    expect(transformRichTextValue(null)).toEqual({
+      blocknote: null,
+      markdown: null,
+      tiptap: null,
+    });
+  });
+
   it('should return empty subfields when nothing is set', () => {
     expect(
       transformRichTextValue({ blocknote: null, markdown: null, tiptap: null }),

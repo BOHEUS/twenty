@@ -23,7 +23,9 @@ export const transformRichTextValue = (
     ? richTextValueSchema.parse(richTextValue)
     : richTextValue;
 
-  const normalizedDocument = normalizeRichTextDocument(parsedValue);
+  const normalizedDocument = isDefined(parsedValue)
+    ? normalizeRichTextDocument(parsedValue)
+    : null;
 
   if (!isDefined(normalizedDocument)) {
     return { blocknote: null, markdown: null, tiptap: null };
