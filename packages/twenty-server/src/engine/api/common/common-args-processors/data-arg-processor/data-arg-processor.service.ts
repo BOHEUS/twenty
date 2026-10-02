@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 
 import { msg } from '@lingui/core/macro';
-import { isNull, isObject, isUndefined } from '@sniptt/guards';
+import {
+  isNonEmptyString,
+  isNull,
+  isObject,
+  isUndefined,
+} from '@sniptt/guards';
 import {
   FieldMetadataSettingsMapping,
   FieldMetadataType,
@@ -12,8 +17,15 @@ import {
   assertIsDefinedOrThrow,
   assertUnreachable,
   isDefined,
+  isPlainObject,
+  parseTipTapJsonDocument,
 } from 'twenty-shared/utils';
+import { In } from 'typeorm';
 
+import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
+import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
+import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
+import { extractRichTextDocumentFileIds } from 'src/engine/core-modules/record-transformer/utils/extract-rich-text-document-file-ids.util';
 import { computeMorphOrRelationFieldJoinColumnName } from 'src/engine/metadata-modules/field-metadata/utils/compute-morph-or-relation-field-join-column-name.util';
 import { isFieldMetadataSettingsOfType } from 'src/engine/metadata-modules/field-metadata/utils/is-field-metadata-settings-of-type.util';
 import { belongsToTwentyStandardApp } from 'src/engine/metadata-modules/utils/belongs-to-twenty-standard-app.util';
@@ -67,7 +79,50 @@ import { FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-meta
 
 @Injectable()
 export class DataArgProcessorService {
-  constructor(private readonly recordPositionService: RecordPositionService) {}
+  constructor(
+    private readonly recordPositionService: RecordPositionService,
+    @InjectWorkspaceScopedRepository(FileEntity)
+    private readonly fileRepository: WorkspaceScopedRepository<FileEntity>,
+  ) {}
+
+  // File URLs are only signed for files of the reading workspace, but a
+  // stored reference to another workspace's file is still rejected early.
+  private async assertRichTextFilesBelongToWorkspace({
+    richTextValue,
+    fieldName,
+    workspaceId,
+  }: {
+    richTextValue: unknown;
+    fieldName: string;
+    workspaceId: string;
+  }): Promise<void> {
+    const document =
+      isPlainObject(richTextValue) && isNonEmptyString(richTextValue.tiptap)
+        ? parseTipTapJsonDocument(richTextValue.tiptap)
+        : undefined;
+
+    if (!isDefined(document)) {
+      return;
+    }
+
+    const fileIds = extractRichTextDocumentFileIds(document);
+
+    if (fileIds.length === 0) {
+      return;
+    }
+
+    const workspaceFileCount = await this.fileRepository.count(workspaceId, {
+      where: { id: In(fileIds) },
+    });
+
+    if (workspaceFileCount !== fileIds.length) {
+      throw new CommonQueryRunnerException(
+        `Rich text field "${fieldName}" references files outside the workspace`,
+        CommonQueryRunnerExceptionCode.INVALID_ARGS_DATA,
+        { userFriendlyMessage: msg`Invalid value for rich text.` },
+      );
+    }
+  }
 
   async process({
     partialRecordInputs,
@@ -164,6 +219,14 @@ export class DataArgProcessorService {
           flatFieldMetadataMaps,
           flatObjectMetadataMaps,
         );
+
+        if (fieldMetadata.type === FieldMetadataType.RICH_TEXT) {
+          await this.assertRichTextFilesBelongToWorkspace({
+            richTextValue: processedRecord[key],
+            fieldName: key,
+            workspaceId: workspace.id,
+          });
+        }
       }
       processedRecords.push(processedRecord);
     }

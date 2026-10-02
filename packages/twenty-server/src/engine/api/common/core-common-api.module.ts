@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
+import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/provide-workspace-scoped-repository';
 import { CommonArgsProcessors } from 'src/engine/api/common/common-args-processors/common-args-processors';
 import { GroupByArgProcessorService } from 'src/engine/api/common/common-args-processors/group-by-arg-processor/group-by-arg-processor.service';
 import { ProcessNestedRelationsHelper } from 'src/engine/api/common/common-nested-relations-processor/process-nested-relations.helper';
@@ -34,7 +36,7 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
     WorkspaceQueryHookModule,
     WorkspaceQueryRunnerModule,
     PermissionsModule,
-    TypeOrmModule.forFeature([RoleTargetEntity]),
+    TypeOrmModule.forFeature([RoleTargetEntity, FileEntity]),
     UserRoleModule,
     ApiKeyModule,
     FileModule,
@@ -53,6 +55,7 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
     WorkspaceManyOrAllFlatEntityMapsCacheModule,
   ],
   providers: [
+    provideWorkspaceScopedRepository(FileEntity),
     ProcessNestedRelationsHelper,
     ...CommonArgsProcessors,
     ProcessAggregateHelper,
