@@ -9,7 +9,9 @@ import { type NextFunction, type Request, type Response } from 'express';
 import { isDefined, normalizeAllowedIframeOrigin } from 'twenty-shared/utils';
 
 import { ClientConfigService } from 'src/engine/core-modules/client-config/services/client-config.service';
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { WorkspaceDomainsService } from 'src/engine/core-modules/domain/workspace-domains/services/workspace-domains.service';
+import { buildWhiteLabeledManifest } from 'src/engine/core-modules/frontend/utils/build-white-labeled-manifest.util';
 import { isFrontendDocumentRequest } from 'src/engine/core-modules/frontend/utils/is-frontend-document-request.util';
 import { renderFrontendHtml } from 'src/engine/core-modules/frontend/utils/render-frontend-html.util';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
@@ -24,14 +26,22 @@ export class FrontendService {
   private readonly logger = new Logger(FrontendService.name);
   private readonly template: string | undefined;
   private readonly indexUrl: string | undefined;
+  private readonly manifest: Record<string, unknown> | undefined;
 
   constructor(
     private readonly clientConfigService: ClientConfigService,
     private readonly workspaceDomainsService: WorkspaceDomainsService,
+    private readonly brandingService: BrandingService,
     @Inject('FRONTEND_PATH') readonly frontPath: string,
     twentyConfigService: TwentyConfigService,
   ) {
     this.indexUrl = twentyConfigService.get('FRONTEND_INDEX_URL');
+
+    const manifestPath = join(this.frontPath, 'manifest.json');
+
+    if (existsSync(manifestPath)) {
+      this.manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    }
 
     if (isDefined(this.indexUrl)) {
       return;
@@ -89,6 +99,27 @@ export class FrontendService {
     this.validateTemplate(template);
 
     return template;
+  }
+
+  serveManifest(request: Request, response: Response, next: NextFunction) {
+    if (request.path !== '/manifest.json' || !isDefined(this.manifest)) {
+      next();
+
+      return;
+    }
+
+    const brand = this.brandingService.getBrand();
+
+    if (!brand.isWhiteLabeled) {
+      next();
+
+      return;
+    }
+
+    response.setHeader('Cache-Control', 'no-store');
+    response
+      .type('application/manifest+json')
+      .send(JSON.stringify(buildWhiteLabeledManifest(this.manifest, brand)));
   }
 
   async serveDocument(
@@ -152,7 +183,7 @@ export class FrontendService {
       response
         .status(503)
         .type('text')
-        .send('Unable to load Twenty. Please try again.');
+        .send('Unable to load the app. Please try again.');
     }
   }
 }

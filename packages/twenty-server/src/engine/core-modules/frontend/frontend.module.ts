@@ -10,11 +10,12 @@ import { join } from 'path';
 import { isDefined } from 'twenty-shared/utils';
 
 import { ClientConfigModule } from 'src/engine/core-modules/client-config/client-config.module';
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { WorkspaceDomainsModule } from 'src/engine/core-modules/domain/workspace-domains/workspace-domains.module';
 import { FrontendService } from 'src/engine/core-modules/frontend/frontend.service';
 
 @Module({
-  imports: [ClientConfigModule, WorkspaceDomainsModule],
+  imports: [ClientConfigModule, EnterpriseModule, WorkspaceDomainsModule],
   providers: [
     FrontendService,
     { provide: 'FRONTEND_PATH', useValue: join(__dirname, '../../../front') },
@@ -50,6 +51,8 @@ export class FrontendModule implements OnModuleInit {
       },
     });
 
+    // Registered before the static handler, otherwise the manifest on disk wins.
+    adapter.use(this.frontendService.serveManifest.bind(this.frontendService));
     adapter.use((request: Request, response: Response, next: NextFunction) => {
       if (request.path === '/index.html') {
         next();
