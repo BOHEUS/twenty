@@ -26,6 +26,24 @@ export class WorkspaceSchemaColumnManagerService {
     await queryRunner.query(sql);
   }
 
+  // Dropped columns keep their attribute slot, and Postgres counts slots against its column limit
+  async countColumnSlots({
+    queryRunner,
+    schemaName,
+    tableName,
+  }: {
+    queryRunner: QueryRunner;
+    schemaName: string;
+    tableName: string;
+  }): Promise<number> {
+    const [{ count }] = await queryRunner.query(
+      `SELECT COUNT(*)::int AS count FROM pg_attribute WHERE attrelid = $1::regclass AND attnum > 0`,
+      [`${escapeIdentifier(schemaName)}.${escapeIdentifier(tableName)}`],
+    );
+
+    return count;
+  }
+
   async dropColumns({
     queryRunner,
     schemaName,

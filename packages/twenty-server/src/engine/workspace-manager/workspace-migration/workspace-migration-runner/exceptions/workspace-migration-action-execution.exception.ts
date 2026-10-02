@@ -11,6 +11,7 @@ export const WorkspaceMigrationActionExecutionExceptionCode = {
   INVALID_ACTION_TYPE: 'INVALID_ACTION_TYPE',
   FLAT_ENTITY_NOT_FOUND: 'FLAT_ENTITY_NOT_FOUND',
   UNSUPPORTED_FIELD_METADATA_TYPE: 'UNSUPPORTED_FIELD_METADATA_TYPE',
+  COLUMN_LIMIT_REACHED: 'COLUMN_LIMIT_REACHED',
   INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
 } as const;
 
@@ -34,6 +35,8 @@ const getWorkspaceMigrationActionExecutionExceptionUserFriendlyMessage = (
       return msg`Entity not found.`;
     case WorkspaceMigrationActionExecutionExceptionCode.UNSUPPORTED_FIELD_METADATA_TYPE:
       return msg`Unsupported field metadata type.`;
+    case WorkspaceMigrationActionExecutionExceptionCode.COLUMN_LIMIT_REACHED:
+      return msg`This object has reached the maximum number of columns. Remove unused fields before adding new ones.`;
     case WorkspaceMigrationActionExecutionExceptionCode.INTERNAL_SERVER_ERROR:
       return msg`An unexpected error occurred.`;
     default:

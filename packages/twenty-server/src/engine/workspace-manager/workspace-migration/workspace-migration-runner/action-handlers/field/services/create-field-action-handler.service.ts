@@ -29,6 +29,7 @@ import {
   WorkspaceMigrationActionRunnerContext,
   type WorkspaceMigrationActionRunnerArgs,
 } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/types/workspace-migration-action-runner-args.type';
+import { assertColumnLimitNotExceededOrThrow } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/utils/assert-column-limit-not-exceeded-or-throw.util';
 import { generateColumnDefinitions } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/utils/generate-column-definitions.util';
 import { getWorkspaceSchemaContextForMigration } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/utils/get-workspace-schema-context-for-migration.util';
 import {
@@ -251,6 +252,14 @@ export class CreateFieldActionHandlerService extends WorkspaceMigrationRunnerAct
             getSearchFieldMetadatasByTsVectorFieldId,
           })
         : undefined,
+    });
+
+    assertColumnLimitNotExceededOrThrow({
+      existingColumnSlotCount:
+        await this.workspaceSchemaManagerService.columnManager.countColumnSlots(
+          { queryRunner, schemaName, tableName },
+        ),
+      addedColumnCount: columnDefinitions.length,
     });
 
     await executeBatchEnumOperations({
