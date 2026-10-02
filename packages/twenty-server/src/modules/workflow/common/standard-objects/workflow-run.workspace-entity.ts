@@ -1,7 +1,6 @@
 import { type AgentChatThreadWorkspaceEntity } from 'src/engine/metadata-modules/ai/ai-history/standard-objects/agent-chat-thread.workspace-entity';
 import { registerEnumType } from '@nestjs/graphql';
 
-import { type ActorMetadata } from 'twenty-shared/types';
 import {
   type WorkflowRunStepInfos,
   type WorkflowRunStepLogs,
@@ -60,8 +59,6 @@ export class WorkflowRunWorkspaceEntity extends BaseWorkspaceEntity {
   startedAt: string | null;
   endedAt: string | null;
   status: WorkflowRunStatus;
-  createdBy: ActorMetadata;
-  updatedBy: ActorMetadata;
   state: WorkflowRunState;
   stepLogs: WorkflowRunStepLogs | null;
   position: number;

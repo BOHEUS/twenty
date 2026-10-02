@@ -1,5 +1,3 @@
-import { type ActorMetadata } from 'twenty-shared/types';
-
 import { type FileOutput } from 'src/engine/api/common/common-args-processors/data-arg-processor/types/file-item.type';
 import { type AgentChatThreadWorkspaceEntity } from 'src/engine/metadata-modules/ai/ai-history/standard-objects/agent-chat-thread.workspace-entity';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
@@ -24,8 +22,6 @@ export class AttachmentWorkspaceEntity extends BaseWorkspaceEntity {
   type: string | null;
   /** @deprecated Use `file[0].extension` field instead */
   fileCategory: string;
-  createdBy: ActorMetadata;
-  updatedBy: ActorMetadata;
   /** @deprecated */
   author: EntityRelation<WorkspaceMemberWorkspaceEntity> | null;
   authorId: string | null;

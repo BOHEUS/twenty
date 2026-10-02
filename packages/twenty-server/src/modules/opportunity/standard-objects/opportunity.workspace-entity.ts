@@ -1,4 +1,4 @@
-import { type ActorMetadata, type CurrencyMetadata } from 'twenty-shared/types';
+import { type CurrencyMetadata } from 'twenty-shared/types';
 
 import { type AgentChatThreadTargetWorkspaceEntity } from 'src/engine/metadata-modules/ai/ai-history/standard-objects/agent-chat-thread-target.workspace-entity';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
@@ -19,8 +19,6 @@ export class OpportunityWorkspaceEntity extends BaseWorkspaceEntity {
   closeDate: Date | null;
   stage: string;
   position: number;
-  createdBy: ActorMetadata;
-  updatedBy: ActorMetadata;
   pointOfContact: EntityRelation<PersonWorkspaceEntity> | null;
   pointOfContactId: string | null;
   company: EntityRelation<CompanyWorkspaceEntity> | null;

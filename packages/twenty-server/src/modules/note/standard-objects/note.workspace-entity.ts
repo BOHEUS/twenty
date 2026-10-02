@@ -1,4 +1,4 @@
-import { type ActorMetadata, type RichTextMetadata } from 'twenty-shared/types';
+import { type RichTextMetadata } from 'twenty-shared/types';
 
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { type EntityRelation } from 'src/engine/workspace-manager/workspace-migration/types/entity-relation.interface';
@@ -10,8 +10,6 @@ export class NoteWorkspaceEntity extends BaseWorkspaceEntity {
   position: number;
   title: string;
   bodyV2: RichTextMetadata | null;
-  createdBy: ActorMetadata;
-  updatedBy: ActorMetadata;
   noteTargets: EntityRelation<NoteTargetWorkspaceEntity[]>;
   attachments: EntityRelation<AttachmentWorkspaceEntity[]>;
   timelineActivities: EntityRelation<TimelineActivityWorkspaceEntity[]>;

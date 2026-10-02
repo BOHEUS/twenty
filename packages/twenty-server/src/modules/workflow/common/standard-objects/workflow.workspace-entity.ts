@@ -1,5 +1,3 @@
-import { type ActorMetadata } from 'twenty-shared/types';
-
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
 import { type EntityRelation } from 'src/engine/workspace-manager/workspace-migration/types/entity-relation.interface';
 import { type AttachmentWorkspaceEntity } from 'src/modules/attachment/standard-objects/attachment.workspace-entity';
@@ -26,6 +24,4 @@ export class WorkflowWorkspaceEntity extends BaseWorkspaceEntity {
   automatedTriggers: EntityRelation<WorkflowAutomatedTriggerWorkspaceEntity[]>;
   timelineActivities: EntityRelation<TimelineActivityWorkspaceEntity[]>;
   attachments: EntityRelation<AttachmentWorkspaceEntity[]>;
-  createdBy: ActorMetadata;
-  updatedBy: ActorMetadata;
 }

@@ -1,5 +1,4 @@
 import {
-  type ActorMetadata,
   type EmailsMetadata,
   type FullNameMetadata,
   type LinksMetadata,
@@ -34,8 +33,6 @@ export class PersonWorkspaceEntity extends BaseWorkspaceEntity {
   avatarUrl: string | null;
   avatarFile: FileOutput[] | null;
   position: number;
-  createdBy: ActorMetadata;
-  updatedBy: ActorMetadata;
   company: EntityRelation<CompanyWorkspaceEntity> | null;
   companyId: string | null;
   pointOfContactForOpportunities: EntityRelation<OpportunityWorkspaceEntity[]>;

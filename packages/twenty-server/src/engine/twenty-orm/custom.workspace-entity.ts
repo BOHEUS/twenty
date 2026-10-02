@@ -1,4 +1,4 @@
-import { type ActorMetadata, FieldMetadataType } from 'twenty-shared/types';
+import { FieldMetadataType } from 'twenty-shared/types';
 
 import { DEFAULT_LABEL_IDENTIFIER_FIELD_NAME } from 'src/engine/metadata-modules/object-metadata/constants/object-metadata.constants';
 import { BaseWorkspaceEntity } from 'src/engine/twenty-orm/base.workspace-entity';
@@ -17,8 +17,6 @@ export const SEARCH_FIELDS_FOR_CUSTOM_OBJECT: FieldTypeAndNameMetadata[] = [
 export class CustomWorkspaceEntity extends BaseWorkspaceEntity {
   name: string | null;
   position: number;
-  createdBy: ActorMetadata;
-  updatedBy: ActorMetadata;
   noteTargets: NoteTargetWorkspaceEntity[];
   taskTargets: TaskTargetWorkspaceEntity[];
   attachments: AttachmentWorkspaceEntity[];

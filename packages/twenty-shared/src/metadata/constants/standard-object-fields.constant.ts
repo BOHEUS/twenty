@@ -1,3 +1,4 @@
+import { buildStandardObjectActorFields } from '@/metadata/utils/internal/build-standard-object-actor-fields.util';
 import { buildStandardObjectBaseFields } from '@/metadata/utils/internal/build-standard-object-base-fields.util';
 import { TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER } from '@/application/constants/TwentyStandardApplicationUniversalIdentifier';
 import { getSystemRelationFieldUniversalIdentifier } from '@/application/deterministic-identifier/get-system-relation-field-universal-identifier.util';
@@ -10,6 +11,9 @@ import { buildStandardObjectSystemFields } from '@/metadata/utils/internal/build
 export const STANDARD_OBJECT_FIELDS = {
   agentChatThread: {
     ...buildStandardObjectBaseFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThread,
+    ),
+    ...buildStandardObjectActorFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThread,
     ),
     archivedAt: { universalIdentifier: 'b42eaf6f-240f-41ef-af61-51d5ac9cde7d' },
@@ -76,6 +80,9 @@ export const STANDARD_OBJECT_FIELDS = {
     ...buildStandardObjectBaseFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThreadTarget,
     ),
+    ...buildStandardObjectActorFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThreadTarget,
+    ),
     thread: { universalIdentifier: '54664c16-3c3d-4d5e-904c-59e1b3707cfb' },
     targetPerson: {
       universalIdentifier: getSystemRelationFieldUniversalIdentifier({
@@ -112,6 +119,9 @@ export const STANDARD_OBJECT_FIELDS = {
     ...buildStandardObjectBaseFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentTurn,
     ),
+    ...buildStandardObjectActorFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentTurn,
+    ),
     agentId: { universalIdentifier: '4ac55a9a-95e8-4fd9-8c03-47ee3b618ae7' },
     thread: { universalIdentifier: '4e9b4f1f-c1bb-42d0-bb38-eb2b2f830e64' },
     messages: { universalIdentifier: '737c3559-ea1a-4269-aea4-e672b17afbb1' },
@@ -121,6 +131,9 @@ export const STANDARD_OBJECT_FIELDS = {
   },
   agentMessage: {
     ...buildStandardObjectBaseFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentMessage,
+    ),
+    ...buildStandardObjectActorFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentMessage,
     ),
     agentId: { universalIdentifier: '880a91ad-4ab1-4067-87f6-970a53aa2234' },
@@ -145,6 +158,9 @@ export const STANDARD_OBJECT_FIELDS = {
   },
   agentMessagePart: {
     ...buildStandardObjectBaseFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentMessagePart,
+    ),
+    ...buildStandardObjectActorFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentMessagePart,
     ),
     orderIndex: { universalIdentifier: 'd2b3e277-380c-4133-977d-f23f8092aebc' },
@@ -201,6 +217,9 @@ export const STANDARD_OBJECT_FIELDS = {
   },
   agentTurnEvaluation: {
     ...buildStandardObjectBaseFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentTurnEvaluation,
+    ),
+    ...buildStandardObjectActorFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentTurnEvaluation,
     ),
     score: { universalIdentifier: 'a4313259-d43b-4d10-abf5-2426e152c10b' },

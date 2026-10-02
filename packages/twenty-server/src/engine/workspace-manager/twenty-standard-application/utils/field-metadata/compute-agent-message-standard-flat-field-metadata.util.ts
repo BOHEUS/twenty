@@ -6,6 +6,7 @@ import {
   RelationType,
   RelationOnDeleteAction,
 } from 'twenty-shared/types';
+import { buildStandardActorFlatFieldMetadatas } from 'src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/build-standard-actor-flat-field-metadatas.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import {
   type CreateStandardFieldArgs,
@@ -20,6 +21,7 @@ export const buildAgentMessageStandardFlatFieldMetadatas = (
     'context'
   >,
 ): Record<AllStandardObjectFieldName<'agentMessage'>, FlatFieldMetadata> => ({
+  ...buildStandardActorFlatFieldMetadatas(args),
   id: {
     ...createStandardFieldFlatMetadata({
       ...args,
