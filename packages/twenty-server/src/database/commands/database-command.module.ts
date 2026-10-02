@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { WorkspaceIteratorModule } from 'src/database/commands/command-runners/workspace-iterator.module';
+import { ReportRichTextUsageCommand } from 'src/database/commands/rich-text-usage/report-rich-text-usage.command';
 import { CronRegisterAllCommand } from 'src/database/commands/cron-register-all.command';
 import { DataSeedWorkspaceCommand } from 'src/database/commands/data-seed-dev-workspace.command';
 import { SecretEncryptionRotationModule } from 'src/database/commands/secret-encryption-rotation/secret-encryption-rotation.module';
@@ -124,6 +125,7 @@ import { WorkflowCoreConsistencyModule } from 'src/modules/workflow/workflow-cor
     UpgradeStatusCommand,
     RebuildApplicationDefaultDepsCommand,
     InstallPreInstalledAppsCommand,
+    ReportRichTextUsageCommand,
     provideWorkspaceScopedRepository(RoleEntity),
   ],
 })
