@@ -31,7 +31,7 @@ describe('buildMcpServerCard', () => {
     );
     expect(card.name).toBe('com.twenty/twenty');
     expect(card.version).toBe('0.42.0');
-    expect(card.repository.source).toBe('github');
+    expect(card.repository?.source).toBe('github');
   });
 
   it('marks the Authorization header optional and secret (OAuth or API key)', () => {
