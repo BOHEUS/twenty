@@ -3,10 +3,14 @@ import { Injectable } from '@nestjs/common';
 import { isNumber } from '@sniptt/guards';
 import { type ObjectRecord } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { Not } from 'typeorm';
 
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { sanitizeNumber } from 'src/engine/utils/sanitize-number.utli';
+
+// Postgres orders NaN above every number, so a single NaN row would make MAX return NaN
+const NON_NAN_POSITION_WHERE = { position: Not('NaN') };
 
 export type RecordPositionServiceCreateArgs = {
   value: number | 'first' | 'last';
@@ -213,7 +217,7 @@ export class RecordPositionService {
           },
         );
 
-        return await repository.minimum('position');
+        return await repository.minimum('position', NON_NAN_POSITION_WHERE);
       },
       authContext,
     );
@@ -236,7 +240,7 @@ export class RecordPositionService {
           },
         );
 
-        return await repository.maximum('position');
+        return await repository.maximum('position', NON_NAN_POSITION_WHERE);
       },
       authContext,
     );

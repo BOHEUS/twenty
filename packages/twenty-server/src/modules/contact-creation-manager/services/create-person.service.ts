@@ -3,14 +3,17 @@ import { Injectable } from '@nestjs/common';
 import { type FullNameMetadata } from 'twenty-shared/types';
 import { DeepPartial } from 'typeorm';
 
+import { RecordPositionService } from 'src/engine/core-modules/record-position/services/record-position.service';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
-import { type WorkspaceRepository } from 'src/engine/twenty-orm/repository/workspace-repository';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { PersonWorkspaceEntity } from 'src/modules/person/standard-objects/person.workspace-entity';
 
 @Injectable()
 export class CreatePersonService {
-  constructor(private readonly workspaceOrmManager: WorkspaceOrmManager) {}
+  constructor(
+    private readonly workspaceOrmManager: WorkspaceOrmManager,
+    private readonly recordPositionService: RecordPositionService,
+  ) {}
 
   public async createPeople(
     peopleToCreate: Partial<PersonWorkspaceEntity>[],
@@ -26,13 +29,17 @@ export class CreatePersonService {
         { shouldBypassPermissionChecks: true },
       );
 
-      const lastPersonPosition =
-        await this.getLastPersonPosition(personRepository);
+      const firstPersonPosition =
+        await this.recordPositionService.buildRecordPosition({
+          value: 'last',
+          objectMetadata: { isCustom: false, nameSingular: 'person' },
+          workspaceId,
+        });
 
       const createdPeople = await personRepository.insert(
         peopleToCreate.map((person, index) => ({
           ...person,
-          position: lastPersonPosition + index,
+          position: firstPersonPosition + index,
         })),
       );
 
@@ -99,16 +106,5 @@ export class CreatePersonService {
 
       return enrichedPeople.raw;
     }, authContext);
-  }
-
-  private async getLastPersonPosition(
-    personRepository: WorkspaceRepository<PersonWorkspaceEntity>,
-  ): Promise<number> {
-    const lastPersonPosition = await personRepository.maximum(
-      'position',
-      undefined,
-    );
-
-    return lastPersonPosition ?? 0;
   }
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { FeatureFlagEntity } from 'src/engine/core-modules/feature-flag/feature-flag.entity';
+import { RecordPositionModule } from 'src/engine/core-modules/record-position/record-position.module';
 import { SecureHttpClientModule } from 'src/engine/core-modules/secure-http-client/secure-http-client.module';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
@@ -22,6 +23,7 @@ import { CreatePersonService } from 'src/modules/contact-creation-manager/servic
     ]),
     TypeOrmModule.forFeature([ObjectMetadataEntity, FieldMetadataEntity]),
     SecureHttpClientModule,
+    RecordPositionModule,
   ],
   providers: [
     CreateCompanyService,

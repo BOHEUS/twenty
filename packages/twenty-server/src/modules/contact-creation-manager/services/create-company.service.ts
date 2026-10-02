@@ -11,9 +11,9 @@ import {
 import { isDefined, normalizeDomain } from 'twenty-shared/utils';
 import { type DeepPartial, In } from 'typeorm';
 
+import { RecordPositionService } from 'src/engine/core-modules/record-position/services/record-position.service';
 import { SecureHttpClientService } from 'src/engine/core-modules/secure-http-client/secure-http-client.service';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
-import { type WorkspaceRepository } from 'src/engine/twenty-orm/repository/workspace-repository';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { CompanyWorkspaceEntity } from 'src/modules/company/standard-objects/company.workspace-entity';
 import { getCompanyNameFromDomainName } from 'src/modules/contact-creation-manager/utils/get-company-name-from-domain-name.util';
@@ -37,6 +37,7 @@ export class CreateCompanyService {
   constructor(
     private readonly workspaceOrmManager: WorkspaceOrmManager,
     private readonly secureHttpClientService: SecureHttpClientService,
+    private readonly recordPositionService: RecordPositionService,
   ) {
     this.httpService = this.secureHttpClientService.getHttpClient({
       baseURL: TWENTY_COMPANIES_BASE_URL,
@@ -146,11 +147,15 @@ export class CreateCompanyService {
         return existingCompanyIdsMap;
       }
 
-      let lastCompanyPosition =
-        await this.getLastCompanyPosition(companyRepository);
+      const firstCompanyPosition =
+        await this.recordPositionService.buildRecordPosition({
+          value: 'last',
+          objectMetadata: { isCustom: false, nameSingular: 'company' },
+          workspaceId,
+        });
       const newCompaniesData = await Promise.all(
-        newCompaniesToCreate.map((company) =>
-          this.prepareCompanyData(company, ++lastCompanyPosition),
+        newCompaniesToCreate.map((company, index) =>
+          this.prepareCompanyData(company, firstCompanyPosition + index),
         ),
       );
 
@@ -315,17 +320,6 @@ export class CreateCompanyService {
       },
       {} as { [domainName: string]: string },
     );
-  }
-
-  private async getLastCompanyPosition(
-    companyRepository: WorkspaceRepository<CompanyWorkspaceEntity>,
-  ): Promise<number> {
-    const lastCompanyPosition = await companyRepository.maximum(
-      'position',
-      undefined,
-    );
-
-    return lastCompanyPosition ?? 0;
   }
 
   private async getCompanyInfoFromDomainName(
