@@ -23,7 +23,7 @@ export const useResolvedApplicationDescription = (
   }
 
   if (isWorkspaceCustomApplication(application, currentWorkspace)) {
-    return getCustomApplicationDescription(brand);
+    return getCustomApplicationDescription(brand.docsUrl);
   }
 
   return application?.description ?? '';

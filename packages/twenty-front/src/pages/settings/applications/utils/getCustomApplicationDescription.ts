@@ -1,11 +1,10 @@
 import { t } from '@lingui/core/macro';
-import { type Brand } from 'twenty-shared/types';
 
 import { getAppDevelopmentDocumentationUrls } from '~/pages/settings/applications/utils/getAppDevelopmentDocumentationUrls';
 
-export const getCustomApplicationDescription = (brand: Brand): string => {
+export const getCustomApplicationDescription = (docsUrl: string): string => {
   const { gettingStartedUrl, buildingAppsUrl } =
-    getAppDevelopmentDocumentationUrls(brand.docsUrl);
+    getAppDevelopmentDocumentationUrls(docsUrl);
 
   return t`Host your workspace's customizations and overrides.
 
