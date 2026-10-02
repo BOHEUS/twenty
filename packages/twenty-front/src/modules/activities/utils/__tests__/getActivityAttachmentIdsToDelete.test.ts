@@ -13,26 +13,32 @@ describe('getActivityAttachmentIdsToDelete', () => {
         file: [{ url: 'https://example.com/files/images/test2.txt' }],
       },
     ] as Attachment[];
-    const newActivityBody = JSON.stringify([
-      {
-        type: 'file',
-        props: { url: 'https://example.com/files/images/test.txt' },
-      },
-      {
-        type: 'file',
-        props: { url: 'https://example.com/files/images/test2.txt' },
-      },
-    ]);
-    const oldActivityBody = JSON.stringify([
-      {
-        type: 'file',
-        props: { url: 'https://example.com/files/images/test.txt' },
-      },
-      {
-        type: 'file',
-        props: { url: 'https://example.com/files/images/test2.txt' },
-      },
-    ]);
+    const newActivityBody = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'file',
+          attrs: { url: 'https://example.com/files/images/test.txt' },
+        },
+        {
+          type: 'file',
+          attrs: { url: 'https://example.com/files/images/test2.txt' },
+        },
+      ],
+    });
+    const oldActivityBody = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'file',
+          attrs: { url: 'https://example.com/files/images/test.txt' },
+        },
+        {
+          type: 'file',
+          attrs: { url: 'https://example.com/files/images/test2.txt' },
+        },
+      ],
+    });
     const attachmentIdsToDelete = getActivityAttachmentIdsToDelete(
       newActivityBody,
       attachments,
@@ -52,22 +58,28 @@ describe('getActivityAttachmentIdsToDelete', () => {
         file: [{ url: 'https://example.com/files/images/test2.txt' }],
       },
     ] as Attachment[];
-    const newActivityBody = JSON.stringify([
-      {
-        type: 'file',
-        props: { url: 'https://example.com/files/images/test.txt' },
-      },
-    ]);
-    const oldActivityBody = JSON.stringify([
-      {
-        type: 'file',
-        props: { url: 'https://example.com/files/images/test.txt' },
-      },
-      {
-        type: 'file',
-        props: { url: 'https://example.com/files/images/test2.txt' },
-      },
-    ]);
+    const newActivityBody = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'file',
+          attrs: { url: 'https://example.com/files/images/test.txt' },
+        },
+      ],
+    });
+    const oldActivityBody = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'file',
+          attrs: { url: 'https://example.com/files/images/test.txt' },
+        },
+        {
+          type: 'file',
+          attrs: { url: 'https://example.com/files/images/test2.txt' },
+        },
+      ],
+    });
     const attachmentIdsToDelete = getActivityAttachmentIdsToDelete(
       newActivityBody,
       attachments,

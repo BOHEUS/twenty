@@ -16,22 +16,25 @@ describe('getActivityAttachmentIdsAndNameToUpdate', () => {
       },
     ] as Attachment[];
 
-    const activityBody = JSON.stringify([
-      {
-        type: 'file',
-        props: {
-          url: 'https://exemple.com/files/images/test.txt',
-          name: 'image',
+    const activityBody = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'file',
+          attrs: {
+            url: 'https://exemple.com/files/images/test.txt',
+            name: 'image',
+          },
         },
-      },
-      {
-        type: 'file',
-        props: {
-          url: 'https://exemple.com/files/images/test2.txt',
-          name: 'image1',
+        {
+          type: 'file',
+          attrs: {
+            url: 'https://exemple.com/files/images/test2.txt',
+            name: 'image1',
+          },
         },
-      },
-    ]);
+      ],
+    });
     const attachmentIdsAndNameToUpdate =
       getActivityAttachmentIdsAndNameToUpdate(activityBody, attachments);
     expect(attachmentIdsAndNameToUpdate).toEqual([]);
@@ -51,22 +54,25 @@ describe('getActivityAttachmentIdsAndNameToUpdate', () => {
       },
     ] as Attachment[];
 
-    const activityBody = JSON.stringify([
-      {
-        type: 'file',
-        props: {
-          url: 'https://exemple.com/files/images/test.txt',
-          name: 'image',
+    const activityBody = JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'file',
+          attrs: {
+            url: 'https://exemple.com/files/images/test.txt',
+            name: 'image',
+          },
         },
-      },
-      {
-        type: 'file',
-        props: {
-          url: 'https://exemple.com/files/images/test2.txt',
-          name: 'image4',
+        {
+          type: 'file',
+          attrs: {
+            url: 'https://exemple.com/files/images/test2.txt',
+            name: 'image4',
+          },
         },
-      },
-    ]);
+      ],
+    });
     const attachmentIdsAndNameToUpdate =
       getActivityAttachmentIdsAndNameToUpdate(activityBody, attachments);
     expect(attachmentIdsAndNameToUpdate).toEqual([{ id: '2', name: 'image4' }]);

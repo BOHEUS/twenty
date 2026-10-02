@@ -4,14 +4,14 @@ describe('getActivitySummary', () => {
   it('should work for empty body ""', () => {
     const activityBody = {};
 
-    const res = getActivitySummary(JSON.stringify(activityBody));
+    const res = getActivitySummary({ blocknote: JSON.stringify(activityBody) });
 
     expect(res).toEqual('');
   });
   it('should work for empty body {}', () => {
     const activityBody = '';
 
-    const res = getActivitySummary(JSON.stringify(activityBody));
+    const res = getActivitySummary({ blocknote: JSON.stringify(activityBody) });
 
     expect(res).toEqual('');
   });
@@ -63,7 +63,7 @@ describe('getActivitySummary', () => {
       },
     ];
 
-    const res = getActivitySummary(JSON.stringify(activityBody));
+    const res = getActivitySummary({ blocknote: JSON.stringify(activityBody) });
 
     expect(res).toEqual('test 1');
   });
@@ -105,7 +105,7 @@ describe('getActivitySummary', () => {
       },
     ];
 
-    const res = getActivitySummary(JSON.stringify(activityBody));
+    const res = getActivitySummary({ blocknote: JSON.stringify(activityBody) });
 
     expect(res).toEqual('TEST');
   });
@@ -135,8 +135,29 @@ describe('getActivitySummary', () => {
       },
     ];
 
-    const res = getActivitySummary(JSON.stringify(activityBody));
+    const res = getActivitySummary({ blocknote: JSON.stringify(activityBody) });
 
     expect(res).toEqual('');
+  });
+
+  it('should read the tiptap subfield', () => {
+    const tiptap = JSON.stringify({
+      type: 'doc',
+      content: [
+        { type: 'paragraph' },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'first ' },
+            { type: 'text', text: 'line', marks: [{ type: 'bold' }] },
+          ],
+        },
+        { type: 'paragraph', content: [{ type: 'text', text: 'second' }] },
+      ],
+    });
+
+    expect(
+      getActivitySummary({ tiptap, blocknote: null, markdown: null }),
+    ).toEqual('first line');
   });
 });

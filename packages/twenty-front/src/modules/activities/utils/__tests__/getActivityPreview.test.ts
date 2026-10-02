@@ -4,14 +4,14 @@ describe('getActivityPreview', () => {
   it('should work for empty body', () => {
     const activityBody = {};
 
-    const res = getActivityPreview(JSON.stringify(activityBody));
+    const res = getActivityPreview({ blocknote: JSON.stringify(activityBody) });
 
     expect(res).toEqual('');
   });
   it('should work for empty body', () => {
     const activityBody = '';
 
-    const res = getActivityPreview(JSON.stringify(activityBody));
+    const res = getActivityPreview({ blocknote: JSON.stringify(activityBody) });
 
     expect(res).toEqual('');
   });
@@ -63,7 +63,7 @@ describe('getActivityPreview', () => {
       },
     ];
 
-    const res = getActivityPreview(JSON.stringify(activityBody));
+    const res = getActivityPreview({ blocknote: JSON.stringify(activityBody) });
 
     expect(res).toEqual('test 1\ntest text\ntest 2');
   });
@@ -105,8 +105,29 @@ describe('getActivityPreview', () => {
       },
     ];
 
-    const res = getActivityPreview(JSON.stringify(activityBody));
+    const res = getActivityPreview({ blocknote: JSON.stringify(activityBody) });
 
     expect(res).toEqual('TEST');
+  });
+
+  it('should read the tiptap subfield', () => {
+    const tiptap = JSON.stringify({
+      type: 'doc',
+      content: [
+        { type: 'paragraph' },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'first ' },
+            { type: 'text', text: 'line', marks: [{ type: 'bold' }] },
+          ],
+        },
+        { type: 'paragraph', content: [{ type: 'text', text: 'second' }] },
+      ],
+    });
+
+    expect(
+      getActivityPreview({ tiptap, blocknote: null, markdown: null }),
+    ).toEqual('first line\nsecond');
   });
 });

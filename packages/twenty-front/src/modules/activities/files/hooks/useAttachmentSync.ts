@@ -40,12 +40,14 @@ export const useAttachmentSync = (attachments: Attachment[]) => {
   ) => {
     if (!newBody) return;
 
-    const previousBodyOrEmptyArray = previousBody?.trim() ? previousBody : '[]';
+    const previousBodyOrEmptyDocument = previousBody?.trim()
+      ? previousBody
+      : '';
 
     const attachmentIdsToDelete = getActivityAttachmentIdsToDelete(
       newBody,
       attachments,
-      previousBodyOrEmptyArray,
+      previousBodyOrEmptyDocument,
     );
 
     if (attachmentIdsToDelete.length > 0) {

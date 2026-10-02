@@ -1,32 +1,40 @@
 import { isNonEmptyString } from '@sniptt/guards';
-
-import { parseInitialBlocknote } from '@/blocknote-editor/utils/parseInitialBlocknote';
+import {
+  isDefined,
+  parseTipTapJsonDocument,
+  TIPTAP_NODE_TYPES,
+  type TipTapNode,
+} from 'twenty-shared/utils';
 
 export type AttachmentInfo = {
   path: string;
   name: string;
 };
 
-const ATTACHMENT_BLOCK_TYPES = ['image', 'file', 'video', 'audio'];
+const collectAttachments = (node: TipTapNode): AttachmentInfo[] => {
+  const path =
+    node.type === TIPTAP_NODE_TYPES.IMAGE
+      ? node.attrs?.src
+      : node.type === TIPTAP_NODE_TYPES.FILE
+        ? node.attrs?.url
+        : undefined;
+  const name =
+    node.type === TIPTAP_NODE_TYPES.IMAGE
+      ? node.attrs?.title
+      : node.attrs?.name;
+
+  return [
+    ...(isNonEmptyString(path)
+      ? [{ path, name: isNonEmptyString(name) ? name : '' }]
+      : []),
+    ...(node.content ?? []).flatMap(collectAttachments),
+  ];
+};
 
 export const getActivityAttachmentPathsAndName = (
-  stringifiedActivityBlocknote: string,
+  serializedTipTapDocument: string,
 ): AttachmentInfo[] => {
-  const blocks = parseInitialBlocknote(stringifiedActivityBlocknote) ?? [];
+  const document = parseTipTapJsonDocument(serializedTipTapDocument);
 
-  return blocks.reduce((acc: AttachmentInfo[], block) => {
-    const props = block.props as { url?: string; name?: string } | undefined;
-
-    if (
-      block.type !== undefined &&
-      ATTACHMENT_BLOCK_TYPES.includes(block.type) &&
-      isNonEmptyString(props?.url)
-    ) {
-      acc.push({
-        path: props.url,
-        name: props?.name ?? '',
-      });
-    }
-    return acc;
-  }, []);
+  return isDefined(document) ? collectAttachments(document) : [];
 };
