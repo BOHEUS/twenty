@@ -78,5 +78,6 @@ export const PhonesValueOptionalSchema = PhonesValueSchema.optional();
 export const RichTextValueSchema = z.object({
   markdown: z.string().optional(),
   blocknote: z.string().optional(),
+  tiptap: z.string().optional(),
 });
 export const RichTextValueOptionalSchema = RichTextValueSchema.optional();

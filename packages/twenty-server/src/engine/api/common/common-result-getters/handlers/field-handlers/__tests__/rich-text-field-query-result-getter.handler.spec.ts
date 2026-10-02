@@ -183,4 +183,54 @@ describe('RichTextFieldQueryResultGetterHandler', () => {
       expect(result).toEqual(record);
     });
   });
+
+  describe('should sign tiptap file references', () => {
+    it('when nested image and file nodes point to workspace files', async () => {
+      const fileId = '20202020-0000-4000-8000-000000000001';
+      const fileUrl = `https://my-domain.twenty.com/file/files-field/${fileId}`;
+      const record = {
+        ...baseRecord,
+        bodyV2: {
+          markdown: null,
+          blocknote: null,
+          tiptap: JSON.stringify({
+            type: 'doc',
+            content: [
+              {
+                type: 'blockquote',
+                content: [{ type: 'image', attrs: { src: fileUrl } }],
+              },
+              { type: 'file', attrs: { url: fileUrl, name: 'a.pdf' } },
+              {
+                type: 'image',
+                attrs: { src: 'https://external.com/image.jpg' },
+              },
+            ],
+          }),
+        },
+      };
+
+      const result = await handler.handle(
+        record,
+        'ws-1',
+        richTextFieldMetadata,
+      );
+
+      expect(JSON.parse(result.bodyV2.tiptap)).toEqual({
+        type: 'doc',
+        content: [
+          {
+            type: 'blockquote',
+            content: [{ type: 'image', attrs: { src: 'signed-path' } }],
+          },
+          { type: 'file', attrs: { url: 'signed-path', name: 'a.pdf' } },
+          {
+            type: 'image',
+            attrs: { src: 'https://external.com/image.jpg' },
+          },
+        ],
+      });
+      expect(mockFileUrlService.signFileByIdUrl).toHaveBeenCalledTimes(2);
+    });
+  });
 });

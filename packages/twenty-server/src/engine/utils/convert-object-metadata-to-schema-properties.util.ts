@@ -352,9 +352,17 @@ export const convertObjectMetadataToSchemaProperties = ({
           properties: {
             blocknote: {
               type: 'string',
+              deprecated: true,
+              description:
+                'Deprecated: BlockNote JSON, derived from tiptap. Use tiptap or markdown instead.',
             },
             markdown: {
               type: 'string',
+            },
+            tiptap: {
+              type: 'string',
+              description:
+                'TipTap JSON document, the source of truth for rich text.',
             },
           },
         };

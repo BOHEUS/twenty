@@ -29,9 +29,12 @@ export const resolveRichTextFieldsInRecord = (
       continue;
     }
 
-    const { blocknote, markdown } = parsedRichTextValue.data;
+    const { blocknote, markdown, tiptap } = parsedRichTextValue.data;
 
     resolvedRecord[fieldName] = {
+      ...(isString(tiptap)
+        ? { tiptap: resolveRichTextVariables(tiptap, context) }
+        : {}),
       blocknote: isString(blocknote)
         ? resolveRichTextVariables(blocknote, context)
         : blocknote,

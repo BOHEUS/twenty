@@ -280,6 +280,8 @@ export {
   parseTipTapJsonDocument,
   parseCanonicalTipTapJsonDocument,
 } from './tiptap/parse-tiptap-json-document';
+export { RECORD_RICH_TEXT_MARK_TYPES } from './tiptap/record-rich-text-mark-types';
+export { RECORD_RICH_TEXT_NODE_TYPES } from './tiptap/record-rich-text-node-types';
 export { resolveCanvasTheme } from './tiptap/resolve-canvas-theme';
 export type { RichTextConversionResult } from './tiptap/rich-text-conversion-result';
 export { RICH_TEXT_DOCUMENT_LIMITS } from './tiptap/rich-text-document-limits';
