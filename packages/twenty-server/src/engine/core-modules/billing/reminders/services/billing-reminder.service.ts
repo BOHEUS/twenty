@@ -16,6 +16,7 @@ import { getSettingsPath, isDefined } from 'twenty-shared/utils';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 import { Between, Repository } from 'typeorm';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { SubscriptionInterval } from 'src/engine/core-modules/billing/enums/billing-subscription-interval.enum';
 import { SubscriptionStatus } from 'src/engine/core-modules/billing/enums/billing-subscription-status.enum';
@@ -43,6 +44,7 @@ export class BillingReminderService {
   private readonly logger = new Logger(BillingReminderService.name);
 
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly twentyConfigService: TwentyConfigService,
     // Billing reminders run as a cross-workspace cron, so no workspaceId is in scope.
     // eslint-disable-next-line twenty/prefer-workspace-scoped-repository
@@ -317,10 +319,13 @@ export class BillingReminderService {
     billingSettingsUrl: string;
     locale: WorkspaceMemberWorkspaceEntity['locale'];
   }) {
+    const brand = this.brandingService.getBrand();
+    const brandName = brand.name;
+
     switch (reminder.type) {
       case 'trial-ending':
         return {
-          subject: msg`Your Twenty trial is ending soon`,
+          subject: msg`Your ${brandName} trial is ending soon`,
           emailTemplate: BillingTrialEndingEmail({
             userName,
             workspaceDisplayName,
@@ -330,11 +335,12 @@ export class BillingReminderService {
             ),
             link: billingSettingsUrl,
             locale,
+            brand,
           }),
         };
       case 'trial-converting':
         return {
-          subject: msg`A heads up before your Twenty trial ends`,
+          subject: msg`A heads up before your ${brandName} trial ends`,
           emailTemplate: BillingTrialConvertingEmail({
             userName,
             workspaceDisplayName,
@@ -342,17 +348,19 @@ export class BillingReminderService {
             interval: reminder.interval,
             link: billingSettingsUrl,
             locale,
+            brand,
           }),
         };
       case 'subscription-renewing':
         return {
-          subject: msg`Your Twenty plan renews soon`,
+          subject: msg`Your ${brandName} plan renews soon`,
           emailTemplate: BillingSubscriptionRenewingEmail({
             userName,
             workspaceDisplayName,
             renewsAt: reminder.renewsAt,
             link: billingSettingsUrl,
             locale,
+            brand,
           }),
         };
     }

@@ -13,6 +13,7 @@ import { AppPath, ConnectedAccountProvider } from 'twenty-shared/types';
 import { assertIsDefinedOrThrow, isDefined } from 'twenty-shared/utils';
 import { IsNull, Repository } from 'typeorm';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import {
   AppTokenEntity,
   AppTokenType,
@@ -80,6 +81,7 @@ import { PermissionsService } from 'src/engine/metadata-modules/permissions/perm
 // oxlint-disable-next-line twenty/inject-workspace-repository
 export class AuthService {
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly accessTokenService: AccessTokenService,
     private readonly ssoExchangeTokenService: SsoExchangeTokenService,
     private readonly workspaceDomainsService: WorkspaceDomainsService,
@@ -736,6 +738,7 @@ export class AuthService {
       email: user.email,
       link: this.domainServerConfigService.getBaseUrl().toString(),
       locale: firstUserWorkspace.locale,
+      brand: this.brandingService.getBrand(),
     });
 
     const html = await renderEmail(emailTemplate, { pretty: true });

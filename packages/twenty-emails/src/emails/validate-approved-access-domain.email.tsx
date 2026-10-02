@@ -12,7 +12,9 @@ import { Title } from 'src/components/Title';
 import { DEFAULT_WORKSPACE_LOGO } from 'src/constants/DefaultWorkspaceLogo';
 import { capitalize } from 'src/utils/capitalize';
 import { createI18nInstance } from 'src/utils/i18n.utils';
+import { DEFAULT_BRAND } from 'twenty-shared/constants';
 import { type APP_LOCALES } from 'twenty-shared/translations';
+import { type Brand } from 'twenty-shared/types';
 import { getImageAbsoluteURI } from 'twenty-shared/utils';
 
 type SendApprovedAccessDomainValidationProps = {
@@ -26,6 +28,7 @@ type SendApprovedAccessDomainValidationProps = {
   };
   serverUrl: string;
   locale: keyof typeof APP_LOCALES;
+  brand: Brand;
 };
 
 export const SendApprovedAccessDomainValidation = ({
@@ -35,6 +38,7 @@ export const SendApprovedAccessDomainValidation = ({
   sender,
   serverUrl,
   locale,
+  brand,
 }: SendApprovedAccessDomainValidationProps) => {
   const i18n = createI18nInstance(locale);
   const workspaceLogo = workspace.logo
@@ -45,7 +49,7 @@ export const SendApprovedAccessDomainValidation = ({
   const senderEmail = sender.email;
 
   return (
-    <BaseEmail width={333} locale={locale}>
+    <BaseEmail width={333} locale={locale} brand={brand}>
       <Title value={i18n._('Validate domain')} />
       <MainText>
         <Trans
@@ -93,6 +97,7 @@ SendApprovedAccessDomainValidation.PreviewProps = {
   },
   serverUrl: 'https://app.twenty.com',
   locale: 'en',
+  brand: DEFAULT_BRAND,
 };
 
 export default SendApprovedAccessDomainValidation;

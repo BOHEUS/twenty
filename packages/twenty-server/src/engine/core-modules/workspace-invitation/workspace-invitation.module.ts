@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { AppTokenEntity } from 'src/engine/core-modules/app-token/app-token.entity';
 import { WorkspaceDomainsModule } from 'src/engine/core-modules/domain/workspace-domains/workspace-domains.module';
 import { FeatureFlagModule } from 'src/engine/core-modules/feature-flag/feature-flag.module';
@@ -15,6 +16,7 @@ import { RoleValidationModule } from 'src/engine/metadata-modules/role-validatio
 
 @Module({
   imports: [
+    EnterpriseModule,
     WorkspaceDomainsModule,
     TypeOrmModule.forFeature([AppTokenEntity, UserWorkspaceEntity]),
     RoleValidationModule,

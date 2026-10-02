@@ -4,13 +4,16 @@ import { CallToAction } from 'src/components/CallToAction';
 import { MainText } from 'src/components/MainText';
 import { Title } from 'src/components/Title';
 import { createI18nInstance } from 'src/utils/i18n.utils';
+import { DEFAULT_BRAND } from 'twenty-shared/constants';
 import { type APP_LOCALES } from 'twenty-shared/translations';
+import { type Brand } from 'twenty-shared/types';
 
 type PasswordUpdateNotifyEmailProps = {
   userName: string;
   email: string;
   link: string;
   locale: keyof typeof APP_LOCALES;
+  brand: Brand;
 };
 
 export const PasswordUpdateNotifyEmail = ({
@@ -18,12 +21,13 @@ export const PasswordUpdateNotifyEmail = ({
   email,
   link,
   locale,
+  brand,
 }: PasswordUpdateNotifyEmailProps) => {
   const i18n = createI18nInstance(locale);
   const formattedDate = i18n.date(new Date());
 
   return (
-    <BaseEmail locale={locale}>
+    <BaseEmail locale={locale} brand={brand}>
       <Title value={i18n._('Password updated')} />
       <MainText>
         {userName?.length > 1 ? (
@@ -43,7 +47,10 @@ export const PasswordUpdateNotifyEmail = ({
         <br />
       </MainText>
       <br />
-      <CallToAction value={i18n._('Connect to Twenty')} href={link} />
+      <CallToAction
+        value={i18n._('Connect to {brandName}', { brandName: brand.name })}
+        href={link}
+      />
       <br />
       <br />
     </BaseEmail>
@@ -55,6 +62,7 @@ PasswordUpdateNotifyEmail.PreviewProps = {
   email: 'john.doe@example.com',
   link: 'https://app.twenty.com',
   locale: 'en',
+  brand: DEFAULT_BRAND,
 } as PasswordUpdateNotifyEmailProps;
 
 export default PasswordUpdateNotifyEmail;

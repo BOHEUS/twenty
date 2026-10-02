@@ -10,6 +10,7 @@ import { AppPath } from 'twenty-shared/types';
 import { assertIsDefinedOrThrow, isDefined } from 'twenty-shared/utils';
 import { Repository } from 'typeorm';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import {
   AppTokenEntity,
   AppTokenType,
@@ -31,6 +32,7 @@ import { UserEntity } from 'src/engine/core-modules/user/user.entity';
 @Injectable()
 export class EmailVerificationService {
   constructor(
+    private readonly brandingService: BrandingService,
     @InjectRepository(AppTokenEntity)
     private readonly appTokenRepository: Repository<AppTokenEntity>,
     @InjectRepository(UserEntity)
@@ -84,9 +86,13 @@ export class EmailVerificationService {
           linkPathnameAndSearchParams,
         );
 
+    const brand = this.brandingService.getBrand();
+    const brandName = brand.name;
+
     const emailData = {
       link: verificationLink.toString(),
       locale,
+      brand,
       isEmailUpdate:
         verificationTrigger === EmailVerificationTrigger.EMAIL_UPDATE,
     };
@@ -102,7 +108,7 @@ export class EmailVerificationService {
     const emailVerificationMsg =
       verificationTrigger === EmailVerificationTrigger.EMAIL_UPDATE
         ? msg`Please confirm your updated email`
-        : msg`Welcome to Twenty: Please Confirm Your Email`;
+        : msg`Welcome to ${brandName}: Please Confirm Your Email`;
     const i18n = this.i18nService.getI18nInstance(locale);
     const subject = i18n._(emailVerificationMsg);
 

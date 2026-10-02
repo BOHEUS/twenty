@@ -7,6 +7,7 @@ import { FileFolder, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
 import { Repository } from 'typeorm';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { ApprovedAccessDomainEntity } from 'src/engine/core-modules/approved-access-domain/approved-access-domain.entity';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
@@ -36,6 +37,7 @@ export class ApprovedAccessDomainService {
   private readonly logger = new Logger(ApprovedAccessDomainService.name);
 
   constructor(
+    private readonly brandingService: BrandingService,
     @InjectWorkspaceScopedRepository(ApprovedAccessDomainEntity)
     private readonly approvedAccessDomainRepository: WorkspaceScopedRepository<ApprovedAccessDomainEntity>,
     // Cross-workspace lookups for token validation and SSO discovery.
@@ -114,6 +116,7 @@ export class ApprovedAccessDomainService {
       },
       serverUrl: this.twentyConfigService.get('SERVER_URL'),
       locale: sender.locale,
+      brand: this.brandingService.getBrand(),
     });
     const html = await renderEmail(emailTemplate);
     const text = await renderEmail(emailTemplate, {

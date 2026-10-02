@@ -4,7 +4,9 @@ import { CallToAction } from 'src/components/CallToAction';
 import { MainText } from 'src/components/MainText';
 import { Title } from 'src/components/Title';
 import { createI18nInstance } from 'src/utils/i18n.utils';
+import { DEFAULT_BRAND } from 'twenty-shared/constants';
 import { type APP_LOCALES } from 'twenty-shared/translations';
+import { type Brand } from 'twenty-shared/types';
 
 type WarnSuspendedWorkspaceEmailProps = {
   daysSinceInactive: number;
@@ -13,6 +15,7 @@ type WarnSuspendedWorkspaceEmailProps = {
   workspaceDisplayName: string | undefined;
   link: string;
   locale: keyof typeof APP_LOCALES;
+  brand: Brand;
 };
 
 export const WarnSuspendedWorkspaceEmail = ({
@@ -22,6 +25,7 @@ export const WarnSuspendedWorkspaceEmail = ({
   workspaceDisplayName,
   link,
   locale,
+  brand,
 }: WarnSuspendedWorkspaceEmailProps) => {
   const i18n = createI18nInstance(locale);
   const daysLeft = inactiveDaysBeforeDelete - daysSinceInactive;
@@ -29,7 +33,7 @@ export const WarnSuspendedWorkspaceEmail = ({
   const remainingDays = daysLeft > 0 ? daysLeft : 0;
 
   return (
-    <BaseEmail width={333} locale={locale}>
+    <BaseEmail width={333} locale={locale} brand={brand}>
       <Title value={i18n._('Your workspace is paused')} />
       <MainText>
         {userName?.length > 1 ? (
@@ -69,6 +73,7 @@ WarnSuspendedWorkspaceEmail.PreviewProps = {
   workspaceDisplayName: 'Acme Inc.',
   link: 'https://acme.twenty.com/settings/billing',
   locale: 'en',
+  brand: DEFAULT_BRAND,
 };
 
 export default WarnSuspendedWorkspaceEmail;

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { BillingReminderCronCommand } from 'src/engine/core-modules/billing/reminders/crons/commands/billing-reminder.cron.command';
 import { BillingReminderService } from 'src/engine/core-modules/billing/reminders/services/billing-reminder.service';
@@ -12,6 +13,7 @@ import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.ent
 
 @Module({
   imports: [
+    EnterpriseModule,
     TypeOrmModule.forFeature([BillingSubscriptionEntity, WorkspaceEntity]),
     EmailModule,
     UserModule,

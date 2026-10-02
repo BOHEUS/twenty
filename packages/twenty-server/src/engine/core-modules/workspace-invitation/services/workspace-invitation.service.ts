@@ -18,6 +18,7 @@ import {
   Repository,
 } from 'typeorm';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import {
   AppTokenEntity,
   AppTokenType,
@@ -49,6 +50,7 @@ import { CustomException } from 'src/utils/custom-exception';
 @Injectable()
 export class WorkspaceInvitationService {
   constructor(
+    private readonly brandingService: BrandingService,
     @InjectRepository(AppTokenEntity)
     private readonly appTokenRepository: Repository<AppTokenEntity>,
     @InjectRepository(UserWorkspaceEntity)
@@ -373,6 +375,9 @@ export class WorkspaceInvitationService {
             })
           : undefined;
 
+        const brand = this.brandingService.getBrand();
+        const brandName = brand.name;
+
         const emailData = {
           link: link.toString(),
           workspace: {
@@ -386,6 +391,7 @@ export class WorkspaceInvitationService {
           },
           serverUrl: this.twentyConfigService.get('SERVER_URL'),
           locale: sender.locale,
+          brand,
         };
 
         const emailTemplate = SendInviteLinkEmail(emailData);
@@ -394,7 +400,7 @@ export class WorkspaceInvitationService {
           plainText: true,
         });
 
-        const joinTeamMsg = msg`Join your team on Twenty`;
+        const joinTeamMsg = msg`Join your team on ${brandName}`;
         const i18n = this.i18nService.getI18nInstance(sender.locale);
         const subject = i18n._(joinTeamMsg);
 

@@ -1,5 +1,7 @@
 import { createElement } from 'react';
 
+import { DEFAULT_BRAND } from 'twenty-shared/constants';
+
 import {
   BillingSubscriptionRenewingEmail,
   BillingTrialConvertingEmail,
@@ -32,6 +34,7 @@ const TEMPLATES = [
       renewsAt: new Date('2026-01-01'),
       link: 'https://app.twenty.com/settings/billing',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'https://app.twenty.com/settings/billing',
   },
@@ -44,6 +47,7 @@ const TEMPLATES = [
       interval: 'month',
       link: 'https://app.twenty.com/settings/billing',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'https://app.twenty.com/settings/billing',
   },
@@ -56,6 +60,7 @@ const TEMPLATES = [
       dataRetentionDays: 30,
       link: 'https://app.twenty.com/settings/billing',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'https://app.twenty.com/settings/billing',
   },
@@ -66,6 +71,7 @@ const TEMPLATES = [
       userName: 'Tim',
       workspaceDisplayName: 'Acme Inc',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'Acme Inc',
   },
@@ -76,6 +82,7 @@ const TEMPLATES = [
       hasPassword: true,
       link: 'https://app.twenty.com/reset-password',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'https://app.twenty.com/reset-password',
   },
@@ -86,6 +93,7 @@ const TEMPLATES = [
       email: 'tim@twenty.com',
       link: 'https://app.twenty.com',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'tim@twenty.com',
   },
@@ -98,6 +106,7 @@ const TEMPLATES = [
       sender: SENDER,
       serverUrl: 'https://app.twenty.com',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'https://app.twenty.com/validate-approved-access-domain',
   },
@@ -106,6 +115,7 @@ const TEMPLATES = [
     element: SendEmailVerificationLinkEmail({
       link: 'https://app.twenty.com/verify-email',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'https://app.twenty.com/verify-email',
   },
@@ -117,6 +127,7 @@ const TEMPLATES = [
       sender: SENDER,
       serverUrl: 'https://app.twenty.com',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'https://app.twenty.com/invite/token',
   },
@@ -129,6 +140,7 @@ const TEMPLATES = [
       canAccessFullAdminPanel: true,
       canImpersonate: false,
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'jony@twenty.com',
   },
@@ -141,6 +153,7 @@ const TEMPLATES = [
       workspaceDisplayName: 'Acme Inc',
       link: 'https://app.twenty.com/settings/billing',
       locale: 'en',
+      brand: DEFAULT_BRAND,
     }),
     expectedContent: 'https://app.twenty.com/settings/billing',
   },
@@ -189,10 +202,36 @@ describe('email templates rendering', () => {
         hasPassword: true,
         link: 'https://app.twenty.com/reset-password',
         locale: 'fr-FR',
+        brand: DEFAULT_BRAND,
       }),
     );
 
     expect(html).toContain('mot de passe');
+  });
+
+  it('should render the white-labeled brand without Twenty branding', async () => {
+    const html = await renderEmail(
+      SendInviteLinkEmail({
+        link: 'https://crm.acme.test/invite/123',
+        workspace: WORKSPACE,
+        sender: { ...SENDER, email: 'tim@acme.test' },
+        serverUrl: 'https://crm.acme.test',
+        locale: 'en',
+        brand: {
+          ...DEFAULT_BRAND,
+          isWhiteLabeled: true,
+          name: 'Acme CRM',
+          logoUrl: 'https://acme.test/logo.png',
+          websiteUrl: 'https://acme.test',
+          docsUrl: 'https://docs.acme.test',
+        },
+      }),
+    );
+
+    expect(html).toContain('Join your team on Acme CRM');
+    expect(html).toContain('https://acme.test/logo.png');
+    expect(html).toContain('https://docs.acme.test');
+    expect(html).not.toMatch(/Twenty|twenty\.com|twentyhq/);
   });
 });
 

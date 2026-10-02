@@ -13,6 +13,7 @@ import { getSettingsPath, isDefined } from 'twenty-shared/utils';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 import { In, Repository } from 'typeorm';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { SubscriptionStatus } from 'src/engine/core-modules/billing/enums/billing-subscription-status.enum';
 import { BillingSubscriptionService } from 'src/engine/core-modules/billing/services/billing-subscription.service';
@@ -65,6 +66,7 @@ export class CleanerWorkspaceService {
   private readonly inactiveDaysBeforeWarn: number;
   private readonly maxNumberOfWorkspacesDeletedPerExecution: number;
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly workspaceService: WorkspaceService,
     private readonly twentyConfigService: TwentyConfigService,
     private readonly userVarsService: UserVarsService,
@@ -132,6 +134,7 @@ export class CleanerWorkspaceService {
       workspaceDisplayName: `${workspaceDisplayName}`,
       link: billingSettingsUrl,
       locale: workspaceMember.locale,
+      brand: this.brandingService.getBrand(),
     };
     const emailTemplate = WarnSuspendedWorkspaceEmail(emailData);
     const html = await renderEmail(emailTemplate, { pretty: true });
@@ -208,6 +211,7 @@ export class CleanerWorkspaceService {
       userName: `${workspaceMember.name.firstName} ${workspaceMember.name.lastName}`,
       workspaceDisplayName,
       locale: workspaceMember.locale,
+      brand: this.brandingService.getBrand(),
     };
     const emailTemplate = CleanSuspendedWorkspaceEmail(emailData);
     const html = await renderEmail(emailTemplate, { pretty: true });

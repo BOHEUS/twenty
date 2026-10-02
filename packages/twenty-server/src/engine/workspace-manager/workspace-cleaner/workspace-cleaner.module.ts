@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { BillingModule } from 'src/engine/core-modules/billing/billing.module';
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { WorkspaceDomainsModule } from 'src/engine/core-modules/domain/workspace-domains/workspace-domains.module';
@@ -23,6 +24,7 @@ import { CleanerWorkspaceService } from 'src/engine/workspace-manager/workspace-
 
 @Module({
   imports: [
+    EnterpriseModule,
     TypeOrmModule.forFeature([
       WorkspaceEntity,
       UserWorkspaceEntity,

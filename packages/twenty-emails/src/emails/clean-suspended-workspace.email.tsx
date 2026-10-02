@@ -4,13 +4,16 @@ import { CallToAction } from 'src/components/CallToAction';
 import { MainText } from 'src/components/MainText';
 import { Title } from 'src/components/Title';
 import { createI18nInstance } from 'src/utils/i18n.utils';
+import { DEFAULT_BRAND } from 'twenty-shared/constants';
 import { type APP_LOCALES } from 'twenty-shared/translations';
+import { type Brand } from 'twenty-shared/types';
 
 type CleanSuspendedWorkspaceEmailProps = {
   daysSinceInactive: number;
   userName: string;
   workspaceDisplayName: string | undefined;
   locale: keyof typeof APP_LOCALES;
+  brand: Brand;
 };
 
 export const CleanSuspendedWorkspaceEmail = ({
@@ -18,11 +21,12 @@ export const CleanSuspendedWorkspaceEmail = ({
   userName,
   workspaceDisplayName,
   locale,
+  brand,
 }: CleanSuspendedWorkspaceEmailProps) => {
   const i18n = createI18nInstance(locale);
 
   return (
-    <BaseEmail width={333} locale={locale}>
+    <BaseEmail width={333} locale={locale} brand={brand}>
       <Title value={i18n._('Your workspace has been deleted')} />
       <MainText>
         {userName?.length > 1 ? (
@@ -42,7 +46,10 @@ export const CleanSuspendedWorkspaceEmail = ({
         <Trans id="Its data has been removed and can no longer be recovered." />
         <br />
         <br />
-        <Trans id="If you'd ever like to give Twenty another try, you can start a fresh workspace in minutes — we'd love to have you back." />
+        <Trans
+          id="If you'd ever like to give {brandName} another try, you can start a fresh workspace in minutes — we'd love to have you back."
+          values={{ brandName: brand.name }}
+        />
       </MainText>
       <br />
       <CallToAction
@@ -60,6 +67,7 @@ CleanSuspendedWorkspaceEmail.PreviewProps = {
   userName: 'John Doe',
   workspaceDisplayName: 'My Workspace',
   locale: 'en',
+  brand: DEFAULT_BRAND,
 };
 
 export default CleanSuspendedWorkspaceEmail;

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { AppTokenEntity } from 'src/engine/core-modules/app-token/app-token.entity';
 import { EmailVerificationTokenService } from 'src/engine/core-modules/auth/token/services/email-verification-token.service';
 import { DomainServerConfigModule } from 'src/engine/core-modules/domain/domain-server-config/domain-server-config.module';
@@ -14,6 +15,7 @@ import { UserEntity } from 'src/engine/core-modules/user/user.entity';
 
 @Module({
   imports: [
+    EnterpriseModule,
     TypeOrmModule.forFeature([AppTokenEntity, UserEntity]),
     EmailModule,
     TwentyConfigModule,

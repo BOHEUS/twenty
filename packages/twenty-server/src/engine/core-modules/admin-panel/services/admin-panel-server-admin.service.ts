@@ -8,6 +8,7 @@ import { SOURCE_LOCALE } from 'twenty-shared/translations';
 import { isDefined } from 'twenty-shared/utils';
 import { Repository } from 'typeorm';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { CoreEntityCacheService } from 'src/engine/core-entity-cache/services/core-entity-cache.service';
 import { type ServerAdminDTO } from 'src/engine/core-modules/admin-panel/dtos/server-admin.dto';
 import { type AuthContextUser } from 'src/engine/core-modules/auth/types/auth-context.type';
@@ -28,6 +29,7 @@ export class AdminPanelServerAdminService {
   private readonly logger = new Logger(AdminPanelServerAdminService.name);
 
   constructor(
+    private readonly brandingService: BrandingService,
     @InjectRepository(UserEntity)
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(UserWorkspaceEntity)
@@ -247,6 +249,7 @@ export class AdminPanelServerAdminService {
               canAccessFullAdminPanel: targetUser.canAccessFullAdminPanel,
               canImpersonate: targetUser.canImpersonate,
               locale,
+              brand: this.brandingService.getBrand(),
             });
             const html = await renderEmail(emailTemplate, { pretty: true });
             const text = await renderEmail(emailTemplate, { plainText: true });

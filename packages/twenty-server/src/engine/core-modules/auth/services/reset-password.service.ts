@@ -12,6 +12,7 @@ import { AppPath } from 'twenty-shared/types';
 import { getAppPath, isDefined } from 'twenty-shared/utils';
 import { IsNull, MoreThan, Repository } from 'typeorm';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import {
   AppTokenEntity,
   AppTokenType,
@@ -38,6 +39,7 @@ export class ResetPasswordService {
   private readonly logger = new Logger(ResetPasswordService.name);
 
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly twentyConfigService: TwentyConfigService,
     private readonly workspaceDomainsService: WorkspaceDomainsService,
     @InjectRepository(WorkspaceEntity)
@@ -225,6 +227,7 @@ export class ResetPasswordService {
       ),
       hasPassword,
       locale,
+      brand: this.brandingService.getBrand(),
     };
 
     const emailTemplate = PasswordResetLinkEmail(emailData);

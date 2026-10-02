@@ -4,35 +4,39 @@ import { CallToAction } from 'src/components/CallToAction';
 import { MainText } from 'src/components/MainText';
 import { Title } from 'src/components/Title';
 import { createI18nInstance } from 'src/utils/i18n.utils';
+import { DEFAULT_BRAND } from 'twenty-shared/constants';
 import { type APP_LOCALES } from 'twenty-shared/translations';
+import { type Brand } from 'twenty-shared/types';
 
 type SendEmailVerificationLinkEmailProps = {
   link: string;
   locale: keyof typeof APP_LOCALES;
   isEmailUpdate?: boolean;
+  brand: Brand;
 };
 
 export const SendEmailVerificationLinkEmail = ({
   link,
   locale,
   isEmailUpdate = false,
+  brand,
 }: SendEmailVerificationLinkEmailProps) => {
   const i18n = createI18nInstance(locale);
   const title = isEmailUpdate
     ? i18n._('Confirm your new email address')
     : i18n._('Confirm your email address');
   const bodyId = isEmailUpdate
-    ? 'We received a request to change the email address associated with your Twenty account. Click below to confirm this change.'
-    : 'Thanks for registering for an account on Twenty! Before we get started, we just need to confirm that this is you. Click below to verify your email address.';
+    ? 'We received a request to change the email address associated with your {brandName} account. Click below to confirm this change.'
+    : 'Thanks for registering for an account on {brandName}! Before we get started, we just need to confirm that this is you. Click below to verify your email address.';
   const ctaLabel = isEmailUpdate
     ? i18n._('Confirm new email')
     : i18n._('Verify Email');
 
   return (
-    <BaseEmail width={333} locale={locale}>
+    <BaseEmail width={333} locale={locale} brand={brand}>
       <Title value={title} />
       <MainText>
-        <Trans id={bodyId} />
+        <Trans id={bodyId} values={{ brandName: brand.name }} />
       </MainText>
       <br />
       <CallToAction href={link} value={ctaLabel} />
@@ -45,6 +49,7 @@ export const SendEmailVerificationLinkEmail = ({
 SendEmailVerificationLinkEmail.PreviewProps = {
   link: 'https://app.twenty.com/verify-email/123',
   locale: 'en',
+  brand: DEFAULT_BRAND,
   isEmailUpdate: false,
 };
 
