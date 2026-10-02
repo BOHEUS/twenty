@@ -122,22 +122,17 @@ export const FooterNote = ({
 
   const links = [
     shouldOfferBypass && !shouldUseBypass && (
-      <button key="bypass" type="button" onClick={enableBypass}>
+      <button type="button" onClick={enableBypass}>
         <Trans>Bypass SSO</Trans>
       </button>
     ),
     isDefined(privacyUrl) && (
-      <a
-        key="privacy"
-        href={privacyUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
+      <a href={privacyUrl} target="_blank" rel="noopener noreferrer">
         <Trans>Privacy Policy</Trans>
       </a>
     ),
     isDefined(termsUrl) && (
-      <a key="terms" href={termsUrl} target="_blank" rel="noopener noreferrer">
+      <a href={termsUrl} target="_blank" rel="noopener noreferrer">
         <Trans>Terms of Service</Trans>
       </a>
     ),
