@@ -1,6 +1,6 @@
 import { type Editor } from '@tiptap/core';
 import { useAtom, useStore } from 'jotai';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useUploadAttachmentFile } from '@/activities/files/hooks/useUploadAttachmentFile';
 import { type Attachment } from '@/activities/files/types/Attachment';
@@ -110,7 +110,12 @@ export const TiptapRichTextFieldEditor = ({
       ]
     : null;
 
-  const upstreamDocument = getRichTextFieldTiptapDocument(fieldValue);
+  // Converting legacy values is costly on large notes, so only redo it when
+  // the stored value changes.
+  const upstreamDocument = useMemo(
+    () => getRichTextFieldTiptapDocument(fieldValue),
+    [fieldValue],
+  );
 
   const { updateDraft, markDirty, flush, draftResyncKey } =
     useRecordSeededDraft({
