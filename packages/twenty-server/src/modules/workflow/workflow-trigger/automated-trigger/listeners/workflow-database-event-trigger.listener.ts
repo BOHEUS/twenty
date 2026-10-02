@@ -21,13 +21,10 @@ import { findActiveFlatApplicationByUniversalIdentifier } from 'src/engine/core-
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
-import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
 import { findFlatEntityByUniversalIdentifier } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier.util';
-import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { buildFieldMapsFromFlatObjectMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/build-field-maps-from-flat-object-metadata.util';
-import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 import { RecordAccessPolicyService } from 'src/engine/core-modules/record-share/services/record-access-policy.service';
 import { omitInheritedReadabilityChildRecords } from 'src/engine/core-modules/record-share/utils/omit-inherited-readability-child-records.util';
 import { buildRoleRowAccessPolicySubject } from 'src/engine/core-modules/record-share/utils/build-role-row-access-policy-subject.util';
@@ -81,16 +78,10 @@ export class WorkflowDatabaseEventTriggerListener {
   async handleObjectRecordCreateEvent(
     payload: WorkspaceEventBatch<ObjectRecordCreateEvent>,
   ) {
-    if (await this.shouldIgnoreEvent(payload)) {
-      return;
-    }
-
-    const clonedPayload = structuredClone(payload);
-
-    await this.enrichCreatedEvent(clonedPayload);
     await this.handleEvent({
-      payload: clonedPayload,
+      payload,
       action: DatabaseEventAction.CREATED,
+      getRecordsToEnrich: (event) => [event.properties.after],
     });
   }
 
@@ -98,17 +89,13 @@ export class WorkflowDatabaseEventTriggerListener {
   async handleObjectRecordUpdateEvent(
     payload: WorkspaceEventBatch<ObjectRecordUpdateEvent>,
   ) {
-    if (await this.shouldIgnoreEvent(payload)) {
-      return;
-    }
-
-    const clonedPayload = structuredClone(payload);
-
-    await this.enrichUpdatedEvent(clonedPayload);
-
     await this.handleEvent({
-      payload: clonedPayload,
+      payload,
       action: DatabaseEventAction.UPDATED,
+      getRecordsToEnrich: (event) => [
+        event.properties.before,
+        event.properties.after,
+      ],
     });
   }
 
@@ -116,16 +103,10 @@ export class WorkflowDatabaseEventTriggerListener {
   async handleObjectRecordDeleteEvent(
     payload: WorkspaceEventBatch<ObjectRecordDeleteEvent>,
   ) {
-    if (await this.shouldIgnoreEvent(payload)) {
-      return;
-    }
-
-    const clonedPayload = structuredClone(payload);
-
-    await this.enrichDeletedEvent(clonedPayload);
     await this.handleEvent({
-      payload: clonedPayload,
+      payload,
       action: DatabaseEventAction.DELETED,
+      getRecordsToEnrich: (event) => [event.properties.before],
     });
   }
 
@@ -133,16 +114,10 @@ export class WorkflowDatabaseEventTriggerListener {
   async handleObjectRecordDestroyEvent(
     payload: WorkspaceEventBatch<ObjectRecordDestroyEvent>,
   ) {
-    if (await this.shouldIgnoreEvent(payload)) {
-      return;
-    }
-
-    const clonedPayload = structuredClone(payload);
-
-    await this.enrichDestroyedEvent(clonedPayload);
     await this.handleEvent({
-      payload: clonedPayload,
+      payload,
       action: DatabaseEventAction.DESTROYED,
+      getRecordsToEnrich: (event) => [event.properties.before],
     });
   }
 
@@ -150,126 +125,34 @@ export class WorkflowDatabaseEventTriggerListener {
   async handleObjectRecordUpsertEvent(
     payload: WorkspaceEventBatch<ObjectRecordUpsertEvent>,
   ) {
-    if (await this.shouldIgnoreEvent(payload)) {
-      return;
-    }
-
-    const clonedPayload = structuredClone(payload);
-
     await this.handleEvent({
-      payload: clonedPayload,
+      payload,
       action: DatabaseEventAction.UPSERTED,
-    });
-  }
-
-  private async enrichCreatedEvent(
-    payload: WorkspaceEventBatch<ObjectRecordCreateEvent>,
-  ) {
-    const workspaceId = payload.workspaceId;
-    const {
-      flatObjectMetadata,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-    } = await this.workflowCommonWorkspaceService.getObjectMetadataInfo(
-      payload.objectMetadata.nameSingular,
-      workspaceId,
-    );
-
-    await this.enrichRecordsWithRelations({
-      records: payload.events.map((event) => event.properties.after),
-      workspaceId,
-      flatObjectMetadata,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-    });
-  }
-
-  private async enrichUpdatedEvent(
-    payload: WorkspaceEventBatch<ObjectRecordUpdateEvent>,
-  ) {
-    const workspaceId = payload.workspaceId;
-    const {
-      flatObjectMetadata,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-    } = await this.workflowCommonWorkspaceService.getObjectMetadataInfo(
-      payload.objectMetadata.nameSingular,
-      workspaceId,
-    );
-
-    await this.enrichRecordsWithRelations({
-      records: payload.events.map((event) => event.properties.before),
-      workspaceId,
-      flatObjectMetadata,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-    });
-    await this.enrichRecordsWithRelations({
-      records: payload.events.map((event) => event.properties.after),
-      workspaceId,
-      flatObjectMetadata,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-    });
-  }
-
-  private async enrichDeletedEvent(
-    payload: WorkspaceEventBatch<ObjectRecordDeleteEvent>,
-  ) {
-    const workspaceId = payload.workspaceId;
-    const {
-      flatObjectMetadata,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-    } = await this.workflowCommonWorkspaceService.getObjectMetadataInfo(
-      payload.objectMetadata.nameSingular,
-      workspaceId,
-    );
-
-    await this.enrichRecordsWithRelations({
-      records: payload.events.map((event) => event.properties.before),
-      workspaceId,
-      flatObjectMetadata,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-    });
-  }
-
-  private async enrichDestroyedEvent(
-    payload: WorkspaceEventBatch<ObjectRecordDestroyEvent>,
-  ) {
-    const workspaceId = payload.workspaceId;
-    const {
-      flatObjectMetadata,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-    } = await this.workflowCommonWorkspaceService.getObjectMetadataInfo(
-      payload.objectMetadata.nameSingular,
-      workspaceId,
-    );
-
-    await this.enrichRecordsWithRelations({
-      records: payload.events.map((event) => event.properties.before),
-      workspaceId,
-      flatObjectMetadata,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
+      getRecordsToEnrich: (event) => [
+        event.properties.before,
+        event.properties.after,
+      ],
     });
   }
 
   private async enrichRecordsWithRelations({
     records,
     workspaceId,
-    flatObjectMetadata,
-    flatObjectMetadataMaps,
-    flatFieldMetadataMaps,
+    objectMetadataNameSingular,
   }: {
     records: Partial<ObjectRecord>[];
     workspaceId: string;
-    flatObjectMetadata: FlatObjectMetadata;
-    flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>;
-    flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>;
+    objectMetadataNameSingular: string;
   }) {
+    const {
+      flatObjectMetadata,
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
+    } = await this.workflowCommonWorkspaceService.getObjectMetadataInfo(
+      objectMetadataNameSingular,
+      workspaceId,
+    );
+
     const authContext = buildSystemAuthContext(workspaceId);
 
     await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
@@ -348,13 +231,21 @@ export class WorkflowDatabaseEventTriggerListener {
     return false;
   }
 
-  private async handleEvent({
+  private async handleEvent<TEvent extends ObjectRecordEvent>({
     payload,
     action,
+    getRecordsToEnrich,
   }: {
-    payload: WorkspaceEventBatch<ObjectRecordEvent>;
+    payload: WorkspaceEventBatch<TEvent>;
     action: DatabaseEventAction;
+    getRecordsToEnrich: (
+      event: TEvent,
+    ) => (Partial<ObjectRecord> | undefined)[];
   }) {
+    if (await this.shouldIgnoreEvent(payload)) {
+      return;
+    }
+
     const workspaceId = payload.workspaceId;
     const databaseEventName = payload.name;
 
@@ -367,10 +258,21 @@ export class WorkflowDatabaseEventTriggerListener {
       return;
     }
 
-    const admittedRecordIds = await this.resolveAdmittedRecordIds(payload);
+    const clonedPayload = structuredClone(payload);
+
+    await this.enrichRecordsWithRelations({
+      workspaceId,
+      objectMetadataNameSingular: clonedPayload.objectMetadata.nameSingular,
+      records: clonedPayload.events
+        .flatMap(getRecordsToEnrich)
+        .filter(isDefined),
+    });
+
+    const admittedRecordIds =
+      await this.resolveAdmittedRecordIds(clonedPayload);
 
     for (const eventListener of eventListeners) {
-      for (const eventPayload of payload.events) {
+      for (const eventPayload of clonedPayload.events) {
         const shouldTriggerJob = this.shouldTriggerJob({
           eventPayload,
           eventListener,

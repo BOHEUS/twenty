@@ -3,10 +3,12 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER } from 'twenty-shared/application';
 import type { ObjectRecordUpdateEvent } from 'twenty-shared/database-events';
 import {
+  FieldMetadataType,
   MetadataReadability,
   RecordShareAccessLevel,
   RecordSharePrincipalType,
   RecordShareRowCause,
+  RelationType,
 } from 'twenty-shared/types';
 
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
@@ -28,6 +30,7 @@ describe('WorkflowDatabaseEventTriggerListener', () => {
   let messageQueueService: jest.Mocked<MessageQueueService>;
   let workspaceCacheService: jest.Mocked<WorkspaceCacheService>;
   let recordShareStorageService: jest.Mocked<RecordShareStorageService>;
+  let workflowCommonWorkspaceService: WorkflowCommonWorkspaceService;
 
   const setTriggerMap = (
     listeners: Array<{ workflowId: string; settings: object; type?: unknown }>,
@@ -150,6 +153,7 @@ describe('WorkflowDatabaseEventTriggerListener', () => {
     listener = module.get<WorkflowDatabaseEventTriggerListener>(
       WorkflowDatabaseEventTriggerListener,
     );
+    workflowCommonWorkspaceService = module.get(WorkflowCommonWorkspaceService);
   });
 
   describe('handleObjectRecordUpdateEvent', () => {
@@ -699,6 +703,175 @@ describe('WorkflowDatabaseEventTriggerListener', () => {
 
       await listener.handleObjectRecordUpdateEvent(positionOnlyPayload);
 
+      expect(messageQueueService.add).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleObjectRecordUpsertEvent', () => {
+    const workspaceId = 'test-workspace';
+    const workflowId = 'test-workflow';
+    const workspaceMember = {
+      id: 'workspace-member-id',
+      name: { firstName: 'Jane', lastName: 'Doe' },
+    };
+
+    beforeEach(() => {
+      const ownerField = {
+        id: 'owner-field-id',
+        universalIdentifier: 'owner-field',
+        name: 'owner',
+        type: FieldMetadataType.RELATION,
+        settings: { relationType: RelationType.MANY_TO_ONE },
+        relationTargetObjectMetadataId: 'workspace-member-object-id',
+      };
+
+      const workspaceMemberObject = createMockFlatObjectMetadata({
+        id: 'workspace-member-object-id',
+        universalIdentifier: 'workspace-member-object',
+        nameSingular: 'workspaceMember',
+      });
+
+      jest
+        .mocked(workflowCommonWorkspaceService.getObjectMetadataInfo)
+        .mockResolvedValue({
+          flatObjectMetadata: createMockFlatObjectMetadata({
+            fieldIds: [ownerField.id],
+          }),
+          flatObjectMetadataMaps: {
+            byUniversalIdentifier: {
+              [workspaceMemberObject.universalIdentifier]:
+                workspaceMemberObject,
+            },
+            universalIdentifierById: {
+              [workspaceMemberObject.id]:
+                workspaceMemberObject.universalIdentifier,
+            },
+          },
+          flatFieldMetadataMaps: {
+            byUniversalIdentifier: {
+              [ownerField.universalIdentifier]: ownerField,
+            },
+            universalIdentifierById: {
+              [ownerField.id]: ownerField.universalIdentifier,
+            },
+          },
+        } as never);
+
+      workspaceOrmManager.getRepository.mockReturnValue({
+        find: jest.fn().mockResolvedValue([workspaceMember]),
+      } as never);
+    });
+
+    it('should enrich relation fields of both before and after records', async () => {
+      const upsertPayload: WorkspaceEventBatch<any> = {
+        workspaceId,
+        name: 'upsertEvent',
+        objectMetadata: createMockFlatObjectMetadata({}),
+        events: [
+          {
+            recordId: 'test-record',
+            properties: {
+              updatedFields: ['field1'],
+              before: { ownerId: workspaceMember.id, field1: 'old' },
+              after: { ownerId: workspaceMember.id, field1: 'new' },
+            },
+          },
+        ],
+      };
+
+      setTriggerMap([
+        {
+          type: AutomatedTriggerType.DATABASE_EVENT,
+          workflowId,
+          settings: { eventName: 'upsertEvent' },
+        },
+      ]);
+
+      await listener.handleObjectRecordUpsertEvent(upsertPayload);
+
+      expect(messageQueueService.add).toHaveBeenCalledWith(
+        WorkflowTriggerJob.name,
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            properties: {
+              updatedFields: ['field1'],
+              before: {
+                ownerId: workspaceMember.id,
+                field1: 'old',
+                owner: workspaceMember,
+              },
+              after: {
+                ownerId: workspaceMember.id,
+                field1: 'new',
+                owner: workspaceMember,
+              },
+            },
+          }),
+        }),
+        { retryLimit: 3 },
+      );
+      expect(upsertPayload.events[0].properties.after).not.toHaveProperty(
+        'owner',
+      );
+    });
+
+    it('should enrich created records that have no before state', async () => {
+      const upsertPayload: WorkspaceEventBatch<any> = {
+        workspaceId,
+        name: 'upsertEvent',
+        objectMetadata: createMockFlatObjectMetadata({}),
+        events: [
+          {
+            recordId: 'test-record',
+            properties: {
+              after: { ownerId: workspaceMember.id },
+            },
+          },
+        ],
+      };
+
+      setTriggerMap([
+        {
+          type: AutomatedTriggerType.DATABASE_EVENT,
+          workflowId,
+          settings: { eventName: 'upsertEvent' },
+        },
+      ]);
+
+      await listener.handleObjectRecordUpsertEvent(upsertPayload);
+
+      expect(messageQueueService.add).toHaveBeenCalledWith(
+        WorkflowTriggerJob.name,
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            properties: {
+              after: { ownerId: workspaceMember.id, owner: workspaceMember },
+            },
+          }),
+        }),
+        { retryLimit: 3 },
+      );
+    });
+
+    it('should not load related records when no workflow listens to the event', async () => {
+      setTriggerMap([]);
+
+      await listener.handleObjectRecordUpsertEvent({
+        workspaceId,
+        name: 'upsertEvent',
+        objectMetadata: createMockFlatObjectMetadata({}),
+        events: [
+          {
+            recordId: 'test-record',
+            properties: { after: { ownerId: workspaceMember.id } },
+          },
+        ],
+      } as WorkspaceEventBatch<any>);
+
+      expect(
+        workflowCommonWorkspaceService.getObjectMetadataInfo,
+      ).not.toHaveBeenCalled();
+      expect(workspaceOrmManager.getRepository).not.toHaveBeenCalled();
       expect(messageQueueService.add).not.toHaveBeenCalled();
     });
   });
