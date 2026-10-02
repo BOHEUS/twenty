@@ -46,7 +46,6 @@ export const callRecordingMediaStateNodeSchema = z.object({
   summary: z
     .object({
       markdown: z.string().nullable().optional(),
-      blocknote: z.unknown().nullable().optional(),
     })
     .nullable()
     .optional(),

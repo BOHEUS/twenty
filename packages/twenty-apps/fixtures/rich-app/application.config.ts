@@ -87,7 +87,7 @@ export default defineApplication({
       universalIdentifier: '25a66ff5-8458-498e-9e7e-33ea458a6f3c',
       description: 'Rich text welcome message',
       type: FieldType.RICH_TEXT,
-      value: { blocknote: null, markdown: 'Welcome to **Rich App**!' },
+      value: { markdown: 'Welcome to **Rich App**!' },
     },
   },
   serverVariables: {
@@ -124,7 +124,8 @@ export default defineApplication({
       isRequired: false,
     },
     POSTCARD_SANDBOX_MODE: {
-      description: 'Send postcards through the provider sandbox instead of production',
+      description:
+        'Send postcards through the provider sandbox instead of production',
       type: FieldType.BOOLEAN,
       isSecret: false,
       isRequired: false,

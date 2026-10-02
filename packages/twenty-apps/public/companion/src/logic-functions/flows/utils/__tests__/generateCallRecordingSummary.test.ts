@@ -312,7 +312,7 @@ describe('generateCallRecordingSummary', () => {
             ],
           },
           data: {
-            summary: { blocknote: null, markdown: '## Overview\nGood call.' },
+            summary: { markdown: '## Overview\nGood call.' },
           },
         },
         id: true,
@@ -363,7 +363,6 @@ describe('generateCallRecordingSummary', () => {
           },
           data: {
             summary: {
-              blocknote: null,
               markdown:
                 '## Summary unavailable\n\nThe transcript contains only greetings and audio checks.',
             },

@@ -136,13 +136,16 @@ export const generateDocumentHandler = async (
     };
   }
 
-  // RICH_TEXT stores { blocknote, markdown }; the Markdown projection feeds the
+  // RICH_TEXT values always carry markdown; that projection feeds the
   // existing placeholder + PDF/HTML pipeline unchanged.
   const bodyMarkdown =
     (documentTemplate.body as unknown as { markdown: string | null } | null)
       ?.markdown ?? '';
 
-  const { content, missingTokens } = renderTemplate(bodyMarkdown, record.values);
+  const { content, missingTokens } = renderTemplate(
+    bodyMarkdown,
+    record.values,
+  );
 
   const documentName = `${documentTemplate.name ?? 'Document'} — ${record.displayName}`;
 

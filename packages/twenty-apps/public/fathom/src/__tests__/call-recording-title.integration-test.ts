@@ -170,7 +170,7 @@ describe('Fathom background recording titles', () => {
         updateCallRecording: {
           __args: {
             id: payload.callRecordingId,
-            data: { summary: { markdown: 'Updated summary', blocknote: null } },
+            data: { summary: { markdown: 'Updated summary' } },
           },
           id: true,
         },

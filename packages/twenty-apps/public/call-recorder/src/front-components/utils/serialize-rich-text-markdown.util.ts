@@ -1,8 +1,6 @@
-// The settings tab stores RICH_TEXT variables as the blocknote/markdown pair
-// produced by Twenty's rich text editor, so plain markdown has to be wrapped
-// back into that shape to stay readable by both editors.
+// RICH_TEXT variables are stored as a rich text object; markdown alone is
+// enough because Twenty derives the editor formats from it.
 export const serializeRichTextMarkdown = (markdown: string): string =>
   JSON.stringify({
-    blocknote: null,
     markdown: markdown === '' ? null : markdown,
   });

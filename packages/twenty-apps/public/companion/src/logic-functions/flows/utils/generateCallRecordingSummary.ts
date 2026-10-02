@@ -71,7 +71,7 @@ export const generateCallRecordingSummary = async (
 
   const saved = await updateCallRecording(client, {
     id: callRecordingId,
-    data: { summary: { blocknote: null, markdown: result.markdown } },
+    data: { summary: { markdown: result.markdown } },
     expectedSummary: { markdown: callRecording.storedSummaryMarkdown },
   });
   return { outcome: saved ? result.outcome : 'already-summarized' };

@@ -188,7 +188,7 @@ export const EXPECTED_MANIFEST: Manifest = {
         universalIdentifier: '25a66ff5-8458-498e-9e7e-33ea458a6f3c',
         description: 'Rich text welcome message',
         type: FieldMetadataType.RICH_TEXT,
-        value: { blocknote: null, markdown: 'Welcome to **Rich App**!' },
+        value: { markdown: 'Welcome to **Rich App**!' },
       },
     },
     serverVariables: {

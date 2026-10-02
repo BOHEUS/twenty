@@ -22,7 +22,7 @@ export const findCallRecordingMediaState = async ({
         node: {
           id: true,
           updatedAt: true,
-          summary: { markdown: true, blocknote: true },
+          summary: { markdown: true },
           video: { fileId: true },
           audio: { fileId: true },
           fathomRecordingImports: {

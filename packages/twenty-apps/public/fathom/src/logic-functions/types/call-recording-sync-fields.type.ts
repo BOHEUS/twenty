@@ -10,6 +10,6 @@ export type CallRecordingSyncFields = {
   transcript?: TranscriptEntry[];
   video?: CallRecordingMediaFile[];
   audio?: CallRecordingMediaFile[];
-  summary?: { markdown: string; blocknote: null };
+  summary?: { markdown: string };
   calendarEventId?: string;
 };

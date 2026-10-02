@@ -223,7 +223,6 @@ const buildFieldUpdate = ({
     fields: {
       summary: {
         markdown: formatSummaryAsMarkdown(firefliesTranscript),
-        blocknote: null,
       },
     },
   };

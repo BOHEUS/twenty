@@ -50,9 +50,7 @@ export const syncGranolaNoteToCallRecordingOrThrow = async ({
       startedAt,
       endedAt,
       ...(isNonEmptyArray(transcript) ? { transcript } : {}),
-      ...(isNonEmptyString(summary)
-        ? { summary: { markdown: summary, blocknote: null } }
-        : {}),
+      ...(isNonEmptyString(summary) ? { summary: { markdown: summary } } : {}),
       ...(isDefined(calendarEventId) ? { calendarEventId } : {}),
     },
   });
