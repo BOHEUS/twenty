@@ -70,6 +70,8 @@ export const StandaloneRichTextEditorContent = ({
     },
   });
 
+  const handleFocusRequest = useCallback(() => editor.focus(), [editor]);
+
   const handlePersistBody = useDebouncedCallback((blocknote: string) => {
     if (!shouldPersistDraft()) {
       return;
@@ -113,7 +115,7 @@ export const StandaloneRichTextEditorContent = ({
     <>
       <StandaloneRichTextWidgetAutoFocusEffect
         shouldFocus={shouldFocus}
-        editor={editor}
+        focusEditor={handleFocusRequest}
         containerElement={containerElement}
       />
       <DashboardsBlockEditor
