@@ -3,6 +3,7 @@ import { Controller, Get, Header, Req, UseGuards } from '@nestjs/common';
 import { type Request } from 'express';
 import { ApiPath } from 'twenty-shared/types';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { buildApiCatalog } from 'src/engine/core-modules/well-known/utils/build-api-catalog.util';
 import { buildMcpServerCard } from 'src/engine/core-modules/well-known/utils/build-mcp-server-card.util';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
@@ -16,7 +17,10 @@ const FALLBACK_SERVER_VERSION = '0.0.0';
 
 @Controller(ApiPath.WellKnown)
 export class WellKnownController {
-  constructor(private readonly twentyConfigService: TwentyConfigService) {}
+  constructor(
+    private readonly twentyConfigService: TwentyConfigService,
+    private readonly brandingService: BrandingService,
+  ) {}
 
   @Get('mcp/server-card.json')
   @UseGuards(PublicEndpointGuard, NoPermissionGuard)
@@ -30,6 +34,7 @@ export class WellKnownController {
     return buildMcpServerCard({
       baseUrl: getRequestBaseUrl(request),
       version,
+      brand: this.brandingService.getBrand(),
     });
   }
 
@@ -42,6 +47,13 @@ export class WellKnownController {
   )
   @Header('Cache-Control', DISCOVERY_CACHE_CONTROL)
   getApiCatalog(@Req() request: Request): string {
-    return JSON.stringify(buildApiCatalog(getRequestBaseUrl(request)), null, 2);
+    return JSON.stringify(
+      buildApiCatalog({
+        baseUrl: getRequestBaseUrl(request),
+        docsUrl: this.brandingService.getBrand().docsUrl,
+      }),
+      null,
+      2,
+    );
   }
 }

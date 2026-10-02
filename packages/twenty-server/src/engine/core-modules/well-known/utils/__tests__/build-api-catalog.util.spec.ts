@@ -1,10 +1,15 @@
+import { DOCUMENTATION_BASE_URL } from 'twenty-shared/constants';
+
 import { buildApiCatalog } from 'src/engine/core-modules/well-known/utils/build-api-catalog.util';
 
 describe('buildApiCatalog', () => {
   const baseUrl = 'https://mycompany.twenty.com';
 
   it('anchors each surface at its canonical URL on the given host', () => {
-    const catalog = buildApiCatalog(baseUrl);
+    const catalog = buildApiCatalog({
+      baseUrl,
+      docsUrl: DOCUMENTATION_BASE_URL,
+    });
 
     const anchors = catalog.linkset.map((entry) => entry.anchor);
 
@@ -17,7 +22,10 @@ describe('buildApiCatalog', () => {
   });
 
   it('points the REST core surface at its live per-host OpenAPI + OAuth metadata', () => {
-    const catalog = buildApiCatalog(baseUrl);
+    const catalog = buildApiCatalog({
+      baseUrl,
+      docsUrl: DOCUMENTATION_BASE_URL,
+    });
 
     const restCore = catalog.linkset.find(
       (entry) => entry.anchor === `${baseUrl}/rest`,
@@ -35,7 +43,10 @@ describe('buildApiCatalog', () => {
   });
 
   it('references the MCP server card for the MCP surface', () => {
-    const catalog = buildApiCatalog(baseUrl);
+    const catalog = buildApiCatalog({
+      baseUrl,
+      docsUrl: DOCUMENTATION_BASE_URL,
+    });
 
     const mcp = catalog.linkset.find(
       (entry) => entry.anchor === `${baseUrl}/mcp`,
@@ -50,12 +61,26 @@ describe('buildApiCatalog', () => {
   });
 
   it('gives every surface human documentation', () => {
-    const catalog = buildApiCatalog(baseUrl);
+    const catalog = buildApiCatalog({
+      baseUrl,
+      docsUrl: DOCUMENTATION_BASE_URL,
+    });
 
     for (const entry of catalog.linkset) {
       expect(entry['service-doc']?.[0]?.href).toMatch(
         /^https:\/\/docs\.twenty\.com\//,
       );
+    }
+  });
+
+  it('points every surface at the root of a custom documentation site', () => {
+    const catalog = buildApiCatalog({
+      baseUrl,
+      docsUrl: 'https://docs.acme.test',
+    });
+
+    for (const entry of catalog.linkset) {
+      expect(entry['service-doc']?.[0]?.href).toBe('https://docs.acme.test');
     }
   });
 });

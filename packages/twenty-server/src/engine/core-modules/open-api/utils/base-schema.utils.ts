@@ -1,18 +1,45 @@
 import { type OpenAPIV3_1 } from 'openapi-types';
-import { ApiPath } from 'twenty-shared/types';
+import { ApiPath, type Brand } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
 
 import { computeOpenApiPath } from 'src/engine/core-modules/open-api/utils/path.utils';
 
 export const API_Version = 'v0.1';
 
+// White-labeled instances never link to Twenty's GitHub, only to what the operator configured.
+const getLegalInfo = (
+  brand: Brand,
+): Pick<OpenAPIV3_1.InfoObject, 'termsOfService' | 'contact' | 'license'> => {
+  if (!brand.isWhiteLabeled) {
+    return {
+      termsOfService:
+        'https://github.com/twentyhq/twenty?tab=coc-ov-file#readme',
+      contact: { email: brand.supportEmail ?? undefined },
+      license: {
+        name: 'AGPL-3.0',
+        url: 'https://github.com/twentyhq/twenty?tab=License-1-ov-file#readme',
+      },
+    };
+  }
+
+  return {
+    termsOfService: brand.termsUrl ?? undefined,
+    contact: isDefined(brand.supportEmail)
+      ? { email: brand.supportEmail }
+      : undefined,
+    license: { name: 'AGPL-3.0' },
+  };
+};
+
 export const baseSchema = (
   schemaName: 'core' | 'metadata',
   serverUrl: string,
+  brand: Brand,
 ): OpenAPIV3_1.Document => {
   return {
     openapi: '3.1.1',
     info: {
-      title: 'Twenty Api',
+      title: `${brand.name} Api`,
       description: `Use this page to explore and call the **REST API**.
 
 ## Authentication
@@ -106,7 +133,7 @@ order_by=id[AscNullsFirst],createdAt[DescNullsLast]
 ## Usage with LLMs
 
 The recommended way to give an LLM agent (Claude Desktop, Cursor, Windsurf, …)
-access to your workspace is the **Twenty MCP server**, not this OpenAPI schema.
+access to your workspace is the **${brand.name} MCP server**, not this OpenAPI schema.
 The MCP server exposes typed tools the agent can call directly with proper
 header-based auth (OAuth or API key), no tokens in URLs.
 
@@ -122,18 +149,10 @@ hand the file to your tool — never paste a tokenized URL into a chat:
 
 \`\`\`bash
 curl -H 'Authorization: Bearer <token>' \\
-  ${serverUrl}/${ApiPath.Rest}/open-api/${schemaName} > twenty-${schemaName}.json
+  ${serverUrl}/${ApiPath.Rest}/open-api/${schemaName} > ${schemaName}-open-api.json
 \`\`\`
 `,
-      termsOfService:
-        'https://github.com/twentyhq/twenty?tab=coc-ov-file#readme',
-      contact: {
-        email: 'felix@twenty.com',
-      },
-      license: {
-        name: 'AGPL-3.0',
-        url: 'https://github.com/twentyhq/twenty?tab=License-1-ov-file#readme',
-      },
+      ...getLegalInfo(brand),
       version: API_Version,
     },
     servers: [
@@ -159,8 +178,8 @@ curl -H 'Authorization: Bearer <token>' \\
       },
     ],
     externalDocs: {
-      description: 'Find out more about **Twenty**',
-      url: 'https://twenty.com',
+      description: `Find out more about **${brand.name}**`,
+      url: brand.websiteUrl,
     },
     paths: { [`/open-api/${schemaName}`]: computeOpenApiPath(serverUrl) },
   };

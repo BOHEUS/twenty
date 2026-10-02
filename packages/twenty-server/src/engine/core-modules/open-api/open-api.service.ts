@@ -8,6 +8,7 @@ import {
   isDefined,
 } from 'twenty-shared/utils';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { DatabaseEventAction } from 'src/engine/api/graphql/graphql-query-runner/enums/database-event-action';
 import { AccessTokenService } from 'src/engine/core-modules/auth/token/services/access-token.service';
 import { baseSchema } from 'src/engine/core-modules/open-api/utils/base-schema.utils';
@@ -54,6 +55,7 @@ export class OpenApiService {
   constructor(
     private readonly accessTokenService: AccessTokenService,
     private readonly twentyConfigService: TwentyConfigService,
+    private readonly brandingService: BrandingService,
     private readonly flatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
   ) {}
 
@@ -100,7 +102,7 @@ export class OpenApiService {
       serverUrlFallback: `${request.protocol}://${request.get('host')}`,
     });
 
-    const schema = baseSchema('core', baseUrl);
+    const schema = baseSchema('core', baseUrl, this.brandingService.getBrand());
 
     const workspace = await this.getWorkspaceFromRequest(request);
 
@@ -213,7 +215,11 @@ export class OpenApiService {
       serverUrlFallback: `${request.protocol}://${request.get('host')}`,
     });
 
-    const schema = baseSchema('metadata', baseUrl);
+    const schema = baseSchema(
+      'metadata',
+      baseUrl,
+      this.brandingService.getBrand(),
+    );
 
     const workspace = await this.getWorkspaceFromRequest(request);
 

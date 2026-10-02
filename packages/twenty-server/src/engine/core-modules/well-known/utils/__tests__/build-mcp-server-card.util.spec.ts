@@ -1,3 +1,5 @@
+import { DEFAULT_BRAND } from 'twenty-shared/constants';
+
 import { MCP_PROTOCOL_VERSION } from 'src/engine/api/mcp/constants/mcp-protocol-version.const';
 import { buildMcpServerCard } from 'src/engine/core-modules/well-known/utils/build-mcp-server-card.util';
 
@@ -6,6 +8,7 @@ describe('buildMcpServerCard', () => {
     const card = buildMcpServerCard({
       baseUrl: 'https://mycompany.twenty.com',
       version: '1.2.3',
+      brand: DEFAULT_BRAND,
     });
 
     expect(card.remotes).toHaveLength(1);
@@ -20,6 +23,7 @@ describe('buildMcpServerCard', () => {
     const card = buildMcpServerCard({
       baseUrl: 'https://api.twenty.com',
       version: '0.42.0',
+      brand: DEFAULT_BRAND,
     });
 
     expect(card.$schema).toBe(
@@ -34,6 +38,7 @@ describe('buildMcpServerCard', () => {
     const card = buildMcpServerCard({
       baseUrl: 'https://mycompany.twenty.com',
       version: '1.0.0',
+      brand: DEFAULT_BRAND,
     });
 
     expect(card.remotes[0].headers).toEqual([
@@ -43,5 +48,27 @@ describe('buildMcpServerCard', () => {
         isSecret: true,
       }),
     ]);
+  });
+
+  it('names, describes and links the card from the brand when white-labeled', () => {
+    const card = buildMcpServerCard({
+      baseUrl: 'https://crm.acme.test',
+      version: '1.0.0',
+      brand: {
+        ...DEFAULT_BRAND,
+        isWhiteLabeled: true,
+        name: 'Acme CRM',
+        websiteUrl: 'https://www.acme.test',
+      },
+    });
+
+    expect(card).toMatchObject({
+      name: 'test.acme/mcp',
+      title: 'Acme CRM',
+      websiteUrl: 'https://www.acme.test',
+    });
+    expect(card.description).toContain('Acme CRM');
+    expect(card).not.toHaveProperty('repository');
+    expect(JSON.stringify(card)).not.toMatch(/twenty/i);
   });
 });

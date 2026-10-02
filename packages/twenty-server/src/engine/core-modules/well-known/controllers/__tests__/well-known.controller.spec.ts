@@ -1,7 +1,9 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 
 import { type Request } from 'express';
+import { DEFAULT_BRAND } from 'twenty-shared/constants';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { WellKnownController } from 'src/engine/core-modules/well-known/controllers/well-known.controller';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 
@@ -25,6 +27,10 @@ describe('WellKnownController', () => {
         {
           provide: TwentyConfigService,
           useValue: { get: configGet },
+        },
+        {
+          provide: BrandingService,
+          useValue: { getBrand: () => DEFAULT_BRAND },
         },
       ],
     }).compile();

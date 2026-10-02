@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from 'src/engine/core-modules/auth/auth.module';
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { FeatureFlagModule } from 'src/engine/core-modules/feature-flag/feature-flag.module';
 import { OpenApiController } from 'src/engine/core-modules/open-api/open-api.controller';
 import { OpenApiService } from 'src/engine/core-modules/open-api/open-api.service';
@@ -11,6 +12,7 @@ import { ObjectMetadataModule } from 'src/engine/metadata-modules/object-metadat
   imports: [
     ObjectMetadataModule,
     AuthModule,
+    EnterpriseModule,
     FeatureFlagModule,
     WorkspaceManyOrAllFlatEntityMapsCacheModule,
   ],
