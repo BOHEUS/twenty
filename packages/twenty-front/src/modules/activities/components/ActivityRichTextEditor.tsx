@@ -1,3 +1,4 @@
+import { type Editor } from '@tiptap/core';
 import { useStore } from 'jotai';
 import { useCallback, useRef } from 'react';
 
@@ -8,6 +9,7 @@ import { type Task } from '@/activities/types/Task';
 import { type BLOCK_SCHEMA } from '@/blocknote-editor/blocks/Schema';
 import { BLOCK_EDITOR_GLOBAL_HOTKEYS_CONFIG } from '@/blocknote-editor/constants/BlockEditorGlobalHotkeysConfig';
 import { useLabelIdentifierFieldMetadataItem } from '@/object-metadata/hooks/useLabelIdentifierFieldMetadataItem';
+import { type FieldRichTextValue } from '@/object-record/record-field/ui/types/FieldMetadata';
 import { RichTextFieldEditor } from '@/object-record/record-field/ui/meta-types/input/components/RichTextFieldEditor';
 import { recordStoreFamilyState } from '@/object-record/record-store/states/recordStoreFamilyState';
 import { isTitleCellInEditModeComponentState } from '@/object-record/record-title-cell/states/isTitleCellInEditModeComponentState';
@@ -34,7 +36,11 @@ export const ActivityRichTextEditor = ({
   const store = useStore();
 
   // oxlint-disable-next-line twenty/no-state-useref
-  const editorRef = useRef<typeof BLOCK_SCHEMA.BlockNoteEditor | null>(null);
+  const blockNoteEditorRef = useRef<typeof BLOCK_SCHEMA.BlockNoteEditor | null>(
+    null,
+  );
+  // oxlint-disable-next-line twenty/no-state-useref
+  const tiptapEditorRef = useRef<Editor | null>(null);
 
   const { upsertActivity } = useUpsertActivity({
     activityObjectNameSingular,
@@ -60,7 +66,7 @@ export const ActivityRichTextEditor = ({
   });
 
   const handlePersistBody = useCallback(
-    (blocknote: string) => {
+    (body: FieldRichTextValue) => {
       if (!canCreateActivity) {
         setCanCreateActivity(true);
       }
@@ -73,7 +79,7 @@ export const ActivityRichTextEditor = ({
         upsertActivity({
           activity,
           input: {
-            bodyV2: { blocknote, markdown: null },
+            bodyV2: body,
           },
         });
       }
@@ -95,7 +101,8 @@ export const ActivityRichTextEditor = ({
     );
 
     if (isRecordTitleCellOpen) {
-      editorRef.current?.domElement?.blur();
+      blockNoteEditorRef.current?.domElement?.blur();
+      tiptapEditorRef.current?.commands.blur();
       return;
     }
 
@@ -131,7 +138,8 @@ export const ActivityRichTextEditor = ({
       onPersistBody={handlePersistBody}
       onFocus={handleFocus}
       onBlur={handleBlur}
-      editorRef={editorRef}
+      blockNoteEditorRef={blockNoteEditorRef}
+      tiptapEditorRef={tiptapEditorRef}
     />
   );
 };
