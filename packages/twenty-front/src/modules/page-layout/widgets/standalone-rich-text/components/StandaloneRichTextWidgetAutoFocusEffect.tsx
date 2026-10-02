@@ -1,15 +1,14 @@
-import { type DASHBOARD_BLOCK_SCHEMA } from '@/page-layout/widgets/standalone-rich-text/constants/DashboardBlockSchema';
 import { useEffect } from 'react';
 
 type StandaloneRichTextWidgetAutoFocusEffectProps = {
   shouldFocus: boolean;
-  editor: typeof DASHBOARD_BLOCK_SCHEMA.BlockNoteEditor;
+  focusEditor: () => void;
   containerElement?: HTMLElement | null;
 };
 
 export const StandaloneRichTextWidgetAutoFocusEffect = ({
   shouldFocus,
-  editor,
+  focusEditor,
   containerElement,
 }: StandaloneRichTextWidgetAutoFocusEffectProps) => {
   useEffect(() => {
@@ -19,7 +18,7 @@ export const StandaloneRichTextWidgetAutoFocusEffect = ({
 
       if (!alreadyFocused) {
         const rafId = requestAnimationFrame(() => {
-          editor.focus();
+          focusEditor();
         });
 
         return () => {
@@ -27,7 +26,7 @@ export const StandaloneRichTextWidgetAutoFocusEffect = ({
         };
       }
     }
-  }, [shouldFocus, editor, containerElement]);
+  }, [shouldFocus, focusEditor, containerElement]);
 
   return null;
 };
