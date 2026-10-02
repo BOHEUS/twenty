@@ -2,6 +2,7 @@ import { AdvancedTextEditor } from '@/advanced-text-editor/components/AdvancedTe
 import { useAdvancedTextEditor } from '@/advanced-text-editor/hooks/useAdvancedTextEditor';
 import { type AdvancedTextEditorProfile } from '@/advanced-text-editor/types/AdvancedTextEditorProfile';
 import { buildFullRichTextWithVariableTagExtensions } from '@/advanced-text-editor/utils/buildFullRichTextExtensions';
+import { buildRecordRichTextExtensions } from '@/advanced-text-editor/utils/buildRecordRichTextExtensions';
 import { type Meta, type StoryObj } from '@storybook/react-vite';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { TIPTAP_DOCUMENT_SCHEMA_VERSION, isDefined } from 'twenty-shared/utils';
@@ -21,12 +22,25 @@ const STORY_RICH_TEXT_PROFILE = {
   buildExtensions: buildFullRichTextWithVariableTagExtensions,
 } satisfies AdvancedTextEditorProfile;
 
+const STORY_RECORD_RICH_TEXT_PROFILE = {
+  chrome: 'document',
+  minHeight: 200,
+  enableFullScreen: false,
+  buildExtensions: buildRecordRichTextExtensions,
+} satisfies AdvancedTextEditorProfile;
+
 const STORY_MINIMAL_PROFILE = {
   chrome: 'document',
   minHeight: 200,
   enableFullScreen: false,
   buildExtensions: () => [],
 } satisfies AdvancedTextEditorProfile;
+
+const STORY_PROFILES = {
+  richText: STORY_RICH_TEXT_PROFILE,
+  recordRichText: STORY_RECORD_RICH_TEXT_PROFILE,
+  minimal: STORY_MINIMAL_PROFILE,
+};
 
 const EditorWrapper = ({
   readonly = false,
@@ -41,13 +55,10 @@ const EditorWrapper = ({
   defaultValue?: string | null;
   onUpdate?: (content: string) => void;
   minHeight?: number;
-  extensionSet?: 'richText' | 'minimal';
+  extensionSet?: keyof typeof STORY_PROFILES;
 }) => {
   const editor = useAdvancedTextEditor({
-    profile:
-      extensionSet === 'richText'
-        ? STORY_RICH_TEXT_PROFILE
-        : STORY_MINIMAL_PROFILE,
+    profile: STORY_PROFILES[extensionSet],
     placeholder,
     readonly,
     defaultValue,
@@ -545,5 +556,104 @@ export const SlashMenuKeepsEditorFocus: Story = {
         name: 'Heading from slash menu',
       }),
     ).toBeVisible();
+  },
+};
+
+const paragraph = (text: string) => ({
+  type: 'paragraph',
+  content: [{ type: 'text', text }],
+});
+
+export const RecordRichText: Story = {
+  args: {
+    extensionSet: 'recordRichText',
+    defaultValue: JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 4, textAlign: 'center' },
+          content: [{ type: 'text', text: 'Meeting notes' }],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Red text',
+              marks: [{ type: 'textStyle', attrs: { color: 'red' } }],
+            },
+            { type: 'text', text: ' and ' },
+            {
+              type: 'text',
+              text: 'highlighted code',
+              marks: [
+                { type: 'code' },
+                { type: 'highlight', attrs: { color: 'yellow' } },
+              ],
+            },
+          ],
+        },
+        {
+          type: 'taskList',
+          content: [
+            {
+              type: 'taskItem',
+              attrs: { checked: true },
+              content: [paragraph('Send the proposal')],
+            },
+            {
+              type: 'taskItem',
+              attrs: { checked: false },
+              content: [paragraph('Book the follow-up')],
+            },
+          ],
+        },
+        {
+          type: 'blockquote',
+          content: [paragraph('Quoted customer feedback')],
+        },
+        {
+          type: 'codeBlock',
+          attrs: { language: 'ts' },
+          content: [{ type: 'text', text: 'const deal = await close();' }],
+        },
+        {
+          type: 'table',
+          content: [
+            {
+              type: 'tableRow',
+              content: ['Stage', 'Amount'].map((text) => ({
+                type: 'tableHeader',
+                content: [paragraph(text)],
+              })),
+            },
+            {
+              type: 'tableRow',
+              content: ['Proposal', '$12,000'].map((text) => ({
+                type: 'tableCell',
+                content: [paragraph(text)],
+              })),
+            },
+          ],
+        },
+        {
+          type: 'file',
+          attrs: {
+            url: 'https://example.com/proposal.pdf',
+            name: 'proposal.pdf',
+            fileCategory: 'TEXT_DOCUMENT',
+          },
+        },
+      ],
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    expect(await canvas.findByText('Meeting notes')).toBeVisible();
+    expect(await canvas.findByText('Quoted customer feedback')).toBeVisible();
+    expect(await canvas.findByRole('table')).toBeVisible();
+    expect(await canvas.findByText('proposal.pdf')).toBeVisible();
   },
 };
