@@ -6,6 +6,7 @@ import { capitalize } from 'twenty-shared/utils';
 import { CommonRestoreManyQueryRunnerService } from 'src/engine/api/common/common-query-runners/common-restore-many-query-runner.service';
 import { RestApiBaseHandler } from 'src/engine/api/rest/core/handlers/rest-api-base.handler';
 import { parseDepthRestRequest } from 'src/engine/api/rest/input-request-parsers/depth-parser-utils/parse-depth-rest-request.util';
+import { parseIncludeRestRequest } from 'src/engine/api/rest/input-request-parsers/include-parser-utils/parse-include-rest-request.util';
 import { parseFilterRestRequest } from 'src/engine/api/rest/input-request-parsers/filter-parser-utils/parse-filter-rest-request.util';
 import { AuthenticatedRequest } from 'src/engine/api/rest/types/authenticated-request.type';
 import { workspaceQueryRunnerRestApiExceptionHandler } from 'src/engine/api/rest/utils/workspace-query-runner-rest-api-exception-handler.util';
@@ -24,7 +25,7 @@ export class RestApiRestoreManyHandler extends RestApiBaseHandler {
     };
   }> {
     try {
-      const { filter, depth } = this.parseRequestArgs(request);
+      const { filter, depth, include } = this.parseRequestArgs(request);
 
       const {
         authContext,
@@ -36,6 +37,7 @@ export class RestApiRestoreManyHandler extends RestApiBaseHandler {
 
       const selectedFields = await this.computeSelectedFields({
         depth,
+        include,
         flatObjectMetadata,
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
@@ -77,6 +79,7 @@ export class RestApiRestoreManyHandler extends RestApiBaseHandler {
     return {
       filter,
       depth: parseDepthRestRequest(request),
+      include: parseIncludeRestRequest(request),
     };
   }
 }

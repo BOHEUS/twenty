@@ -6,6 +6,7 @@ import { capitalize } from 'twenty-shared/utils';
 import { CommonUpdateOneQueryRunnerService } from 'src/engine/api/common/common-query-runners/common-update-one-query-runner.service';
 import { RestApiBaseHandler } from 'src/engine/api/rest/core/handlers/rest-api-base.handler';
 import { parseDepthRestRequest } from 'src/engine/api/rest/input-request-parsers/depth-parser-utils/parse-depth-rest-request.util';
+import { parseIncludeRestRequest } from 'src/engine/api/rest/input-request-parsers/include-parser-utils/parse-include-rest-request.util';
 import { parseCorePath } from 'src/engine/api/rest/input-request-parsers/path-parser-utils/parse-core-path.utils';
 import { AuthenticatedRequest } from 'src/engine/api/rest/types/authenticated-request.type';
 import { workspaceQueryRunnerRestApiExceptionHandler } from 'src/engine/api/rest/utils/workspace-query-runner-rest-api-exception-handler.util';
@@ -20,7 +21,7 @@ export class RestApiUpdateOneHandler extends RestApiBaseHandler {
 
   async handle(request: AuthenticatedRequest) {
     try {
-      const { id, data, depth } = this.parseRequestArgs(request);
+      const { id, data, depth, include } = this.parseRequestArgs(request);
 
       const {
         authContext,
@@ -32,6 +33,7 @@ export class RestApiUpdateOneHandler extends RestApiBaseHandler {
 
       const selectedFields = await this.computeSelectedFields({
         depth,
+        include,
         flatObjectMetadata,
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
@@ -71,6 +73,7 @@ export class RestApiUpdateOneHandler extends RestApiBaseHandler {
       id,
       data: request.body,
       depth: parseDepthRestRequest(request),
+      include: parseIncludeRestRequest(request),
     };
   }
 }

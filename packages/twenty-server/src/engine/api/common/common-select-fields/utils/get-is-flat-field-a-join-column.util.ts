@@ -5,7 +5,7 @@ import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-m
 export const getIsFlatFieldAJoinColumn = ({
   flatField,
 }: {
-  flatField: FlatFieldMetadata;
+  flatField: Pick<FlatFieldMetadata, 'name' | 'settings'>;
 }): boolean => {
   const flatFieldIsJoinColumn =
     isDefined(flatField.settings) &&

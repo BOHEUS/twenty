@@ -6,6 +6,7 @@ import { capitalize } from 'twenty-shared/utils';
 import { CommonMergeManyQueryRunnerService } from 'src/engine/api/common/common-query-runners/common-merge-many-query-runner.service';
 import { RestApiBaseHandler } from 'src/engine/api/rest/core/handlers/rest-api-base.handler';
 import { parseDepthRestRequest } from 'src/engine/api/rest/input-request-parsers/depth-parser-utils/parse-depth-rest-request.util';
+import { parseIncludeRestRequest } from 'src/engine/api/rest/input-request-parsers/include-parser-utils/parse-include-rest-request.util';
 import { AuthenticatedRequest } from 'src/engine/api/rest/types/authenticated-request.type';
 import { workspaceQueryRunnerRestApiExceptionHandler } from 'src/engine/api/rest/utils/workspace-query-runner-rest-api-exception-handler.util';
 
@@ -19,7 +20,8 @@ export class RestApiMergeManyHandler extends RestApiBaseHandler {
 
   async handle(request: AuthenticatedRequest) {
     try {
-      const { depth, ...restArgs } = await this.parseRequestArgs(request);
+      const { depth, include, ...restArgs } =
+        await this.parseRequestArgs(request);
       const {
         authContext,
         flatObjectMetadata,
@@ -31,6 +33,7 @@ export class RestApiMergeManyHandler extends RestApiBaseHandler {
 
       const selectedFields = await this.computeSelectedFields({
         depth,
+        include,
         flatObjectMetadata,
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
@@ -62,12 +65,14 @@ export class RestApiMergeManyHandler extends RestApiBaseHandler {
 
   private async parseRequestArgs(request: AuthenticatedRequest) {
     const depth = parseDepthRestRequest(request);
+    const include = parseIncludeRestRequest(request);
 
     return {
       conflictPriorityIndex: request.body.conflictPriorityIndex,
       dryRun: request.body.dryRun,
       ids: request.body.ids,
       depth,
+      include,
     };
   }
 }

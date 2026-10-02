@@ -7,7 +7,6 @@ import {
 } from 'twenty-shared/types';
 
 import { CommonSelectFieldsHelper } from 'src/engine/api/common/common-select-fields/common-select-fields-helper';
-import { MAX_DEPTH } from 'src/engine/api/rest/input-request-parsers/constants/max-depth.constant';
 import { createEmptyFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-flat-entity-maps.constant';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { addFlatEntityToFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/add-flat-entity-to-flat-entity-maps-or-throw.util';
@@ -424,86 +423,6 @@ describe('RestToCommonSelectedFieldsHandler', () => {
       expect(result).toEqual({});
     });
 
-    it('should handle nested relations up to MAX_DEPTH', () => {
-      const personCompanyRelation = createMockField({
-        id: 'field-1',
-        name: 'company',
-        type: FieldMetadataType.RELATION,
-        objectMetadataId: 'person-id',
-        settings: {
-          relationType: RelationType.MANY_TO_ONE,
-        },
-        relationTargetObjectMetadataId: 'company-id',
-      });
-      const companyNameField = createMockField({
-        id: 'field-2',
-        name: 'name',
-        type: FieldMetadataType.TEXT,
-        objectMetadataId: 'company-id',
-      });
-      const companyPeopleRelation = createMockField({
-        id: 'field-3',
-        name: 'people',
-        type: FieldMetadataType.RELATION,
-        objectMetadataId: 'company-id',
-        settings: {
-          relationType: RelationType.ONE_TO_MANY,
-        },
-        relationTargetObjectMetadataId: 'person-id',
-      });
-      const personNameField = createMockField({
-        id: 'field-4',
-        name: 'name',
-        type: FieldMetadataType.TEXT,
-        objectMetadataId: 'person-id',
-      });
-
-      const personObject = createMockObjectMetadata({
-        id: 'person-id',
-        nameSingular: 'person',
-        fieldIds: ['field-1', 'field-4'],
-      });
-      const companyObject = createMockObjectMetadata({
-        id: 'company-id',
-        nameSingular: 'company',
-        fieldIds: ['field-2', 'field-3'],
-      });
-
-      const flatFieldMetadataMaps = buildFlatFieldMetadataMaps([
-        personCompanyRelation,
-        companyNameField,
-        companyPeopleRelation,
-        personNameField,
-      ]);
-      const flatObjectMetadataMaps = buildFlatObjectMetadataMaps([
-        personObject,
-        companyObject,
-      ]);
-
-      const result = handler.computeFromDepth({
-        objectsPermissions: createObjectsPermissions([
-          'person-id',
-          'company-id',
-        ]),
-        flatObjectMetadataMaps,
-        flatFieldMetadataMaps,
-        flatObjectMetadata: personObject,
-        depth: MAX_DEPTH,
-      });
-
-      expect(result).toEqual({
-        name: true,
-        companyId: true,
-        company: {
-          name: true,
-          people: {
-            name: true,
-            companyId: true,
-          },
-        },
-      });
-    });
-
     it('should only return label identifier fields when flag is true', () => {
       const idField = createMockField({
         id: 'field-id',
@@ -643,7 +562,7 @@ describe('RestToCommonSelectedFieldsHandler', () => {
       });
     });
 
-    it('should handle junction table relations with depth', () => {
+    it('should recurse into junction table relations when requested', () => {
       const junctionRelation1 = createMockField({
         id: 'field-1',
         name: 'person',
@@ -728,7 +647,8 @@ describe('RestToCommonSelectedFieldsHandler', () => {
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
         flatObjectMetadata: companyObject,
-        depth: MAX_DEPTH,
+        depth: 1,
+        recurseIntoJunctionTableRelations: true,
       });
 
       expect(result).toEqual({

@@ -6,7 +6,7 @@ import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-m
 export const getIsFlatFieldAJunctionRelationField = ({
   flatField,
 }: {
-  flatField: FlatFieldMetadata;
+  flatField: Pick<FlatFieldMetadata, 'name' | 'settings'>;
 }): boolean => {
   const isJunctionRelationField =
     isDefined(flatField.settings) &&

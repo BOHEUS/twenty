@@ -5,6 +5,7 @@ import { ObjectRecord } from 'twenty-shared/types';
 import { CommonFindOneQueryRunnerService } from 'src/engine/api/common/common-query-runners/common-find-one-query-runner.service';
 import { RestApiBaseHandler } from 'src/engine/api/rest/core/handlers/rest-api-base.handler';
 import { parseDepthRestRequest } from 'src/engine/api/rest/input-request-parsers/depth-parser-utils/parse-depth-rest-request.util';
+import { parseIncludeRestRequest } from 'src/engine/api/rest/input-request-parsers/include-parser-utils/parse-include-rest-request.util';
 import { parseCorePath } from 'src/engine/api/rest/input-request-parsers/path-parser-utils/parse-core-path.utils';
 import { AuthenticatedRequest } from 'src/engine/api/rest/types/authenticated-request.type';
 import { workspaceQueryRunnerRestApiExceptionHandler } from 'src/engine/api/rest/utils/workspace-query-runner-rest-api-exception-handler.util';
@@ -19,7 +20,7 @@ export class RestApiFindOneHandler extends RestApiBaseHandler {
 
   async handle(request: AuthenticatedRequest) {
     try {
-      const { filter, depth } = await this.parseRequestArgs(request);
+      const { filter, depth, include } = await this.parseRequestArgs(request);
       const {
         authContext,
         flatObjectMetadata,
@@ -30,6 +31,7 @@ export class RestApiFindOneHandler extends RestApiBaseHandler {
 
       const selectedFields = await this.computeSelectedFields({
         depth,
+        include,
         flatObjectMetadata,
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
@@ -62,10 +64,12 @@ export class RestApiFindOneHandler extends RestApiBaseHandler {
     const { id: recordId } = parseCorePath(request);
     const filter = { id: { eq: recordId } };
     const depth = parseDepthRestRequest(request);
+    const include = parseIncludeRestRequest(request);
 
     return {
       filter,
       depth,
+      include,
     };
   }
 }

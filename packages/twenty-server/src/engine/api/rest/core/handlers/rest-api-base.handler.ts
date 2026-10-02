@@ -11,7 +11,9 @@ import { CommonSelectFieldsHelper } from 'src/engine/api/common/common-select-fi
 import { CommonGroupByOutputItem } from 'src/engine/api/common/types/common-group-by-output-item.type';
 import { CommonSelectedFields } from 'src/engine/api/common/types/common-selected-fields-result.type';
 import { parseCorePath } from 'src/engine/api/rest/input-request-parsers/path-parser-utils/parse-core-path.utils';
+import { computeIncludeSelectedFieldsOrThrow } from 'src/engine/api/rest/input-request-parsers/include-parser-utils/compute-include-selected-fields-or-throw.util';
 import { Depth } from 'src/engine/api/rest/input-request-parsers/types/depth.type';
+import { RelationIncludeTree } from 'src/engine/api/rest/input-request-parsers/types/relation-include-tree.type';
 import { AuthenticatedRequest } from 'src/engine/api/rest/types/authenticated-request.type';
 import { ActorFromAuthContextService } from 'src/engine/core-modules/actor/services/actor-from-auth-context.service';
 import { ApiKeyRoleService } from 'src/engine/core-modules/api-key/services/api-key-role.service';
@@ -130,12 +132,14 @@ export abstract class RestApiBaseHandler {
   async computeSelectedFields({
     authContext,
     depth,
+    include = {},
     flatObjectMetadata,
     flatObjectMetadataMaps,
     flatFieldMetadataMaps,
   }: {
     authContext: WorkspaceAuthContext;
     depth?: Depth | undefined;
+    include?: RelationIncludeTree;
     flatObjectMetadata: FlatObjectMetadata;
     flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>;
     flatFieldMetadataMaps: FlatEntityMaps<OrmFlatFieldMetadata>;
@@ -143,13 +147,22 @@ export abstract class RestApiBaseHandler {
     const { objectsPermissions } =
       await this.getObjectsPermissions(authContext);
 
-    return this.commonSelectFieldsHelper.computeFromDepth({
-      objectsPermissions,
-      flatObjectMetadataMaps,
-      flatFieldMetadataMaps,
-      flatObjectMetadata,
-      depth,
-    });
+    return {
+      ...this.commonSelectFieldsHelper.computeFromDepth({
+        objectsPermissions,
+        flatObjectMetadataMaps,
+        flatFieldMetadataMaps,
+        flatObjectMetadata,
+        depth,
+      }),
+      ...computeIncludeSelectedFieldsOrThrow({
+        includeTree: include,
+        flatObjectMetadata,
+        flatObjectMetadataMaps,
+        flatFieldMetadataMaps,
+        objectsPermissions,
+      }),
+    };
   }
 
   async buildCommonOptions(request: AuthenticatedRequest) {

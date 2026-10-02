@@ -59,6 +59,28 @@ export const computeDepthParameters = (): OpenAPIV3_1.ParameterObject => {
   };
 };
 
+export const computeIncludeParameters = (): OpenAPIV3_1.ParameterObject => {
+  return {
+    name: 'include',
+    in: 'query',
+    description: `Comma-separated list of relations to include in the response, combined with **depth**. Use a dot to include a relation of a relation, up to 2 levels deep.`,
+    required: false,
+    schema: {
+      type: 'string',
+    },
+    examples: {
+      simple: {
+        value: 'company',
+        summary: 'Include a direct relation',
+      },
+      nested: {
+        value: 'company.people,pointOfContactForOpportunities',
+        summary: 'Include a nested relation and a direct relation',
+      },
+    },
+  };
+};
+
 export const computeUpsertParameters = (): OpenAPIV3_1.ParameterObject => {
   return {
     name: 'upsert',

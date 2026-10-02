@@ -329,6 +329,50 @@ describe('Core REST API Find Many endpoint', () => {
     }).expect(400);
   });
 
+  it('should include only the requested nested relations', async () => {
+    const response = await makeRestApiRequest({
+      method: 'get',
+      path: '/people?include=company.people',
+    }).expect(200);
+
+    const person = response.body.data.people[0];
+
+    expect(person.company.domainName.primaryLinkUrl).toBe(
+      TEST_PRIMARY_LINK_URL_AS_DOMAIN,
+    );
+    expect(person.company.people.map(({ id }: { id: string }) => id)).toEqual(
+      expect.arrayContaining(testPersonIds),
+    );
+    expect(person.company.opportunities).not.toBeDefined();
+    expect(person.pointOfContactForOpportunities).not.toBeDefined();
+  });
+
+  it('should combine include with depth 1', async () => {
+    const response = await makeRestApiRequest({
+      method: 'get',
+      path: '/people?depth=1&include=company.people',
+    }).expect(200);
+
+    const person = response.body.data.people[0];
+
+    expect(person.company.people).toBeDefined();
+    expect(person.pointOfContactForOpportunities).toBeDefined();
+  });
+
+  it('should reject an unknown relation in include', async () => {
+    await makeRestApiRequest({
+      method: 'get',
+      path: '/people?include=company.unknownRelation',
+    }).expect(400);
+  });
+
+  it('should reject include paths deeper than 2 levels', async () => {
+    await makeRestApiRequest({
+      method: 'get',
+      path: '/people?include=company.people.company',
+    }).expect(400);
+  });
+
   describe('cursor pagination ordered by a relation field', () => {
     it('should continue past the first page when depth loads the ordered relation', async () => {
       const ids: string[] = [];

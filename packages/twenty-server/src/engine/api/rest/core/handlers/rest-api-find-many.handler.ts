@@ -8,6 +8,7 @@ import {
 } from 'src/engine/api/rest/core/handlers/rest-api-base.handler';
 import { CommonFindManyQueryRunnerService } from 'src/engine/api/common/common-query-runners/common-find-many-query-runner.service';
 import { parseDepthRestRequest } from 'src/engine/api/rest/input-request-parsers/depth-parser-utils/parse-depth-rest-request.util';
+import { parseIncludeRestRequest } from 'src/engine/api/rest/input-request-parsers/include-parser-utils/parse-include-rest-request.util';
 import { parseEndingBeforeRestRequest } from 'src/engine/api/rest/input-request-parsers/ending-before-parser-utils/parse-ending-before-rest-request.util';
 import { parseFilterRestRequest } from 'src/engine/api/rest/input-request-parsers/filter-parser-utils/parse-filter-rest-request.util';
 import { parseLimitRestRequest } from 'src/engine/api/rest/input-request-parsers/limit-parser-utils/parse-limit-rest-request.util';
@@ -37,6 +38,7 @@ export class RestApiFindManyHandler extends RestApiBaseHandler {
 
       const selectedFields = await this.computeSelectedFields({
         depth: parsedArgs.depth,
+        include: parsedArgs.include,
         flatObjectMetadata,
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
@@ -87,6 +89,7 @@ export class RestApiFindManyHandler extends RestApiBaseHandler {
 
   private parseRequestArgs(request: AuthenticatedRequest) {
     const depth = parseDepthRestRequest(request);
+    const include = parseIncludeRestRequest(request);
     const limit = parseLimitRestRequest(request);
     const orderBy = parseOrderByRestRequest(request);
     const filter = parseFilterRestRequest(request);
@@ -101,6 +104,7 @@ export class RestApiFindManyHandler extends RestApiBaseHandler {
       before: endingBefore,
       after: startingAfter,
       depth,
+      include,
     };
   }
 }
