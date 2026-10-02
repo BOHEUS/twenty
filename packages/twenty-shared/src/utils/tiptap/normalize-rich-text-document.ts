@@ -16,7 +16,7 @@ type RichTextDocumentInput = {
 
 const parseJson = (value: string): unknown => {
   try {
-    return JSON.parse(value);
+    return JSON.parse(value) ?? undefined;
   } catch {
     return undefined;
   }
@@ -69,8 +69,9 @@ export const normalizeRichTextDocument = ({
     };
   }
 
-  // Unparseable legacy values were served as text, so keep them as text.
-  if (isNonEmptyString(blocknote)) {
+  // Legacy values that are not JSON were served as plain text, so keep them
+  // as text. JSON of any other shape holds no displayable content.
+  if (isNonEmptyString(blocknote) && !isDefined(parseJson(blocknote))) {
     return {
       document: convertMarkdownToTipTapDocument(blocknote),
       fallbackCount: 1,

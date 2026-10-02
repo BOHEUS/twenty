@@ -91,4 +91,9 @@ describe('normalizeRichTextDocument', () => {
       }),
     ).toBeNull();
   });
+
+  it('should ignore JSON values that are neither BlockNote nor TipTap', () => {
+    expect(normalizeRichTextDocument({ blocknote: '{}' })).toBeNull();
+    expect(normalizeRichTextDocument({ blocknote: '""' })).toBeNull();
+  });
 });
