@@ -35,7 +35,7 @@ it('saves an already-paid result without starting another generation or overwrit
         { summary: { markdown: { eq: '' } } },
       ],
     },
-    data: { summary: { markdown: 'Saved result', blocknote: null } },
+    data: { summary: { markdown: 'Saved result' } },
   });
 });
 

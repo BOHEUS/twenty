@@ -163,7 +163,7 @@ describe('generateCallRecordingSummariesHandler', () => {
         __args: {
           id: 'call-recording-1',
           data: {
-            summary: { blocknote: null, markdown: '## Overview\nGood call.' },
+            summary: { markdown: '## Overview\nGood call.' },
           },
         },
         id: true,

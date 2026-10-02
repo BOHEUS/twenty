@@ -148,7 +148,7 @@ describe('buildFathomCallRecordingUpsertFields', () => {
             words: [{ text: 'New source transcript' }],
           },
         ],
-        summary: { markdown: 'New source summary', blocknote: null },
+        summary: { markdown: 'New source summary' },
       },
     });
 
@@ -166,14 +166,13 @@ describe('buildFathomCallRecordingUpsertFields', () => {
             words: [{ text: 'New source transcript' }],
           },
         ],
-        summary: { markdown: 'New source summary', blocknote: null },
+        summary: { markdown: 'New source summary' },
       },
     });
 
     expect(fields.updateCallRecordingFields.transcript).toBeUndefined();
     expect(fields.updateCallRecordingFields.summary).toEqual({
       markdown: 'New source summary',
-      blocknote: null,
     });
   });
 

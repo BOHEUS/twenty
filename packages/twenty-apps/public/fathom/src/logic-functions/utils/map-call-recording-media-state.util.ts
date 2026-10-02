@@ -6,7 +6,6 @@ import {
   fathomMediaUploadCheckpointSchema,
 } from 'src/logic-functions/schemas/call-recording-media-state-query-result.schema';
 import { type CallRecordingMediaState } from 'src/logic-functions/types/call-recording-media-state.type';
-import { isDefined } from 'src/utils/is-defined';
 
 export const mapCallRecordingMediaState = (
   node: z.infer<typeof callRecordingMediaStateNodeSchema>,
@@ -22,9 +21,7 @@ export const mapCallRecordingMediaState = (
     fathomRecordingImportId: isNonEmptyString(recordingImport?.id)
       ? recordingImport.id
       : undefined,
-    fathomRecordingImportUpdatedAt: isNonEmptyString(
-      recordingImport?.updatedAt,
-    )
+    fathomRecordingImportUpdatedAt: isNonEmptyString(recordingImport?.updatedAt)
       ? recordingImport.updatedAt
       : undefined,
     recordingId: isNonEmptyString(recordingImport?.recordingId)
@@ -35,9 +32,7 @@ export const mapCallRecordingMediaState = (
     hasAudio:
       node.audio?.some((file) => isNonEmptyString(file.fileId)) ?? false,
     hasTranscript: isNonEmptyArray(node.transcript),
-    hasSummary:
-      isNonEmptyString(node.summary?.markdown) ||
-      isDefined(node.summary?.blocknote),
+    hasSummary: isNonEmptyString(node.summary?.markdown),
     failureReason: isNonEmptyString(recordingImport?.mediaFailureReason)
       ? recordingImport.mediaFailureReason
       : undefined,

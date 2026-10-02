@@ -57,7 +57,7 @@ export const syncFathomMeetingToCallRecording = async ({
       ? {}
       : { transcript: transcriptEntries }),
     ...(isNonEmptyString(summaryMarkdown)
-      ? { summary: { markdown: summaryMarkdown, blocknote: null } }
+      ? { summary: { markdown: summaryMarkdown } }
       : {}),
     ...(calendarEventId === undefined ? {} : { calendarEventId }),
   };

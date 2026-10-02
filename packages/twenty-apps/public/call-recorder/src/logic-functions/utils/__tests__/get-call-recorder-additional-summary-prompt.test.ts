@@ -30,7 +30,7 @@ describe('getCallRecorderAdditionalSummaryPrompt', () => {
 
   it('returns undefined when the rich text markdown is empty', () => {
     process.env[CALL_RECORDER_ADDITIONAL_SUMMARY_PROMPT_ENV_VAR_NAME] =
-      JSON.stringify({ blocknote: null, markdown: null });
+      JSON.stringify({ markdown: null });
 
     expect(getCallRecorderAdditionalSummaryPrompt()).toBeUndefined();
   });

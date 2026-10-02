@@ -85,7 +85,7 @@ export const generateCallRecordingSummary = async (
   try {
     await updateCallRecording(client, {
       id: callRecordingId,
-      data: { summary: { blocknote: null, markdown: summaryMarkdown } },
+      data: { summary: { markdown: summaryMarkdown } },
     });
   } catch (error) {
     // Not rethrown: a redelivery would re-bill the agent run that already succeeded.

@@ -6,14 +6,12 @@ import { serializeRichTextMarkdown } from 'src/front-components/utils/serialize-
 describe('serializeRichTextMarkdown', () => {
   it('wraps markdown into the stored rich text shape', () => {
     expect(serializeRichTextMarkdown('Write terse notes.')).toBe(
-      '{"blocknote":null,"markdown":"Write terse notes."}',
+      '{"markdown":"Write terse notes."}',
     );
   });
 
   it('serializes an empty prompt using the stored rich text shape', () => {
-    expect(serializeRichTextMarkdown('')).toBe(
-      '{"blocknote":null,"markdown":null}',
-    );
+    expect(serializeRichTextMarkdown('')).toBe('{"markdown":null}');
   });
 
   it('round-trips through the reader used by the summary prompt', () => {

@@ -45,7 +45,7 @@ export const recoverRecordingSummaries = async (
         updateCallRecordings: {
           __args: {
             filter: { id: { eq: node.id }, ...missingSummary },
-            data: { summary: { blocknote: null, markdown: cached.markdown } },
+            data: { summary: { markdown: cached.markdown } },
           },
           id: true,
         },
