@@ -44,7 +44,7 @@ export class AddRichTextTiptapColumnsCommand extends ProvisionedWorkspaceCommand
 
     if (options.dryRun === true || !isDefined(dataSource)) {
       this.logger.log(
-        `[DRY RUN] Would add ${columns.length} tiptap column(s) for workspace ${workspaceId}`,
+        `[DRY RUN] Would ensure ${columns.length} tiptap column(s) exist for workspace ${workspaceId}`,
       );
 
       return;
@@ -57,7 +57,7 @@ export class AddRichTextTiptapColumnsCommand extends ProvisionedWorkspaceCommand
     }
 
     this.logger.log(
-      `Added ${columns.length} tiptap column(s) for workspace ${workspaceId}`,
+      `Ensured ${columns.length} tiptap column(s) exist for workspace ${workspaceId}`,
     );
   }
 
