@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { FileModule } from 'src/engine/core-modules/file/file.module';
 import { ThrottlerModule } from 'src/engine/core-modules/throttler/throttler.module';
@@ -28,6 +29,7 @@ import { ApplicationRegistrationLookupModule } from 'src/engine/core-modules/app
 
 @Module({
   imports: [
+    EnterpriseModule,
     ApplicationLookupModule,
     ApplicationRegistrationLookupModule,
     WorkspaceManyOrAllFlatEntityMapsCacheModule,

@@ -33,6 +33,14 @@ export class BrandingService {
     });
   }
 
+  // The help center search reaches Twenty's documentation unless the operator points it at their own Mintlify site.
+  isHelpCenterSearchAvailable(): boolean {
+    return (
+      !this.getBrand().isWhiteLabeled ||
+      isNonEmptyString(this.twentyConfigService.get('MINTLIFY_SUBDOMAIN'))
+    );
+  }
+
   private getOptionalConfigValue(
     key:
       | 'BRAND_LOGO_URL'

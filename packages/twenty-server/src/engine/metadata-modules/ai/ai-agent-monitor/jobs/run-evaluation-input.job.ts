@@ -1,12 +1,13 @@
 import { Logger } from '@nestjs/common';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { Process } from 'src/engine/core-modules/message-queue/decorators/process.decorator';
 import { Processor } from 'src/engine/core-modules/message-queue/decorators/processor.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
 import { AgentAsyncExecutorService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-async-executor.service';
-import { AGENT_RUN_BASE_SYSTEM_PROMPT } from 'src/engine/metadata-modules/ai/ai-agent/constants/agent-run-base-system-prompt.const';
+import { buildAgentRunBaseSystemPrompt } from 'src/engine/metadata-modules/ai/ai-agent/utils/build-agent-run-base-system-prompt.util';
 import { AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
 import { AgentChatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat.service';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
@@ -26,6 +27,7 @@ export class RunEvaluationInputJob {
   private readonly logger = new Logger(RunEvaluationInputJob.name);
 
   constructor(
+    private readonly brandingService: BrandingService,
     @InjectWorkspaceScopedRepository(AgentEntity)
     private readonly agentRepository: WorkspaceScopedRepository<AgentEntity>,
     private readonly agentChatService: AgentChatService,
@@ -57,7 +59,9 @@ export class RunEvaluationInputJob {
     const executionResult = await this.aiAgentExecutorService.executeAgent({
       agent,
       messages: [{ role: 'user', content: data.input }],
-      baseSystemPrompt: AGENT_RUN_BASE_SYSTEM_PROMPT,
+      baseSystemPrompt: buildAgentRunBaseSystemPrompt(
+        this.brandingService.getBrand().name,
+      ),
       workspaceId: data.workspaceId,
       userWorkspaceId: null,
     });

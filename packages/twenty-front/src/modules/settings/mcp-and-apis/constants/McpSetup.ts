@@ -9,10 +9,6 @@ export const MCP_SETUP = {
     key: 'Authorization',
     value: 'Bearer <YOUR_API_KEY>',
   },
-  server: {
-    name: 'twenty',
-    displayName: 'Twenty',
-  },
   clientDocsUrls: {
     augment: 'https://docs.augmentcode.com/setup-augment/mcp',
     amazonQ:

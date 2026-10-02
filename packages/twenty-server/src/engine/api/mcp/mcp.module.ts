@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { McpCoreController } from 'src/engine/api/mcp/controllers/mcp-core.controller';
 import { McpAuthGuard } from 'src/engine/api/mcp/guards/mcp-auth.guard';
 import { McpInstructionBuilderService } from 'src/engine/api/mcp/services/mcp-instruction-builder.service';
@@ -20,6 +21,7 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
 
 @Module({
   imports: [
+    EnterpriseModule,
     ApiKeyModule,
     MetricsModule,
     TokenModule,

@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 
 import { isNonEmptyString } from '@sniptt/guards';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
+import { buildChatBaseSystemPrompt } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-chat-base-system-prompt.util';
 import { COMMON_PRELOAD_TOOLS } from 'src/engine/core-modules/tool-provider/constants/common-preload-tools.const';
 import { ToolRegistryService } from 'src/engine/core-modules/tool-provider/services/tool-registry.service';
 import { buildToolCatalogSection } from 'src/engine/core-modules/tool-provider/utils/build-tool-catalog-section.util';
@@ -30,6 +32,7 @@ const estimateTokenCount = (text: string): number => Math.ceil(text.length / 4);
 @Injectable()
 export class SystemPromptBuilderService {
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly toolRegistry: ToolRegistryService,
     private readonly skillService: SkillService,
     private readonly agentActorContextService: AgentActorContextService,
@@ -60,7 +63,9 @@ export class SystemPromptBuilderService {
 
     const sections: SystemPromptSection[] = [];
 
-    const baseContent = CHAT_SYSTEM_PROMPTS.BASE;
+    const baseContent = buildChatBaseSystemPrompt(
+      this.brandingService.getBrand().name,
+    );
 
     sections.push({
       title: 'Base Instructions',

@@ -8,6 +8,7 @@ import {
 import { isDefined, resolveInput } from 'twenty-shared/utils';
 import { type WorkflowRunStepLog } from 'twenty-shared/workflow';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { type WorkflowAction } from 'src/modules/workflow/workflow-executor/interfaces/workflow-action.interface';
 
 import { UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
@@ -16,7 +17,7 @@ import { type AgentExecutionResult } from 'src/engine/metadata-modules/ai/ai-age
 import { createAskQuestionsTool } from 'src/engine/metadata-modules/ai/ai-chat/tools/ask-questions.tool';
 import { createProposeEmailTool } from 'src/engine/metadata-modules/ai/ai-chat/tools/propose-email.tool';
 import { createRequestFormTool } from 'src/engine/metadata-modules/ai/ai-chat/tools/request-form.tool';
-import { WORKFLOW_BASE_SYSTEM_PROMPT } from 'src/engine/metadata-modules/ai/ai-agent/constants/workflow-base-system-prompt.const';
+import { buildWorkflowBaseSystemPrompt } from 'src/engine/metadata-modules/ai/ai-agent/utils/build-workflow-base-system-prompt.util';
 import { AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
@@ -44,6 +45,7 @@ export class AiAgentWorkflowAction implements WorkflowAction {
   private readonly logger = new Logger(AiAgentWorkflowAction.name);
 
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly aiAgentExecutionService: AgentAsyncExecutorService,
     private readonly workflowExecutionContextService: WorkflowExecutionContextService,
     private readonly workflowRunStepLogService: WorkflowRunStepLogWorkspaceService,
@@ -148,6 +150,10 @@ export class AiAgentWorkflowAction implements WorkflowAction {
 
     const startedAtMs = Date.now();
 
+    const workflowBaseSystemPrompt = buildWorkflowBaseSystemPrompt(
+      this.brandingService.getBrand().name,
+    );
+
     const executionResult = await this.aiAgentExecutionService.executeAgent({
       agent,
       ...(isDefined(resumedThreadId)
@@ -161,8 +167,8 @@ export class AiAgentWorkflowAction implements WorkflowAction {
           }
         : { messages: [{ role: 'user', content: resolvedPrompt }] }),
       baseSystemPrompt: isAskingQuestionsAllowed
-        ? `${WORKFLOW_BASE_SYSTEM_PROMPT}\n\n${WORKFLOW_AGENT_ASK_QUESTIONS_PROMPT}`
-        : WORKFLOW_BASE_SYSTEM_PROMPT,
+        ? `${workflowBaseSystemPrompt}\n\n${WORKFLOW_AGENT_ASK_QUESTIONS_PROMPT}`
+        : workflowBaseSystemPrompt,
       pausingTools: isAskingQuestionsAllowed
         ? {
             [ASK_QUESTIONS_TOOL_NAME]: createAskQuestionsTool({

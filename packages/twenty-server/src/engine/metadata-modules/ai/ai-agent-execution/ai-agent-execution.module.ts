@@ -1,3 +1,4 @@
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { AgentMessageResolver } from 'src/engine/metadata-modules/ai/ai-agent-execution/resolvers/agent-message.resolver';
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -34,6 +35,7 @@ import { RunAgentAttachmentService } from './services/run-agent-attachment.servi
 
 @Module({
   imports: [
+    EnterpriseModule,
     AiBillingModule,
     AiModelsModule,
     AiAgentModule,

@@ -1,3 +1,5 @@
+import { brandState } from '@/client-config/states/brandState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
 import { isDefined } from 'twenty-shared/utils';
@@ -71,6 +73,8 @@ const StyledTable = styled(Table)`
 
 export const SettingsAiModelTiersPreview = () => {
   const tiers = useAiModelTiers();
+  const brand = useAtomStateValue(brandState);
+  const brandName = brand.name;
 
   return (
     <Section.Root>
@@ -107,7 +111,7 @@ export const SettingsAiModelTiersPreview = () => {
                           ? t`No model is available for this mode.`
                           : tier.isPinned
                             ? t`Manually selected for this mode.`
-                            : t`Automatically selected by Twenty for this mode.`
+                            : t`Automatically selected by ${brandName} for this mode.`
                       }
                     >
                       {getAiModelModeDescription(tier, {

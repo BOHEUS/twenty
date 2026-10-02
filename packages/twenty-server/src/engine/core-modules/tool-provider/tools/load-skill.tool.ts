@@ -1,6 +1,8 @@
 import { z } from 'zod';
+import { type Brand } from 'twenty-shared/types';
 import { tipTapDocumentToMarkdown } from 'twenty-shared/utils';
 
+import { rebrandStandardText } from 'src/engine/core-modules/enterprise/utils/rebrand-standard-text.util';
 import { type FlatSkill } from 'src/engine/metadata-modules/flat-skill/types/flat-skill.type';
 
 export const LOAD_SKILL_TOOL_NAME = 'load_skills';
@@ -30,6 +32,7 @@ export type ListAvailableSkillNamesFunction = () => Promise<string[]>;
 export const createLoadSkillTool = (
   loadSkills: LoadSkillFunction,
   listAvailableSkillNames: ListAvailableSkillNamesFunction,
+  brand: Brand,
 ) => ({
   description:
     'Load specialized skills for complex tasks. Returns detailed step-by-step instructions for building workflows, dashboards, manipulating data, or managing metadata. Call this before attempting complex operations.',
@@ -57,7 +60,11 @@ export const createLoadSkillTool = (
       skills: skills.map((skill) => ({
         name: skill.name,
         label: skill.label,
-        content: tipTapDocumentToMarkdown(skill.content),
+        content: rebrandStandardText({
+          text: tipTapDocumentToMarkdown(skill.content),
+          brand,
+          isCustom: skill.isCustom,
+        }),
       })),
       message: `Loaded ${skills.map((skill) => skill.label).join(', ')}.`,
     };

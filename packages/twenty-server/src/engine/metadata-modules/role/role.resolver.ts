@@ -9,6 +9,7 @@ import { Args, Mutation, Parent, Query, ResolveField } from '@nestjs/graphql';
 import { PermissionFlagType } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 import { ApiKeyRoleService } from 'src/engine/core-modules/api-key/services/api-key-role.service';
@@ -90,6 +91,7 @@ import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filt
 @UseInterceptors(WorkspaceMigrationGraphqlApiExceptionInterceptor)
 export class RoleResolver {
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly userRoleService: UserRoleService,
     private readonly roleService: RoleService,
     private readonly objectPermissionService: ObjectPermissionService,
@@ -383,15 +385,18 @@ export class RoleResolver {
         );
       }
 
-      return fromFlatAgentWithRoleIdToAgentDto({
-        ...agentEntity,
-        createdAt: agentEntity.createdAt.toISOString(),
-        updatedAt: agentEntity.updatedAt.toISOString(),
-        deletedAt: agentEntity.deletedAt?.toISOString() ?? null,
-        universalIdentifier: agentEntity.universalIdentifier,
-        applicationUniversalIdentifier: flatApplication.universalIdentifier,
-        roleId: role.id,
-      });
+      return fromFlatAgentWithRoleIdToAgentDto(
+        {
+          ...agentEntity,
+          createdAt: agentEntity.createdAt.toISOString(),
+          updatedAt: agentEntity.updatedAt.toISOString(),
+          deletedAt: agentEntity.deletedAt?.toISOString() ?? null,
+          universalIdentifier: agentEntity.universalIdentifier,
+          applicationUniversalIdentifier: flatApplication.universalIdentifier,
+          roleId: role.id,
+        },
+        this.brandingService.getBrand(),
+      );
     });
   }
 

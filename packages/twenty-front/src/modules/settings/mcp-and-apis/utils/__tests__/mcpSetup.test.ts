@@ -4,6 +4,7 @@ import {
   buildGooseInstallLink,
   buildLmStudioInstallLink,
   buildMcpConfig,
+  buildMcpServer,
   buildMcpServerUrl,
   buildReplitInstallLink,
   buildRemoteMcpServerConfig,
@@ -12,6 +13,10 @@ import {
 } from '@/settings/mcp-and-apis/utils/mcpSetup';
 
 const mcpServerUrl = 'https://api.twenty.com/mcp';
+const mcpServer = buildMcpServer({
+  serverBaseUrl: 'https://api.twenty.com',
+  brandName: 'Twenty',
+});
 
 const decodeBase64JsonParam = (link: string, paramName: string) => {
   const params = new URLSearchParams(link.split('?')[1]);
@@ -38,9 +43,24 @@ describe('isHttpsUrl', () => {
   });
 });
 
+describe('buildMcpServer', () => {
+  it('derives the server identity from the brand name', () => {
+    expect(
+      buildMcpServer({
+        serverBaseUrl: 'https://crm.acme.test/',
+        brandName: 'Acme CRM',
+      }),
+    ).toEqual({
+      url: 'https://crm.acme.test/mcp',
+      name: 'acme-crm',
+      displayName: 'Acme CRM',
+    });
+  });
+});
+
 describe('buildMcpConfig', () => {
   it('builds the remote MCP JSON config', () => {
-    expect(JSON.parse(buildMcpConfig(mcpServerUrl))).toEqual({
+    expect(JSON.parse(buildMcpConfig(mcpServer))).toEqual({
       mcpServers: {
         twenty: {
           url: mcpServerUrl,
@@ -66,7 +86,7 @@ describe('buildRemoteMcpServerConfig', () => {
 
 describe('buildClaudeInstallLink', () => {
   it('builds a Claude custom connector link', () => {
-    const link = buildClaudeInstallLink(mcpServerUrl);
+    const link = buildClaudeInstallLink(mcpServer);
     const params = new URL(link).searchParams;
 
     expect(link.startsWith('https://claude.ai/customize/connectors?')).toBe(
@@ -80,7 +100,7 @@ describe('buildClaudeInstallLink', () => {
 
 describe('buildCursorInstallLink', () => {
   it('base64-encodes the remote MCP config', () => {
-    const link = buildCursorInstallLink(mcpServerUrl);
+    const link = buildCursorInstallLink(mcpServer);
 
     expect(link.startsWith('https://cursor.com/en/install-mcp?')).toBe(true);
     expect(new URLSearchParams(link.split('?')[1]).get('name')).toBe('twenty');
@@ -94,7 +114,7 @@ describe('buildVsCodeInstallLink', () => {
   it('URI-encodes the VS Code MCP install payload', () => {
     const payload = JSON.parse(
       decodeURIComponent(
-        buildVsCodeInstallLink(mcpServerUrl).replace('vscode:mcp/install?', ''),
+        buildVsCodeInstallLink(mcpServer).replace('vscode:mcp/install?', ''),
       ),
     );
 
@@ -111,7 +131,7 @@ describe('buildVsCodeInstallLink', () => {
 
 describe('buildGooseInstallLink', () => {
   it('builds a Goose streamable HTTP extension link', () => {
-    const link = buildGooseInstallLink(mcpServerUrl);
+    const link = buildGooseInstallLink(mcpServer);
     const params = new URLSearchParams(link.split('?')[1]);
 
     expect(link.startsWith('goose://extension?')).toBe(true);
@@ -125,7 +145,7 @@ describe('buildGooseInstallLink', () => {
 
 describe('buildReplitInstallLink', () => {
   it('base64-encodes the Replit MCP payload', () => {
-    const link = buildReplitInstallLink(mcpServerUrl);
+    const link = buildReplitInstallLink(mcpServer);
 
     expect(link.startsWith('https://replit.com/integrations?')).toBe(true);
     expect(decodeBase64JsonParam(link, 'mcp')).toEqual({
@@ -143,7 +163,7 @@ describe('buildReplitInstallLink', () => {
 
 describe('buildLmStudioInstallLink', () => {
   it('base64-encodes the remote MCP config', () => {
-    const link = buildLmStudioInstallLink(mcpServerUrl);
+    const link = buildLmStudioInstallLink(mcpServer);
 
     expect(link.startsWith('lmstudio://add_mcp?')).toBe(true);
     expect(new URLSearchParams(link.split('?')[1]).get('name')).toBe('twenty');

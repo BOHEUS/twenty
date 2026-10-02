@@ -4,6 +4,7 @@ import { PermissionFlagType } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 import { z } from 'zod';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import {
   ACTION_TOOL_LABELS,
   type ActionToolId,
@@ -45,6 +46,7 @@ export class ActionToolProvider implements ToolProvider {
   private readonly toolMap: Map<string, Tool>;
 
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly httpTool: HttpTool,
     private readonly sendEmailTool: SendEmailTool,
     private readonly draftEmailTool: DraftEmailTool,
@@ -184,14 +186,16 @@ export class ActionToolProvider implements ToolProvider {
       );
     }
 
-    descriptors.push(
-      this.buildDescriptor(
-        'search_help_center',
-        this.searchHelpCenterTool,
-        includeSchemas,
-        context.locale,
-      ),
-    );
+    if (this.brandingService.isHelpCenterSearchAvailable()) {
+      descriptors.push(
+        this.buildDescriptor(
+          'search_help_center',
+          this.searchHelpCenterTool,
+          includeSchemas,
+          context.locale,
+        ),
+      );
+    }
 
     descriptors.push(
       this.buildDescriptor(

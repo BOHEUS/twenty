@@ -4,6 +4,8 @@ import { Args, Mutation, Query } from '@nestjs/graphql';
 import { PermissionFlagType } from 'twenty-shared/constants';
 import { isNonEmptyString } from '@sniptt/guards';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
+import { STANDARD_AGENT } from 'src/engine/workspace-manager/twenty-standard-application/constants/standard-agent.constant';
 import { ApplicationExceptionFilter } from 'src/engine/core-modules/application/application-exception-filter';
 import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
 import { canCallerReachApplication } from 'src/engine/core-modules/application/utils/can-caller-reach-application.util';
@@ -50,6 +52,7 @@ import { ApplicationTargetGuard } from 'src/engine/guards/application-target.gua
 @UseFilters(ApplicationExceptionFilter, AuthGraphqlApiExceptionFilter)
 export class AgentResolver {
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly agentService: AgentService,
     private readonly aiModelRegistryService: AiModelRegistryService,
   ) {}
@@ -62,15 +65,24 @@ export class AgentResolver {
   ): Promise<AgentDTO[]> {
     const flatAgentsWithRoleId =
       await this.agentService.findManyAgents(workspaceId);
+    const brand = this.brandingService.getBrand();
+    const isHelperAgentHidden =
+      !this.brandingService.isHelpCenterSearchAvailable();
 
     return flatAgentsWithRoleId
-      .filter((flatAgent) =>
-        canCallerReachApplication({
-          callingApplication,
-          applicationId: flatAgent.applicationId,
-        }),
+      .filter(
+        (flatAgent) =>
+          canCallerReachApplication({
+            callingApplication,
+            applicationId: flatAgent.applicationId,
+          }) &&
+          !(
+            isHelperAgentHidden &&
+            flatAgent.universalIdentifier ===
+              STANDARD_AGENT.helper.universalIdentifier
+          ),
       )
-      .map(fromFlatAgentWithRoleIdToAgentDto);
+      .map((flatAgent) => fromFlatAgentWithRoleIdToAgentDto(flatAgent, brand));
   }
 
   @Query(() => AgentDTO)
@@ -90,7 +102,10 @@ export class AgentResolver {
       id,
     });
 
-    return fromFlatAgentWithRoleIdToAgentDto(fatAgentWithRoleId);
+    return fromFlatAgentWithRoleIdToAgentDto(
+      fatAgentWithRoleId,
+      this.brandingService.getBrand(),
+    );
   }
 
   @Mutation(() => AgentDTO)
@@ -108,7 +123,10 @@ export class AgentResolver {
       workspace.id,
     );
 
-    return fromFlatAgentWithRoleIdToAgentDto(createdAgent);
+    return fromFlatAgentWithRoleIdToAgentDto(
+      createdAgent,
+      this.brandingService.getBrand(),
+    );
   }
 
   @Mutation(() => AgentDTO)
@@ -126,7 +144,10 @@ export class AgentResolver {
       workspaceId: workspace.id,
     });
 
-    return fromFlatAgentWithRoleIdToAgentDto(updatedAgent);
+    return fromFlatAgentWithRoleIdToAgentDto(
+      updatedAgent,
+      this.brandingService.getBrand(),
+    );
   }
 
   @Mutation(() => AgentDTO)
@@ -140,6 +161,9 @@ export class AgentResolver {
       workspaceId,
     );
 
-    return fromFlatAgentWithRoleIdToAgentDto(deletedFlatAgent);
+    return fromFlatAgentWithRoleIdToAgentDto(
+      deletedFlatAgent,
+      this.brandingService.getBrand(),
+    );
   }
 }

@@ -1,7 +1,25 @@
 import { MCP_SETUP } from '@/settings/mcp-and-apis/constants/McpSetup';
+import { type McpServer } from '@/settings/mcp-and-apis/types/McpServer';
 
 export const buildMcpServerUrl = (serverBaseUrl: string) =>
   `${serverBaseUrl.replace(/\/+$/, '')}/mcp`;
+
+// Clients key servers by a short machine name, so it is derived from the brand name.
+export const buildMcpServer = ({
+  serverBaseUrl,
+  brandName,
+}: {
+  serverBaseUrl: string;
+  brandName: string;
+}): McpServer => ({
+  url: buildMcpServerUrl(serverBaseUrl),
+  name:
+    brandName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'crm',
+  displayName: brandName,
+});
 
 export const isHttpsUrl = (url: string) => {
   try {
@@ -20,56 +38,58 @@ export const buildRemoteMcpServerConfig = (mcpServerUrl: string) => ({
   headers: buildMcpAuthorizationHeaders(),
 });
 
-export const buildMcpConfig = (mcpServerUrl: string) =>
+export const buildMcpConfig = (mcpServer: McpServer) =>
   JSON.stringify(
     {
       mcpServers: {
-        [MCP_SETUP.server.name]: buildRemoteMcpServerConfig(mcpServerUrl),
+        [mcpServer.name]: buildRemoteMcpServerConfig(mcpServer.url),
       },
     },
     null,
     2,
   );
 
-export const buildClaudeInstallLink = (mcpServerUrl: string) => {
+export const buildClaudeInstallLink = (mcpServer: McpServer) => {
   const params = new URLSearchParams({
     modal: 'add-custom-connector',
-    connectorName: MCP_SETUP.server.displayName,
-    connectorUrl: mcpServerUrl,
+    connectorName: mcpServer.displayName,
+    connectorUrl: mcpServer.url,
   });
 
   return `https://claude.ai/customize/connectors?${params.toString()}`;
 };
 
-export const buildCursorInstallLink = (mcpServerUrl: string) => {
-  const config = btoa(JSON.stringify(buildRemoteMcpServerConfig(mcpServerUrl)));
+export const buildCursorInstallLink = (mcpServer: McpServer) => {
+  const config = btoa(
+    JSON.stringify(buildRemoteMcpServerConfig(mcpServer.url)),
+  );
 
   const params = new URLSearchParams({
-    name: MCP_SETUP.server.name,
+    name: mcpServer.name,
     config,
   });
 
   return `https://cursor.com/en/install-mcp?${params.toString()}`;
 };
 
-export const buildVsCodeInstallLink = (mcpServerUrl: string) =>
+export const buildVsCodeInstallLink = (mcpServer: McpServer) =>
   `vscode:mcp/install?${encodeURIComponent(
     JSON.stringify({
-      name: MCP_SETUP.server.name,
+      name: mcpServer.name,
       type: 'http',
-      url: mcpServerUrl,
+      url: mcpServer.url,
       headers: buildMcpAuthorizationHeaders(),
     }),
   )}`;
 
-export const buildGooseInstallLink = (mcpServerUrl: string) => {
+export const buildGooseInstallLink = (mcpServer: McpServer) => {
   const params = new URLSearchParams({
-    url: mcpServerUrl,
+    url: mcpServer.url,
     type: 'streamable_http',
     timeout: '300',
-    id: MCP_SETUP.server.name,
-    name: MCP_SETUP.server.displayName,
-    description: 'Access your Twenty workspace through MCP',
+    id: mcpServer.name,
+    name: mcpServer.displayName,
+    description: `Access your ${mcpServer.displayName} workspace through MCP`,
   });
 
   params.append(
@@ -80,11 +100,11 @@ export const buildGooseInstallLink = (mcpServerUrl: string) => {
   return `goose://extension?${params.toString()}`;
 };
 
-export const buildReplitInstallLink = (mcpServerUrl: string) => {
+export const buildReplitInstallLink = (mcpServer: McpServer) => {
   const payload = btoa(
     JSON.stringify({
-      displayName: MCP_SETUP.server.displayName,
-      baseUrl: mcpServerUrl,
+      displayName: mcpServer.displayName,
+      baseUrl: mcpServer.url,
       headers: [
         {
           key: MCP_SETUP.authorizationHeader.key,
@@ -101,11 +121,13 @@ export const buildReplitInstallLink = (mcpServerUrl: string) => {
   return `https://replit.com/integrations?${params.toString()}`;
 };
 
-export const buildLmStudioInstallLink = (mcpServerUrl: string) => {
-  const config = btoa(JSON.stringify(buildRemoteMcpServerConfig(mcpServerUrl)));
+export const buildLmStudioInstallLink = (mcpServer: McpServer) => {
+  const config = btoa(
+    JSON.stringify(buildRemoteMcpServerConfig(mcpServer.url)),
+  );
 
   const params = new URLSearchParams({
-    name: MCP_SETUP.server.name,
+    name: mcpServer.name,
     config,
   });
 

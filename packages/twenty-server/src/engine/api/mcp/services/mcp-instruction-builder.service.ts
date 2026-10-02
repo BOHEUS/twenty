@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ToolCategory } from 'twenty-shared/ai';
 import { camelToSnakeCase } from 'twenty-shared/utils';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { MCP_EXCLUDED_TOOL_NAMES } from 'src/engine/api/mcp/constants/mcp-excluded-tool-names.const';
 import { buildMcpServerInstructions } from 'src/engine/api/mcp/utils/build-mcp-server-instructions.util';
 import { ToolRegistryService } from 'src/engine/core-modules/tool-provider/services/tool-registry.service';
@@ -14,6 +15,7 @@ import { type RolePermissionConfig } from 'src/engine/twenty-orm/types/role-perm
 @Injectable()
 export class McpInstructionBuilderService {
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly flatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
     private readonly skillService: SkillService,
     private readonly toolRegistry: ToolRegistryService,
@@ -64,6 +66,7 @@ export class McpInstructionBuilderService {
       actionToolNames,
       skillNames,
       isDirectMode,
+      brandName: this.brandingService.getBrand().name,
     });
   }
 }

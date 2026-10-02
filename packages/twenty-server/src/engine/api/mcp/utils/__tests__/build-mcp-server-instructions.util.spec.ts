@@ -14,6 +14,7 @@ const getActionLine = (instructions: string): string =>
 describe('buildMcpServerInstructions', () => {
   it('should render the ACTION line from the tools the caller can reach', () => {
     const instructions = buildMcpServerInstructions({
+      brandName: 'Twenty',
       objectNames: 'companies, people',
       actionToolNames: ['send_email', 'search_help_center'],
       isDirectMode: false,
@@ -28,6 +29,7 @@ describe('buildMcpServerInstructions', () => {
 
   it('should add the upload recipe only when the upload tools are reachable', () => {
     const withUpload = buildMcpServerInstructions({
+      brandName: 'Twenty',
       objectNames: 'companies',
       actionToolNames: ['create_file_upload', 'complete_file_upload'],
       isDirectMode: false,
@@ -36,6 +38,7 @@ describe('buildMcpServerInstructions', () => {
     expect(withUpload).toContain('To attach a file: create_file_upload');
 
     const withoutUpload = buildMcpServerInstructions({
+      brandName: 'Twenty',
       objectNames: 'companies',
       actionToolNames: ['send_email'],
       isDirectMode: false,
@@ -46,6 +49,7 @@ describe('buildMcpServerInstructions', () => {
 
   it('should add the http_request guidance only when http_request is reachable', () => {
     const withHttp = buildMcpServerInstructions({
+      brandName: 'Twenty',
       objectNames: 'companies',
       actionToolNames: ['http_request'],
       isDirectMode: false,
@@ -54,6 +58,7 @@ describe('buildMcpServerInstructions', () => {
     expect(withHttp).toContain('http_request is ONLY for external');
 
     const withoutHttp = buildMcpServerInstructions({
+      brandName: 'Twenty',
       objectNames: 'companies',
       actionToolNames: ['send_email'],
       isDirectMode: false,
@@ -64,6 +69,7 @@ describe('buildMcpServerInstructions', () => {
 
   it('should document every meta-tool the MCP server exposes', () => {
     const instructions = buildMcpServerInstructions({
+      brandName: 'Twenty',
       objectNames: 'companies',
       actionToolNames: ['send_email'],
       isDirectMode: false,
@@ -83,6 +89,7 @@ describe('buildMcpServerInstructions', () => {
 
   it('should route an unverified tool name to learn_tools, not to the catalog', () => {
     const instructions = buildMcpServerInstructions({
+      brandName: 'Twenty',
       objectNames: 'companies',
       actionToolNames: ['send_email'],
       isDirectMode: false,
@@ -101,6 +108,7 @@ describe('buildMcpServerInstructions', () => {
 
   it('should omit the skills line when the workspace has no skills', () => {
     const instructions = buildMcpServerInstructions({
+      brandName: 'Twenty',
       objectNames: 'companies',
       actionToolNames: ['send_email'],
       isDirectMode: false,
@@ -111,6 +119,7 @@ describe('buildMcpServerInstructions', () => {
 
   it('should point direct mode at the listed tools instead of the meta-tools', () => {
     const directInstructions = buildMcpServerInstructions({
+      brandName: 'Twenty',
       objectNames: 'companies',
       actionToolNames: ['send_email'],
       isDirectMode: true,

@@ -21,6 +21,8 @@ import {
 } from 'twenty-shared/utils';
 import { type Repository } from 'typeorm';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
+import { rebrandStandardText } from 'src/engine/core-modules/enterprise/utils/rebrand-standard-text.util';
 import { isUserAuthContext } from 'src/engine/core-modules/auth/guards/is-user-auth-context.guard';
 import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import { TOOL_EXECUTION_DURATION_MS_BUCKET_BOUNDARIES } from 'src/engine/core-modules/metrics/constants/tool-execution-duration-ms-bucket-boundaries.constant';
@@ -101,6 +103,7 @@ export class AgentAsyncExecutorService {
   private readonly logger = new Logger(AgentAsyncExecutorService.name);
 
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly aiModelRegistryService: AiModelRegistryService,
     private readonly aiModelConfigService: AiModelConfigService,
     private readonly toolRegistry: ToolRegistryService,
@@ -394,8 +397,16 @@ export class AgentAsyncExecutorService {
 
       const offeredToolNames = Object.keys(pausingTools);
 
+      const agentPrompt = agent
+        ? rebrandStandardText({
+            text: tipTapDocumentToMarkdown(agent.prompt),
+            brand: this.brandingService.getBrand(),
+            isCustom: agent.isCustom,
+          })
+        : '';
+
       const textResponse = await generateText({
-        instructions: `${baseSystemPrompt}\n\n${agent ? tipTapDocumentToMarkdown(agent.prompt) : ''}${toolCatalogSection}`,
+        instructions: `${baseSystemPrompt}\n\n${agentPrompt}${toolCatalogSection}`,
         tools: { ...tools, ...pausingTools },
         model: registeredModel.model,
         messages: [...priorModelMessages, ...modelMessages],

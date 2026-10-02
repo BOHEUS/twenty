@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { isDefined } from 'twenty-shared/utils';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
@@ -24,6 +25,7 @@ import { WorkspaceMigrationValidateBuildAndRunService } from 'src/engine/workspa
 @Injectable()
 export class SkillService {
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly workspaceMigrationValidateBuildAndRunService: WorkspaceMigrationValidateBuildAndRunService,
     private readonly workspaceManyOrAllFlatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
     private readonly applicationService: ApplicationService,
@@ -41,7 +43,9 @@ export class SkillService {
     return Object.values(flatSkillMaps.byUniversalIdentifier)
       .filter(isDefined)
       .sort((a, b) => a.label.localeCompare(b.label))
-      .map(fromFlatSkillToSkillDto);
+      .map((flatSkill) =>
+        fromFlatSkillToSkillDto(flatSkill, this.brandingService.getBrand()),
+      );
   }
 
   async findById(id: string, workspaceId: string): Promise<SkillDTO | null> {
@@ -62,7 +66,7 @@ export class SkillService {
       return null;
     }
 
-    return fromFlatSkillToSkillDto(flatSkill);
+    return fromFlatSkillToSkillDto(flatSkill, this.brandingService.getBrand());
   }
 
   async create(
@@ -117,6 +121,7 @@ export class SkillService {
         flatEntityId: universalFlatSkillToCreate.id,
         flatEntityMaps: recomputedFlatSkillMaps,
       }),
+      this.brandingService.getBrand(),
     );
   }
 
@@ -179,6 +184,7 @@ export class SkillService {
         flatEntityId: input.id,
         flatEntityMaps: recomputedFlatSkillMaps,
       }),
+      this.brandingService.getBrand(),
     );
   }
 
@@ -225,7 +231,10 @@ export class SkillService {
       );
     }
 
-    return fromFlatSkillToSkillDto(flatSkillToDelete);
+    return fromFlatSkillToSkillDto(
+      flatSkillToDelete,
+      this.brandingService.getBrand(),
+    );
   }
 
   async findAllFlatSkills(workspaceId: string): Promise<FlatSkill[]> {
@@ -349,6 +358,7 @@ export class SkillService {
         flatEntityId: id,
         flatEntityMaps: recomputedFlatSkillMaps,
       }),
+      this.brandingService.getBrand(),
     );
   }
 
@@ -414,6 +424,7 @@ export class SkillService {
         flatEntityId: id,
         flatEntityMaps: recomputedFlatSkillMaps,
       }),
+      this.brandingService.getBrand(),
     );
   }
 

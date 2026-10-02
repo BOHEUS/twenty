@@ -1,3 +1,5 @@
+import { brandState } from '@/client-config/states/brandState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
 import { Fragment } from 'react';
@@ -8,7 +10,7 @@ import { SettingsMcpSetupCard } from '@/settings/mcp-and-apis/components/Setting
 import { buildMcpSetupCategories } from '@/settings/mcp-and-apis/utils/buildMcpSetupCategories';
 import {
   buildMcpConfig,
-  buildMcpServerUrl,
+  buildMcpServer,
   isHttpsUrl,
 } from '@/settings/mcp-and-apis/utils/mcpSetup';
 import { Section } from 'twenty-ui/components';
@@ -46,11 +48,16 @@ const StyledCardsGrid = styled.div`
 `;
 
 export const SettingsMcpSetup = () => {
-  const mcpServerUrl = buildMcpServerUrl(REACT_APP_SERVER_BASE_URL);
-  const mcpConfig = buildMcpConfig(mcpServerUrl);
+  const brand = useAtomStateValue(brandState);
+  const mcpServer = buildMcpServer({
+    serverBaseUrl: REACT_APP_SERVER_BASE_URL,
+    brandName: brand.name,
+  });
+  const mcpConfig = buildMcpConfig(mcpServer);
   const categories = buildMcpSetupCategories({
-    isHttpsInstallLinkEnabled: isHttpsUrl(mcpServerUrl),
-    mcpServerUrl,
+    isHttpsInstallLinkEnabled: isHttpsUrl(mcpServer.url),
+    mcpServer,
+    isWhiteLabeled: brand.isWhiteLabeled,
   });
 
   return (

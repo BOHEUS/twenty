@@ -3,7 +3,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { DEFAULT_TOOL_INPUT_SCHEMA } from 'twenty-shared/logic-function';
 
 import { MCP_PROTOCOL_VERSION } from 'src/engine/api/mcp/constants/mcp-protocol-version.const';
-import { MCP_SERVER_INFO } from 'src/engine/api/mcp/constants/mcp-server-info.const';
+import { MCP_SERVER_VERSION } from 'src/engine/api/mcp/constants/mcp-server-version.const';
 import { McpCoreController } from 'src/engine/api/mcp/controllers/mcp-core.controller';
 import { type JsonRpc } from 'src/engine/api/mcp/dtos/json-rpc';
 import { McpAuthGuard } from 'src/engine/api/mcp/guards/mcp-auth.guard';
@@ -147,7 +147,10 @@ describe('McpCoreController', () => {
             resources: { listChanged: false },
             prompts: { listChanged: false },
           },
-          serverInfo: MCP_SERVER_INFO,
+          serverInfo: {
+            name: 'Twenty MCP Server',
+            version: MCP_SERVER_VERSION,
+          },
           instructions: 'mock instructions',
         },
       };

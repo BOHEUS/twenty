@@ -7,6 +7,7 @@ import {
 } from 'twenty-shared/application';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { ApplicationLookupService } from 'src/engine/core-modules/application/application-lookup/application-lookup.service';
 import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
 import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
@@ -15,7 +16,7 @@ import { type FlatWorkspace } from 'src/engine/core-modules/workspace/types/flat
 import { AgentActorContextService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-actor-context.service';
 import { AgentAsyncExecutorService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-async-executor.service';
 import { type RunAsWorkspaceMemberContext } from 'src/engine/metadata-modules/ai/ai-agent-execution/types/run-as-workspace-member-context.type';
-import { AGENT_RUN_BASE_SYSTEM_PROMPT } from 'src/engine/metadata-modules/ai/ai-agent/constants/agent-run-base-system-prompt.const';
+import { buildAgentRunBaseSystemPrompt } from 'src/engine/metadata-modules/ai/ai-agent/utils/build-agent-run-base-system-prompt.util';
 import { AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
 import { withDedicatedAiTrace } from 'src/engine/metadata-modules/ai/ai-models/utils/with-dedicated-ai-trace.util';
 import {
@@ -37,6 +38,7 @@ export class AgentRunService {
   private readonly logger = new Logger(AgentRunService.name);
 
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly agentActorContextService: AgentActorContextService,
     private readonly agentAsyncExecutorService: AgentAsyncExecutorService,
     private readonly applicationLookupService: ApplicationLookupService,
@@ -124,7 +126,9 @@ export class AgentRunService {
         this.agentAsyncExecutorService.executeAgent({
           agent,
           messages,
-          baseSystemPrompt: AGENT_RUN_BASE_SYSTEM_PROMPT,
+          baseSystemPrompt: buildAgentRunBaseSystemPrompt(
+            this.brandingService.getBrand().name,
+          ),
           actorContext: runAsContext?.actorContext,
           authContext,
           workspaceId: workspace.id,

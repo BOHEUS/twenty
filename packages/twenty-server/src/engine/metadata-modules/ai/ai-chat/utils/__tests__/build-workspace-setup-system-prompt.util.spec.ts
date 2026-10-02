@@ -1,7 +1,14 @@
-import { WORKSPACE_SETUP_SYSTEM_PROMPT } from 'src/engine/metadata-modules/ai/ai-chat/constants/workspace-setup-system-prompt.constant';
+import { buildWorkspaceSetupSystemPrompt } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-workspace-setup-system-prompt.util';
 
-describe('WORKSPACE_SETUP_SYSTEM_PROMPT', () => {
-  const prompt = WORKSPACE_SETUP_SYSTEM_PROMPT;
+describe('buildWorkspaceSetupSystemPrompt', () => {
+  const prompt = buildWorkspaceSetupSystemPrompt('Twenty');
+
+  it('should name the product with the given brand', () => {
+    const brandedPrompt = buildWorkspaceSetupSystemPrompt('Acme CRM');
+
+    expect(brandedPrompt).toContain('integrated into Acme CRM, a CRM');
+    expect(brandedPrompt).not.toMatch(/\bTwenty\b/);
+  });
 
   it('should stay static with all dynamic content in the first message', () => {
     expect(prompt).not.toContain('${');

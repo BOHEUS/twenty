@@ -5,13 +5,14 @@ import { type ToolSet, zodSchema } from 'ai';
 import { type ActorMetadata, FieldActorSource } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { JSON_RPC_ERROR_CODE } from 'src/engine/api/mcp/constants/json-rpc-error-code.const';
 import { MCP_CLOSED_WORLD_READ_ONLY_TOOL_ANNOTATIONS } from 'src/engine/api/mcp/constants/mcp-closed-world-read-only-tool-annotations.const';
 import { MCP_EXCLUDED_TOOL_NAMES } from 'src/engine/api/mcp/constants/mcp-excluded-tool-names.const';
 import { MCP_EXECUTE_TOOL_ANNOTATIONS } from 'src/engine/api/mcp/constants/mcp-execute-tool-annotations.const';
 import { MCP_OPEN_WORLD_READ_ONLY_TOOL_ANNOTATIONS } from 'src/engine/api/mcp/constants/mcp-open-world-read-only-tool-annotations.const';
 import { MCP_PROTOCOL_VERSION } from 'src/engine/api/mcp/constants/mcp-protocol-version.const';
-import { MCP_SERVER_INFO } from 'src/engine/api/mcp/constants/mcp-server-info.const';
+import { MCP_SERVER_VERSION } from 'src/engine/api/mcp/constants/mcp-server-version.const';
 import { JsonRpc } from 'src/engine/api/mcp/dtos/json-rpc';
 import { McpInstructionBuilderService } from 'src/engine/api/mcp/services/mcp-instruction-builder.service';
 import { McpToolExecutorService } from 'src/engine/api/mcp/services/mcp-tool-executor.service';
@@ -93,6 +94,7 @@ const annotatePreloadedMcpTools = (toolSet: ToolSet): ToolSet =>
 @Injectable()
 export class McpProtocolService {
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly toolRegistry: ToolRegistryService,
     private readonly userRoleService: UserRoleService,
     private readonly mcpToolExecutorService: McpToolExecutorService,
@@ -133,7 +135,10 @@ export class McpProtocolService {
           resources: { listChanged: false },
           prompts: { listChanged: false },
         },
-        serverInfo: MCP_SERVER_INFO,
+        serverInfo: {
+          name: `${this.brandingService.getBrand().name} MCP Server`,
+          version: MCP_SERVER_VERSION,
+        },
         instructions,
       },
     });
@@ -294,6 +299,7 @@ export class McpProtocolService {
 
             return allSkills.map((skill) => skill.name);
           },
+          this.brandingService.getBrand(),
         ),
         inputSchema: zodSchema(loadSkillInputSchema),
         annotations: MCP_CLOSED_WORLD_READ_ONLY_TOOL_ANNOTATIONS,

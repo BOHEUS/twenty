@@ -23,6 +23,7 @@ const buildPrompt = (isWorkspaceSetupThread?: boolean) =>
   buildFullSystemPrompt({
     toolCatalog: [],
     skillCatalog: [],
+    brandName: 'Twenty',
     preloadedTools: [],
     workspaceInstructions: WORKSPACE_INSTRUCTIONS_DOCUMENT,
     userContext: USER_CONTEXT,
@@ -48,6 +49,7 @@ describe('buildFullSystemPrompt', () => {
     const prompt = buildFullSystemPrompt({
       toolCatalog: [],
       skillCatalog: [],
+      brandName: 'Twenty',
       referencedSkills: [REFERENCED_SKILL],
       preloadedTools: [],
     });
@@ -106,6 +108,7 @@ describe('buildFullSystemPrompt', () => {
       buildFullSystemPrompt({
         toolCatalog: [],
         skillCatalog: [],
+        brandName: 'Twenty',
         preloadedTools: [],
         canAttachConversationToRecords,
       });
@@ -117,5 +120,20 @@ describe('buildFullSystemPrompt', () => {
       'attach_conversation_to_record',
     );
     expect(buildPrompt(false)).not.toContain('attach_conversation_to_record');
+  });
+
+  it('should name the product with the brand in both chat and setup prompts', () => {
+    for (const isWorkspaceSetupThread of [false, true]) {
+      const prompt = buildFullSystemPrompt({
+        toolCatalog: [],
+        skillCatalog: [],
+        preloadedTools: [],
+        isWorkspaceSetupThread,
+        brandName: 'Acme CRM',
+      });
+
+      expect(prompt).toContain('integrated into Acme CRM, a CRM');
+      expect(prompt).not.toMatch(/\bTwenty\b(?!\]\])/);
+    }
   });
 });

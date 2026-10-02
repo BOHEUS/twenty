@@ -1,6 +1,7 @@
 import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
 import { FilesFieldModule } from 'src/engine/core-modules/file/files-field/files-field.module';
 import { RecordCrudModule } from 'src/engine/core-modules/record-crud/record-crud.module';
@@ -48,6 +49,7 @@ import { ToolRegistryService } from './services/tool-registry.service';
 
 @Module({
   imports: [
+    EnterpriseModule,
     ApplicationTranslationCatalogModule,
     ToolModule,
     RecordCrudModule,

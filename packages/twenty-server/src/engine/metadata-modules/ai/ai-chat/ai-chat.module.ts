@@ -1,3 +1,4 @@
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { AgentChatActorService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-actor.service';
 import { RecordShareModule } from 'src/engine/core-modules/record-share/record-share.module';
 import { AgentChatStreamStateModule } from 'src/engine/metadata-modules/ai/ai-chat/agent-chat-stream-state.module';
@@ -53,6 +54,7 @@ import { SystemPromptBuilderService } from './services/system-prompt-builder.ser
 
 @Module({
   imports: [
+    EnterpriseModule,
     RecordShareModule,
     AgentChatStreamStateModule,
     AgentChatThreadLifecycleModule,

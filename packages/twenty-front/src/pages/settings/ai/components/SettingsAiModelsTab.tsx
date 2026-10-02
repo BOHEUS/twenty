@@ -1,3 +1,4 @@
+import { brandState } from '@/client-config/states/brandState';
 import { t } from '@lingui/core/macro';
 import { AI_MODEL_TIERS, type AiModelTier } from 'twenty-shared/ai';
 import { Section } from 'twenty-ui/components';
@@ -25,6 +26,8 @@ import { useSettingsAiModelsActions } from '~/pages/settings/ai/hooks/useSetting
 
 export const SettingsAiModelsTab = () => {
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
+  const brand = useAtomStateValue(brandState);
+  const brandName = brand.name;
   const aiModels = useAtomStateValue(aiModelsState);
   const tiers = useAiModelTiers();
   const { chatTier, agentTier } = useWorkspaceAiModelTiers();
@@ -61,7 +64,7 @@ export const SettingsAiModelsTab = () => {
             <SettingsOptionCardContentSelect
               Icon={IconMessage}
               title={t`AI chat`}
-              description={t`Model used when you chat with Twenty`}
+              description={t`Model used when you chat with ${brandName}`}
               divider
             >
               <Select
@@ -90,7 +93,7 @@ export const SettingsAiModelsTab = () => {
           <SettingsOptionCardContentSwitch
             Icon={IconWand}
             title={t`Choose automatically`}
-            description={t`Twenty fills each level with the best model that meets your requirements`}
+            description={t`${brandName} fills each level with the best model that meets your requirements`}
             checked={isAutoModelSelectionEnabled}
             onChange={handleAutoModelSelectionToggle}
           />

@@ -1,3 +1,4 @@
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { injectChatMessageSenders } from 'src/engine/metadata-modules/ai/ai-chat/utils/inject-chat-message-senders.util';
 import { AgentChatActorService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-actor.service';
 import { type ToolContext } from 'src/engine/core-modules/tool-provider/types/tool-context.type';
@@ -143,6 +144,7 @@ export class ChatExecutionService {
   private readonly logger = new Logger(ChatExecutionService.name);
 
   constructor(
+    private readonly brandingService: BrandingService,
     private readonly toolRegistry: ToolRegistryService,
     private readonly skillService: SkillService,
     private readonly aiModelRegistryService: AiModelRegistryService,
@@ -375,6 +377,7 @@ export class ChatExecutionService {
 
           return allSkills.map((skill) => skill.name);
         },
+        this.brandingService.getBrand(),
       ),
     };
 
@@ -446,6 +449,7 @@ export class ChatExecutionService {
       userContext,
       isWorkspaceSetupThread,
       canAttachConversationToRecords,
+      brandName: this.brandingService.getBrand().name,
     });
 
     this.logger.log(

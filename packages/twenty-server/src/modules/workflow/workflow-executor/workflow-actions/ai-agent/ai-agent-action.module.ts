@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { EnterpriseModule } from 'src/engine/core-modules/enterprise/enterprise.module';
 import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { UserWorkspaceModule } from 'src/engine/core-modules/user-workspace/user-workspace.module';
 import { AiAgentExecutionModule } from 'src/engine/metadata-modules/ai/ai-agent-execution/ai-agent-execution.module';
@@ -16,6 +17,7 @@ import { AiAgentWorkflowAction } from './ai-agent.workflow-action';
 
 @Module({
   imports: [
+    EnterpriseModule,
     WorkflowExecutionContextModule,
     ApplicationModule,
     AiAgentExecutionModule,
