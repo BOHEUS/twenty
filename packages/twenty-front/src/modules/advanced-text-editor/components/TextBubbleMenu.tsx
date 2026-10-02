@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { StyledBubbleMenuContainer } from '@/advanced-text-editor/components/StyledBubbleMenuContainer';
 import { BubbleMenuIconButton } from '@/advanced-text-editor/components/BubbleMenuIconButton';
+import { RichTextColorDropdown } from '@/advanced-text-editor/components/RichTextColorDropdown';
 import { EditLinkDropdown } from '@/advanced-text-editor/components/EditLinkDropdown';
 import { TurnIntoBlockDropdown } from '@/advanced-text-editor/components/TurnIntoBlockDropdown';
 import { useTextBubbleState } from '@/advanced-text-editor/hooks/useTextBubbleState';
@@ -10,6 +11,7 @@ import { getEditLinkDropdownId } from '@/advanced-text-editor/utils/getEditLinkD
 import { type Editor } from '@tiptap/core';
 import { NodeSelection } from '@tiptap/pm/state';
 import { BubbleMenu } from '@tiptap/react/menus';
+import { TIPTAP_MARK_TYPES } from 'twenty-shared/utils';
 import {
   IconBold,
   IconItalic,
@@ -105,6 +107,9 @@ export const TextBubbleMenu = ({ editor }: TextBubbleMenuProps) => {
             />
           );
         })}
+        {hasEditorExtension(editor, TIPTAP_MARK_TYPES.HIGHLIGHT) && (
+          <RichTextColorDropdown editor={editor} />
+        )}
         {hasEditorExtension(editor, 'link') && (
           <EditLinkDropdown
             dropdownId={getEditLinkDropdownId({

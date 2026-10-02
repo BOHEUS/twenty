@@ -48,7 +48,10 @@ export const buildRecordRichTextExtensions = (
   }),
   TableKit.configure({ table: { resizable: false } }),
   DividerNode,
-  FileNode,
+  FileNode.configure({
+    onFileUpload: context.onFileUpload,
+    onFileUploadError: context.onImageUploadError,
+  }),
   MentionTag,
   ...(isDefined(context.searchMentionRecords)
     ? [

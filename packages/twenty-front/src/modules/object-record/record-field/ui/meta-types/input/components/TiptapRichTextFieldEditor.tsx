@@ -94,7 +94,7 @@ export const TiptapRichTextFieldEditor = ({
   const { uploadAttachmentFile } = useUploadAttachmentFile();
   const { searchMentionRecords } = useMentionSearch();
 
-  const handleImageUpload = async (file: File) => {
+  const handleAttachmentUpload = async (file: File) => {
     const { attachmentAbsoluteURL, attachmentFileId } =
       await uploadAttachmentFile(file, {
         id: recordId,
@@ -236,7 +236,8 @@ export const TiptapRichTextFieldEditor = ({
       onUpdate: handleEditorUpdate,
       onFocus: handleFocus,
       onBlur: handleBlur,
-      onImageUpload: handleImageUpload,
+      onImageUpload: handleAttachmentUpload,
+      onFileUpload: handleAttachmentUpload,
       searchMentionRecords,
     },
     [recordId, isRecordFieldReadOnly],

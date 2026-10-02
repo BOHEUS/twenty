@@ -18,6 +18,7 @@ type UseAdvancedTextEditorProps = {
   onBlur?: (editor: Editor) => void;
   onImageUpload?: (file: File) => Promise<UploadedImage>;
   onImageUploadError?: (error: Error, file: File) => void;
+  onFileUpload?: AdvancedTextEditorExtensionContext['onFileUpload'];
   searchMentionRecords?: AdvancedTextEditorExtensionContext['searchMentionRecords'];
   content?: Content;
   editorProps?: EditorOptions['editorProps'];
@@ -34,6 +35,7 @@ export const useAdvancedTextEditor = (
     onBlur,
     onImageUpload,
     onImageUploadError,
+    onFileUpload,
     searchMentionRecords,
     content,
     editorProps,
@@ -47,6 +49,7 @@ export const useAdvancedTextEditor = (
         context: {
           onImageUpload,
           onImageUploadError,
+          onFileUpload,
           searchMentionRecords,
         },
         placeholder,
@@ -57,6 +60,7 @@ export const useAdvancedTextEditor = (
       placeholder,
       onImageUpload,
       onImageUploadError,
+      onFileUpload,
       searchMentionRecords,
       readonly,
     ],
