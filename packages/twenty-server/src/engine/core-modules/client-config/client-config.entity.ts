@@ -250,6 +250,39 @@ export class Support {
 }
 
 @ObjectType()
+export class Brand {
+  @Field(() => Boolean)
+  isWhiteLabeled: boolean;
+
+  @Field(() => String)
+  name: string;
+
+  @Field(() => String, { nullable: true })
+  logoUrl: string | null;
+
+  @Field(() => String, { nullable: true })
+  faviconUrl: string | null;
+
+  @Field(() => String, { nullable: true })
+  termsUrl: string | null;
+
+  @Field(() => String, { nullable: true })
+  privacyUrl: string | null;
+
+  @Field(() => String, { nullable: true })
+  dpaUrl: string | null;
+
+  @Field(() => String)
+  websiteUrl: string;
+
+  @Field(() => String)
+  docsUrl: string;
+
+  @Field(() => String, { nullable: true })
+  supportEmail: string | null;
+}
+
+@ObjectType()
 export class Sentry {
   @Field(() => String, { nullable: true })
   environment?: string;
@@ -372,6 +405,9 @@ export class ClientConfig {
 
   @Field(() => Support)
   support: Support;
+
+  @Field(() => Brand)
+  brand: Brand;
 
   @Field(() => Boolean)
   isAttachmentPreviewEnabled: boolean;

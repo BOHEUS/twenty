@@ -147,4 +147,11 @@ export const CONFIG_VARIABLES_GROUP_METADATA: Record<
     isHiddenOnLoad: true,
     isHiddenInAdminPanel: true,
   },
+  [ConfigVariablesGroup.BRANDING]: {
+    position: 2300,
+    description:
+      'Replace the Twenty name, logos and links across the app, emails, API docs and AI. Requires a valid Enterprise key, otherwise Twenty branding is used.',
+    isHiddenOnLoad: true,
+    isHiddenInAdminPanel: false,
+  },
 };

@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppTokenEntity } from 'src/engine/core-modules/app-token/app-token.entity';
 import { EnterpriseKeyValidationCronJob } from 'src/engine/core-modules/enterprise/cron/jobs/organization-key-validation.cron.job';
 import { EnterpriseResolver } from 'src/engine/core-modules/enterprise/enterprise.resolver';
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { CustomAiProviderAccessService } from 'src/engine/core-modules/enterprise/services/custom-ai-provider-access.service';
 import { EnterprisePlanService } from 'src/engine/core-modules/enterprise/services/enterprise-plan.service';
 import { TwentyConfigModule } from 'src/engine/core-modules/twenty-config/twenty-config.module';
@@ -25,12 +26,14 @@ import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.ent
   ],
   providers: [
     EnterprisePlanService,
+    BrandingService,
     CustomAiProviderAccessService,
     EnterpriseKeyValidationCronJob,
     EnterpriseResolver,
   ],
   exports: [
     EnterprisePlanService,
+    BrandingService,
     CustomAiProviderAccessService,
     EnterpriseKeyValidationCronJob,
   ],

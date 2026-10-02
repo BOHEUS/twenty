@@ -15,6 +15,7 @@ import {
   type ClientConfig,
 } from 'src/engine/core-modules/client-config/client-config.entity';
 import { DomainServerConfigService } from 'src/engine/core-modules/domain/domain-server-config/services/domain-server-config.service';
+import { BrandingService } from 'src/engine/core-modules/enterprise/services/branding.service';
 import { EmailingDomainDriver } from 'src/engine/core-modules/emailing-domain/drivers/types/emailing-domain-driver.type';
 import { PUBLIC_FEATURE_FLAGS } from 'src/engine/core-modules/feature-flag/constants/public-feature-flag.const';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
@@ -35,6 +36,7 @@ export class ClientConfigService {
     private domainServerConfigService: DomainServerConfigService,
     private aiModelRegistryService: AiModelRegistryService,
     private maintenanceModeService: MaintenanceModeService,
+    private brandingService: BrandingService,
   ) {}
 
   private resolveBenchmark(modelConfig: AiModelConfig | undefined): {
@@ -80,6 +82,8 @@ export class ClientConfigService {
       EmailingDomainDriver.LOG;
 
     const isBillingEnabled = this.twentyConfigService.get('IS_BILLING_ENABLED');
+
+    const brand = this.brandingService.getBrand();
 
     const availableModels =
       this.aiModelRegistryService.getAdminFilteredModels();
@@ -207,12 +211,16 @@ export class ClientConfigService {
       publicFunctionDomain:
         this.domainServerConfigService.getPublicBaseHostnameOrUndefined() ??
         null,
-      support: {
-        supportDriver: supportDriver ? supportDriver : SupportDriver.NONE,
-        supportFrontChatId: this.twentyConfigService.get(
-          'SUPPORT_FRONT_CHAT_ID',
-        ),
-      },
+      // White-labeled instances hide every support entry point.
+      support: brand.isWhiteLabeled
+        ? { supportDriver: SupportDriver.NONE }
+        : {
+            supportDriver: supportDriver ? supportDriver : SupportDriver.NONE,
+            supportFrontChatId: this.twentyConfigService.get(
+              'SUPPORT_FRONT_CHAT_ID',
+            ),
+          },
+      brand,
       sentry: {
         environment: this.twentyConfigService.get('SENTRY_ENVIRONMENT'),
         release: this.twentyConfigService.get('APP_VERSION'),

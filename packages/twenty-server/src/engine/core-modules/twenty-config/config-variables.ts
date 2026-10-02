@@ -4,6 +4,7 @@ import { plainToClass } from 'class-transformer';
 import {
   IsDateString,
   IsDefined,
+  IsEmail,
   IsEnum,
   IsIn,
   IsInt,
@@ -17,6 +18,7 @@ import {
   validateSync,
 } from 'class-validator';
 import {
+  DEFAULT_BRAND,
   ENTERPRISE_INSTANCE_TYPE,
   type EnterpriseInstanceType,
 } from 'twenty-shared/constants';
@@ -2243,6 +2245,85 @@ export class ConfigVariables {
   })
   @IsOptional()
   ENTERPRISE_API_URL: string = 'https://twenty.com/api/enterprise';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BRANDING,
+    description: 'Product name shown in place of Twenty',
+    type: ConfigVariableType.STRING,
+  })
+  @IsString()
+  @IsNotEmpty()
+  BRAND_NAME = DEFAULT_BRAND.name;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BRANDING,
+    description: 'Logo shown on sign-in, onboarding and emails',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptionalOrEmptyString()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  BRAND_LOGO_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BRANDING,
+    description: 'Square icon used as favicon and app icon',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptionalOrEmptyString()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  BRAND_FAVICON_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BRANDING,
+    description: 'Terms of Service link. The legal links are hidden when unset',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptionalOrEmptyString()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  BRAND_TERMS_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BRANDING,
+    description: 'Privacy Policy link. The legal links are hidden when unset',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptionalOrEmptyString()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  BRAND_PRIVACY_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BRANDING,
+    description: 'Data Processing Agreement link',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptionalOrEmptyString()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  BRAND_DPA_URL: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BRANDING,
+    description: 'Website linked from emails, API docs and the MCP server card',
+    type: ConfigVariableType.STRING,
+  })
+  @IsUrl({ require_tld: false, require_protocol: true })
+  BRAND_WEBSITE_URL = DEFAULT_BRAND.websiteUrl;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BRANDING,
+    description: 'Documentation linked from help links and the API catalog',
+    type: ConfigVariableType.STRING,
+  })
+  @IsUrl({ require_tld: false, require_protocol: true })
+  BRAND_DOCS_URL = DEFAULT_BRAND.docsUrl;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BRANDING,
+    description: 'Contact email shown in the API docs',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptionalOrEmptyString()
+  @IsEmail()
+  BRAND_SUPPORT_EMAIL: string;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ADVANCED_SETTINGS,

@@ -22,6 +22,7 @@ export { CSV_INJECTION_PREVENTION_ZWJ } from './CsvInjectionPreventionZwj';
 export { CurrencyCode } from './CurrencyCode';
 export { CURRENCY_CODE_LABELS } from './CurrencyCodeLabels';
 export { DATE_TYPE_FORMAT } from './DateTypeFormat';
+export { DEFAULT_BRAND } from './DefaultBrand';
 export { DEFAULT_NUMBER_OF_GROUPS_LIMIT } from './DefaultNumberOfGroupsLimit';
 export { DEFAULT_RELATIVE_DATE_FILTER_VALUE } from './DefaultRelativeDateFilterValue';
 export { DEFAULT_SELECT_OPTION_COLOR } from './DefaultSelectOptionColor';

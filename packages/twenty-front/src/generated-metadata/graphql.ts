@@ -959,6 +959,20 @@ export type BooleanFieldComparison = {
   isNot?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+export type Brand = {
+  __typename?: 'Brand';
+  docsUrl: Scalars['String']['output'];
+  dpaUrl?: Maybe<Scalars['String']['output']>;
+  faviconUrl?: Maybe<Scalars['String']['output']>;
+  isWhiteLabeled: Scalars['Boolean']['output'];
+  logoUrl?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
+  privacyUrl?: Maybe<Scalars['String']['output']>;
+  supportEmail?: Maybe<Scalars['String']['output']>;
+  termsUrl?: Maybe<Scalars['String']['output']>;
+  websiteUrl: Scalars['String']['output'];
+};
+
 export type CalendarChannel = {
   __typename?: 'CalendarChannel';
   connectedAccountId: Scalars['UUID']['output'];
@@ -1166,6 +1180,7 @@ export type ClientConfig = {
   appVersion?: Maybe<Scalars['String']['output']>;
   authProviders: AuthProviders;
   billing: Billing;
+  brand: Brand;
   calendarBookingPageId?: Maybe<Scalars['String']['output']>;
   canManageFeatureFlags: Scalars['Boolean']['output'];
   captcha: Captcha;
