@@ -24,6 +24,7 @@ export const FieldMetadataExceptionCode = appendCommonExceptionCode({
   RESERVED_KEYWORD: 'RESERVED_KEYWORD',
   NOT_AVAILABLE: 'NOT_AVAILABLE',
   NAME_NOT_SYNCED_WITH_LABEL: 'NAME_NOT_SYNCED_WITH_LABEL',
+  COLUMN_LIMIT_REACHED: 'COLUMN_LIMIT_REACHED',
 } as const);
 
 // oxlint-disable-next-line no-redeclare
@@ -60,6 +61,8 @@ const getFieldMetadataExceptionUserFriendlyMessage = (
       return msg`This field name is not available.`;
     case FieldMetadataExceptionCode.NAME_NOT_SYNCED_WITH_LABEL:
       return msg`Field name is not synced with label.`;
+    case FieldMetadataExceptionCode.COLUMN_LIMIT_REACHED:
+      return msg`This object has reached the maximum number of columns.`;
     case FieldMetadataExceptionCode.INTERNAL_SERVER_ERROR:
       return STANDARD_ERROR_MESSAGE;
     default:

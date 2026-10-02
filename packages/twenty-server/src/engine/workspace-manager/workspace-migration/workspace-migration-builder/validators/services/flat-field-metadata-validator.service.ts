@@ -13,6 +13,7 @@ import { FlatFieldMetadataTypeValidatorService } from 'src/engine/metadata-modul
 import { FlatFieldMetadataRelationPropertiesToCompare } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata-relation-properties-to-compare.type';
 import { isFlatFieldMetadataNameSyncedWithLabel } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-flat-field-metadata-name-synced-with-label.util';
 import { isMorphOrRelationUniversalFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-morph-or-relation-flat-field-metadata.util';
+import { validateFlatFieldMetadataColumnLimit } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-flat-field-metadata-column-limit.util';
 import { validateFlatFieldMetadataNameAvailability } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-flat-field-metadata-name-availability.util';
 import { validateFlatFieldMetadataName } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-flat-field-metadata-name.util';
 import { validateSearchableFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-searchable-flat-field-metadata.util';
@@ -414,6 +415,16 @@ export class FlatFieldMetadataValidatorService {
           buildOptions,
         }),
       );
+
+      if (!buildOptions.isSystemBuild) {
+        validationResult.errors.push(
+          ...validateFlatFieldMetadataColumnLimit({
+            flatFieldMetadataToValidate,
+            universalFlatObjectMetadata: parentFlatObjectMetadata,
+            universalFlatFieldMetadataMaps: optimisticFlatFieldMetadataMaps,
+          }),
+        );
+      }
 
       if (
         flatFieldMetadataToValidate.isSearchable === true &&

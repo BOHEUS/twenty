@@ -34,6 +34,7 @@ export const fieldMetadataGraphqlApiExceptionHandler = (error: unknown) => {
       case FieldMetadataExceptionCode.FIELD_METADATA_NOT_FOUND:
         throw new NotFoundError(error);
       case FieldMetadataExceptionCode.INVALID_FIELD_INPUT:
+      case FieldMetadataExceptionCode.COLUMN_LIMIT_REACHED:
         throw new UserInputError(error);
       case FieldMetadataExceptionCode.FIELD_MUTATION_NOT_ALLOWED:
         throw new ForbiddenError(error);

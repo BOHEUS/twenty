@@ -22,6 +22,7 @@ export const fieldMetadataExceptionCodeToHttpStatus = (
     case FieldMetadataExceptionCode.RESERVED_KEYWORD:
     case FieldMetadataExceptionCode.NOT_AVAILABLE:
     case FieldMetadataExceptionCode.NAME_NOT_SYNCED_WITH_LABEL:
+    case FieldMetadataExceptionCode.COLUMN_LIMIT_REACHED:
       return 400;
     case FieldMetadataExceptionCode.INTERNAL_SERVER_ERROR:
       return 500;
