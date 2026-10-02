@@ -59,8 +59,12 @@ const filterByQuery = (
   });
 };
 
-const buildItems = (editor: Editor, query: string): SlashCommandItem[] => {
-  const allItems = DEFAULT_SLASH_COMMANDS.map((config) =>
+const buildItems = (
+  commands: SlashCommandConfig[],
+  editor: Editor,
+  query: string,
+): SlashCommandItem[] => {
+  const allItems = commands.map((config) =>
     createSlashCommandItem(config, editor),
   );
   const visibleItems = filterVisibleItems(allItems);
@@ -68,6 +72,7 @@ const buildItems = (editor: Editor, query: string): SlashCommandItem[] => {
 };
 
 export type SlashCommandOptions = {
+  commands: SlashCommandConfig[];
   suggestions: Omit<SuggestionOptions, 'editor'>;
 };
 
@@ -75,6 +80,7 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: 'slash-command',
   addOptions: () => {
     return {
+      commands: DEFAULT_SLASH_COMMANDS,
       suggestions: {
         char: '/',
         command: ({ editor, range, props }) => {
@@ -88,7 +94,8 @@ export const SlashCommand = Extension.create<SlashCommandOptions>({
       Suggestion({
         editor: this.editor,
         ...this.options.suggestions,
-        items: ({ query, editor: ed }) => buildItems(ed, query),
+        items: ({ query, editor: ed }) =>
+          buildItems(this.options.commands, ed, query),
         render: () =>
           createSuggestionRenderLifecycle<
             SlashCommandItem,

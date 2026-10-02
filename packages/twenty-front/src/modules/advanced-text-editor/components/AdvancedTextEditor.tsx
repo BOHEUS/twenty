@@ -130,6 +130,78 @@ const StyledEditorContainer = styled.div<{
       border-right: none;
     }
 
+    h4,
+    h5,
+    h6 {
+      font-size: 1em;
+    }
+
+    blockquote {
+      border-left: 3px solid ${themeCssVariables.border.color.strong};
+      color: ${themeCssVariables.font.color.secondary};
+      margin: 0 0 ${themeCssVariables.spacing[2]};
+      padding-left: ${themeCssVariables.spacing[3]};
+    }
+
+    code {
+      background-color: ${themeCssVariables.background.transparent.light};
+      border-radius: ${themeCssVariables.border.radius.sm};
+      font-family: monospace;
+      padding: 0 ${themeCssVariables.spacing[1]};
+    }
+
+    pre {
+      background-color: ${themeCssVariables.background.transparent.light};
+      border-radius: ${themeCssVariables.border.radius.sm};
+      margin: 0 0 ${themeCssVariables.spacing[2]};
+      overflow-x: auto;
+      padding: ${themeCssVariables.spacing[2]};
+
+      code {
+        background-color: transparent;
+        padding: 0;
+      }
+    }
+
+    ul[data-type='taskList'] {
+      list-style: none;
+      padding-left: 0;
+
+      li {
+        align-items: flex-start;
+        display: flex;
+        gap: ${themeCssVariables.spacing[2]};
+
+        > div {
+          flex: 1;
+        }
+      }
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-bottom: ${themeCssVariables.spacing[2]};
+      table-layout: fixed;
+      width: 100%;
+
+      td,
+      th {
+        border: 1px solid ${themeCssVariables.border.color.medium};
+        padding: ${themeCssVariables.spacing[1]} ${themeCssVariables.spacing[2]};
+        vertical-align: top;
+      }
+
+      th {
+        background-color: ${themeCssVariables.background.transparent.lighter};
+        font-weight: ${themeCssVariables.font.weight.medium};
+        text-align: left;
+      }
+
+      .selectedCell {
+        background-color: ${themeCssVariables.color.blue3};
+      }
+    }
+
     .ProseMirror-selectednode {
       outline: 2px solid ${themeCssVariables.color.blue};
     }
