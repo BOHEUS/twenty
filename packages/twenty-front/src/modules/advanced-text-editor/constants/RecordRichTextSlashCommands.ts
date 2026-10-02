@@ -3,6 +3,7 @@ import { msg } from '@lingui/core/macro';
 import {
   IconBlockquote,
   IconCode,
+  IconFileUpload,
   IconListCheck,
   IconTable,
 } from 'twenty-ui/icon';
@@ -58,5 +59,16 @@ export const RECORD_RICH_TEXT_SLASH_COMMANDS: SlashCommandConfig[] = [
         .deleteRange(range)
         .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
         .run(),
+  },
+  {
+    id: 'file',
+    title: msg`File`,
+    description: msg`Upload a file`,
+    icon: IconFileUpload,
+    keywords: [msg`file`, msg`attachment`, msg`upload`, msg`document`],
+    getIsActive: () => false,
+    getIsVisible: (editor) => editor.can().pickAndUploadFile?.() ?? false,
+    getOnSelect: (editor, range) => () =>
+      editor.chain().focus().deleteRange(range).pickAndUploadFile().run(),
   },
 ];
