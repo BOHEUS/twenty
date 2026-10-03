@@ -1,0 +1,1 @@
+export const DECLINED_RESPONSE_STATUS = 'DECLINED';
