@@ -1,5 +1,6 @@
 import { SettingsSectionSkeletonLoader } from '@/settings/components/SettingsSectionSkeletonLoader';
 import { useApolloAdminClient } from '@/settings/admin-panel/apollo/hooks/useApolloAdminClient';
+import { ConfigVariableBrandingLockedCallout } from '@/settings/admin-panel/config-variables/components/ConfigVariableBrandingLockedCallout';
 import { ConfigVariableFilterContainer } from '@/settings/admin-panel/config-variables/components/ConfigVariableFilterContainer';
 import { ConfigVariableFilterDropdown } from '@/settings/admin-panel/config-variables/components/ConfigVariableFilterDropdown';
 import { SettingsAdminConfigVariablesTable } from '@/settings/admin-panel/config-variables/components/SettingsAdminConfigVariablesTable';
@@ -13,6 +14,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import {
   ConfigSource,
+  ConfigVariablesGroup,
   GetConfigVariablesGroupedDocument,
 } from '~/generated-admin/graphql';
 import { normalizeSearchText } from '~/utils/normalizeSearchText';
@@ -198,6 +200,10 @@ export const SettingsAdminConfigVariables = () => {
             title={groupName}
             description={groupData.description}
           />
+
+          {groupName === ConfigVariablesGroup.BRANDING && (
+            <ConfigVariableBrandingLockedCallout />
+          )}
 
           <SettingsAdminConfigVariablesTable variables={groupData.variables} />
         </StyledTableContainer>

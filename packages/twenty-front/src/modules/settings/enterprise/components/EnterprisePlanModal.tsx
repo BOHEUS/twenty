@@ -106,6 +106,7 @@ export const EnterprisePlanModal = () => {
     t`Audit logs`,
     t`Advanced Encryption`,
     t`Custom AI Models`,
+    t`White-label branding`,
   ];
 
   const price = selectedInterval === 'monthly' ? MONTHLY_PRICE : YEARLY_PRICE;

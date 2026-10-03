@@ -1,0 +1,59 @@
+---
+title: White-label branding
+icon: "palette"
+---
+
+An instance with a valid Enterprise (Organization) key can replace Twenty's name, logos, legal links and documentation links across the app, the transactional emails, the public API documents and the AI assistant.
+
+Branding is set for the whole instance. There is no per-workspace override.
+
+## Requirements
+
+Branding only applies while the Enterprise key is valid. Without a valid key, or as soon as the key lapses, the instance falls back to Twenty branding. The variables stay saved, so branding comes back when a valid key is active again.
+
+The admin panel shows a notice in the **Branding** group when no valid key is active.
+
+## Variables
+
+Set these in the admin panel (**Settings → Admin Panel → Config Variables → Branding**) or in your `.env`. The instance counts as white-labeled as soon as one of them differs from its Twenty default.
+
+| Variable | Used for | Default |
+|---|---|---|
+| `BRAND_NAME` | Product name in the app, page titles, emails, API docs, AI and MCP | `Twenty` |
+| `BRAND_LOGO_URL` | Sign-in and onboarding logo, default workspace logo, email logo, social preview image | Bundled Twenty logo |
+| `BRAND_FAVICON_URL` | Favicon and installed app icon | Bundled Twenty icon |
+| `BRAND_TERMS_URL` | Terms of Service link | Twenty's terms |
+| `BRAND_PRIVACY_URL` | Privacy Policy link | Twenty's privacy policy |
+| `BRAND_DPA_URL` | Data Processing Agreement link on sign-up | Twenty's DPA |
+| `BRAND_WEBSITE_URL` | Email footer, API docs and MCP server card | `https://twenty.com` |
+| `BRAND_DOCS_URL` | Help and documentation links, API catalog | `https://docs.twenty.com` |
+| `BRAND_SUPPORT_EMAIL` | Contact in the API docs | Twenty's contact |
+
+All URLs must include the protocol (`https://`).
+
+On a white-labeled instance, an unset legal URL is never replaced by Twenty's: the sign-in footer hides the terms sentence unless both links it needs are set. A custom `BRAND_DOCS_URL` is linked at its root, since Twenty's documentation paths don't exist on other sites.
+
+## Icons
+
+Use a square PNG of at least 512×512 pixels for `BRAND_FAVICON_URL`. The served web app manifest lists that single image at 192 and 512 pixels, the sizes browsers need to install the app. When `BRAND_FAVICON_URL` is unset, `BRAND_LOGO_URL` is used instead.
+
+The manifest and the page metadata are rewritten by the server that serves the front. If the front is hosted separately (`FRONTEND_INDEX_URL`), the manifest served from that host is not rebranded.
+
+## Emails
+
+The sender name comes from `EMAIL_FROM_NAME` (default `Felix from Twenty`) and the address from `EMAIL_FROM_ADDRESS`. Set both to match your brand. Email footers on a white-labeled instance keep only the website and documentation links.
+
+## What changes when white-labeled
+
+- The support chat is disabled.
+- The community page only shows **Features**: the hero, social links, partners and changelog are hidden.
+- The DPA settings pages are not available. Operators who need a DPA link set `BRAND_DPA_URL`.
+- The official Twenty ChatGPT app is not offered on the MCP setup page.
+- The Helper agent and the help center search tool answer from Twenty's documentation, so they are hidden unless `MINTLIFY_SUBDOMAIN` and `MINTLIFY_API_KEY` point the search at your own Mintlify docs.
+
+## What is not rebranded
+
+- Code identifiers, CLI commands and package names, such as `create-twenty-app` and the `twenty` CLI.
+- Seed data used in development and the sample data created with new workspaces.
+- Messages whose wording changed for branding are untranslated until the translation catalogs are updated, so they show in English in other languages.
+- Custom skills and agents written by your users are never rewritten. Only the standard ones have "Twenty" replaced by your brand name when they are read.
