@@ -1,3 +1,6 @@
+import { brandState } from '@/client-config/states/brandState';
+import { getDocumentationUrl } from '@/support/utils/getDocumentationUrl';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { FormFieldInputInnerContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputInnerContainer';
 import { FormFieldInputRowContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputRowContainer';
 import { FormFieldPlaceholder } from '@/object-record/record-field/ui/form-types/components/FormFieldPlaceholder';
@@ -155,6 +158,7 @@ export const WorkflowEditActionFormBuilder = ({
 }: WorkflowEditActionFormBuilderProps) => {
   const { t } = useLingui();
   const theme = useTheme();
+  const brand = useAtomStateValue(brandState);
 
   const [formData, setFormData] = useState<FormData>(action.settings.input);
 
@@ -253,7 +257,10 @@ export const WorkflowEditActionFormBuilder = ({
                 label: t`Learn more`,
                 onClick: () =>
                   window.open(
-                    'https://docs.twenty.com/user-guide/workflows/capabilities/workflow-actions#form',
+                    getDocumentationUrl({
+                      docsUrl: brand.docsUrl,
+                      path: '/user-guide/workflows/capabilities/workflow-actions#form',
+                    }),
                     '_blank',
                     'noopener,noreferrer',
                   ),

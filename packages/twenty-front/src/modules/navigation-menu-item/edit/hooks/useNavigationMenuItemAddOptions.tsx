@@ -1,3 +1,4 @@
+import { brandState } from '@/client-config/states/brandState';
 import { useQuery } from '@apollo/client/react';
 import { useLingui } from '@lingui/react/macro';
 import { NavigationMenuItemType } from 'twenty-shared/types';
@@ -69,6 +70,7 @@ export const useNavigationMenuItemAddOptions = ({
 }: UseNavigationMenuItemAddOptionsParams) => {
   const { t } = useLingui();
   const { getIcon } = useIcons();
+  const brand = useAtomStateValue(brandState);
 
   const {
     data: standalonePagesData,
@@ -173,8 +175,8 @@ export const useNavigationMenuItemAddOptions = ({
           onClick: () => {
             addItem({
               type: NavigationMenuItemType.LINK,
-              name: 'Twenty',
-              link: 'https://twenty.com',
+              name: brand.name,
+              link: brand.websiteUrl,
               color: DEFAULT_NAVIGATION_MENU_ITEM_COLOR_LINK,
             });
           },
