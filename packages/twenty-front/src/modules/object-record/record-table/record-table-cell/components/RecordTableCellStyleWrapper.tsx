@@ -1,6 +1,9 @@
+import { getRecordTableColumnFieldWidthClassName } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthClassName';
+import { getRecordTableColumnFieldWidthStyle } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthStyle';
 import { cx } from '@linaria/core';
 import { styled } from '@linaria/react';
 import { type ReactNode } from 'react';
+import { isDefined } from 'twenty-shared/utils';
 import { useTheme } from 'twenty-ui/theme';
 
 export const StyledCell = styled.div<{
@@ -27,6 +30,20 @@ export const StyledCell = styled.div<{
   text-align: left;
 `;
 
+type RecordTableCellStyleWrapperWidthProps =
+  | { widthClassName: string; recordFieldIndex?: never }
+  | { recordFieldIndex: number; widthClassName?: never };
+
+type RecordTableCellStyleWrapperProps = {
+  className?: string;
+  children?: ReactNode;
+  isSelected?: boolean;
+  isDragging?: boolean;
+  hasRightBorder?: boolean;
+  hasBottomBorder?: boolean;
+} & RecordTableCellStyleWrapperWidthProps &
+  React.ComponentProps<'div'>;
+
 export const RecordTableCellStyleWrapper = ({
   children,
   isSelected,
@@ -34,16 +51,10 @@ export const RecordTableCellStyleWrapper = ({
   hasRightBorder = true,
   hasBottomBorder = true,
   widthClassName,
+  recordFieldIndex,
+  style,
   ...divProps
-}: {
-  className?: string;
-  children?: ReactNode;
-  isSelected?: boolean;
-  isDragging?: boolean;
-  hasRightBorder?: boolean;
-  hasBottomBorder?: boolean;
-  widthClassName: string;
-} & React.ComponentProps<'div'>) => {
+}: RecordTableCellStyleWrapperProps) => {
   const theme = useTheme();
 
   const tdBackgroundColor = isSelected
@@ -64,7 +75,20 @@ export const RecordTableCellStyleWrapper = ({
       hasBottomBorder={hasBottomBorder}
       // oxlint-disable-next-line react/jsx-props-no-spreading
       {...divProps}
-      className={cx('table-cell', widthClassName)}
+      className={cx(
+        'table-cell',
+        isDefined(recordFieldIndex)
+          ? getRecordTableColumnFieldWidthClassName(recordFieldIndex)
+          : widthClassName,
+      )}
+      style={
+        isDefined(recordFieldIndex)
+          ? {
+              ...style,
+              ...getRecordTableColumnFieldWidthStyle(recordFieldIndex),
+            }
+          : style
+      }
     >
       {children}
     </StyledCell>

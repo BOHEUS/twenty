@@ -6,8 +6,6 @@ import { RecordTableCell } from '@/object-record/record-table/record-table-cell/
 import { RecordTableCellFirstRowFirstColumn } from '@/object-record/record-table/record-table-cell/components/RecordTableCellFirstRowFirstColumn';
 import { RecordTableCellStyleWrapper } from '@/object-record/record-table/record-table-cell/components/RecordTableCellStyleWrapper';
 import { RecordTableCellWrapper } from '@/object-record/record-table/record-table-cell/components/RecordTableCellWrapper';
-import { getRecordTableColumnFieldWidthClassName } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthClassName';
-import { getRecordTableColumnFieldWidthStyle } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthStyle';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 
@@ -53,8 +51,7 @@ export const RecordTableFieldsCells = () => {
           <RecordTableCellStyleWrapper
             isSelected={isSelected}
             isDragging={isDragging}
-            widthClassName={getRecordTableColumnFieldWidthClassName(0)}
-            style={getRecordTableColumnFieldWidthStyle(0)}
+            recordFieldIndex={0}
           >
             <RecordTableCell />
           </RecordTableCellStyleWrapper>
@@ -69,10 +66,7 @@ export const RecordTableFieldsCells = () => {
           <RecordTableCellStyleWrapper
             isSelected={isSelected}
             isDragging={isDragging}
-            widthClassName={getRecordTableColumnFieldWidthClassName(
-              recordFieldIndex + 1,
-            )}
-            style={getRecordTableColumnFieldWidthStyle(recordFieldIndex + 1)}
+            recordFieldIndex={recordFieldIndex + 1}
           >
             <RecordTableCell />
           </RecordTableCellStyleWrapper>
