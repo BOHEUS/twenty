@@ -14,6 +14,8 @@ import { findMessageById } from "src/logic-functions/data/find-message-by-id.uti
 import { updatePerson } from "src/logic-functions/data/update-person.util";
 import { type IngestMessageParticipant, ingestMessages, listMessageChannels } from "twenty-sdk/logic-function";
 import { findWhatsappMessageThread } from "src/logic-functions/data/find-whatsapp-message-thread.util";
+import { downloadWhatsAppFile } from "src/logic-functions/data/download-file.util";
+import { uploadFile } from "src/logic-functions/data/upload-file.util";
 import { getFileExtension } from "src/logic-functions/data/get-file-extension.util";
 import { WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
 
@@ -76,14 +78,14 @@ const handler = async (params: {
     }
   }
   let text: string = '';
+  let file: WhatsappFile | undefined;
   // messageParticipants are not reused
   switch (messages.type) {
     case 'audio': {
-      const file: WhatsappFile = {
+      file = {
         fileName: 'audio_'.concat(messages.timestamp, getFileExtension(messages.audio.mime_type)),
         mimeType: messages.audio.mime_type,
-        sha256: messages.audio.sha256,
-        url: messages.audio.url,
+        mediaId: messages.audio.id,
       }
       break;
     }
@@ -96,26 +98,24 @@ const handler = async (params: {
       break;
     }
     case 'document': {
-      text = messages.document.caption;
-      const file: WhatsappFile = {
-        fileName: 'document_'.concat(messages.timestamp, getFileExtension(messages.document.mime_type)),
+      text = messages.document.caption ?? '';
+      file = {
+        fileName: messages.document.filename ?? 'document_'.concat(messages.timestamp, getFileExtension(messages.document.mime_type)),
         mimeType: messages.document.mime_type,
-        sha256: messages.document.sha256,
-        url: messages.document.url,
+        mediaId: messages.document.id,
       }
       break;
     }
     case 'edit': {
-      await updateMessage(coreClient, messages.edit.original_message_id, messages.edit.message.image.caption);
+      await updateMessage(coreClient, messages.edit.original_message_id, messages.edit.message.image.caption ?? '');
       break;
     }
     case 'image': {
-      text = messages.image.caption;
-      const file: WhatsappFile = {
+      text = messages.image.caption ?? '';
+      file = {
         fileName: 'image_'.concat(messages.timestamp, getFileExtension(messages.image.mime_type)),
         mimeType: messages.image.mime_type,
-        sha256: messages.image.sha256,
-        url: messages.image.url,
+        mediaId: messages.image.id,
       }
       break;
     }
@@ -143,11 +143,10 @@ const handler = async (params: {
       break;
     }
     case 'sticker': {
-      const file: WhatsappFile = {
+      file = {
         fileName: 'sticker_'.concat(messages.timestamp, getFileExtension(messages.sticker.mime_type)),
         mimeType: messages.sticker.mime_type,
-        sha256: messages.sticker.sha256,
-        url: messages.sticker.url,
+        mediaId: messages.sticker.id,
       }
       break;
     }
@@ -160,18 +159,26 @@ const handler = async (params: {
       break;
     }
     case 'video': {
-      text = messages.video.caption;
-      const file: WhatsappFile = {
+      text = messages.video.caption ?? '';
+      file = {
         fileName: 'video_'.concat(messages.timestamp, getFileExtension(messages.video.mime_type)),
         mimeType: messages.video.mime_type,
-        sha256: messages.video.sha256,
-        url: messages.video.url,
+        mediaId: messages.video.id,
       }
       break;
     }
     default: {
       return;
     }
+  }
+  if (file) {
+    const { fileBuffer, mimeType } = await downloadWhatsAppFile(file.mediaId);
+    await uploadFile(coreClient, {
+      fileBuffer,
+      filename: file.fileName,
+      mimeType,
+      target: { targetPersonId: whatsAppPerson.people.edges[0].node.id },
+    });
   }
   // TODO: arbitrally create message channels or wait until connection provider accepts API
   await ingestMessages({

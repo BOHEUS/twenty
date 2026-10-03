@@ -69,10 +69,10 @@ type MediaPayload = {
   mime_type: string;
   sha256: string;
   id: string;
-  url: string; // TODO: verify if it's already rolled out or not
+  url?: string; // gradually rolling out, download by id instead
 }
 
-type ImagePayload = MediaPayload & { caption: string };
+type ImagePayload = MediaPayload & { caption?: string };
 
 type WhatsAppWebhookMessageReferral = {
   referral?: {
@@ -151,7 +151,7 @@ type ContactsMessage = WhatsAppWebhookMessageBase & WhatsAppWebhookMessageReferr
 
 type DocumentMessage = WhatsAppWebhookMessageBase & WhatsAppWebhookMessageReferral & {
   type: 'document';
-  document: ImagePayload & { filename: string };
+  document: ImagePayload & { filename?: string };
 }
 
 type EditMessage = WhatsAppWebhookMessageBase & {
