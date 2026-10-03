@@ -5,15 +5,14 @@ export type WhatsAppWebhookMessage = {
   object: 'whatsapp_business_account';
   entry: Array<{
     id: string;
-    changes: Array<{
-      field: 'messages';
-      value: {
-        messaging_product: 'whatsapp';
-        metadata: WhatsappWebhookMessageBusinessData;
-      } & (WhatsappWebhookMessageErrors | WhatsappWebhookMessageStatuses | WhatsappWebhookMessageMessages);
-    }>
+    changes: Array<WhatsAppWebhookMessagesChange>;
   }>;
 };
+
+type WhatsAppWebhookMessagesValue = WhatsAppWebhookMessagingValue &
+  (WhatsappWebhookMessageErrors | WhatsappWebhookMessageStatuses | WhatsappWebhookMessageMessages);
+
+type WhatsAppWebhookMessagesChange = WhatsAppWebhookChangeOf<'messages', WhatsAppWebhookMessagesValue>;
 
 export type WhatsappWebhookMessageBusinessData = {
   display_phone_number: string; // business phone number
@@ -281,3 +280,424 @@ export type WhatsAppWebhookMessageContent =
   | TextMessage
   | UnsupportedMessage
   | VideoMessage;
+
+type WhatsAppWebhookChangeOf<TField extends string, TValue> = {
+  field: TField;
+  value: TValue;
+};
+
+type WhatsAppWebhookMessagingValue = {
+  messaging_product: 'whatsapp';
+  metadata: WhatsappWebhookMessageBusinessData;
+};
+
+type WhatsAppTemplateIdentity = {
+  message_template_id: number;
+  message_template_name: string;
+  message_template_language: string;
+};
+
+type WhatsAppTier =
+  | 'TIER_50'
+  | 'TIER_250'
+  | 'TIER_2K'
+  | 'TIER_10K'
+  | 'TIER_100K'
+  | 'TIER_NOT_SET'
+  | 'TIER_UNLIMITED';
+
+export type WhatsAppAccountAlertsValue = {
+  entity_type: 'BUSINESS' | 'PHONE_NUMBER' | 'CURRENT_STATUS_ID';
+  entity_id: string;
+  alert_info: {
+    alert_severity: 'CRITICAL' | 'INFORMATIONAL' | 'WARNING';
+    alert_status: 'ACTIVE' | 'NONE';
+    alert_type:
+      | 'INCREASED_CAPABILITIES_ELIGIBILITY_DEFERRED'
+      | 'INCREASED_CAPABILITIES_ELIGIBILITY_FAILED'
+      | 'INCREASED_CAPABILITIES_ELIGIBILITY_NEED_MORE_INFO'
+      | 'OBA_APPROVED'
+      | 'OBA_REJECTED'
+      | 'PROFILE_PICTURE_LOST';
+    alert_description: string;
+  };
+};
+
+type WhatsAppAccountReviewUpdateValue = {
+  decision: 'APPROVED' | 'REJECTED' | 'PENDING' | 'DEFERRED';
+};
+
+type WhatsAppWabaInfo = {
+  waba_id: string;
+  owner_business_id: string;
+};
+
+export type WhatsAppAccountUpdateValue =
+  | { event: 'ACCOUNT_DELETED' }
+  | { event: 'ACCOUNT_OFFBOARDED' }
+  | { event: 'ACCOUNT_RECONNECTED' }
+  | {
+      event: 'ACCOUNT_RESTRICTION';
+      restriction_info: Array<{
+        restriction_type:
+          | 'RESTRICTED_ADD_PHONE_NUMBER_ACTION'
+          | 'RESTRICTED_BIZ_INITIATED_AND_USER_INITIATED_CALLING'
+          | 'RESTRICTED_BIZ_INITIATED_MESSAGING'
+          | 'RESTRICTED_BUSINESS_INITIATED_CALLING'
+          | 'RESTRICTED_CUSTOMER_INITIATED_MESSAGING'
+          | 'RESTRICTED_DIRECT_SEND_UTILITY_TEMPLATES'
+          | 'RESTRICTED_USER_INITIATED_CALLING'
+          | 'RESTRICTED_USER_INITIATED_CALLING_CALL_BUTTON_HIDDEN'
+          | 'RESTRICTED_UTILITY_TEMPLATES';
+        expiration: number;
+        remediation?: string;
+      }>;
+    }
+  | {
+      event: 'ACCOUNT_VIOLATION';
+      violation_info: { violation_type: string };
+    }
+  | {
+      event: 'AD_ACCOUNT_LINKED';
+      waba_info: {
+        waba_id: string;
+        ad_account_linked: string;
+        owner_business_id: string;
+      };
+    }
+  | {
+      event: 'AUTH_INTL_PRICE_ELIGIBILITY_UPDATE';
+      auth_international_rate_eligibility: {
+        start_time: number;
+        exception_countries?: Array<{
+          country_code: string;
+          start_time: number;
+        }>;
+      };
+    }
+  | {
+      event: 'BUSINESS_PRIMARY_LOCATION_COUNTRY_UPDATE';
+      country: string;
+    }
+  | {
+      event: 'DISABLED_UPDATE';
+      ban_info: {
+        waba_ban_state: 'DISABLE' | 'REINSTATE' | 'SCHEDULE_FOR_DISABLE';
+        waba_ban_date: string;
+      };
+    }
+  | {
+      event: 'MM_LITE_TERMS_SIGNED';
+      waba_info: WhatsAppWabaInfo;
+    }
+  | {
+      event: 'PARTNER_ADDED';
+      waba_info: WhatsAppWabaInfo & {
+        solution_id?: string;
+        solution_partner_business_ids?: string[];
+      };
+    }
+  | {
+      event: 'PARTNER_APP_INSTALLED';
+      waba_info: WhatsAppWabaInfo & {
+        partner_app_id: string;
+        solution_id?: string;
+        solution_partner_business_ids?: string[];
+      };
+    }
+  | {
+      event: 'PARTNER_APP_UNINSTALLED';
+      waba_info: WhatsAppWabaInfo & { partner_app_id: string };
+    }
+  | {
+      event: 'PARTNER_CLIENT_CERTIFICATION_STATUS_UPDATE';
+      partner_client_certification_info: {
+        client_business_id: string;
+        status: 'APPROVED' | 'DISCARDED' | 'FAILED' | 'PENDING' | 'REVOKED';
+        rejection_reasons?: Array<
+          | 'ADDRESS NOT MATCHING'
+          | 'BUSINESS NOT ELIGIBLE'
+          | 'LEGAL NAME NOT MATCHING'
+          | 'LEGAL NAME NOT FOUND IN DOCUMENTS'
+          | 'MALFORMED DOCUMENTS'
+          | 'NONE'
+          | 'WEBSITE NOT MATCHING'
+        >;
+      };
+    }
+  | {
+      event: 'PARTNER_REMOVED';
+      waba_info: WhatsAppWabaInfo;
+      disconnection_info?: {
+        reason:
+          | 'ACCOUNT_DISCONNECTED'
+          | 'BUSINESS_DOWNGRADE'
+          | 'CHANGE_NUMBER'
+          | 'COMPANION_INACTIVITY'
+          | 'PRIMARY_INACTIVITY'
+          | 'USER_RE_REGISTERED';
+        initiated_by: 'SYSTEM' | 'USER';
+      };
+    }
+  | {
+      event: 'VOLUME_BASED_PRICING_TIER_UPDATE';
+      volume_tier_info: {
+        tier_update_time: number;
+        pricing_category: string;
+        tier: string;
+        effective_month: string;
+        region: string;
+      };
+    };
+
+export type WhatsAppAutomaticEventsValue = WhatsAppWebhookMessagingValue & {
+  automatic_events: Array<{
+    id: string; // WhatsApp message ID
+    event_name: 'LeadSubmitted' | 'Purchase';
+    timestamp: number;
+    ctwa_clid?: string; // not set for status ads
+    custom_data?: {
+      // purchase events only
+      currency: string;
+      value: number; // amount * 1000
+    };
+  }>;
+};
+
+export type WhatsAppBusinessCapabilityUpdateValue = {
+  max_daily_conversation_per_phone?: number; // deprecated
+  max_daily_conversations_per_business?:
+    | 'TIER_250'
+    | 'TIER_2K'
+    | 'TIER_10K'
+    | 'TIER_100K'
+    | 'TIER_UNLIMITED';
+  max_phone_numbers_per_business?: number;
+  max_phone_numbers_per_waba?: number;
+};
+
+export type WhatsAppHistoryValue = WhatsAppWebhookMessagingValue & {
+  history: Array<
+    | {
+        metadata: {
+          phase: 0 | 1 | 2;
+          chunk_order: number;
+          progress: number; // 0-100
+        };
+        threads: Array<{
+          id: string; // customer phone number
+          messages: Array<
+            WhatsAppWebhookMessageContent & {
+              to?: string; // only for SMB message echoes
+              history_context: {
+                status: 'DELIVERED' | 'ERROR' | 'PENDING' | 'PLAYED' | 'READ' | 'SENT';
+              };
+            }
+          >;
+        }>;
+      }
+    | {
+        errors: Array<{
+          code: number;
+          title: string;
+          message: string;
+          error_data: { details: string };
+        }>;
+      }
+  >;
+};
+
+export type WhatsAppMessageTemplateComponentsUpdateValue = WhatsAppTemplateIdentity & {
+  message_template_element: string;
+  message_template_title?: string;
+  message_template_footer?: string;
+  message_template_buttons?: Array<{
+    message_template_button_type:
+      | 'CATALOG'
+      | 'COPY_CODE'
+      | 'EXTENSION'
+      | 'FLOW'
+      | 'MPM'
+      | 'ORDER_DETAILS'
+      | 'OTP'
+      | 'PHONE_NUMBER'
+      | 'POSTBACK'
+      | 'REMINDER'
+      | 'SEND_LOCATION'
+      | 'SPM'
+      | 'QUICK_REPLY'
+      | 'URL'
+      | 'VOICE_CALL';
+    message_template_button_text: string;
+    message_template_button_url?: string;
+    message_template_button_phone_number?: string;
+  }>;
+};
+
+type WhatsAppTemplateQualityScore = 'GREEN' | 'RED' | 'YELLOW' | 'UNKNOWN';
+
+export type WhatsAppMessageTemplateQualityUpdateValue = WhatsAppTemplateIdentity & {
+  previous_quality_score: WhatsAppTemplateQualityScore;
+  new_quality_score: WhatsAppTemplateQualityScore;
+};
+
+export type WhatsAppMessageTemplateStatusUpdateValue = WhatsAppTemplateIdentity & {
+  event:
+    | 'APPROVED'
+    | 'ARCHIVED'
+    | 'UNARCHIVED'
+    | 'DELETED'
+    | 'DISABLED'
+    | 'FLAGGED'
+    | 'IN_APPEAL'
+    | 'LIMIT_EXCEEDED'
+    | 'LOCKED'
+    | 'PAUSED'
+    | 'PENDING'
+    | 'REINSTATED'
+    | 'PENDING_DELETION'
+    | 'REJECTED';
+  reason:
+    | 'ABUSIVE_CONTENT'
+    | 'CATEGORY_NOT_AVAILABLE'
+    | 'INCORRECT_CATEGORY'
+    | 'INVALID_FORMAT'
+    | 'NONE'
+    | 'PROMOTIONAL'
+    | 'SCAM'
+    | 'TAG_CONTENT_MISMATCH'
+    | null;
+  message_template_category: 'MARKETING' | 'UTILITY' | 'AUTHENTICATION';
+  disable_info?: { disable_date: string };
+  other_info?: {
+    title: 'FIRST_PAUSE' | 'SECOND_PAUSE' | 'RATE_LIMITING_PAUSE' | 'UNPAUSE' | 'DISABLED';
+    description: string;
+  };
+  rejection_info?: {
+    reason: string;
+    recommendation: string;
+  };
+};
+
+export type WhatsAppPartnerSolutionsValue = {
+  event: 'SOLUTION_CREATED' | 'SOLUTION_UPDATED';
+  solution_id: string;
+  solution_status:
+    | 'ACTIVE'
+    | 'DEACTIVATED'
+    | 'DRAFT'
+    | 'INITIATED'
+    | 'PENDING_DEACTIVATION'
+    | 'REJECTED';
+};
+
+export type WhatsAppPaymentConfigurationUpdateValue = {
+  configuration_name: string;
+  provider_name: 'billdesk' | 'payu' | 'razorpay' | 'zaakpay';
+  provider_mid: string;
+  status: 'Active' | 'Needs Connecting' | 'Needs Testing';
+  created_timestamp: number;
+  updated_timestamp: number;
+};
+
+export type WhatsAppPhoneNumberNameUpdateValue = {
+  display_phone_number: string;
+  decision: 'APPROVED' | 'DEFERRED' | 'PENDING' | 'REJECTED';
+  requested_verified_name: string;
+  rejection_reason:
+    | 'NAME_EMPLOYEE_ISSUE'
+    | 'NAME_ENDCLIENT_NOTRELATED'
+    | 'NAME_FORMAT_UNACCEPTABLE'
+    | 'NAME_INDIVIDUAL_ISSUE'
+    | 'NAME_NOT_CONSISTENT'
+    | 'UNKNOWN'
+    | null;
+};
+
+export type WhatsAppPhoneNumberQualityUpdateValue = {
+  display_phone_number: string;
+  event: 'ONBOARDING' | 'THROUGHPUT_UPGRADE';
+  current_limit?: WhatsAppTier; // deprecated
+  old_limit?: WhatsAppTier; // deprecated
+  max_daily_conversations_per_business: WhatsAppTier;
+};
+
+export type WhatsAppSecurityValue = {
+  display_phone_number: string;
+  event: 'PIN_CHANGED' | 'PIN_RESET_REQUEST' | 'PIN_REQUEST_SUCCESS';
+  requester?: string; // only for PIN_RESET_REQUEST
+};
+
+export type WhatsAppSmbAppStateSyncValue = WhatsAppWebhookMessagingValue & {
+  state_sync: Array<{
+    type: 'contact';
+    contact: {
+      full_name?: string; // not set on remove
+      first_name?: string; // not set on remove
+      phone_number: string;
+    };
+    action: 'add' | 'remove';
+    metadata: { timestamp: string };
+  }>;
+};
+
+export type WhatsAppSmbMessageEchoesValue = WhatsAppWebhookMessagingValue & {
+  message_echoes: Array<
+    WhatsAppWebhookMessageContent & {
+      to: string;
+    }
+  >;
+};
+
+export type WhatsAppTemplateCategoryUpdateValue = WhatsAppTemplateIdentity & {
+  new_category: string;
+} & (
+    | {
+        correct_category: string;
+        category_update_timestamp: number;
+      }
+    | { previous_category: string }
+  );
+
+export type WhatsAppUserPreferencesValue = WhatsAppWebhookMessagingValue & {
+  contacts: Array<{
+    profile?: { name: string };
+    wa_id: string;
+  }>;
+  user_preferences: Array<{
+    wa_id: string;
+    detail: string;
+    category: 'marketing_messages';
+    value: 'stop' | 'resume';
+    timestamp: number;
+  }>;
+};
+
+export type WhatsAppWebhookChange =
+  | WhatsAppWebhookChangeOf<'account_alerts', WhatsAppAccountAlertsValue>
+  | WhatsAppWebhookChangeOf<'account_review_update', WhatsAppAccountReviewUpdateValue>
+  | WhatsAppWebhookChangeOf<'account_update', WhatsAppAccountUpdateValue>
+  | WhatsAppWebhookChangeOf<'automatic_events', WhatsAppAutomaticEventsValue>
+  | WhatsAppWebhookChangeOf<'business_capability_update', WhatsAppBusinessCapabilityUpdateValue>
+  | WhatsAppWebhookChangeOf<'history', WhatsAppHistoryValue>
+  | WhatsAppWebhookChangeOf<'message_template_components_update', WhatsAppMessageTemplateComponentsUpdateValue>
+  | WhatsAppWebhookChangeOf<'message_template_quality_update', WhatsAppMessageTemplateQualityUpdateValue>
+  | WhatsAppWebhookChangeOf<'message_template_status_update', WhatsAppMessageTemplateStatusUpdateValue>
+  | WhatsAppWebhookMessagesChange
+  | WhatsAppWebhookChangeOf<'partner_solutions', WhatsAppPartnerSolutionsValue>
+  | WhatsAppWebhookChangeOf<'payment_configuration_update', WhatsAppPaymentConfigurationUpdateValue>
+  | WhatsAppWebhookChangeOf<'phone_number_name_update', WhatsAppPhoneNumberNameUpdateValue>
+  | WhatsAppWebhookChangeOf<'phone_number_quality_update', WhatsAppPhoneNumberQualityUpdateValue>
+  | WhatsAppWebhookChangeOf<'security', WhatsAppSecurityValue>
+  | WhatsAppWebhookChangeOf<'smb_app_state_sync', WhatsAppSmbAppStateSyncValue>
+  | WhatsAppWebhookChangeOf<'smb_message_echoes', WhatsAppSmbMessageEchoesValue>
+  | WhatsAppWebhookChangeOf<'template_category_update', WhatsAppTemplateCategoryUpdateValue>
+  | WhatsAppWebhookChangeOf<'user_preferences', WhatsAppUserPreferencesValue>;
+
+export type WhatsAppWebhook = {
+  object: 'whatsapp_business_account';
+  entry: Array<{
+    id: string;
+    changes: WhatsAppWebhookChange[];
+  }>;
+};
