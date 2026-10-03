@@ -1062,9 +1062,7 @@ describe('Application export - data model', () => {
       expectToFail: true,
     });
 
-    expect(errors?.[0]?.extensions?.subCode).toBe(
-      'STANDARD_APPLICATION_NOT_EXPORTABLE',
-    );
+    expect(errors?.[0]?.extensions?.subCode).toBe('APPLICATION_NOT_FOUND');
   });
 
   it('round-trips the workspace Custom application through an additive dry-run sync without any action', async () => {
@@ -1373,10 +1371,7 @@ describe('Application export - data model', () => {
           ({ universalIdentifier }) =>
             universalIdentifier === removedPredicateId,
         ),
-      ).toMatchObject({
-        metadataName: 'rowLevelPermissionPredicate',
-        status: ApplicationExportCoverageStatus.EXCLUDED,
-      });
+      ).toBeUndefined();
 
       const dryRun = await syncApplication({
         manifest: data.exportApplication.manifest,
@@ -1387,6 +1382,21 @@ describe('Application export - data model', () => {
 
       expect(dryRun.errors).toBeUndefined();
       expect(dryRun.data.syncApplication.actions).toEqual([]);
+
+      const deletionInferringDryRun = await syncApplication({
+        manifest: data.exportApplication.manifest,
+        dryRun: true,
+        expectToFail: false,
+      });
+
+      expect(deletionInferringDryRun.errors).toBeUndefined();
+      expect(
+        deletionInferringDryRun.data.syncApplication.actions.filter(
+          ({ metadataName }) =>
+            metadataName === 'rowLevelPermissionPredicate' ||
+            metadataName === 'rowLevelPermissionPredicateGroup',
+        ),
+      ).toEqual([]);
     } finally {
       await upsertRowLevelPermissionPredicates({
         expectToFail: false,

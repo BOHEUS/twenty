@@ -10,7 +10,7 @@ import { SettingsAccountsPasswordController } from '@/settings/accounts/componen
 import { type ConnectionFormData } from '@/settings/accounts/hooks/useImapSmtpCaldavConnectionForm';
 import { type AccountType } from 'twenty-shared/constants';
 import { Section } from 'twenty-ui/components';
-import { MOBILE_VIEWPORT, themeCssVariables } from 'twenty-ui/theme-constants';
+import { MOBILE_VIEWPORT, themeCssVariables } from 'twenty-ui/theme';
 
 const StyledFormContainer = styled.div`
   display: flex;
@@ -157,6 +157,7 @@ export const SettingsAccountsConnectionForm = ({
             render={({ field, fieldState }) => (
               <SettingsTextInput
                 instanceId="imap-username-connection-form"
+                ignorePasswordManagers
                 label={t`IMAP Username (Optional)`}
                 placeholder={t`john.doe`}
                 type="text"
@@ -254,6 +255,7 @@ export const SettingsAccountsConnectionForm = ({
             render={({ field, fieldState }) => (
               <SettingsTextInput
                 instanceId="smtp-username-connection-form"
+                ignorePasswordManagers
                 label={t`SMTP Username`}
                 placeholder={t`john.doe`}
                 type="text"
@@ -350,6 +352,7 @@ export const SettingsAccountsConnectionForm = ({
             render={({ field, fieldState }) => (
               <SettingsTextInput
                 instanceId="caldav-username-connection-form"
+                ignorePasswordManagers
                 label={t`CalDAV Username`}
                 placeholder={t`john.doe`}
                 required={false}

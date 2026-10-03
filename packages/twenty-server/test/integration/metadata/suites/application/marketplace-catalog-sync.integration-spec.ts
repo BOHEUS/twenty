@@ -12,11 +12,12 @@ import { findApplicationRegistrationByUniversalIdentifier } from 'test/integrati
 import { insertCatalogApplicationRegistration } from 'test/integration/metadata/suites/application/utils/insert-catalog-application-registration.util';
 import { syncMarketplaceCatalogFromRegistryPackage } from 'test/integration/metadata/suites/application/utils/sync-marketplace-catalog-from-registry-package.util';
 import { upsertApplicationRegistrationFromCatalog } from 'test/integration/metadata/suites/application/utils/upsert-application-registration-from-catalog.util';
-import { makeAdminPanelAPIRequest } from 'test/integration/twenty-config/utils/make-admin-panel-api-request.util';
+import { makeAdminPanelApiRequest } from 'test/integration/twenty-config/utils/make-admin-panel-api-request.util';
 import { getAppProviderByClassName } from 'test/integration/utils/get-app-provider-by-class-name.util';
 import { type DataSource } from 'typeorm';
 
 import { MARKETPLACE_VETTED_APPLICATIONS } from 'src/engine/core-modules/application/application-marketplace/constants/marketplace-vetted-applications.constant';
+import { type ApplicationRegistrationLookupService } from 'src/engine/core-modules/application/application-registration/application-registration-lookup/application-registration-lookup.service';
 import { type ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
 import { ApplicationRegistrationSourceType } from 'src/engine/core-modules/application/application-registration/enums/application-registration-source-type.enum';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
@@ -177,6 +178,10 @@ describe('Marketplace Catalog Sync (integration)', () => {
           getAppProviderByClassName<ApplicationRegistrationService>(
             'ApplicationRegistrationService',
           );
+        const applicationRegistrationLookupService =
+          getAppProviderByClassName<ApplicationRegistrationLookupService>(
+            'ApplicationRegistrationLookupService',
+          );
         const universalIdentifier = isVetted
           ? crypto.randomUUID()
           : MARKETPLACE_VETTED_APPLICATIONS[0].universalIdentifier;
@@ -195,7 +200,7 @@ describe('Marketplace Catalog Sync (integration)', () => {
         };
 
         expect(
-          await applicationRegistrationService.findOneByUniversalIdentifierGlobal(
+          await applicationRegistrationLookupService.findOneByUniversalIdentifierGlobal(
             universalIdentifier,
           ),
         ).toBeNull();
@@ -204,13 +209,13 @@ describe('Marketplace Catalog Sync (integration)', () => {
           await applicationRegistrationService.upsertFromCatalog(catalogParams);
 
           const registration =
-            await applicationRegistrationService.findOneByUniversalIdentifierGlobal(
+            await applicationRegistrationLookupService.findOneByUniversalIdentifierGlobal(
               universalIdentifier,
             );
 
           expect(registration).toMatchObject({ isVetted: !isVetted });
 
-          const updateResponse = await makeAdminPanelAPIRequest({
+          const updateResponse = await makeAdminPanelApiRequest({
             query: gql`
               mutation UpdateAdminApplicationRegistration(
                 $input: AdminUpdateApplicationRegistrationInput!
@@ -233,7 +238,7 @@ describe('Marketplace Catalog Sync (integration)', () => {
 
           await applicationRegistrationService.upsertFromCatalog(catalogParams);
 
-          const refreshedResponse = await makeAdminPanelAPIRequest({
+          const refreshedResponse = await makeAdminPanelApiRequest({
             query: gql`
               query FindOneAdminApplicationRegistration($id: String!) {
                 findOneAdminApplicationRegistration(id: $id) {

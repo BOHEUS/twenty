@@ -1,3 +1,4 @@
+import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { SaveAndCancelButtons } from '@/settings/components/SaveAndCancelButtons/SaveAndCancelButtons';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
@@ -10,24 +11,21 @@ import { SETTINGS_ROLE_DETAIL_TABS } from '@/settings/roles/role/constants/Setti
 import { useSaveDraftRoleToDB } from '@/settings/roles/role/hooks/useSaveDraftRoleToDB';
 import { settingsDraftRoleFamilyState } from '@/settings/roles/states/settingsDraftRoleFamilyState';
 import { settingsPersistedRoleFamilyState } from '@/settings/roles/states/settingsPersistedRoleFamilyState';
-import { settingsRolesIsLoadingState } from '@/settings/roles/states/settingsRolesIsLoadingState';
 import { useWorkspaceSurfaceScopedComponentInstanceId } from '@/ui/layout/hooks/useWorkspaceSurfaceScopedComponentInstanceId';
 import { activeTabIdComponentState } from '@/ui/layout/tab-list/states/activeTabIdComponentState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomFamilyState } from '@/ui/utilities/state/jotai/hooks/useSetAtomFamilyState';
 import { useLoadCurrentUser } from '@/users/hooks/useLoadCurrentUser';
 import { t } from '@lingui/core/macro';
 import { useState } from 'react';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components';
 import { IconLock, IconSettings, IconUserPlus } from 'twenty-ui/icon';
 
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
-import { getDirtyFields } from '~/utils/getDirtyFields';
-import { isDeeplyEqual } from '~/utils/isDeeplyEqual';
+import { getRoleDirtyFields } from '@/settings/roles/role/utils/getRoleDirtyFields';
 
 type SettingsRoleProps = {
   roleId: string;
@@ -47,8 +45,6 @@ export const SettingsRole = ({ roleId, isCreateMode }: SettingsRoleProps) => {
   const navigateSettings = useNavigateSettings();
 
   const [isSaving, setIsSaving] = useState(false);
-
-  const settingsRolesIsLoading = useAtomStateValue(settingsRolesIsLoadingState);
 
   const settingsDraftRole = useAtomFamilyStateValue(
     settingsDraftRoleFamilyState,
@@ -98,7 +94,11 @@ export const SettingsRole = ({ roleId, isCreateMode }: SettingsRoleProps) => {
     },
   ];
 
-  const isDirty = !isDeeplyEqual(settingsDraftRole, settingsPersistedRole);
+  const dirtyFields = getRoleDirtyFields(
+    settingsDraftRole,
+    settingsPersistedRole,
+  );
+  const isDirty = Object.keys(dirtyFields).length > 0;
 
   const handleCancel = () => {
     if (isCreateMode) {
@@ -112,13 +112,6 @@ export const SettingsRole = ({ roleId, isCreateMode }: SettingsRoleProps) => {
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-
-    const dirtyFields = getDirtyFields(
-      settingsDraftRole,
-      settingsPersistedRole,
-    );
-
     if (isDefined(dirtyFields.label) && dirtyFields.label === '') {
       enqueueToast({
         variant: 'error',
@@ -127,17 +120,17 @@ export const SettingsRole = ({ roleId, isCreateMode }: SettingsRoleProps) => {
       return;
     }
 
+    setIsSaving(true);
+
     try {
       await saveDraftRoleToDB();
       await loadCurrentUser();
+    } catch (error) {
+      enqueueToast(getToastOptionsFromError({ error }));
     } finally {
       setIsSaving(false);
     }
   };
-
-  if (!isDefined(settingsRolesIsLoading)) {
-    return <></>;
-  }
 
   return (
     <SettingsPageLayout

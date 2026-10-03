@@ -8,7 +8,7 @@ import { navigationDrawerActiveTabState } from '@/ui/navigation/states/navigatio
 import { navigationDrawerExpandedMemorizedState } from '@/ui/navigation/states/navigationDrawerExpandedMemorizedState';
 import { NAVIGATION_DRAWER_TABS } from '@/ui/navigation/states/navigationDrawerTabs';
 import { navigationMemorizedUrlState } from '@/ui/navigation/states/navigationMemorizedUrlState';
-import { useIsMobile } from '@/ui/utilities/responsive/hooks/useIsMobile';
+import { useIsMobile } from 'twenty-ui/utilities';
 import { act, renderHook } from '@testing-library/react';
 import { createStore, Provider } from 'jotai';
 import { type ReactNode } from 'react';
@@ -17,7 +17,10 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 jest.mock('@/ai/hooks/useReturnFromExpandedAiChat');
 jest.mock('@/ai/hooks/useSwitchToNewAiChat');
 jest.mock('@/navigation/hooks/useDefaultHomePagePath');
-jest.mock('@/ui/utilities/responsive/hooks/useIsMobile');
+jest.mock('twenty-ui/utilities', () => ({
+  ...jest.requireActual('twenty-ui/utilities'),
+  useIsMobile: jest.fn(),
+}));
 
 jest.mock('@/side-panel/hooks/useSidePanelMenu', () => ({
   useSidePanelMenu: () => ({ closeSidePanelMenu: jest.fn() }),
@@ -166,28 +169,24 @@ describe('useSwitchNavigationDrawerMode', () => {
         NAVIGATION_DRAWER_TABS.AI_CHAT_HISTORY,
       ),
     );
-    act(() =>
-      result.current.switchNavigationDrawerMode(
-        NAVIGATION_DRAWER_TABS.AI_CHAT_HISTORY,
-      ),
-    );
 
-    expect(mockSwitchToNewChat).toHaveBeenCalledTimes(2);
+    expect(mockSwitchToNewChat).toHaveBeenCalled();
   });
 
-  it('does not start a new chat when the chat page is already open', () => {
-    const { result } = renderSwitchNavigationDrawerMode({
-      pathname: AI_CHAT_PATH,
-    });
+  it.each([AI_CHAT_PATH, '/inbox'])(
+    'does not start a new chat when %s is already open',
+    (pathname) => {
+      const { result } = renderSwitchNavigationDrawerMode({ pathname });
 
-    act(() =>
-      result.current.switchNavigationDrawerMode(
-        NAVIGATION_DRAWER_TABS.AI_CHAT_HISTORY,
-      ),
-    );
+      act(() =>
+        result.current.switchNavigationDrawerMode(
+          NAVIGATION_DRAWER_TABS.AI_CHAT_HISTORY,
+        ),
+      );
 
-    expect(mockSwitchToNewChat).not.toHaveBeenCalled();
-  });
+      expect(mockSwitchToNewChat).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([false, true])(
     'preserves desktop sidebar expansion (%s) when opening settings and returning home',

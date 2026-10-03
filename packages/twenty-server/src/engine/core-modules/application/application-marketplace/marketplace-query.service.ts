@@ -11,6 +11,7 @@ import { CoreEntityCacheService } from 'src/engine/core-entity-cache/services/co
 import { MARKETPLACE_CATALOG_CACHE_ENTITY_ID } from 'src/engine/core-modules/application/application-marketplace/constants/marketplace-apps-cache.constant';
 import { MarketplaceAppDTO } from 'src/engine/core-modules/application/application-marketplace/dtos/marketplace-app.dto';
 import { MarketplaceAppDetailDTO } from 'src/engine/core-modules/application/application-marketplace/dtos/marketplace-app-detail.dto';
+import { toApplicationCapabilities } from 'src/engine/core-modules/application/utils/to-application-capabilities.util';
 import { MarketplaceAppRoleDTO } from 'src/engine/core-modules/application/application-marketplace/dtos/marketplace-app-role.dto';
 import { ApplicationRegistrationAssetUrlService } from 'src/engine/core-modules/application/application-registration/application-registration-asset-url.service';
 import { type ApplicationRegistrationEntity } from 'src/engine/core-modules/application/application-registration/application-registration.entity';
@@ -18,13 +19,13 @@ import {
   ApplicationRegistrationException,
   ApplicationRegistrationExceptionCode,
 } from 'src/engine/core-modules/application/application-registration/application-registration.exception';
-import { ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
+import { ApplicationRegistrationLookupService } from 'src/engine/core-modules/application/application-registration/application-registration-lookup/application-registration-lookup.service';
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
 
 @Injectable()
 export class MarketplaceQueryService {
   constructor(
-    private readonly applicationRegistrationService: ApplicationRegistrationService,
+    private readonly applicationRegistrationLookupService: ApplicationRegistrationLookupService,
     private readonly applicationRegistrationAssetUrlService: ApplicationRegistrationAssetUrlService,
     private readonly coreEntityCacheService: CoreEntityCacheService,
     private readonly applicationService: ApplicationService,
@@ -72,7 +73,7 @@ export class MarketplaceQueryService {
     universalIdentifier: string,
   ): Promise<ApplicationRegistrationEntity> {
     const registration =
-      await this.applicationRegistrationService.findOneByUniversalIdentifierGlobal(
+      await this.applicationRegistrationLookupService.findOneByUniversalIdentifierGlobal(
         universalIdentifier,
       );
 
@@ -164,6 +165,9 @@ export class MarketplaceQueryService {
             }),
           )
         : undefined,
+      requestedCapabilities: toApplicationCapabilities(
+        manifest?.application?.requestedCapabilities,
+      ),
       manifest: registration.manifest ?? undefined,
     };
   }

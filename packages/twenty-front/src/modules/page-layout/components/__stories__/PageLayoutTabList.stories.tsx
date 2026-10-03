@@ -5,7 +5,6 @@ import { styled } from '@linaria/react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { type ComponentProps, useEffect, useMemo } from 'react';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
-import { ComponentWithRouterDecorator } from 'twenty-ui/testing';
 
 import { PageLayoutTabList } from '@/page-layout/components/PageLayoutTabList';
 import { PageLayoutTabListEffect } from '@/page-layout/components/PageLayoutTabListEffect';
@@ -19,8 +18,9 @@ import { LayoutRenderingProvider } from '@/ui/layout/contexts/LayoutRenderingCon
 import { activeTabIdComponentState } from '@/ui/layout/tab-list/states/activeTabIdComponentState';
 import { jotaiStore } from '@/ui/utilities/state/jotai/jotaiStore';
 import { useAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentState';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { PageLayoutType } from '~/generated-metadata/graphql';
+import { ComponentWithRouterDecorator } from '~/testing/decorators/ComponentWithRouterDecorator';
 
 const StyledContainer = styled.div<{ containerWidth: number }>`
   border: 1px solid ${themeCssVariables.border.color.strong};
@@ -103,8 +103,7 @@ const PageLayoutTabListPlayground = ({
   containerWidth = 720,
 }: PageLayoutTabListPlaygroundProps) => {
   const isInIdentifierBar = presentation === 'identifier-bar';
-  // Tab drops are routed into the page-layout draft by the dnd provider, so
-  // the story renders from that draft to stay interactive.
+  // The dnd provider routes tab drops into the draft, so render from it.
   const [pageLayoutDraft, setPageLayoutDraft] = useAtomComponentState(
     pageLayoutDraftComponentState,
   );

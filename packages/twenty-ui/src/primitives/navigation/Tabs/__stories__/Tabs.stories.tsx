@@ -3,14 +3,14 @@ import { type Meta, type StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { NotificationCounter } from '@ui/primitives/data-display/NotificationCounter/NotificationCounter';
+import { Tag } from '@ui/primitives/data-display/Tag/Tag';
 import { IconInfoCircle } from '@ui/icon';
 import { Input } from '@ui/primitives/input/Input/Input';
 import {
   A11Y_DEFER_COLOR_CONTRAST,
   CatalogDecorator,
-  type CatalogStory,
   ComponentDecorator,
+  type CatalogStory,
 } from '@ui/testing';
 
 import { Tabs } from '../Tabs';
@@ -113,8 +113,8 @@ export const Default: Story = {
 };
 
 export const Documentation: Story = {
-  ...Default,
-  play: undefined,
+  decorators: Default.decorators,
+  parameters: Default.parameters,
 };
 
 export const Controlled: Story = {
@@ -136,15 +136,6 @@ export const AutomaticActivation: Story = {
   render: (args) => (
     <TabsExample tabProps={args} listProps={{ activateOnFocus: true }} />
   ),
-};
-
-export const WithIconAndBadge: Story = {
-  decorators: [ComponentDecorator],
-  parameters: { container: { width: 360 } },
-  args: {
-    startIcon: <IconInfoCircle />,
-    badge: <NotificationCounter count={3} variant="secondary" />,
-  },
 };
 
 export const Disabled: Story = {
@@ -179,6 +170,27 @@ export const Highlighted: Story = {
     expect(canvas.getByRole('tabpanel', { name: 'Activity' })).toBeVisible();
     await userEvent.click(overview);
     expect(canvas.getByRole('tabpanel', { name: 'Overview' })).toBeVisible();
+  },
+};
+
+export const IconOnly: Story = {
+  decorators: [ComponentDecorator],
+  parameters: { container: { width: 360 } },
+  args: {
+    'aria-label': 'Overview',
+    children: undefined,
+    startIcon: <IconInfoCircle />,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await expect(canvas.getByRole('tab', { name: 'Overview' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(
+      canvas.getByRole('tabpanel', { name: 'Overview' }),
+    ).toHaveTextContent('Record overview');
   },
 };
 
@@ -244,7 +256,7 @@ const TABS_CATALOG_CONTENT_PROPS: Record<
   plain: {},
   icon: { startIcon: <IconInfoCircle /> },
   badge: {
-    badge: <NotificationCounter count={3} variant="secondary" />,
+    badge: <Tag color="gray">3</Tag>,
   },
 };
 

@@ -1,6 +1,6 @@
 import { msg } from '@lingui/core/macro';
 
-import { type ToolStatusLabels } from '@/ai/types/tool-status-labels.type';
+import { type ToolStatusLabels } from '@/ai/types/ToolStatusLabels';
 
 export const ACTION_TOOL_STATUS_LABELS: Record<string, ToolStatusLabels> = {
   send_email: {
@@ -22,5 +22,9 @@ export const ACTION_TOOL_STATUS_LABELS: Record<string, ToolStatusLabels> = {
   navigate_app: {
     loading: msg`Navigating in the app`,
     completed: msg`Navigated in the app`,
+  },
+  share_record: {
+    loading: msg`Sharing record`,
+    completed: msg`Shared record`,
   },
 };

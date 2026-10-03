@@ -2,11 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2020",
+    "lib": ["ES2020", "DOM", "ES2023.Intl"],
     "jsx": "react-jsx",
     "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "moduleResolution": "bundler",
+    "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "noEmit": true,
     "types": ["node", "vitest/globals"],
@@ -34,6 +36,11 @@
     "scripts/generateDocsData.ts",
     "docs/**/*.ts",
     "scripts/checkDocsExamples.ts",
-    "scripts/checkOptionalDependencies.ts"
+    "scripts/checkOptionalDependencies.ts",
+    "scripts/checkThemeExports.ts",
+    "scripts/checkModuleOwnership.ts",
+    "scripts/utils/**/*.ts",
+    "scripts/types/**/*.ts",
+    "scripts/__tests__/**/*.ts"
   ]
 }

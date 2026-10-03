@@ -3,6 +3,7 @@ import { ModuleRef } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { TypeORMModule } from 'src/database/typeorm/typeorm.module';
+import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
 import { AuthModule } from 'src/engine/core-modules/auth/auth.module';
 import { BillingModule } from 'src/engine/core-modules/billing/billing.module';
 import { BillingProductEntity } from 'src/engine/core-modules/billing/entities/billing-product.entity';
@@ -18,9 +19,11 @@ import { ApplicationInstallModule } from 'src/engine/core-modules/application/ap
 import { TriggerInstallApplicationJob } from 'src/engine/core-modules/application/application-install/jobs/trigger-install-application.job';
 import { TriggerUninstallApplicationJob } from 'src/engine/core-modules/application/application-install/jobs/trigger-uninstall-application.job';
 import { ApplicationManifestModule } from 'src/engine/core-modules/application/application-manifest/application-manifest.module';
+import { ApplicationRegistrationLookupModule } from 'src/engine/core-modules/application/application-registration/application-registration-lookup/application-registration-lookup.module';
 import { ApplicationRegistrationModule } from 'src/engine/core-modules/application/application-registration/application-registration.module';
 import { ApplicationUpgradeModule } from 'src/engine/core-modules/application/application-upgrade/application-upgrade.module';
 import { UpgradeApplicationsJob } from 'src/engine/core-modules/application/jobs/upgrade-applications.job';
+import { UpgradeWorkspaceApplicationJob } from 'src/engine/core-modules/application/jobs/upgrade-workspace-application.job';
 import { InstallPreInstalledAppsJob } from 'src/engine/core-modules/application/pre-installed-apps/jobs/install-pre-installed-apps.job';
 import { PreInstalledAppsModule } from 'src/engine/core-modules/application/pre-installed-apps/pre-installed-apps.module';
 import { InstallOnboardingAppsJob } from 'src/engine/core-modules/onboarding/jobs/install-onboarding-apps.job';
@@ -57,6 +60,9 @@ import { LogicFunctionModule } from 'src/engine/metadata-modules/logic-function/
 import { NavigationMenuItemModule } from 'src/engine/metadata-modules/navigation-menu-item/navigation-menu-item.module';
 import { ObjectMetadataModule } from 'src/engine/metadata-modules/object-metadata/object-metadata.module';
 import { WebhookJobModule } from 'src/engine/metadata-modules/webhook/jobs/webhook-job.module';
+import { DeferredWorkspaceMigrationActionRecoveryCronJob } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/crons/jobs/deferred-workspace-migration-action-recovery.cron.job';
+import { RunDeferredWorkspaceMigrationActionsJob } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/jobs/run-deferred-workspace-migration-actions.job';
+import { WorkspaceMigrationRunnerModule } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/workspace-migration-runner.module';
 import { SubscriptionsModule } from 'src/engine/subscriptions/subscriptions.module';
 import { CleanOnboardingWorkspacesJob } from 'src/engine/workspace-manager/workspace-cleaner/crons/clean-onboarding-workspaces.job';
 import { CleanSuspendedWorkspacesJob } from 'src/engine/workspace-manager/workspace-cleaner/crons/clean-suspended-workspaces.job';
@@ -101,6 +107,7 @@ import { WorkflowModule } from 'src/modules/workflow/workflow.module';
     NavigationMenuItemModule,
     SdkClientModule,
     WorkspaceCleanerModule,
+    WorkspaceCacheModule,
     SubscriptionsModule,
     EventLogIngestionModule,
     AiAgentMonitorModule,
@@ -111,12 +118,14 @@ import { WorkflowModule } from 'src/modules/workflow/workflow.module';
     EmailingModule,
     ApplicationInstallModule,
     ApplicationManifestModule,
+    ApplicationRegistrationLookupModule,
     ApplicationRegistrationModule,
     ApplicationUpgradeModule,
     PreInstalledAppsModule,
     OnboardingModule,
     BillingReminderModule,
     ApplicationRecurringChargeModule,
+    WorkspaceMigrationRunnerModule,
   ],
   providers: [
     ApplicationRecurringChargeCronJob,
@@ -138,11 +147,14 @@ import { WorkflowModule } from 'src/modules/workflow/workflow.module';
     UpdateWorkspaceMemberEmailJob,
     GenerateSdkClientJob,
     UpgradeApplicationsJob,
+    UpgradeWorkspaceApplicationJob,
     InstallOnboardingAppsJob,
     InstallPreInstalledAppsJob,
     TriggerInstallApplicationJob,
     TriggerUninstallApplicationJob,
     WarmUpApplicationLogicFunctionsJob,
+    RunDeferredWorkspaceMigrationActionsJob,
+    DeferredWorkspaceMigrationActionRecoveryCronJob,
   ],
 })
 export class JobsModule {

@@ -11,7 +11,7 @@ import { TabList } from '@/ui/layout/tab-list/components/TabList';
 import { styled } from '@linaria/react';
 import { IconX } from 'twenty-ui/icon';
 import { IconButton } from 'twenty-ui/components';
-import { themeCssVariables, useTheme } from 'twenty-ui/theme-constants';
+import { themeCssVariables, useTheme } from 'twenty-ui/theme';
 
 type SettingsCustomizeVideoModalProps = {
   modalInstanceId: string;
@@ -19,8 +19,7 @@ type SettingsCustomizeVideoModalProps = {
   tabs: SettingsCustomizeVideoModalTab[];
 };
 
-// the tab list draws its own separator, so the header only needs one when the
-// single tab is replaced by a plain title
+// The tab list draws its own separator, so the header needs one only when it shows a plain title
 const StyledHeader = styled.div<{ $hasBottomBorder: boolean }>`
   align-items: center;
   border-bottom: ${({ $hasBottomBorder }) =>

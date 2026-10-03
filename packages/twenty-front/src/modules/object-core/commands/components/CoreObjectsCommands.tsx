@@ -9,7 +9,11 @@ import { useOpenCoreWorkflowFiltersSidePanel } from '@/object-core/workflows/hoo
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
 import { SelectableListItem } from '@/ui/layout/selectable-list/components/SelectableListItem';
 
-export const CoreObjectsCommands = () => {
+type CoreObjectsCommandsProps = {
+  section: 'THIS_OBJECT' | 'SELECTION';
+};
+
+export const CoreObjectsCommands = ({ section }: CoreObjectsCommandsProps) => {
   const {
     coreWorkflowFiltersCommandLabel,
     shouldDisplayCoreWorkflowFiltersCommand,
@@ -31,7 +35,7 @@ export const CoreObjectsCommands = () => {
 
   return (
     <>
-      {shouldDisplayCoreWorkflowFiltersCommand && (
+      {section === 'THIS_OBJECT' && shouldDisplayCoreWorkflowFiltersCommand && (
         <SelectableListItem
           itemId={CORE_WORKFLOW_FILTERS_COMMAND_ID}
           onEnter={openCoreWorkflowFiltersSidePanel}
@@ -44,7 +48,7 @@ export const CoreObjectsCommands = () => {
           />
         </SelectableListItem>
       )}
-      {shouldDisplayCoreWorkflowsDeleteCommand && (
+      {section === 'SELECTION' && shouldDisplayCoreWorkflowsDeleteCommand && (
         <SelectableListItem
           itemId={CORE_WORKFLOWS_DELETE_COMMAND_ID}
           onEnter={handleDeleteSelectedCoreWorkflows}

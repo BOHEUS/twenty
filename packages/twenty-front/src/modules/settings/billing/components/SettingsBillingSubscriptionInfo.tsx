@@ -7,8 +7,8 @@ import { SettingsBillingSubscriptionInfoModals } from '@/settings/billing/compon
 import { BILLING_MODAL_IDS } from '@/settings/billing/constants/BillingModalIds';
 import { useApplyBillingSubscriptionChange } from '@/settings/billing/hooks/useApplyBillingSubscriptionChange';
 import { useApplyCurrentWorkspaceBillingUpdate } from '@/settings/billing/hooks/useApplyCurrentWorkspaceBillingUpdate';
-import { useBillingSubscriptionCost } from '@/settings/billing/hooks/useBillingSubscriptionCost';
 import { useBillingSubscriptionChangeWording } from '@/settings/billing/hooks/useBillingSubscriptionChangeWording';
+import { useBillingSubscriptionCost } from '@/settings/billing/hooks/useBillingSubscriptionCost';
 import { useBillingWording } from '@/settings/billing/hooks/useBillingWording';
 import { useCurrentBillingFlags } from '@/settings/billing/hooks/useCurrentBillingFlags';
 import { useCurrentPlan } from '@/settings/billing/hooks/useCurrentPlan';
@@ -21,7 +21,7 @@ import { useNextPlan } from '@/settings/billing/hooks/useNextPlan';
 import { useSplitPhaseItemsInPrices } from '@/settings/billing/hooks/useSplitPhaseItemsInPrices';
 import { billingHasPaymentMethodSelector } from '@/settings/billing/states/billingHasPaymentMethodSelector';
 import { isSubscriptionPaymentOverdue } from '@/settings/billing/utils/isSubscriptionPaymentOverdue';
-import { usePermissionFlagMap } from '@/settings/roles/hooks/usePermissionFlagMap';
+import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSubscriptionStatus } from '@/workspace/hooks/useSubscriptionStatus';
@@ -30,7 +30,7 @@ import { useMutation } from '@apollo/client/react';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { Section, useToast } from 'twenty-ui/components';
 import { IconClockPlay, IconCoins, IconTag } from 'twenty-ui/icon';
 import {
   BillingPlanKey,
@@ -40,8 +40,6 @@ import {
   SubscriptionStatus,
 } from '~/generated-metadata/graphql';
 import { beautifyExactDate } from '~/utils/date-utils';
-
-import { useToast } from 'twenty-ui/primitives/feedback';
 
 export const SettingsBillingSubscriptionInfo = ({
   currentWorkspace,
@@ -138,8 +136,9 @@ export const SettingsBillingSubscriptionInfo = ({
     await endTrialPeriod({ skipPaymentMethodRedirect: true });
   };
 
-  const { [PermissionFlagType.WORKSPACE]: hasPermissionToEndTrialPeriod } =
-    usePermissionFlagMap();
+  const hasPermissionToEndTrialPeriod = useHasPermissionFlag(
+    PermissionFlagType.WORKSPACE,
+  );
 
   const {
     seats,

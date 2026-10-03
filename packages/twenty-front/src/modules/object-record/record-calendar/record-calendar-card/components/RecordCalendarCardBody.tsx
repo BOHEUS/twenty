@@ -17,7 +17,7 @@ import { RecordInlineCell } from '@/object-record/record-inline-cell/components/
 import { getRecordFieldInputInstanceId } from '@/object-record/utils/getRecordFieldInputId';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { isDefined } from 'twenty-shared/utils';
 
 type RecordCalendarCardBodyProps = {
@@ -31,8 +31,7 @@ export const RecordCalendarCardBody = ({
   calendarDay,
   isRecordReadOnly,
 }: RecordCalendarCardBodyProps) => {
-  const { objectPermissions, objectMetadataItem } =
-    useRecordCalendarContextOrThrow();
+  const { objectMetadataItem } = useRecordCalendarContextOrThrow();
 
   const cardInstanceIdPrefix =
     getRecordCalendarCardInstanceIdPrefix(calendarDay);
@@ -103,7 +102,7 @@ export const RecordCalendarCardBody = ({
                 isLabelIdentifier: false,
                 isRecordFieldReadOnly: isRecordFieldReadOnly({
                   isRecordReadOnly,
-                  objectPermissions,
+                  objectMetadataId: objectMetadataItem.id,
                   fieldMetadataItem,
                   fieldDefinition: correspondingFieldDefinition,
                   objectPermissionsByObjectMetadataId,

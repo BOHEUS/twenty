@@ -1,23 +1,23 @@
-import { Field } from 'twenty-ui/primitives/input';
-import { isNonEmptyString } from '@sniptt/guards';
-import { isDefined } from 'twenty-shared/utils';
+import { AutogrowWrapper } from '@/ui/input/components/internal/AutogrowWrapper/AutogrowWrapper';
 import { css } from '@linaria/core';
 import { styled } from '@linaria/react';
+import { isNonEmptyString } from '@sniptt/guards';
 import React, {
-  forwardRef,
   type ChangeEvent,
   type FocusEventHandler,
   type InputHTMLAttributes,
-  useContext,
+  forwardRef,
   useId,
   useRef,
   useState,
 } from 'react';
+import { isDefined } from 'twenty-shared/utils';
 import { type IconComponent, IconEye, IconEyeOff } from 'twenty-ui/icon';
-import { AutogrowWrapper } from 'twenty-ui/primitives/layout';
+import { Field } from 'twenty-ui/primitives/input';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { useCombinedRefs } from '~/hooks/useCombinedRefs';
 import { turnIntoEmptyStringIfWhitespacesOnly } from '~/utils/string/turnIntoEmptyStringIfWhitespacesOnly';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { PASSWORD_MANAGER_IGNORE_ATTRIBUTES } from '@/ui/input/constants/PasswordManagerIgnoreAttributes';
 const StyledContainer = styled.div<Pick<TextInputComponentProps, 'fullWidth'>>`
   box-sizing: border-box;
   display: inline-flex;
@@ -260,6 +260,7 @@ export type TextInputComponentProps = Omit<
   rightAdornment?: string;
   leftAdornment?: string;
   textClickOutsideId?: string;
+  ignorePasswordManagers?: boolean;
 };
 
 type TextInputWithAutoGrowWrapperProps = TextInputComponentProps;
@@ -270,6 +271,7 @@ const TextInputComponent = forwardRef<
 >(
   (
     {
+      'aria-label': ariaLabel,
       className,
       label,
       value,
@@ -300,10 +302,11 @@ const TextInputComponent = forwardRef<
       rightAdornment,
       leftAdornment,
       textClickOutsideId,
+      ignorePasswordManagers = false,
     },
     ref,
   ) => {
-    const { theme } = useContext(ThemeContext);
+    const theme = useTheme();
     const inputRef = useRef<HTMLInputElement>(null);
     const combinedRef = useCombinedRefs(ref, inputRef);
 
@@ -357,10 +360,14 @@ const TextInputComponent = forwardRef<
             )}
 
             <StyledInput
+              aria-label={ariaLabel}
               id={instanceId}
               width={width}
               data-testid={dataTestId}
               autoComplete={autoComplete ?? 'off'}
+              // oxlint-disable-next-line react/jsx-props-no-spreading
+              {...(ignorePasswordManagers &&
+                PASSWORD_MANAGER_IGNORE_ATTRIBUTES)}
               ref={combinedRef}
               tabIndex={tabIndex ?? 0}
               onFocus={handleFocus}

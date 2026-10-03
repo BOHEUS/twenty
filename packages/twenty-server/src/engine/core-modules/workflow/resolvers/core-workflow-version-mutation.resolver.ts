@@ -5,6 +5,7 @@ import { PermissionFlagType } from 'twenty-shared/constants';
 
 import { CoreResolver } from 'src/engine/api/graphql/graphql-config/decorators/core-resolver.decorator';
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
+import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
 import { type AuthContextUser } from 'src/engine/core-modules/auth/types/auth-context.type';
 import { PreventNestToAutoLogGraphqlErrorsFilter } from 'src/engine/core-modules/graphql/filters/prevent-nest-to-auto-log-graphql-errors.filter';
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
@@ -31,11 +32,13 @@ import { WorkflowVersionValidationGraphqlApiExceptionFilter } from 'src/engine/c
 import { CoreWorkflowLifecycleWorkspaceService } from 'src/engine/core-modules/workflow/services/core-workflow-lifecycle.workspace-service';
 import { CoreWorkflowVersionMutationWorkspaceService } from 'src/engine/core-modules/workflow/services/core-workflow-version-mutation.workspace-service';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { AuthApplication } from 'src/engine/decorators/auth/auth-application.decorator';
 import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
+import { CoreWorkflowAccessService } from 'src/engine/core-modules/workflow/services/core-workflow-access.service';
+import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
-import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
 import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/metadata-modules/permissions/utils/permissions-graphql-api-exception.filter';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
@@ -46,8 +49,17 @@ import { CoreWorkflowRunnerService } from 'src/modules/workflow/workflow-runner/
 @CoreResolver()
 @UsePipes(ResolverValidationPipe)
 @UseGuards(
-  WorkspaceAuthGuard,
-  UserAuthGuard,
+  AuthPrincipalGuard({
+    userSession: {
+      standard: true,
+      impersonated: true,
+      playground: true,
+      workspaceAgnostic: false,
+    },
+    apiKey: false,
+    oauthClient: true,
+    application: true,
+  }),
   SettingsPermissionGuard(PermissionFlagType.WORKFLOWS),
 )
 @UseFilters(
@@ -64,32 +76,23 @@ export class CoreWorkflowVersionMutationResolver {
     private readonly coreWorkflowVersionMutationWorkspaceService: CoreWorkflowVersionMutationWorkspaceService,
     private readonly coreWorkflowLifecycleWorkspaceService: CoreWorkflowLifecycleWorkspaceService,
     private readonly coreWorkflowRunnerService: CoreWorkflowRunnerService,
+    private readonly coreWorkflowAccessService: CoreWorkflowAccessService,
     private readonly workspaceOrmManager: WorkspaceOrmManager,
   ) {}
 
   @Mutation(() => Boolean)
-  async validateCoreWorkflowVersion(
-    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-    @Args('coreWorkflowVersionId', { type: () => UUIDScalarType })
-    coreWorkflowVersionId: string,
-  ): Promise<boolean> {
-    return this.coreWorkflowLifecycleWorkspaceService.validateCoreWorkflowVersion(
-      {
-        workspaceId,
-        coreWorkflowVersionId,
-      },
-    );
-  }
-
-  @Mutation(() => Boolean)
   async activateCoreWorkflowVersion(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('coreWorkflowVersionId', { type: () => UUIDScalarType })
     coreWorkflowVersionId: string,
   ): Promise<boolean> {
     return this.coreWorkflowLifecycleWorkspaceService.activateCoreWorkflowVersion(
       {
         workspaceId,
+
+        userWorkspaceId,
         coreWorkflowVersionId,
       },
     );
@@ -98,21 +101,42 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => Boolean)
   async deactivateCoreWorkflowVersion(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('coreWorkflowVersionId', { type: () => UUIDScalarType })
     coreWorkflowVersionId: string,
   ): Promise<boolean> {
     return this.coreWorkflowLifecycleWorkspaceService.deactivateCoreWorkflowVersion(
       {
         workspaceId,
+
+        userWorkspaceId,
         coreWorkflowVersionId,
       },
     );
   }
 
   @Mutation(() => RunWorkflowVersionDTO)
+  @UseGuards(
+    AuthPrincipalGuard({
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: false,
+      oauthClient: { withUser: true, withoutUser: false },
+      application: { withUser: true, withoutUser: false },
+    }),
+  )
   async runCoreWorkflowVersion(
     @AuthUser() user: AuthContextUser,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
+    @AuthApplication({ allowUndefined: true })
+    callerApplication: FlatApplication | undefined,
     @Args('input')
     {
       coreWorkflowVersionId,
@@ -133,8 +157,28 @@ export class CoreWorkflowVersionMutationResolver {
         });
       }, buildSystemAuthContext(workspaceId));
 
+    await this.coreWorkflowAccessService.assertCoreWorkflowVersionsAreAccessibleOrThrow(
+      {
+        workspaceId,
+        userWorkspaceId,
+        coreWorkflowVersionIds: [coreWorkflowVersionId],
+      },
+    );
+
+    await this.coreWorkflowAccessService.assertCoreWorkflowVersionsAreStartableByApplicationOrThrow(
+      {
+        workspaceId,
+        callerApplicationId: callerApplication?.id,
+        coreWorkflowVersionIds: [coreWorkflowVersionId],
+      },
+    );
+
     const { payload: triggerPayload, createdBy } =
-      buildWorkflowRunTriggerContext({ workspaceMember, payload });
+      buildWorkflowRunTriggerContext({
+        workspaceMember,
+        payload,
+        startingApplicationId: callerApplication?.id,
+      });
 
     return this.coreWorkflowRunnerService.run({
       workspaceId,
@@ -148,6 +192,8 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => CoreWorkflowVersionDTO)
   async createDraftFromCoreWorkflowVersion(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('input')
     {
       coreWorkflowId,
@@ -157,6 +203,8 @@ export class CoreWorkflowVersionMutationResolver {
     return this.coreWorkflowVersionMutationWorkspaceService.createDraftFromCoreWorkflowVersion(
       {
         workspaceId,
+
+        userWorkspaceId,
         coreWorkflowId,
         coreWorkflowVersionIdToCopy,
       },
@@ -166,10 +214,14 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => WorkflowVersionStepChangesDTO)
   async createCoreWorkflowVersionStep(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('input') input: CreateCoreWorkflowVersionStepInput,
   ): Promise<WorkflowVersionStepChangesDTO> {
     return this.coreWorkflowVersionMutationWorkspaceService.createStep({
       workspaceId,
+
+      userWorkspaceId,
       input,
     });
   }
@@ -177,11 +229,15 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => WorkflowActionDTO)
   async updateCoreWorkflowVersionStep(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('input')
     { coreWorkflowVersionId, step }: UpdateCoreWorkflowVersionStepInput,
   ): Promise<WorkflowActionDTO> {
     return this.coreWorkflowVersionMutationWorkspaceService.updateStep({
       workspaceId,
+
+      userWorkspaceId,
       coreWorkflowVersionId,
       step,
     });
@@ -190,11 +246,15 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => WorkflowVersionTriggerDTO)
   async updateCoreWorkflowVersionTrigger(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('input')
     { coreWorkflowVersionId, trigger }: UpdateCoreWorkflowVersionTriggerInput,
   ): Promise<WorkflowVersionTriggerDTO> {
     return this.coreWorkflowVersionMutationWorkspaceService.updateTrigger({
       workspaceId,
+
+      userWorkspaceId,
       coreWorkflowVersionId,
       trigger,
     });
@@ -203,11 +263,15 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => WorkflowVersionStepChangesDTO)
   async deleteCoreWorkflowVersionStep(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('input')
     { coreWorkflowVersionId, stepId }: DeleteCoreWorkflowVersionStepInput,
   ): Promise<WorkflowVersionStepChangesDTO> {
     return this.coreWorkflowVersionMutationWorkspaceService.deleteStep({
       workspaceId,
+
+      userWorkspaceId,
       coreWorkflowVersionId,
       stepIdToDelete: stepId,
     });
@@ -216,11 +280,15 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => WorkflowVersionStepChangesDTO)
   async duplicateCoreWorkflowVersionStep(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('input')
     { coreWorkflowVersionId, stepId }: DuplicateCoreWorkflowVersionStepInput,
   ): Promise<WorkflowVersionStepChangesDTO> {
     return this.coreWorkflowVersionMutationWorkspaceService.duplicateStep({
       workspaceId,
+
+      userWorkspaceId,
       coreWorkflowVersionId,
       stepId,
     });
@@ -229,6 +297,8 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => WorkflowVersionStepChangesDTO)
   async createCoreWorkflowVersionEdge(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('input')
     {
       coreWorkflowVersionId,
@@ -239,6 +309,8 @@ export class CoreWorkflowVersionMutationResolver {
   ): Promise<WorkflowVersionStepChangesDTO> {
     return this.coreWorkflowVersionMutationWorkspaceService.createEdge({
       workspaceId,
+
+      userWorkspaceId,
       coreWorkflowVersionId,
       source,
       target,
@@ -249,6 +321,8 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => WorkflowVersionStepChangesDTO)
   async deleteCoreWorkflowVersionEdge(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('input')
     {
       coreWorkflowVersionId,
@@ -259,6 +333,8 @@ export class CoreWorkflowVersionMutationResolver {
   ): Promise<WorkflowVersionStepChangesDTO> {
     return this.coreWorkflowVersionMutationWorkspaceService.deleteEdge({
       workspaceId,
+
+      userWorkspaceId,
       coreWorkflowVersionId,
       source,
       target,
@@ -269,6 +345,8 @@ export class CoreWorkflowVersionMutationResolver {
   @Mutation(() => Boolean)
   async updateCoreWorkflowVersionPositions(
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
+    @AuthUserWorkspaceId({ allowUndefined: true })
+    userWorkspaceId: string | undefined,
     @Args('input')
     {
       coreWorkflowVersionId,
@@ -277,6 +355,8 @@ export class CoreWorkflowVersionMutationResolver {
   ): Promise<boolean> {
     await this.coreWorkflowVersionMutationWorkspaceService.updatePositions({
       workspaceId,
+
+      userWorkspaceId,
       coreWorkflowVersionId,
       positions,
     });
