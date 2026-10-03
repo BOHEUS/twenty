@@ -2,6 +2,7 @@ import { defineLogicFunction, RoutePayload } from 'twenty-sdk/define';
 import { WhatsAppWebhookMessage } from 'src/logic-functions/types/whatsapp-webhook-message.type';
 import { validateWebhookPayload } from 'src/logic-functions/data/validate-webhook-payload.util';
 import { enqueueJobs } from "twenty-sdk/logic-function";
+import { WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
 
 const handler = async (
   params: RoutePayload<WhatsAppWebhookMessage>,
@@ -43,7 +44,7 @@ const handler = async (
       if ('messages' in change.value) {
         for (const message of change.value.messages) {
           await enqueueJobs({
-            logicFunctionUniversalIdentifier: '8aa95b71-dffe-4232-8fdd-c4aeba2aedd0', retryLimit: 3, delayMs: 500, jobs: [{
+            logicFunctionUniversalIdentifier: WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER, retryLimit: 3, delayMs: 500, jobs: [{
               payload: {
                 businessData: change.value.metadata, contacts: change.value.contacts[0], messages: message
               }

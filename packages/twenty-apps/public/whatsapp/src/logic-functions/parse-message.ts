@@ -1,12 +1,10 @@
 import { defineLogicFunction } from 'twenty-sdk/define';
 import { CoreApiClient } from "twenty-client-sdk/core";
-import { MetadataApiClient } from "twenty-client-sdk/metadata";
 import {
   WhatsappWebhookMessageBusinessData,
   WhatsAppWebhookMessageContacts,
   WhatsAppWebhookMessageContent
 } from "src/logic-functions/types/whatsapp-webhook-message.type";
-import { findConnectedAccount } from "src/logic-functions/data/find-connected-account-by-filter.util";
 import { findPersonByFilter } from "src/logic-functions/data/find-person-by-filter.util";
 import { createPerson } from "src/logic-functions/data/create-person.util";
 import { getGroupMessageParticipants } from "src/logic-functions/data/get-group-message-participants.util";
@@ -14,7 +12,10 @@ import { WhatsappFile } from "src/logic-functions/types/whatsapp-file.type";
 import { updateMessage } from "src/logic-functions/data/update-message.util";
 import { findMessageById } from "src/logic-functions/data/find-message-by-id.util";
 import { updatePerson } from "src/logic-functions/data/update-person.util";
-import { type IngestMessageParticipant, ingestMessages } from "twenty-sdk/logic-function";
+import { type IngestMessageParticipant, ingestMessages, listMessageChannels } from "twenty-sdk/logic-function";
+import { findWhatsappMessageThread } from "src/logic-functions/data/find-whatsapp-message-thread.util";
+import { getFileExtension } from "src/logic-functions/data/get-file-extension.util";
+import { WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
 
 const handler = async (params: {
   businessData: WhatsappWebhookMessageBusinessData,
@@ -23,36 +24,21 @@ const handler = async (params: {
 }) => {
   const { businessData, contacts, messages } = params;
   const coreClient = new CoreApiClient();
-  const metadataClient = new MetadataApiClient();
-  /*
-   webhook comes
-   find a person with specific phone number (either primary or secondary)
-   if not, create a person
-   find a related message participant
-   if not, create a message participant
-   find a related message thread
-   if not, create a new message thread (generate and store all ids in KV store)
-   create a new message and link it all together
-   */
-
   /*
   Questions:
      fix downloading file
-     check if all variables are added (should they be application or server variables?)
      add upload file (how to get API key served by app?)
-     how to handle group chats?
-     should group ID be used as messageExternalThreadId or separately?
-     how to handle case where
+     is kv better than whatsapp message thread object?
   */
   if (messages.type === 'unsupported') {
     return; // not needed at time being to do anything with it, maybe when notifications will be done at some point it'll become useful
   }
-  let relatedConnectedAccount = await findConnectedAccount(metadataClient, businessData.display_phone_number);
+  let relatedConnectedAccount = await listMessageChannels();
   if (!relatedConnectedAccount) {
     return;
   }
   // find a thread by whatsapp id, if group id is present, use that
-  let messageThread: string = '';
+  let messageThread: string = messages.group_id ?? await findWhatsappMessageThread(coreClient) ?? "";
 
   const participants: IngestMessageParticipant[] = [];
   participants.push({
@@ -81,6 +67,12 @@ const handler = async (params: {
       if (!whatsAppPerson) {
         await createPerson(coreClient, groupParticipant);
       }
+      participants.push({
+        role: 'TO',
+        handle: '',
+        displayName: '',
+        personId: ''
+      })
     }
   }
   let text: string = '';
@@ -88,6 +80,7 @@ const handler = async (params: {
   switch (messages.type) {
     case 'audio': {
       const file: WhatsappFile = {
+        fileName: 'audio_'.concat(messages.timestamp, getFileExtension(messages.audio.mime_type)),
         mimeType: messages.audio.mime_type,
         sha256: messages.audio.sha256,
         url: messages.audio.url,
@@ -105,6 +98,7 @@ const handler = async (params: {
     case 'document': {
       text = messages.document.caption;
       const file: WhatsappFile = {
+        fileName: 'document_'.concat(messages.timestamp, getFileExtension(messages.document.mime_type)),
         mimeType: messages.document.mime_type,
         sha256: messages.document.sha256,
         url: messages.document.url,
@@ -118,6 +112,7 @@ const handler = async (params: {
     case 'image': {
       text = messages.image.caption;
       const file: WhatsappFile = {
+        fileName: 'image_'.concat(messages.timestamp, getFileExtension(messages.image.mime_type)),
         mimeType: messages.image.mime_type,
         sha256: messages.image.sha256,
         url: messages.image.url,
@@ -149,6 +144,7 @@ const handler = async (params: {
     }
     case 'sticker': {
       const file: WhatsappFile = {
+        fileName: 'sticker_'.concat(messages.timestamp, getFileExtension(messages.sticker.mime_type)),
         mimeType: messages.sticker.mime_type,
         sha256: messages.sticker.sha256,
         url: messages.sticker.url,
@@ -166,6 +162,7 @@ const handler = async (params: {
     case 'video': {
       text = messages.video.caption;
       const file: WhatsappFile = {
+        fileName: 'video_'.concat(messages.timestamp, getFileExtension(messages.video.mime_type)),
         mimeType: messages.video.mime_type,
         sha256: messages.video.sha256,
         url: messages.video.url,
@@ -181,16 +178,16 @@ const handler = async (params: {
     messageChannelId: '', // find
     messages: [{
       externalId: messages.id,
-      threadExternalId: '',
+      threadExternalId: messageThread,
       text,
-      participants: [],
+      participants: participants,
       receivedAt: new Date(messages.timestamp),
     }]
   })
 }
 
 export default defineLogicFunction({
-  universalIdentifier: '8aa95b71-dffe-4232-8fdd-c4aeba2aedd0',
+  universalIdentifier: WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER,
   name: 'parse-message',
   description: 'Add a description for your logic function',
   timeoutSeconds: 900,

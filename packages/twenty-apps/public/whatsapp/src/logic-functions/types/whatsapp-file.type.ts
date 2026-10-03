@@ -1,5 +1,5 @@
 export type WhatsappFile = {
-  fileName?: string;
+  fileName: string;
   mimeType: string;
   sha256: string;
   url: string;

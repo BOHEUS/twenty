@@ -1,7 +1,5 @@
 import { defineConnectionProvider } from 'twenty-sdk/define';
-
-export const WHATSAPP_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER =
-  '5bb90895-9137-4a98-9865-442245575b32';
+import { WHATSAPP_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
 
 export default defineConnectionProvider({
   universalIdentifier: WHATSAPP_CONNECTION_PROVIDER_UNIVERSAL_IDENTIFIER,

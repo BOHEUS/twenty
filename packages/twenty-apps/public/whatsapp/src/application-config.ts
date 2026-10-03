@@ -4,6 +4,8 @@ import {
   APP_DESCRIPTION,
   APP_DISPLAY_NAME,
   APPLICATION_UNIVERSAL_IDENTIFIER,
+  WHATSAPP_APPLICATION_VARIABLE_ACCESS_TOKEN, WHATSAPP_APPLICATION_VARIABLE_VERIFY_TOKEN,
+  WHATSAPP_APPLICATION_VARIABLE_WEBHOOK_VALIDATION_SECRET,
 } from 'src/constants/universal-identifiers';
 
 export default defineApplication({
@@ -26,17 +28,17 @@ export default defineApplication({
   },
   applicationVariables: {
     VERIFY_TOKEN: {
-      universalIdentifier: "",
+      universalIdentifier: WHATSAPP_APPLICATION_VARIABLE_VERIFY_TOKEN,
       isSecret: true,
       description: 'Secret token used to validate webhooks',
     },
     WEBHOOK_VALIDATION_SECRET: {
-      universalIdentifier: "",
+      universalIdentifier: WHATSAPP_APPLICATION_VARIABLE_WEBHOOK_VALIDATION_SECRET,
       isSecret: true,
       description: 'Secret required to validate webhooks from WhatsApp',
     },
     ACCESS_TOKEN: {
-      universalIdentifier: "",
+      universalIdentifier: WHATSAPP_APPLICATION_VARIABLE_ACCESS_TOKEN,
       isSecret: true,
       description: 'Access token required to download files sent in chats',
     }

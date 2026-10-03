@@ -1,6 +1,5 @@
 import { defineFrontComponent } from 'twenty-sdk/define';
 import { useState } from 'react';
-import { Avatar } from 'twenty-ui/data-display';
 import {
   IconBox,
   IconHierarchy,
@@ -204,11 +203,6 @@ const MainPage = () => {
         padding: '40px',
       }}
     >
-      <Avatar
-        placeholder={APP_DISPLAY_NAME}
-        placeholderColorSeed={APP_DISPLAY_NAME}
-        size="xl"
-      />
       <span
         style={{
           fontSize: '24px',
