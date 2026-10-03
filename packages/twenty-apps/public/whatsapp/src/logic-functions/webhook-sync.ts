@@ -41,18 +41,51 @@ const handler = async (
 
   for (const entry of body.entry) {
     for (const change of entry.changes) {
-      if ('messages' in change.value) {
-        for (const message of change.value.messages) {
-          await enqueueJobs({
-            logicFunctionUniversalIdentifier: WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER,
-            retryLimit: 3,
-            delayMs: 500,
-            jobs: [{
-              payload: {
-                businessData: change.value.metadata, contacts: change.value.contacts[0], messages: message
-              }
-            }]
-          })
+      switch (change.field) {
+        case "account_alerts":
+        case "account_review_update":
+        case "account_update":
+        case "automatic_events":
+        case "business_capability_update":
+        case "history":
+        case "message_template_components_update":
+        case "message_template_quality_update":
+        case "message_template_status_update":
+        case "partner_solutions":
+        case "payment_configuration_update":
+        case "phone_number_name_update":
+        case "phone_number_quality_update":
+        case "security":
+        case "smb_app_state_sync":
+        case "smb_message_echoes":
+        case "template_category_update":
+        case "user_preferences":
+          return {
+            success: false,
+          }
+        case "messages": {
+          if ('errors' in change.value){
+            return {
+              success: false,
+            }
+          }
+          if ('statuses' in change.value) {
+            return {
+              success: false,
+            }
+          }
+          if ('messages' in change.value) {
+            await enqueueJobs({
+              logicFunctionUniversalIdentifier: WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER,
+              retryLimit: 3,
+              delayMs: 500,
+              jobs: [{
+                payload: {
+                  businessData: change.value.metadata, contacts: change.value.contacts[0], messages: change.value.messages,
+                }
+              }]
+            })
+          }
         }
       }
     }
