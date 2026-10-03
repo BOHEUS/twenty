@@ -1,5 +1,6 @@
 import { RecordTableCellStyleWrapper } from '@/object-record/record-table/record-table-cell/components/RecordTableCellStyleWrapper';
 import { getRecordTableColumnFieldWidthClassName } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthClassName';
+import { getRecordTableColumnFieldWidthStyle } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthStyle';
 import { styled } from '@linaria/react';
 import { themeCssVariables } from 'twenty-ui/theme';
 
@@ -20,6 +21,7 @@ export const RecordTableCellLoading = ({
   return (
     <RecordTableCellStyleWrapper
       widthClassName={getRecordTableColumnFieldWidthClassName(recordFieldIndex)}
+      style={getRecordTableColumnFieldWidthStyle(recordFieldIndex)}
       isSelected={isSelected}
     >
       <StyledStaticCellSkeleton />

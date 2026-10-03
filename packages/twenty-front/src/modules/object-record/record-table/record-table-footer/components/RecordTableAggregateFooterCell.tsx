@@ -1,10 +1,9 @@
 import { styled } from '@linaria/react';
 import { useContext } from 'react';
-import { MOBILE_VIEWPORT, themeCssVariables } from 'twenty-ui/theme';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 import { RECORD_TABLE_FIRST_COLUMN_LEFT_CSS_VAR } from '@/object-record/record-table/components/RecordTableStyleWrapper';
 import { RECORD_TABLE_CELL_CONTENT_CLASS_NAME } from '@/object-record/record-table/constants/RecordTableCellContentClassName';
-import { getRecordTableColumnFieldWidthCSSVariableName } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthCSSVariableName';
 import { RECORD_TABLE_ROW_HEIGHT } from '@/object-record/record-table/constants/RecordTableRowHeight';
 import { TABLE_Z_INDEX } from '@/object-record/record-table/constants/TableZIndex';
 import { useRecordTableContextOrThrow } from '@/object-record/record-table/contexts/RecordTableContext';
@@ -15,15 +14,13 @@ import { hasAggregateOperationForViewFieldFamilySelector } from '@/object-record
 import { isRecordTableColumnResizableComponentState } from '@/object-record/record-table/states/isRecordTableColumnResizableComponentState';
 import { useIsRecordTableWidgetAggregateNonInteractive } from '@/object-record/record-table-widget/hooks/useIsRecordTableWidgetAggregateNonInteractive';
 import { getRecordTableColumnFieldWidthClassName } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthClassName';
+import { getRecordTableColumnFieldWidthStyle } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthStyle';
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { cx } from '@linaria/core';
 import { findByProperty, isDefined } from 'twenty-shared/utils';
 
-const FIRST_COLUMN_WIDTH_CSS_VAR = `var(${getRecordTableColumnFieldWidthCSSVariableName(0)})`;
-
 const StyledColumnFooterCell = styled.div<{
-  columnWidth: number;
   isFirstCell: boolean;
   isReadOnly: boolean;
 }>`
@@ -49,8 +46,6 @@ const StyledColumnFooterCell = styled.div<{
     }
   }
 
-  min-width: ${({ columnWidth }) => columnWidth}px;
-
   overflow: hidden;
 
   padding: 0;
@@ -58,21 +53,10 @@ const StyledColumnFooterCell = styled.div<{
   position: sticky;
   text-align: left;
 
-  width: ${({ columnWidth }) => columnWidth}px;
-
   z-index: ${({ isFirstCell }) =>
     isFirstCell
       ? TABLE_Z_INDEX.footer.stickyColumn
       : TABLE_Z_INDEX.footer.default};
-
-  @media (max-width: ${MOBILE_VIEWPORT}px) {
-    max-width: ${({ isFirstCell }) =>
-      isFirstCell ? FIRST_COLUMN_WIDTH_CSS_VAR : 'none'};
-    min-width: ${({ isFirstCell }) =>
-      isFirstCell ? FIRST_COLUMN_WIDTH_CSS_VAR : '0'};
-    width: ${({ isFirstCell }) =>
-      isFirstCell ? FIRST_COLUMN_WIDTH_CSS_VAR : 'auto'};
-  }
 `;
 
 const StyledColumnFootContainer = styled.div`
@@ -119,13 +103,13 @@ export const RecordTableAggregateFooterCell = ({
 
   return (
     <StyledColumnFooterCell
-      columnWidth={recordField.size + 1}
       isFirstCell={isFirstCell}
       isReadOnly={isFooterReadOnly}
       className={cx(
         'footer-cell',
         getRecordTableColumnFieldWidthClassName(columnIndex),
       )}
+      style={getRecordTableColumnFieldWidthStyle(columnIndex)}
     >
       <StyledColumnFootContainer
         className={RECORD_TABLE_CELL_CONTENT_CLASS_NAME}

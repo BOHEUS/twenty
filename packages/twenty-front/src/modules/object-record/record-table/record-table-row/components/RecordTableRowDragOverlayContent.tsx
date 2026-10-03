@@ -35,21 +35,6 @@ import { type RecordTableRowDragData } from '@/object-record/record-table/types/
 import { getRecordTableColumnFieldWidthClassName } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthClassName';
 import { useScrollWrapperHTMLElement } from '@/ui/utilities/scroll/hooks/useScrollWrapperHTMLElement';
 
-const MAX_COLUMNS = 100;
-
-const cloneColumnFieldWidthRules = Array.from(
-  { length: MAX_COLUMNS },
-  (_, i) => {
-    const className = getRecordTableColumnFieldWidthClassName(i);
-    const cssVar = `var(--record-table-column-field-${i})`;
-    return `div.${className} {
-    width: ${cssVar};
-    min-width: ${cssVar};
-    max-width: ${cssVar};
-  }`;
-  },
-).join('\n');
-
 // The overlay portals outside the table, so its column width variables and sticky rules are redeclared.
 const StyledRowDragOverlayCSSBridge = styled.div`
   position: relative;
@@ -104,8 +89,6 @@ const StyledRowDragOverlayCSSBridge = styled.div`
     min-width: ${RECORD_TABLE_COLUMN_ADD_COLUMN_BUTTON_WIDTH}px;
     width: ${RECORD_TABLE_COLUMN_ADD_COLUMN_BUTTON_WIDTH}px;
   }
-
-  ${cloneColumnFieldWidthRules}
 
   div.${RECORD_TABLE_COLUMN_LAST_EMPTY_COLUMN_WIDTH_CLASS_NAME} {
     max-width: var(

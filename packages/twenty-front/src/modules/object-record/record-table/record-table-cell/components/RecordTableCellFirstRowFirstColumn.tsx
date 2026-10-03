@@ -1,5 +1,6 @@
 import { TABLE_Z_INDEX } from '@/object-record/record-table/constants/TableZIndex';
 import { getRecordTableColumnFieldWidthClassName } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthClassName';
+import { getRecordTableColumnFieldWidthStyle } from '@/object-record/record-table/utils/getRecordTableColumnFieldWidthStyle';
 import { cx } from '@linaria/core';
 import { styled } from '@linaria/react';
 import { type ReactNode } from 'react';
@@ -70,6 +71,7 @@ export const RecordTableCellFirstRowFirstColumn = ({
         'table-cell-0-0',
         getRecordTableColumnFieldWidthClassName(0),
       )}
+      style={getRecordTableColumnFieldWidthStyle(0)}
     >
       {children}
     </StyledRecordTableTd>
