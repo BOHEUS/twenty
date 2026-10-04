@@ -112,3 +112,11 @@ export type {
   VerifyJwtHs256Input,
   VerifyJwtHs256Result,
 } from '@/sdk/logic-function/webhooks/verify-jwt-hs256';
+
+export { lookupPeopleByPhoneNumber } from '@/sdk/logic-function/telephony/lookup-people-by-phone-number';
+export type {
+  PhoneLookupCandidate,
+  PhoneLookupInput,
+  PhoneLookupMatchBasis,
+  PhoneLookupResult,
+} from 'twenty-shared/application';
