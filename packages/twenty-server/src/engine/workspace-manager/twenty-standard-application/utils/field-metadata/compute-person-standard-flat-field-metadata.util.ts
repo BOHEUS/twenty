@@ -787,4 +787,34 @@ export const buildPersonStandardFlatFieldMetadatas = ({
     twentyStandardApplicationId,
     now,
   }),
+  callParticipants: createStandardRelationFieldFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      type: FieldMetadataType.RELATION,
+      morphId: null,
+      fieldName: 'callParticipants',
+      label: i18nLabel(
+        msg({ message: `Call Participants`, context: 'fieldMetadata.label' }),
+      ),
+      description: i18nLabel(
+        msg({
+          message: `Call participations`,
+          context: 'fieldMetadata.description',
+        }),
+      ),
+      icon: 'IconPhone',
+      isNullable: true,
+      isUIEditable: false,
+      targetObjectName: 'callParticipant',
+      targetFieldName: 'person',
+      settings: {
+        relationType: RelationType.ONE_TO_MANY,
+      },
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
 });

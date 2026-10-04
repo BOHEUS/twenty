@@ -268,6 +268,117 @@ export const STANDARD_OBJECTS = {
     },
     views: {},
   },
+  call: {
+    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.call,
+    fields: STANDARD_OBJECT_FIELDS.call,
+    indexes: {
+      ownerIdIndex: {
+        universalIdentifier: '4c1514a0-7caf-40c8-80a3-b3a022bfa69b',
+      },
+      companyIdIndex: {
+        universalIdentifier: '03df50cb-5e93-40e0-91ce-ad40084d3b3d',
+      },
+      opportunityIdIndex: {
+        universalIdentifier: 'aaec6669-de2d-4be5-beee-f06b925cf6b6',
+      },
+      applicationIdExternalCallIdUniqueIndex: {
+        universalIdentifier: '0502156c-c110-4183-9208-caf0c07b035e',
+      },
+    },
+    views: {
+      allCalls: buildStandardObjectIndexView({
+        objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.call,
+        fields: STANDARD_OBJECT_FIELDS.call,
+        viewFieldNames: [
+          'title',
+          'direction',
+          'status',
+          'medium',
+          'startedAt',
+          'durationInSeconds',
+          'owner',
+          'company',
+        ],
+      }),
+      callRecordPageFields: buildStandardObjectRecordPageFieldsView({
+        objectUniversalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.call,
+        fields: STANDARD_OBJECT_FIELDS.call,
+        viewFieldNames: [
+          'title',
+          'direction',
+          'medium',
+          'status',
+          'startedAt',
+          'answeredAt',
+          'endedAt',
+          'durationInSeconds',
+          'fromPhoneNumber',
+          'toPhoneNumber',
+          'owner',
+          'company',
+          'opportunity',
+          'recordingUrl',
+          'summary',
+          'createdAt',
+          'createdBy',
+        ],
+        viewFieldGroupNames: {
+          general: 'General',
+          system: 'System',
+        },
+      }),
+    },
+  },
+  callParticipant: {
+    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.callParticipant,
+    fields: STANDARD_OBJECT_FIELDS.callParticipant,
+    indexes: {
+      callIdIndex: {
+        universalIdentifier: '6369ae90-7b9f-458b-aabb-7766e0fe765e',
+      },
+      personIdIndex: {
+        universalIdentifier: '997c86da-a8c0-42a7-8238-9aeaf625a678',
+      },
+      workspaceMemberIdIndex: {
+        universalIdentifier: '44977170-7d79-45c1-8f14-f51beefa35a7',
+      },
+    },
+    views: {
+      allCallParticipants: buildStandardObjectIndexView({
+        objectUniversalIdentifier:
+          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.callParticipant,
+        fields: STANDARD_OBJECT_FIELDS.callParticipant,
+        viewFieldNames: [
+          'call',
+          'role',
+          'handle',
+          'displayName',
+          'person',
+          'workspaceMember',
+          'createdAt',
+        ],
+      }),
+      callParticipantRecordPageFields: buildStandardObjectRecordPageFieldsView({
+        objectUniversalIdentifier:
+          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.callParticipant,
+        fields: STANDARD_OBJECT_FIELDS.callParticipant,
+        viewFieldNames: [
+          'call',
+          'role',
+          'handle',
+          'displayName',
+          'person',
+          'workspaceMember',
+          'createdAt',
+          'createdBy',
+        ],
+        viewFieldGroupNames: {
+          general: 'General',
+          system: 'System',
+        },
+      }),
+    },
+  },
   callRecording: {
     universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.callRecording,
     fields: STANDARD_OBJECT_FIELDS.callRecording,

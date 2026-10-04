@@ -1123,6 +1123,324 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
     "universalIdentifier": "6a9b9656-3e23-4234-94a4-b913c5dde668",
     "views": {},
   },
+  "call": {
+    "fields": {
+      "answeredAt": {
+        "universalIdentifier": "5618cd30-e624-4258-a664-6408c255afa7",
+      },
+      "applicationId": {
+        "universalIdentifier": "54a2e0bd-eb8e-4715-af44-1486fe47486a",
+      },
+      "company": {
+        "universalIdentifier": "c5fb2ef1-2e10-4421-932b-7cd308ffd8cb",
+      },
+      "createdAt": {
+        "universalIdentifier": "9db356c4-07af-56b1-adc5-4bcd0857bf60",
+      },
+      "createdBy": {
+        "universalIdentifier": "2a32958a-b607-5f87-82e0-dbaf6651d22b",
+      },
+      "deletedAt": {
+        "universalIdentifier": "687ca682-4c3b-5f9b-9747-ba1b263bc1aa",
+      },
+      "direction": {
+        "universalIdentifier": "bbb8e33f-7f4f-4641-9d2b-4802fd16b91e",
+      },
+      "durationInSeconds": {
+        "universalIdentifier": "3f548f2c-d576-47cf-b03e-ab8309624aa9",
+      },
+      "endedAt": {
+        "universalIdentifier": "4c2c9ab8-b846-4545-95b5-56dd0e204d0b",
+      },
+      "externalCallId": {
+        "universalIdentifier": "0d712f3a-6c89-4e9a-b3e6-11d416672c99",
+      },
+      "fromPhoneNumber": {
+        "universalIdentifier": "b7df6438-9a28-4624-bf5b-e059976f3d57",
+      },
+      "id": {
+        "universalIdentifier": "485ff177-8aa0-5b60-b87f-152093e014d2",
+      },
+      "medium": {
+        "universalIdentifier": "5b2ffd03-09f2-4a98-b8e3-ba7b63aacabe",
+      },
+      "opportunity": {
+        "universalIdentifier": "0a556ca4-d373-4bf8-85a8-6df8dbd3383d",
+      },
+      "owner": {
+        "universalIdentifier": "dc1d5132-12f8-4b79-a3d7-af7911e50c8e",
+      },
+      "participants": {
+        "universalIdentifier": "83dc885e-657e-4054-a6d1-dfaf72acbf30",
+      },
+      "position": {
+        "universalIdentifier": "e4712bb7-a32d-552c-b2ce-58c4e3951889",
+      },
+      "recordingUrl": {
+        "universalIdentifier": "7dcbad2e-39ec-4a6f-aa40-f2d2d8cb3466",
+      },
+      "searchVector": {
+        "universalIdentifier": "ebd3cc34-a3b2-5ff6-b3e6-5ecc4e4dd41c",
+      },
+      "startedAt": {
+        "universalIdentifier": "56178efc-d3cb-4b2c-a814-cb0d1acd2195",
+      },
+      "status": {
+        "universalIdentifier": "31c6de2b-810b-4584-aa18-fc944a92bb23",
+      },
+      "summary": {
+        "universalIdentifier": "b6380213-a9b6-4b73-8350-d37bcacdad96",
+      },
+      "title": {
+        "universalIdentifier": "1063c843-d566-4240-aa7d-8d2a9bcfd9ac",
+      },
+      "toPhoneNumber": {
+        "universalIdentifier": "d459232c-a32a-44d6-b8dd-1431760f5924",
+      },
+      "transcript": {
+        "universalIdentifier": "aebb9f65-58fe-48f4-96c4-ca11b4b6f4ee",
+      },
+      "updatedAt": {
+        "universalIdentifier": "dc380f6f-9b98-57e9-88b3-9fc77b254f21",
+      },
+      "updatedBy": {
+        "universalIdentifier": "6a79f663-fdf6-5a05-8ffc-c30c9a170fa6",
+      },
+    },
+    "indexes": {
+      "applicationIdExternalCallIdUniqueIndex": {
+        "universalIdentifier": "0502156c-c110-4183-9208-caf0c07b035e",
+      },
+      "companyIdIndex": {
+        "universalIdentifier": "03df50cb-5e93-40e0-91ce-ad40084d3b3d",
+      },
+      "opportunityIdIndex": {
+        "universalIdentifier": "aaec6669-de2d-4be5-beee-f06b925cf6b6",
+      },
+      "ownerIdIndex": {
+        "universalIdentifier": "4c1514a0-7caf-40c8-80a3-b3a022bfa69b",
+      },
+    },
+    "universalIdentifier": "e1536121-497e-4c29-8e6b-410d73657260",
+    "views": {
+      "allCalls": {
+        "universalIdentifier": "c526737d-67a3-5df0-8142-88cd8ec4fded",
+        "viewFields": {
+          "company": {
+            "universalIdentifier": "ce25840b-2dd2-58ca-8933-270bcd34d130",
+          },
+          "direction": {
+            "universalIdentifier": "64c6fa6f-7d71-52ef-9c0c-f40894943ff1",
+          },
+          "durationInSeconds": {
+            "universalIdentifier": "6a95bda0-ba09-555f-9246-8ed0617495f1",
+          },
+          "medium": {
+            "universalIdentifier": "20e67cb8-dbfc-52f6-a004-a677d9382b95",
+          },
+          "owner": {
+            "universalIdentifier": "7a26c95e-ef9f-5a99-8ab9-1658dfec00d1",
+          },
+          "startedAt": {
+            "universalIdentifier": "b3691829-4f83-5b08-bb34-3475ebe18b79",
+          },
+          "status": {
+            "universalIdentifier": "d39e6860-f690-56a8-8165-5dd4d0616d97",
+          },
+          "title": {
+            "universalIdentifier": "894233f4-9647-5ff5-a492-7fe89964644f",
+          },
+        },
+      },
+      "callRecordPageFields": {
+        "universalIdentifier": "4d6365f0-c12c-5578-a31e-66a6e1b1833d",
+        "viewFieldGroups": {
+          "general": {
+            "universalIdentifier": "f04969be-f94b-506e-9779-636e84b8137f",
+          },
+          "system": {
+            "universalIdentifier": "de755f8d-9aa5-50cd-9b38-179e4fb3de1c",
+          },
+        },
+        "viewFields": {
+          "answeredAt": {
+            "universalIdentifier": "a1945543-54e6-5634-ab7e-21771b8ac31f",
+          },
+          "company": {
+            "universalIdentifier": "617b4c4c-e088-566f-ac57-0d3995cefc9e",
+          },
+          "createdAt": {
+            "universalIdentifier": "3af3cd96-231e-5fcb-9254-8e0ed11eea32",
+          },
+          "createdBy": {
+            "universalIdentifier": "1d063d7b-4a05-5d3b-bc8d-23a63ec67b63",
+          },
+          "direction": {
+            "universalIdentifier": "7c9121fc-d6d1-5629-9948-da280bc9d724",
+          },
+          "durationInSeconds": {
+            "universalIdentifier": "4674b125-5ea0-5921-9c24-2af7eec6d92f",
+          },
+          "endedAt": {
+            "universalIdentifier": "58d41fdc-6077-5888-8129-e3a31052b98e",
+          },
+          "fromPhoneNumber": {
+            "universalIdentifier": "728793b0-484d-5fc7-a64f-f84081446aaa",
+          },
+          "medium": {
+            "universalIdentifier": "15730b6a-77ef-5658-913b-184bec0e7a24",
+          },
+          "opportunity": {
+            "universalIdentifier": "b8de9c07-725b-5695-9e52-73fbc69c6766",
+          },
+          "owner": {
+            "universalIdentifier": "4623f6d3-377a-59a7-a845-6fdaf6907d08",
+          },
+          "recordingUrl": {
+            "universalIdentifier": "f5a0b391-ef76-52f8-aed9-7c7511c51e8e",
+          },
+          "startedAt": {
+            "universalIdentifier": "9754e372-0a6b-5589-b7b3-0320b6bc756f",
+          },
+          "status": {
+            "universalIdentifier": "74c43308-5f9c-5b68-a6f2-8654f7f464ed",
+          },
+          "summary": {
+            "universalIdentifier": "0b5c3f40-b9ca-5a4e-af3c-be1822879fdf",
+          },
+          "title": {
+            "universalIdentifier": "a0496415-4d01-50a5-a899-1a2443910e19",
+          },
+          "toPhoneNumber": {
+            "universalIdentifier": "3d29ec6b-dc16-5818-804f-1ba545219709",
+          },
+        },
+      },
+    },
+  },
+  "callParticipant": {
+    "fields": {
+      "call": {
+        "universalIdentifier": "8e8d87de-31f4-4867-b9a5-ec729e8eb7f2",
+      },
+      "createdAt": {
+        "universalIdentifier": "0b04ae38-680e-52b6-a401-5d3c94db7a8f",
+      },
+      "createdBy": {
+        "universalIdentifier": "fa333a00-b06b-55f9-ae0a-e40be6655f91",
+      },
+      "deletedAt": {
+        "universalIdentifier": "6eb6a5c5-2841-5263-9b34-c325f3a5d53e",
+      },
+      "displayName": {
+        "universalIdentifier": "b1237a2b-771d-40d1-bfb2-f70020ae814f",
+      },
+      "handle": {
+        "universalIdentifier": "8643f1ae-a5fb-4b6e-ad83-828b0978cfa0",
+      },
+      "id": {
+        "universalIdentifier": "1d86fd19-afa0-57ab-8973-e748cc36f102",
+      },
+      "person": {
+        "universalIdentifier": "8521364d-0a2c-470e-97bf-7a7755a10d04",
+      },
+      "position": {
+        "universalIdentifier": "faee083d-87ed-5027-8c80-d502fa593a83",
+      },
+      "role": {
+        "universalIdentifier": "25845bcf-9c56-453c-9839-2dcc8af591eb",
+      },
+      "searchVector": {
+        "universalIdentifier": "c2406b55-9560-57db-8396-5965e0f64221",
+      },
+      "updatedAt": {
+        "universalIdentifier": "83d6cc74-2a87-5f8d-9105-7647636174ec",
+      },
+      "updatedBy": {
+        "universalIdentifier": "ee9ad86a-5525-5f5b-83dd-4cb8a4941c97",
+      },
+      "workspaceMember": {
+        "universalIdentifier": "6cf42c17-5380-4f47-a9ee-8027a5112ad1",
+      },
+    },
+    "indexes": {
+      "callIdIndex": {
+        "universalIdentifier": "6369ae90-7b9f-458b-aabb-7766e0fe765e",
+      },
+      "personIdIndex": {
+        "universalIdentifier": "997c86da-a8c0-42a7-8238-9aeaf625a678",
+      },
+      "workspaceMemberIdIndex": {
+        "universalIdentifier": "44977170-7d79-45c1-8f14-f51beefa35a7",
+      },
+    },
+    "universalIdentifier": "b650fb1b-3e9b-4a50-95b4-157a74d0ed02",
+    "views": {
+      "allCallParticipants": {
+        "universalIdentifier": "50b397b1-a137-5d83-91d4-818d3ebf3836",
+        "viewFields": {
+          "call": {
+            "universalIdentifier": "9335b791-3943-5f64-a014-6af50f3f68a6",
+          },
+          "createdAt": {
+            "universalIdentifier": "00256015-d492-54e3-ad0a-56de0491b0da",
+          },
+          "displayName": {
+            "universalIdentifier": "c31850f6-1d4f-55d8-b99d-98332798bc08",
+          },
+          "handle": {
+            "universalIdentifier": "31efe9d2-beaf-56de-beba-e384a68723fd",
+          },
+          "person": {
+            "universalIdentifier": "9b0b35e7-5ecf-5e3e-ac59-609c0fe35f2a",
+          },
+          "role": {
+            "universalIdentifier": "e2d42824-9596-5f4f-b61b-2930ef9db067",
+          },
+          "workspaceMember": {
+            "universalIdentifier": "1f8c3ea3-67e7-5767-ace9-94dc632d47d8",
+          },
+        },
+      },
+      "callParticipantRecordPageFields": {
+        "universalIdentifier": "e7c679ff-e55f-56a5-854c-89a92bcd54c0",
+        "viewFieldGroups": {
+          "general": {
+            "universalIdentifier": "90104c71-98a9-54e0-b87c-afedf4e07ee4",
+          },
+          "system": {
+            "universalIdentifier": "c864aacd-6493-5774-82f2-70c9bdbd085f",
+          },
+        },
+        "viewFields": {
+          "call": {
+            "universalIdentifier": "c51ad5a3-7546-5398-adb2-e2f0c96454e0",
+          },
+          "createdAt": {
+            "universalIdentifier": "d178a6a4-8619-5302-b3ab-b495de39fa7d",
+          },
+          "createdBy": {
+            "universalIdentifier": "77bfc7bc-e621-5a82-bacd-c17aca0aa8e0",
+          },
+          "displayName": {
+            "universalIdentifier": "59c74b90-1c4a-5955-b86e-1f6f77cc652c",
+          },
+          "handle": {
+            "universalIdentifier": "925f42a8-2657-5f62-942f-67808cb245b7",
+          },
+          "person": {
+            "universalIdentifier": "2a1e2f66-2ca9-5047-8e0d-eb5a343ff70a",
+          },
+          "role": {
+            "universalIdentifier": "916ce0e8-00c2-5906-a03b-1afe9a9b0a0c",
+          },
+          "workspaceMember": {
+            "universalIdentifier": "52fd29d4-71a4-52ff-93bf-640309a16d70",
+          },
+        },
+      },
+    },
+  },
   "callRecording": {
     "fields": {
       "applicationId": {
@@ -1350,6 +1668,9 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
       },
       "calendarEventTargets": {
         "universalIdentifier": "f818ef0c-b67b-5dc7-b8e1-427902787503",
+      },
+      "calls": {
+        "universalIdentifier": "dc7512f9-c0d4-4a28-9954-709c8d8d4e46",
       },
       "createdAt": {
         "universalIdentifier": "d206d586-fd61-56e1-80a8-9993beb7be0b",
@@ -2714,6 +3035,9 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
       "calendarEventTargets": {
         "universalIdentifier": "73d131ea-d0dc-5509-83aa-9c0c29545ab2",
       },
+      "calls": {
+        "universalIdentifier": "9866e9d9-7691-4bf6-982c-4d8723309235",
+      },
       "closeDate": {
         "universalIdentifier": "20202020-527e-44d6-b1ac-c4158d307b97",
       },
@@ -2928,6 +3252,9 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
       "calendarEventTargets": {
         "universalIdentifier": "1bb24269-e654-598c-ac53-23973fafd1e6",
       },
+      "callParticipants": {
+        "universalIdentifier": "b99c81ce-69ad-4ff5-bd27-0e455b87c564",
+      },
       "company": {
         "universalIdentifier": "20202020-e2f3-448e-b34c-2d625f0025fd",
       },
@@ -2998,6 +3325,12 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
       },
       "emailsUniqueIndex": {
         "universalIdentifier": "8183a8b2-9114-4f6c-8a5b-12e3f14e5e13",
+      },
+      "phonesAdditionalPhonesGinIndex": {
+        "universalIdentifier": "9f2a6c4e-1b7d-4a3e-8c5f-2d6e9b1a7c03",
+      },
+      "phonesIndex": {
+        "universalIdentifier": "3c4e1f8a-7d2b-4e9c-a6f1-5b8d2e7c9a01",
       },
       "searchVectorGinIndex": {
         "universalIdentifier": "9294b9c3-0225-4a7d-9b6c-23f4a25f6f24",
@@ -4162,6 +4495,9 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
       "calendarStartDay": {
         "universalIdentifier": "20202020-1ecc-4562-84c9-ff3a2f6cce85",
       },
+      "callParticipants": {
+        "universalIdentifier": "15d6567c-00b2-45d2-869f-33ca5827c8ae",
+      },
       "colorScheme": {
         "universalIdentifier": "20202020-66bc-47f2-adac-f2ef7c598b63",
       },
@@ -4197,6 +4533,9 @@ exports[`STANDARD_OBJECTS universal identifiers should never change without an e
       },
       "openRecordIn": {
         "universalIdentifier": "20202020-1b16-419d-9323-6f3ea850e5d9",
+      },
+      "ownedCalls": {
+        "universalIdentifier": "8843ad60-ced3-4e60-a40a-64e0df4d3c20",
       },
       "ownedOpportunities": {
         "universalIdentifier": "20202020-9e4d-4b3a-8c1f-6d7e8f9a0b1c",

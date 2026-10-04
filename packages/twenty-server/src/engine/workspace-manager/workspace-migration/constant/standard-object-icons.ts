@@ -11,6 +11,8 @@ export const STANDARD_OBJECT_ICONS = {
   calendarEventParticipant: 'IconCalendar',
   calendarEvent: 'IconCalendar',
   calendarEventTarget: 'IconCalendar',
+  call: 'IconPhone',
+  callParticipant: 'IconUserCircle',
   callRecording: 'IconVideo',
   comment: 'IconMessageCircle',
   company: 'IconBuildingSkyscraper',

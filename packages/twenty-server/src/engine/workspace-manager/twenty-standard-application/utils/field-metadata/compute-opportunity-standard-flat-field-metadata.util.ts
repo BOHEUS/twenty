@@ -690,4 +690,34 @@ export const buildOpportunityStandardFlatFieldMetadatas = ({
     twentyStandardApplicationId,
     now,
   }),
+  calls: createStandardRelationFieldFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      type: FieldMetadataType.RELATION,
+      morphId: null,
+      fieldName: 'calls',
+      label: i18nLabel(
+        msg({ message: `Calls`, context: 'fieldMetadata.label' }),
+      ),
+      description: i18nLabel(
+        msg({
+          message: `Calls linked to the opportunity`,
+          context: 'fieldMetadata.description',
+        }),
+      ),
+      icon: 'IconPhone',
+      isNullable: true,
+      isUIEditable: false,
+      targetObjectName: 'call',
+      targetFieldName: 'opportunity',
+      settings: {
+        relationType: RelationType.ONE_TO_MANY,
+      },
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
 });

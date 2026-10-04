@@ -664,6 +664,61 @@ export const STANDARD_OBJECT_FIELDS = {
       }),
     },
   },
+  call: {
+    ...buildStandardObjectSystemFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.call,
+    ),
+    title: { universalIdentifier: '1063c843-d566-4240-aa7d-8d2a9bcfd9ac' },
+    direction: { universalIdentifier: 'bbb8e33f-7f4f-4641-9d2b-4802fd16b91e' },
+    medium: { universalIdentifier: '5b2ffd03-09f2-4a98-b8e3-ba7b63aacabe' },
+    status: { universalIdentifier: '31c6de2b-810b-4584-aa18-fc944a92bb23' },
+    startedAt: { universalIdentifier: '56178efc-d3cb-4b2c-a814-cb0d1acd2195' },
+    answeredAt: { universalIdentifier: '5618cd30-e624-4258-a664-6408c255afa7' },
+    endedAt: { universalIdentifier: '4c2c9ab8-b846-4545-95b5-56dd0e204d0b' },
+    durationInSeconds: {
+      universalIdentifier: '3f548f2c-d576-47cf-b03e-ab8309624aa9',
+    },
+    fromPhoneNumber: {
+      universalIdentifier: 'b7df6438-9a28-4624-bf5b-e059976f3d57',
+    },
+    toPhoneNumber: {
+      universalIdentifier: 'd459232c-a32a-44d6-b8dd-1431760f5924',
+    },
+    recordingUrl: {
+      universalIdentifier: '7dcbad2e-39ec-4a6f-aa40-f2d2d8cb3466',
+    },
+    transcript: { universalIdentifier: 'aebb9f65-58fe-48f4-96c4-ca11b4b6f4ee' },
+    summary: { universalIdentifier: 'b6380213-a9b6-4b73-8350-d37bcacdad96' },
+    applicationId: {
+      universalIdentifier: '54a2e0bd-eb8e-4715-af44-1486fe47486a',
+    },
+    externalCallId: {
+      universalIdentifier: '0d712f3a-6c89-4e9a-b3e6-11d416672c99',
+    },
+    owner: { universalIdentifier: 'dc1d5132-12f8-4b79-a3d7-af7911e50c8e' },
+    company: { universalIdentifier: 'c5fb2ef1-2e10-4421-932b-7cd308ffd8cb' },
+    opportunity: {
+      universalIdentifier: '0a556ca4-d373-4bf8-85a8-6df8dbd3383d',
+    },
+    participants: {
+      universalIdentifier: '83dc885e-657e-4054-a6d1-dfaf72acbf30',
+    },
+  },
+  callParticipant: {
+    ...buildStandardObjectSystemFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.callParticipant,
+    ),
+    call: { universalIdentifier: '8e8d87de-31f4-4867-b9a5-ec729e8eb7f2' },
+    role: { universalIdentifier: '25845bcf-9c56-453c-9839-2dcc8af591eb' },
+    handle: { universalIdentifier: '8643f1ae-a5fb-4b6e-ad83-828b0978cfa0' },
+    displayName: {
+      universalIdentifier: 'b1237a2b-771d-40d1-bfb2-f70020ae814f',
+    },
+    person: { universalIdentifier: '8521364d-0a2c-470e-97bf-7a7755a10d04' },
+    workspaceMember: {
+      universalIdentifier: '6cf42c17-5380-4f47-a9ee-8027a5112ad1',
+    },
+  },
   callRecording: {
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.callRecording,
@@ -712,6 +767,7 @@ export const STANDARD_OBJECT_FIELDS = {
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.company,
     ),
+    calls: { universalIdentifier: 'dc7512f9-c0d4-4a28-9954-709c8d8d4e46' },
     name: { universalIdentifier: '20202020-4d99-4e2e-a84c-4a27837b1ece' },
     domainName: {
       universalIdentifier: '20202020-0c28-43d8-8ba5-3659924d3489',
@@ -1138,6 +1194,7 @@ export const STANDARD_OBJECT_FIELDS = {
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.opportunity,
     ),
+    calls: { universalIdentifier: '9866e9d9-7691-4bf6-982c-4d8723309235' },
     name: { universalIdentifier: '20202020-8609-4f65-a2d9-44009eb422b5' },
     amount: { universalIdentifier: '20202020-583e-4642-8533-db761d5fa82f' },
     closeDate: {
@@ -1224,6 +1281,9 @@ export const STANDARD_OBJECT_FIELDS = {
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.person,
     ),
+    callParticipants: {
+      universalIdentifier: 'b99c81ce-69ad-4ff5-bd27-0e455b87c564',
+    },
     name: { universalIdentifier: '20202020-3875-44d5-8c33-a6239011cab8' },
     emails: { universalIdentifier: '20202020-3c51-43fa-8b6e-af39e29368ab' },
     linkedinLink: {
@@ -1550,6 +1610,10 @@ export const STANDARD_OBJECT_FIELDS = {
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workspaceMember,
     ),
+    ownedCalls: { universalIdentifier: '8843ad60-ced3-4e60-a40a-64e0df4d3c20' },
+    callParticipants: {
+      universalIdentifier: '15d6567c-00b2-45d2-869f-33ca5827c8ae',
+    },
     name: { universalIdentifier: '20202020-e914-43a6-9c26-3603c59065f4' },
     colorScheme: {
       universalIdentifier: '20202020-66bc-47f2-adac-f2ef7c598b63',

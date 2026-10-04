@@ -672,6 +672,90 @@ export const STANDARD_FLAT_OBJECT_METADATA_BUILDERS_BY_OBJECT_NAME = {
       twentyStandardApplicationId,
       now,
     }),
+  call: ({
+    now,
+    workspaceId,
+    standardObjectMetadataRelatedEntityIds,
+    twentyStandardApplicationId,
+    dependencyFlatEntityMaps,
+  }: Omit<CreateStandardObjectArgs<'call'>, 'context' | 'objectName'>) =>
+    createStandardObjectFlatMetadata({
+      objectName: 'call',
+      dependencyFlatEntityMaps,
+      context: {
+        universalIdentifier: STANDARD_OBJECTS.call.universalIdentifier,
+        nameSingular: 'call',
+        namePlural: 'calls',
+        labelSingular: i18nLabel(
+          msg({ message: `Call`, context: 'objectMetadata.labelSingular' }),
+        ),
+        labelPlural: i18nLabel(
+          msg({ message: `Calls`, context: 'objectMetadata.labelPlural' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `A phone, VoIP or WhatsApp call logged by a telephony app`,
+            context: 'objectMetadata.description',
+          }),
+        ),
+        icon: 'IconPhone',
+        isSystem: true,
+        isAuditLogged: false,
+        isUICreatable: false,
+        labelIdentifierFieldMetadataName: 'title',
+      },
+      workspaceId,
+      standardObjectMetadataRelatedEntityIds,
+      twentyStandardApplicationId,
+      now,
+    }),
+  callParticipant: ({
+    now,
+    workspaceId,
+    standardObjectMetadataRelatedEntityIds,
+    twentyStandardApplicationId,
+    dependencyFlatEntityMaps,
+  }: Omit<
+    CreateStandardObjectArgs<'callParticipant'>,
+    'context' | 'objectName'
+  >) =>
+    createStandardObjectFlatMetadata({
+      objectName: 'callParticipant',
+      dependencyFlatEntityMaps,
+      context: {
+        universalIdentifier:
+          STANDARD_OBJECTS.callParticipant.universalIdentifier,
+        nameSingular: 'callParticipant',
+        namePlural: 'callParticipants',
+        labelSingular: i18nLabel(
+          msg({
+            message: `Call Participant`,
+            context: 'objectMetadata.labelSingular',
+          }),
+        ),
+        labelPlural: i18nLabel(
+          msg({
+            message: `Call Participants`,
+            context: 'objectMetadata.labelPlural',
+          }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Someone who took part in a call`,
+            context: 'objectMetadata.description',
+          }),
+        ),
+        icon: 'IconUserCircle',
+        isSystem: true,
+        isAuditLogged: false,
+        isUICreatable: false,
+        labelIdentifierFieldMetadataName: 'handle',
+      },
+      workspaceId,
+      standardObjectMetadataRelatedEntityIds,
+      twentyStandardApplicationId,
+      now,
+    }),
   callRecording: ({
     now,
     workspaceId,

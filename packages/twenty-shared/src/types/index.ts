@@ -22,11 +22,15 @@ export { CalendarChannelContactAutoCreationPolicy } from './CalendarChannelConta
 export { CalendarChannelSyncStage } from './CalendarChannelSyncStage';
 export { CalendarChannelSyncStatus } from './CalendarChannelSyncStatus';
 export { CalendarChannelVisibility } from './CalendarChannelVisibility';
+export { CallDirection } from './CallDirection';
+export { CallMedium } from './CallMedium';
+export { CallParticipantRole } from './CallParticipantRole';
 export type {
   CallRecordingTranscriptStatusMarker,
   CallRecordingParsedTranscriptWord,
   CallRecordingParsedTranscriptEntry,
 } from './CallRecordingTranscript';
+export { CallStatus } from './CallStatus';
 export type { CommandMenuConfirmationModalResult } from './CommandMenuConfirmationModalResult';
 export type { CommandMenuConfirmationModalResultBrowserEventDetail } from './CommandMenuConfirmationModalResultBrowserEventDetail';
 export type { CommandMenuContextApi } from './CommandMenuContextApi';
