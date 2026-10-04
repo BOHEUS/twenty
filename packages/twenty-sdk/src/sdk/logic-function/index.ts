@@ -99,3 +99,16 @@ export type { AppKeyValue, AppKeyValueScope } from 'twenty-shared/application';
 
 export { Response } from '@/sdk/logic-function/response';
 export type { ResponseInit } from '@/sdk/logic-function/response';
+
+export { isTimingSafeEqual } from '@/sdk/logic-function/webhooks/is-timing-safe-equal';
+export { verifyHmacSignature } from '@/sdk/logic-function/webhooks/verify-hmac-signature';
+export type {
+  HmacSignatureAlgorithm,
+  HmacSignatureEncoding,
+  VerifyHmacSignatureInput,
+} from '@/sdk/logic-function/webhooks/verify-hmac-signature';
+export { verifyJwtHs256 } from '@/sdk/logic-function/webhooks/verify-jwt-hs256';
+export type {
+  VerifyJwtHs256Input,
+  VerifyJwtHs256Result,
+} from '@/sdk/logic-function/webhooks/verify-jwt-hs256';
