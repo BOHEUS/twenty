@@ -914,6 +914,12 @@ export const STANDARD_OBJECTS = {
       emailsUniqueIndex: {
         universalIdentifier: '8183a8b2-9114-4f6c-8a5b-12e3f14e5e13',
       },
+      phonesIndex: {
+        universalIdentifier: '3c4e1f8a-7d2b-4e9c-a6f1-5b8d2e7c9a01',
+      },
+      phonesAdditionalPhonesGinIndex: {
+        universalIdentifier: '9f2a6c4e-1b7d-4a3e-8c5f-2d6e9b1a7c03',
+      },
       searchVectorGinIndex: {
         universalIdentifier: '9294b9c3-0225-4a7d-9b6c-23f4a25f6f24',
       },

@@ -21,6 +21,10 @@ import { type UniversalFlatIndexFieldMetadata } from 'src/engine/workspace-manag
 export type CreateStandardIndexOptions<O extends AllStandardObjectName> = {
   indexName: AllStandardObjectIndexName<O>;
   relatedFieldNames: AllStandardObjectFieldName<O>[];
+  // Targets one property of a composite field instead of its unique-constraint projection
+  subFieldNameByRelatedFieldName?: Partial<
+    Record<AllStandardObjectFieldName<O>, string>
+  >;
   hasDeterministicUniversalIdentifier?: boolean;
 } & Partial<
   Pick<FlatIndexMetadata, 'indexType' | 'indexWhereClause' | 'isUnique'>
@@ -41,6 +45,7 @@ export const createStandardIndexFlatMetadata = <
   context: {
     indexName,
     relatedFieldNames,
+    subFieldNameByRelatedFieldName = {},
     indexType = IndexType.BTREE,
     indexWhereClause = null,
     isUnique = false,
@@ -91,13 +96,17 @@ export const createStandardIndexFlatMetadata = <
 
   const indexId = v4();
 
+  const subFieldNames = relatedFieldNames.map(
+    (fieldName) => subFieldNameByRelatedFieldName[fieldName] ?? null,
+  );
+
   const computedIndexName = computeFlatIndexNameOrThrow({
     flatObjectMetadata,
     objectFlatFieldMetadatas: flatFieldMetadatas,
     indexFields: flatFieldMetadatas.map((flatFieldMetadata, index) => ({
       order: index,
       fieldMetadataUniversalIdentifier: flatFieldMetadata.universalIdentifier,
-      subFieldName: null,
+      subFieldName: subFieldNames[index],
     })),
     isUnique,
     indexWhereClause,
@@ -130,7 +139,7 @@ export const createStandardIndexFlatMetadata = <
         ({ universalIdentifier: fieldMetadataUniversalIdentifier }, index) => ({
           createdAt: now,
           order: index,
-          subFieldName: null,
+          subFieldName: subFieldNames[index],
           updatedAt: now,
           fieldMetadataUniversalIdentifier,
           indexMetadataUniversalIdentifier: universalIdentifier,
@@ -149,7 +158,7 @@ export const createStandardIndexFlatMetadata = <
         id: v4(),
         indexMetadataId: indexId,
         order: index,
-        subFieldName: null,
+        subFieldName: subFieldNames[index],
         updatedAt: now,
         workspaceId,
       }),
