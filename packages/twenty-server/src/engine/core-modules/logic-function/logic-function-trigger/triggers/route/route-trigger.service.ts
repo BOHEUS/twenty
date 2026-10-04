@@ -21,6 +21,7 @@ import {
   RouteTriggerExceptionCode,
 } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/route/exceptions/route-trigger.exception';
 import { LogicFunctionTriggerService } from 'src/engine/core-modules/logic-function/logic-function-trigger/logic-function-trigger.service';
+import { buildPublicRequestUrl } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/route/utils/build-logic-function-event.util';
 import { type RouteTriggerResponse } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/route/utils/route-trigger-response.util';
 import { sanitizeRouteTriggerPath } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/route/utils/sanitize-route-trigger-path.util';
 import {
@@ -45,6 +46,7 @@ type RouteTriggerRequestContext = {
   workspace: RouteTriggerWorkspace;
   applicationId: string | null;
   isIsolatedOrigin: boolean;
+  requestOrigin: string;
   authenticationContext: RawAuthContext | undefined;
 };
 
@@ -126,6 +128,7 @@ export class RouteTriggerService {
       workspace,
       applicationId: publicDomain?.applicationId ?? null,
       isIsolatedOrigin,
+      requestOrigin: host,
       authenticationContext,
     };
   }
@@ -260,6 +263,7 @@ export class RouteTriggerService {
       workspace,
       applicationId,
       isIsolatedOrigin,
+      requestOrigin,
       authenticationContext,
     } = await this.resolveRouteTriggerRequestContextOrFail(request);
 
@@ -312,6 +316,15 @@ export class RouteTriggerService {
       userId = routeAuthenticationContext.user?.id ?? null;
     }
 
+    // The request origin is what the provider called and is already trusted
+    // above to resolve the workspace. Isolated origins serve routes without
+    // the internal /s/ prefix; legacy routes keep it.
+    const publicUrl = buildPublicRequestUrl({
+      publicOrigin: requestOrigin,
+      request,
+      stripRouteTriggerPrefix: isIsolatedOrigin,
+    });
+
     let outcome;
 
     try {
@@ -324,6 +337,7 @@ export class RouteTriggerService {
         forwardAllHeaders: isIsolatedOrigin,
         userId,
         userWorkspaceId,
+        publicUrl,
       });
     } catch (error) {
       if (

@@ -2,6 +2,7 @@ import { type Request } from 'express';
 
 import {
   buildLogicFunctionEvent,
+  buildPublicRequestUrl,
   extractBody,
   extractRawBody,
   filterRequestHeaders,
@@ -401,6 +402,33 @@ describe('buildLogicFunctionEvent', () => {
     });
   });
 
+  it('should include the public url when provided', () => {
+    const request = createMockRequest({ path: '/webhooks/server/abc' });
+
+    const result = buildLogicFunctionEvent({
+      request,
+      pathParameters: {},
+      forwardedRequestHeaders: [],
+      userWorkspaceId: null,
+      publicUrl: 'https://api.example.com/webhooks/server/abc?x=1',
+    });
+
+    expect(result.requestContext.http.url).toBe(
+      'https://api.example.com/webhooks/server/abc?x=1',
+    );
+  });
+
+  it('should leave the public url out when unknown', () => {
+    const result = buildLogicFunctionEvent({
+      request: createMockRequest(),
+      pathParameters: {},
+      forwardedRequestHeaders: [],
+      userWorkspaceId: null,
+    });
+
+    expect(result.requestContext.http).not.toHaveProperty('url');
+  });
+
   it('should preserve the request path as-is', () => {
     const request = createMockRequest({
       path: '/s/api/users',
@@ -562,5 +590,61 @@ describe('buildLogicFunctionEvent', () => {
       orgId: 'org1',
       userId: 'user1',
     });
+  });
+});
+
+describe('buildPublicRequestUrl', () => {
+  const request = {
+    path: '/webhooks/server/abc',
+    originalUrl: '/webhooks/server/abc?token=1',
+  } as Request;
+
+  it('joins the public origin with the original url including its query', () => {
+    expect(
+      buildPublicRequestUrl({
+        publicOrigin: 'https://api.example.com',
+        request,
+      }),
+    ).toBe('https://api.example.com/webhooks/server/abc?token=1');
+  });
+
+  it('tolerates a trailing slash on the origin', () => {
+    expect(
+      buildPublicRequestUrl({
+        publicOrigin: 'https://api.example.com/',
+        request,
+      }),
+    ).toBe('https://api.example.com/webhooks/server/abc?token=1');
+  });
+
+  it('strips the internal /s/ prefix for isolated origins', () => {
+    expect(
+      buildPublicRequestUrl({
+        publicOrigin: 'https://hooks.acme.com',
+        request: {
+          path: '/s/slack/events',
+          originalUrl: '/s/slack/events?v=1',
+        } as Request,
+        stripRouteTriggerPrefix: true,
+      }),
+    ).toBe('https://hooks.acme.com/slack/events?v=1');
+  });
+
+  it('falls back to the path when the original url is missing', () => {
+    expect(
+      buildPublicRequestUrl({
+        publicOrigin: 'https://api.example.com',
+        request: { path: '/s/route' } as Request,
+      }),
+    ).toBe('https://api.example.com/s/route');
+  });
+
+  it('returns undefined without a public origin', () => {
+    expect(buildPublicRequestUrl({ publicOrigin: undefined, request })).toBe(
+      undefined,
+    );
+    expect(buildPublicRequestUrl({ publicOrigin: '', request })).toBe(
+      undefined,
+    );
   });
 });

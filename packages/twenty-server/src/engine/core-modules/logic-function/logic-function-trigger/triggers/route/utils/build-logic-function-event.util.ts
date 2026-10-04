@@ -4,6 +4,7 @@ import { type LogicFunctionEvent } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { isObject, isString } from '@sniptt/guards';
 
+import { sanitizeRouteTriggerPath } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/route/utils/sanitize-route-trigger-path.util';
 import { isCredentialRequestHeaderName } from 'src/engine/metadata-modules/logic-function/utils/is-credential-request-header-name.util';
 
 const normalizeHeaderValue = (
@@ -144,12 +145,14 @@ export const buildLogicFunctionEvent = ({
   forwardedRequestHeaders,
   forwardAllHeaders = false,
   userWorkspaceId,
+  publicUrl,
 }: {
   request: Request;
   pathParameters: Record<string, string | string[] | undefined>;
   forwardedRequestHeaders: string[];
   forwardAllHeaders?: boolean;
   userWorkspaceId: string | null;
+  publicUrl?: string;
 }): LogicFunctionEvent => {
   const rawBody = extractRawBody(request);
 
@@ -168,8 +171,34 @@ export const buildLogicFunctionEvent = ({
       http: {
         method: request.method,
         path: request.path,
+        ...(isDefined(publicUrl) ? { url: publicUrl } : {}),
       },
     },
     userWorkspaceId,
   };
+};
+
+// request.originalUrl keeps the query string, which signed-URL schemes include.
+export const buildPublicRequestUrl = ({
+  publicOrigin,
+  request,
+  stripRouteTriggerPrefix = false,
+}: {
+  publicOrigin: string | undefined;
+  request: Request;
+  stripRouteTriggerPrefix?: boolean;
+}): string | undefined => {
+  if (!isDefined(publicOrigin) || publicOrigin === '') {
+    return undefined;
+  }
+
+  const origin = publicOrigin.endsWith('/')
+    ? publicOrigin.slice(0, -1)
+    : publicOrigin;
+  const originalUrl = request.originalUrl ?? request.path;
+  const absoluteUrl = originalUrl.startsWith('/')
+    ? originalUrl
+    : `/${originalUrl}`;
+
+  return `${origin}${stripRouteTriggerPrefix ? sanitizeRouteTriggerPath(absoluteUrl) : absoluteUrl}`;
 };

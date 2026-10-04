@@ -9,6 +9,10 @@ export type LogicFunctionEvent<TBody = object> = {
     http: {
       method: string;
       path: string;
+      // The URL the provider called, built from the configured public
+      // origin rather than the proxied request. Providers that sign the
+      // full URL (Twilio) cannot be verified without it.
+      url?: string;
     };
   };
   // Populated for HTTP-route triggers with `isAuthRequired: true`. null

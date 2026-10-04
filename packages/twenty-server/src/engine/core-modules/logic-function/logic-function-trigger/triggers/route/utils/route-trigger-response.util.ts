@@ -8,12 +8,15 @@ export type RouteTriggerResponse = {
   body: unknown;
 };
 
-const ALLOWED_RESPONSE_HEADERS = new Set([
+// validation-token: webhook subscription handshakes (RingCentral) echo the
+// provider's token back in a response header, so it must survive the filter.
+export const ALLOWED_RESPONSE_HEADERS = new Set([
   'content-type',
   'content-language',
   'content-disposition',
   'cache-control',
   'retry-after',
+  'validation-token',
 ]);
 
 export const buildRouteTriggerResponse = (
