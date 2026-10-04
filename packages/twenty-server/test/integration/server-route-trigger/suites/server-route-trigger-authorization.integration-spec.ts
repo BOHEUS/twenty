@@ -4,6 +4,7 @@ import { cleanupApplicationAndAppRegistration } from 'test/integration/metadata/
 import { setupApplicationForSync } from 'test/integration/metadata/suites/application/utils/setup-application-for-sync.util';
 import { syncApplication } from 'test/integration/metadata/suites/application/utils/sync-application.util';
 import { uploadApplicationFile } from 'test/integration/metadata/suites/application/utils/upload-application-file.util';
+import { insertApplicationRegistrationVariable } from 'test/integration/metadata/suites/application-registration-variable/utils/insert-application-registration-variable.util';
 import { expectOneNotInternalServerErrorHttpResponseSnapshot } from 'test/integration/utils/expect-one-not-internal-server-error-http-response-snapshot.util';
 import {
   type LogicFunctionManifest,
@@ -31,6 +32,10 @@ const HANDSHAKE_RESOLVER_UNIVERSAL_IDENTIFIER =
   '5e5f983f-5c1a-4c60-a3c8-7d0e2a4a55e5';
 const GET_HANDSHAKE_RESOLVER_UNIVERSAL_IDENTIFIER =
   '6f6f983f-5c1a-4c60-a3c8-7d0e2a4a66f6';
+const TOKEN_RESOLVER_UNIVERSAL_IDENTIFIER =
+  '7a7f983f-5c1a-4c60-a3c8-7d0e2a4a77a7';
+const PROVIDER_WEBHOOK_TOKEN_VARIABLE_NAME = 'PROVIDER_WEBHOOK_TOKEN';
+const PROVIDER_WEBHOOK_TOKEN = 'provider-webhook-token-value';
 
 const TARGET_FUNCTION_RESPONSE = { greeting: 'hello from target function' };
 
@@ -70,12 +75,14 @@ const buildLogicFunctionManifest = ({
   serverRouteExposed,
   authRequired,
   httpMethods,
+  requestAuthentication,
 }: {
   universalIdentifier: string;
   name: string;
   serverRouteExposed: boolean;
   authRequired: boolean;
   httpMethods?: ServerRouteTriggerSettings['httpMethods'];
+  requestAuthentication?: ServerRouteTriggerSettings['requestAuthentication'];
 }): LogicFunctionManifest => ({
   universalIdentifier,
   name,
@@ -97,6 +104,9 @@ const buildLogicFunctionManifest = ({
         serverRouteTriggerSettings: {
           forwardedRequestHeaders: [],
           ...(isDefined(httpMethods) ? { httpMethods } : {}),
+          ...(isDefined(requestAuthentication)
+            ? { requestAuthentication }
+            : {}),
         },
       }
     : {}),
@@ -155,6 +165,11 @@ describe('ServerRouteTrigger authorization (integration)', () => {
       builtHandlerCode: TARGET_BUILT_HANDLER_CODE,
     });
 
+    await uploadBuiltHandlerFile({
+      builtHandlerPath: 'dist/token-resolver.mjs',
+      builtHandlerCode: HANDSHAKE_RESOLVER_BUILT_HANDLER_CODE,
+    });
+
     await syncApplication({
       manifest: buildBaseManifest({
         appId: APP_UNIVERSAL_IDENTIFIER,
@@ -198,10 +213,33 @@ describe('ServerRouteTrigger authorization (integration)', () => {
               serverRouteExposed: false,
               authRequired: false,
             }),
+            buildLogicFunctionManifest({
+              universalIdentifier: TOKEN_RESOLVER_UNIVERSAL_IDENTIFIER,
+              name: 'token-resolver',
+              serverRouteExposed: true,
+              authRequired: false,
+              requestAuthentication: {
+                type: 'HEADER_TOKEN',
+                headerName: 'X-Provider-Token',
+                secretServerVariableName: PROVIDER_WEBHOOK_TOKEN_VARIABLE_NAME,
+              },
+            }),
           ],
         },
       }),
       expectToFail: false,
+    });
+
+    const [{ applicationRegistrationId }] =
+      await globalThis.testDataSource.query(
+        `SELECT "applicationRegistrationId" FROM core."application" WHERE "universalIdentifier" = $1`,
+        [APP_UNIVERSAL_IDENTIFIER],
+      );
+
+    await insertApplicationRegistrationVariable({
+      applicationRegistrationId,
+      key: PROVIDER_WEBHOOK_TOKEN_VARIABLE_NAME,
+      value: PROVIDER_WEBHOOK_TOKEN,
     });
   }, 60000);
 
@@ -253,6 +291,39 @@ describe('ServerRouteTrigger authorization (integration)', () => {
         body: response.body,
       });
     });
+  });
+
+  describe('POST /webhooks/server/:universalIdentifier with request authentication', () => {
+    it('rejects a request without the provider token before executing the resolver', async () => {
+      const response = await request(baseUrl)
+        .post(`/webhooks/server/${TOKEN_RESOLVER_UNIVERSAL_IDENTIFIER}`)
+        .send({ type: 'url_verification', challenge: 'abc123' });
+
+      expect(response.status).toBe(401);
+      expectOneNotInternalServerErrorHttpResponseSnapshot({
+        status: response.status,
+        body: response.body,
+      });
+    });
+
+    it('rejects a request with a wrong provider token', async () => {
+      const response = await request(baseUrl)
+        .post(`/webhooks/server/${TOKEN_RESOLVER_UNIVERSAL_IDENTIFIER}`)
+        .set('X-Provider-Token', 'not-the-token')
+        .send({ type: 'url_verification', challenge: 'abc123' });
+
+      expect(response.status).toBe(401);
+    });
+
+    it('executes the resolver when the provider token matches', async () => {
+      const response = await request(baseUrl)
+        .post(`/webhooks/server/${TOKEN_RESOLVER_UNIVERSAL_IDENTIFIER}`)
+        .set('X-Provider-Token', PROVIDER_WEBHOOK_TOKEN)
+        .send({ type: 'url_verification', challenge: 'abc123' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ challenge: 'abc123' });
+    }, 60000);
   });
 
   describe('GET /webhooks/server/:universalIdentifier (public, unauthenticated)', () => {

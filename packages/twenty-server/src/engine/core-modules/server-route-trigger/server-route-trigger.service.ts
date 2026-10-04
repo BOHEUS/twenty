@@ -1,9 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type RawBodyRequest } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
 import { Request } from 'express';
 import { isLogicFunctionHttpResponse } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { type SelectQueryBuilder } from 'typeorm';
+import { Repository, type SelectQueryBuilder } from 'typeorm';
+
+import { ApplicationRegistrationVariableEntity } from 'src/engine/core-modules/application/application-registration-variable/application-registration-variable.entity';
 
 import { isUsageRefusedError } from 'src/engine/core-modules/billing/utils/is-usage-refused-error.util';
 import {
@@ -36,6 +39,9 @@ import {
 import { type LogicFunctionExecutionThrottle } from 'src/engine/core-modules/logic-function/logic-function-executor/types/logic-function-execution-throttle.type';
 import { buildServerRouteResolverThrottle } from 'src/engine/core-modules/server-route-trigger/utils/build-server-route-resolver-throttle.util';
 import { parseResolverDispatchResultOrThrow } from 'src/engine/core-modules/server-route-trigger/utils/parse-resolver-dispatch-result-or-throw.util';
+import { hasRequestBody } from 'src/engine/core-modules/server-route-trigger/utils/has-request-body.util';
+import { verifyServerRouteRequestAuthentication } from 'src/engine/core-modules/server-route-trigger/utils/verify-server-route-request-authentication.util';
+import { SecretEncryptionService } from 'src/engine/core-modules/secret-encryption/secret-encryption.service';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { LogicFunctionEntity } from 'src/engine/metadata-modules/logic-function/logic-function.entity';
 import {
@@ -68,6 +74,9 @@ export class ServerRouteTriggerService {
     @InjectMessageQueue(MessageQueue.logicFunctionQueue)
     private readonly messageQueueService: MessageQueueService,
     private readonly twentyConfigService: TwentyConfigService,
+    private readonly secretEncryptionService: SecretEncryptionService,
+    @InjectRepository(ApplicationRegistrationVariableEntity)
+    private readonly applicationRegistrationVariableRepository: Repository<ApplicationRegistrationVariableEntity>,
   ) {}
 
   async handle({
@@ -109,6 +118,12 @@ export class ServerRouteTriggerService {
         ServerRouteTriggerExceptionCode.LOGIC_FUNCTION_NOT_FOUND,
       );
     }
+
+    await this.assertRequestAuthenticatedOrThrow({
+      request,
+      resolver,
+      applicationRegistrationId,
+    });
 
     const event = buildLogicFunctionEvent({
       request,
@@ -165,6 +180,65 @@ export class ServerRouteTriggerService {
       }),
       isResolvedThroughLegacyIdentifier,
     };
+  }
+
+  // Runs before any app code so a forged request costs no execution and
+  // cannot drain the resolver throttle.
+  private async assertRequestAuthenticatedOrThrow({
+    request,
+    resolver,
+    applicationRegistrationId,
+  }: {
+    request: Request;
+    resolver: LogicFunctionEntity;
+    applicationRegistrationId: string;
+  }): Promise<void> {
+    const authentication =
+      resolver.serverRouteTriggerSettings?.requestAuthentication;
+
+    if (!isDefined(authentication)) {
+      return;
+    }
+
+    const secretVariable =
+      await this.applicationRegistrationVariableRepository.findOne({
+        where: {
+          applicationRegistrationId,
+          key: authentication.secretServerVariableName,
+        },
+      });
+
+    const secret = isDefined(secretVariable)
+      ? this.secretEncryptionService.decryptVersionedOrThrow(
+          secretVariable.encryptedValue,
+        )
+      : undefined;
+
+    const result = verifyServerRouteRequestAuthentication({
+      authentication,
+      secret,
+      headers: request.headers,
+      query: request.query,
+      // The provider signed the bytes it sent, not a UTF-8 re-encoding of them.
+      // Body parsers only capture rawBody when there is a body, so a bodyless
+      // request is verified against an empty payload.
+      rawBody:
+        (request as RawBodyRequest<Request>).rawBody ??
+        (hasRequestBody(request) ? undefined : Buffer.alloc(0)),
+    });
+
+    if (result.isAuthenticated) {
+      return;
+    }
+
+    this.logger.warn(
+      `Server route ${resolver.id} rejected an unauthenticated request: ${result.reason}`,
+    );
+
+    throw new ServerRouteTriggerException(
+      'Request authentication failed',
+      ServerRouteTriggerExceptionCode.REQUEST_AUTHENTICATION_FAILED,
+    );
   }
 
   private createResolverQueryBuilder(): SelectQueryBuilder<LogicFunctionEntity> {

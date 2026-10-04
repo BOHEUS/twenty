@@ -55,3 +55,17 @@ exports[`ServerRouteTrigger authorization (integration) POST /webhooks/server/:u
   "status": 404,
 }
 `;
+
+exports[`ServerRouteTrigger authorization (integration) POST /webhooks/server/:universalIdentifier with request authentication rejects a request without the provider token before executing the resolver 1`] = `
+{
+  "body": {
+    "code": "REQUEST_AUTHENTICATION_FAILED",
+    "error": "Error",
+    "messages": [
+      "Request authentication failed",
+    ],
+    "statusCode": 401,
+  },
+  "status": 401,
+}
+`;
