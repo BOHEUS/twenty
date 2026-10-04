@@ -60,6 +60,7 @@ export const createStandardCommandMenuItemFlatMetadata = ({
     position: definition.position,
     isPinned: definition.isPinned,
     availabilityType: definition.availabilityType,
+    availabilityFieldType: null,
     conditionalAvailabilityExpression:
       definition.conditionalAvailabilityExpression ?? null,
     conditionalPinnedExpression:

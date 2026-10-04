@@ -106,6 +106,7 @@ export const buildObjectNavigationUniversalFlatCommandMenuItem = ({
     position,
     isPinned: false,
     availabilityType: CommandMenuItemAvailabilityType.GLOBAL,
+    availabilityFieldType: null,
     conditionalAvailabilityExpression,
     conditionalPinnedExpression: null,
     frontComponentUniversalIdentifier: null,

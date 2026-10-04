@@ -39,6 +39,7 @@ export const SidePanelFrontComponentPage = () => {
         objectNameSingular={
           viewableFrontComponentRecordContext?.objectNameSingular
         }
+        fieldContext={viewableFrontComponentRecordContext?.fieldContext}
         loadingFallback={<FrontComponentSkeletonLoader />}
       />
     </Suspense>

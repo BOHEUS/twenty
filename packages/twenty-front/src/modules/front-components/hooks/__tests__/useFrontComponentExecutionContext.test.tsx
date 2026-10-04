@@ -255,6 +255,7 @@ describe('useFrontComponentExecutionContext', () => {
         selectedRecordIds: ['record-456'],
         selectedObjectMetadata: null,
         timelineActivityId: null,
+        fieldContext: null,
         colorScheme: 'light',
         locale: i18n.locale as AppLocale,
       });
@@ -273,6 +274,7 @@ describe('useFrontComponentExecutionContext', () => {
         selectedRecordIds: ['record-1', 'record-2', 'record-3'],
         selectedObjectMetadata: null,
         timelineActivityId: null,
+        fieldContext: null,
         colorScheme: 'light',
         locale: i18n.locale as AppLocale,
       });

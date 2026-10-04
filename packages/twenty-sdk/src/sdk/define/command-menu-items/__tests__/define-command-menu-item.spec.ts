@@ -68,4 +68,44 @@ describe('defineCommandMenuItem', () => {
       'CommandMenuItem icon will be ignored in favor of application icon, you should remove it',
     );
   });
+
+  it('accepts a FIELD_VALUE command with a supported field type', () => {
+    const result = defineCommandMenuItem({
+      ...baseValidConfig,
+      availabilityType: 'FIELD_VALUE',
+      availabilityFieldType: 'PHONES',
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it.each([undefined, 'TEXT'] as const)(
+    'rejects a FIELD_VALUE command with field type %s',
+    (availabilityFieldType) => {
+      const result = defineCommandMenuItem({
+        ...baseValidConfig,
+        availabilityType: 'FIELD_VALUE',
+        availabilityFieldType,
+      });
+
+      expect(result.success).toBe(false);
+      expect(
+        result.errors.some((error) => error.includes('PHONES, EMAILS, LINKS')),
+      ).toBe(true);
+    },
+  );
+
+  it('rejects availabilityFieldType outside FIELD_VALUE', () => {
+    const result = defineCommandMenuItem({
+      ...baseValidConfig,
+      availabilityType: 'GLOBAL',
+      availabilityFieldType: 'PHONES',
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errors).toContain(
+      'CommandMenuItem availabilityFieldType is only allowed with availabilityType FIELD_VALUE',
+    );
+  });
 });

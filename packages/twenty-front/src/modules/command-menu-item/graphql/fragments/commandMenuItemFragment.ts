@@ -28,6 +28,7 @@ export const COMMAND_MENU_ITEM_FRAGMENT = gql`
     conditionalAvailabilityExpression
     conditionalPinnedExpression
     availabilityType
+    availabilityFieldType
     availabilityObjectMetadataId
     navigationTargetObjectMetadataId
     pageLayoutId

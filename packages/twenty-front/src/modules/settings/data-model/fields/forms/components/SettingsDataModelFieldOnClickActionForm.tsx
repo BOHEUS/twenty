@@ -1,5 +1,6 @@
 import { Controller, useFormContext } from 'react-hook-form';
 
+import { useFieldValueCommandMenuItems } from '@/command-menu-item/hooks/useFieldValueCommandMenuItems';
 import { useFieldMetadataItemById } from '@/object-metadata/hooks/useFieldMetadataItemById';
 import { SettingsOptionCardContentSelect } from '@/settings/components/SettingsOptions/SettingsOptionCardContentSelect';
 import { getSettingsDataModelFieldOnClickActionDescription } from '@/settings/data-model/fields/forms/utils/getSettingsDataModelFieldOnClickActionDescription';
@@ -31,18 +32,33 @@ export const SettingsDataModelFieldOnClickActionForm = ({
   const { control } =
     useFormContext<SettingsDataModelFieldOnClickActionFormValues>();
 
-  const { fieldMetadataItem } = useFieldMetadataItemById(
+  const { fieldMetadataItem, objectMetadataItem } = useFieldMetadataItemById(
     existingFieldMetadataId,
   );
 
   const isEmailField = fieldType === FieldMetadataType.EMAILS;
+
+  const fieldValueCommandMenuItems = useFieldValueCommandMenuItems({
+    fieldType,
+    objectNameSingular: objectMetadataItem?.nameSingular,
+  });
+
+  const existingSettings =
+    (fieldMetadataItem?.settings as FieldMetadataMultiItemSettings) ?? {};
+
+  // Keep the saved choice selectable after the providing app is uninstalled.
+  const canOpenInApp =
+    isEmailField ||
+    fieldValueCommandMenuItems.length > 0 ||
+    existingSettings.clickAction ===
+      FieldMetadataSettingsOnClickAction.OPEN_IN_APP;
 
   const defaultClickAction = isEmailField
     ? FieldMetadataSettingsOnClickAction.OPEN_IN_APP
     : FieldMetadataSettingsOnClickAction.OPEN_LINK;
 
   const options = [
-    ...(isEmailField
+    ...(canOpenInApp
       ? [
           {
             label: t`Open in app`,
@@ -62,9 +78,6 @@ export const SettingsDataModelFieldOnClickActionForm = ({
 
   const description =
     getSettingsDataModelFieldOnClickActionDescription(fieldType);
-
-  const existingSettings =
-    (fieldMetadataItem?.settings as FieldMetadataMultiItemSettings) ?? {};
 
   return (
     <Controller

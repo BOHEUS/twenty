@@ -1,6 +1,9 @@
 import { type CommandMenuItemManifest } from 'twenty-shared/application';
 
-import { CommandMenuItemAvailabilityType } from 'twenty-shared/types';
+import {
+  CommandMenuItemAvailabilityType,
+  type FieldMetadataType,
+} from 'twenty-shared/types';
 import { EngineComponentKey } from 'src/engine/metadata-modules/command-menu-item/enums/engine-component-key.enum';
 import { type UniversalFlatCommandMenuItem } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-command-menu-item.type';
 
@@ -23,6 +26,8 @@ export const fromCommandMenuItemManifestToUniversalFlatCommandMenuItem = ({
     isPinned: commandMenuItemManifest.isPinned ?? false,
     availabilityType: (commandMenuItemManifest.availabilityType ??
       CommandMenuItemAvailabilityType.GLOBAL) as CommandMenuItemAvailabilityType,
+    availabilityFieldType: (commandMenuItemManifest.availabilityFieldType ??
+      null) as FieldMetadataType | null,
     conditionalAvailabilityExpression:
       commandMenuItemManifest.conditionalAvailabilityExpression ?? null,
     conditionalPinnedExpression:

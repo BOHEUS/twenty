@@ -11,6 +11,7 @@ exports[`registry-derived override property maps derives the overridable propert
     "position",
     "isPinned",
     "availabilityType",
+    "availabilityFieldType",
     "availabilityObjectMetadataId",
     "engineComponentKey",
     "hotKeys",

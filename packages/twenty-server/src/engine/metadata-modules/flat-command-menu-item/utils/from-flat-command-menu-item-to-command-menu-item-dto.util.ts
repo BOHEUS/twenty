@@ -32,6 +32,8 @@ export const fromFlatCommandMenuItemToCommandMenuItemDto = (
       : (effectiveFlatCommandMenuItem.payload ?? undefined),
     hotKeys: effectiveFlatCommandMenuItem.hotKeys ?? undefined,
     availabilityType: effectiveFlatCommandMenuItem.availabilityType,
+    availabilityFieldType:
+      effectiveFlatCommandMenuItem.availabilityFieldType ?? undefined,
     conditionalAvailabilityExpression:
       effectiveFlatCommandMenuItem.conditionalAvailabilityExpression ??
       undefined,

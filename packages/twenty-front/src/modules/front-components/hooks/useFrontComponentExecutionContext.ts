@@ -3,7 +3,10 @@ import { objectMetadataItemFamilySelector } from '@/object-metadata/states/objec
 import { getFieldMetadataItemById } from '@/object-metadata/utils/getFieldMetadataItemById';
 import { resolveOpenRecordIn } from '@/object-record/record-index/utils/resolveOpenRecordIn';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
-import { type FrontComponentToolCall } from 'twenty-sdk/front-component';
+import {
+  type FrontComponentFieldContext,
+  type FrontComponentToolCall,
+} from 'twenty-sdk/front-component';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useRef } from 'react';
@@ -123,6 +126,7 @@ export const useFrontComponentExecutionContext = ({
   commandMenuItemId,
   selectedRecordIds,
   objectNameSingular,
+  fieldContext,
   timelineActivityId,
   toolCall,
   colorScheme,
@@ -132,6 +136,7 @@ export const useFrontComponentExecutionContext = ({
   commandMenuItemId?: string;
   selectedRecordIds?: string[];
   objectNameSingular?: string;
+  fieldContext?: FrontComponentFieldContext;
   timelineActivityId?: string;
   toolCall?: FrontComponentToolCall;
   colorScheme: 'light' | 'dark';
@@ -445,6 +450,7 @@ export const useFrontComponentExecutionContext = ({
       : null,
     timelineActivityId: timelineActivityId ?? null,
     toolCall,
+    fieldContext: fieldContext ?? null,
     colorScheme,
     // The host is always configured with APP_LOCALES, so this is a valid AppLocale.
     locale: i18n.locale as AppLocale,

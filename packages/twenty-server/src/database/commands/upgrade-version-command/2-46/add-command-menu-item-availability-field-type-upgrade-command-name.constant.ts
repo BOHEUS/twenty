@@ -1,0 +1,2 @@
+export const ADD_COMMAND_MENU_ITEM_AVAILABILITY_FIELD_TYPE_UPGRADE_COMMAND_NAME =
+  '2.46.0_AddCommandMenuItemAvailabilityFieldTypeFastInstanceCommand_1791100000001';

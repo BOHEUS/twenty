@@ -153,6 +153,8 @@ export type {
   RelationFieldManifest,
   FieldManifest,
 } from './fieldManifestType';
+export type { FieldValueCommandMenuItemFieldType } from './fieldValueCommandMenuItemFieldTypes';
+export { FIELD_VALUE_COMMAND_MENU_ITEM_FIELD_TYPES } from './fieldValueCommandMenuItemFieldTypes';
 export type {
   CommandMenuItemManifest,
   FrontComponentManifest,

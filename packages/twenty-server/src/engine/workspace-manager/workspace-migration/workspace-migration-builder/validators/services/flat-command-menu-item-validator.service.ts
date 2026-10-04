@@ -9,6 +9,7 @@ import { CommandMenuItemExceptionCode } from 'src/engine/metadata-modules/comman
 import { isObjectMetadataCommandMenuItemPayload } from 'src/engine/metadata-modules/command-menu-item/utils/is-object-metadata-command-menu-item-payload.util';
 import { type PathCommandMenuItemPayload } from 'src/engine/metadata-modules/command-menu-item/dtos/types/path-command-menu-item-payload.type';
 import { EngineComponentKey } from 'src/engine/metadata-modules/command-menu-item/enums/engine-component-key.enum';
+import { validateCommandMenuItemFieldValueAvailability } from 'src/engine/metadata-modules/command-menu-item/utils/validate-command-menu-item-field-value-availability.util';
 import { findFlatEntityByUniversalIdentifier } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier.util';
 import { type FailedFlatEntityValidation } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/types/failed-flat-entity-validation.type';
 import { getEmptyFlatEntityValidationError } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/utils/get-flat-entity-validation-error.util';
@@ -83,6 +84,18 @@ export class FlatCommandMenuItemValidatorService {
       flatObjectMetadataMaps,
       validationResult,
     });
+
+    validationResult.errors.push(
+      ...validateCommandMenuItemFieldValueAvailability({
+        availabilityType: flatCommandMenuItem.availabilityType,
+        availabilityFieldType: flatCommandMenuItem.availabilityFieldType,
+        engineComponentKey: flatCommandMenuItem.engineComponentKey,
+        conditionalAvailabilityExpression:
+          flatCommandMenuItem.conditionalAvailabilityExpression,
+        conditionalPinnedExpression:
+          flatCommandMenuItem.conditionalPinnedExpression,
+      }),
+    );
 
     return validationResult;
   }
@@ -193,6 +206,27 @@ export class FlatCommandMenuItemValidatorService {
       flatObjectMetadataMaps,
       validationResult,
     });
+
+    validationResult.errors.push(
+      ...validateCommandMenuItemFieldValueAvailability({
+        availabilityType:
+          flatEntityUpdate.availabilityType ??
+          fromFlatCommandMenuItem.availabilityType,
+        availabilityFieldType:
+          flatEntityUpdate.availabilityFieldType !== undefined
+            ? flatEntityUpdate.availabilityFieldType
+            : fromFlatCommandMenuItem.availabilityFieldType,
+        engineComponentKey,
+        conditionalAvailabilityExpression:
+          flatEntityUpdate.conditionalAvailabilityExpression !== undefined
+            ? flatEntityUpdate.conditionalAvailabilityExpression
+            : fromFlatCommandMenuItem.conditionalAvailabilityExpression,
+        conditionalPinnedExpression:
+          flatEntityUpdate.conditionalPinnedExpression !== undefined
+            ? flatEntityUpdate.conditionalPinnedExpression
+            : fromFlatCommandMenuItem.conditionalPinnedExpression,
+      }),
+    );
 
     return validationResult;
   }

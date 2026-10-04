@@ -1271,6 +1271,12 @@ export const ALL_ENTITY_PROPERTIES_CONFIGURATION_BY_METADATA_NAME = {
       universalProperty: undefined,
       isOverridable: true,
     },
+    availabilityFieldType: {
+      toCompare: true,
+      toStringify: false,
+      universalProperty: undefined,
+      isOverridable: true,
+    },
     conditionalAvailabilityExpression: {
       toCompare: true,
       toStringify: false,

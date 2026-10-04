@@ -18,6 +18,7 @@ export type { UseTranslateResult } from './hooks/useTranslate';
 export { useLocale } from './hooks/useLocale';
 export { useRecordId } from './hooks/useRecordId';
 export { useToolCall } from './hooks/useToolCall';
+export { useFieldContext } from './hooks/useFieldContext';
 export { useSelectedRecordIds } from './hooks/useSelectedRecordIds';
 export { useSelectedObjectMetadata } from './hooks/useSelectedObjectMetadata';
 export { useTimelineActivityId } from './hooks/useTimelineActivityId';
@@ -30,6 +31,7 @@ export type {
 } from './translations/message';
 export type { FrontComponentExecutionContext } from './types/FrontComponentExecutionContext';
 export type { FrontComponentSelectedObjectMetadata } from './types/FrontComponentSelectedObjectMetadata';
+export type { FrontComponentFieldContext } from './types/FrontComponentFieldContext';
 export type { FrontComponentToolCall } from './types/FrontComponentToolCall';
 export type { FrontComponentToolCallStatus } from './types/FrontComponentToolCallStatus';
 export type { FrontComponentStorageType } from './types/FrontComponentStorageType';

@@ -86,6 +86,8 @@ export const fromCreateCommandMenuItemInputToFlatCommandMenuItemToCreate = ({
     availabilityType:
       createCommandMenuItemInput.availabilityType ??
       CommandMenuItemAvailabilityType.GLOBAL,
+    availabilityFieldType:
+      createCommandMenuItemInput.availabilityFieldType ?? null,
     availabilityObjectMetadataId:
       createCommandMenuItemInput.availabilityObjectMetadataId ?? null,
     conditionalAvailabilityExpression:

@@ -1,5 +1,6 @@
 import { type AppLocale } from 'twenty-shared/translations';
 
+import { type FrontComponentFieldContext } from './FrontComponentFieldContext';
 import { type FrontComponentSelectedObjectMetadata } from './FrontComponentSelectedObjectMetadata';
 import { type FrontComponentToolCall } from './FrontComponentToolCall';
 
@@ -19,4 +20,6 @@ export type FrontComponentExecutionContext = {
   locale?: AppLocale;
   /** Set when the component renders an AI chat tool call */
   toolCall?: FrontComponentToolCall;
+  /** Set when the component was opened from a field value (FIELD_VALUE command menu item) */
+  fieldContext?: FrontComponentFieldContext | null;
 };

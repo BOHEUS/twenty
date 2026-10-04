@@ -1,3 +1,4 @@
+import { isFieldValueCommandMenuItem } from '@/command-menu-item/utils/isFieldValueCommandMenuItem';
 import { metadataStoreState } from '@/metadata-store/states/metadataStoreState';
 import { type FlatCommandMenuItem } from '@/metadata-store/types/FlatCommandMenuItem';
 import { type FlatFrontComponent } from '@/metadata-store/types/FlatFrontComponent';
@@ -22,8 +23,9 @@ export const commandMenuItemsSelector = createAtomSelector<
       ]),
     );
 
+    // FIELD_VALUE items surface next to field values, never in command menus.
     return commandMenuItems
-      .filter((item) => item.isActive)
+      .filter((item) => item.isActive && !isFieldValueCommandMenuItem(item))
       .map((item) => ({
         ...item,
         frontComponent: isDefined(item.frontComponentId)

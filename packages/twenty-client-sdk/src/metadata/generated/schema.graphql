@@ -117,6 +117,7 @@ type CommandMenuItem {
   position: Float!
   isPinned: Boolean!
   availabilityType: CommandMenuItemAvailabilityType!
+  availabilityFieldType: FieldMetadataType
   payload: CommandMenuItemPayload
   hotKeys: [String!]
   conditionalAvailabilityExpression: String
@@ -221,6 +222,36 @@ enum CommandMenuItemAvailabilityType {
   GLOBAL_OBJECT_CONTEXT
   RECORD_SELECTION
   FALLBACK
+  FIELD_VALUE
+}
+
+"""Type of the field"""
+enum FieldMetadataType {
+  ACTOR
+  ADDRESS
+  ARRAY
+  BOOLEAN
+  CURRENCY
+  DATE
+  DATE_TIME
+  EMAILS
+  FILES
+  FULL_NAME
+  LINKS
+  MORPH_RELATION
+  MULTI_SELECT
+  NUMBER
+  NUMERIC
+  PHONES
+  POSITION
+  RATING
+  RAW_JSON
+  RELATION
+  RICH_TEXT
+  SELECT
+  TEXT
+  TS_VECTOR
+  UUID
 }
 
 union CommandMenuItemPayload = PathCommandMenuItemPayload | ObjectMetadataCommandMenuItemPayload
@@ -2646,35 +2677,6 @@ type Field {
   morphRelations: [Relation!]
 }
 
-"""Type of the field"""
-enum FieldMetadataType {
-  ACTOR
-  ADDRESS
-  ARRAY
-  BOOLEAN
-  CURRENCY
-  DATE
-  DATE_TIME
-  EMAILS
-  FILES
-  FULL_NAME
-  LINKS
-  MORPH_RELATION
-  MULTI_SELECT
-  NUMBER
-  NUMERIC
-  PHONES
-  POSITION
-  RATING
-  RAW_JSON
-  RELATION
-  RICH_TEXT
-  SELECT
-  TEXT
-  TS_VECTOR
-  UUID
-}
-
 type PageInfo {
   """true if paging forward and there are more records."""
   hasNextPage: Boolean
@@ -5076,6 +5078,7 @@ input CreateCommandMenuItemInput {
   position: Float
   isPinned: Boolean
   availabilityType: CommandMenuItemAvailabilityType
+  availabilityFieldType: FieldMetadataType
   hotKeys: [String!]
   conditionalAvailabilityExpression: String
   conditionalPinnedExpression: String
@@ -5093,6 +5096,7 @@ input UpdateCommandMenuItemInput {
   position: Float
   isPinned: Boolean
   availabilityType: CommandMenuItemAvailabilityType
+  availabilityFieldType: FieldMetadataType
   availabilityObjectMetadataId: UUID
   engineComponentKey: EngineComponentKey
   hotKeys: [String!]

@@ -61,6 +61,7 @@ const buildDiscardDraftWorkflowCommandMenuItem = ({
   availabilityType: DISCARD_DRAFT_WORKFLOW_DEFINITION.availabilityType,
   conditionalAvailabilityExpression,
   conditionalPinnedExpression: null,
+  availabilityFieldType: null,
   frontComponentId: null,
   frontComponentUniversalIdentifier: null,
   engineComponentKey: DISCARD_DRAFT_WORKFLOW_DEFINITION.engineComponentKey,

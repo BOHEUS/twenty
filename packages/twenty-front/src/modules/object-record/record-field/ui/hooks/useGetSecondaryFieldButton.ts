@@ -1,4 +1,6 @@
 import { useOpenEmailInAppOrFallback } from '@/activities/emails/hooks/useOpenEmailInAppOrFallback';
+import { useFieldValueCommandMenuItems } from '@/command-menu-item/hooks/useFieldValueCommandMenuItems';
+import { useOpenFieldValueCommandMenuItem } from '@/command-menu-item/hooks/useOpenFieldValueCommandMenuItem';
 import { FieldContext } from '@/object-record/record-field/ui/contexts/FieldContext';
 import {
   type FieldEmailsValue,
@@ -13,7 +15,14 @@ import { t } from '@lingui/core/macro';
 import { useContext } from 'react';
 import { FieldMetadataSettingsOnClickAction } from 'twenty-shared/types';
 import { ensureAbsoluteUrl, isDefined } from 'twenty-shared/utils';
-import { IconArrowUpRight, IconCopy, IconMail } from 'twenty-ui/icon';
+import {
+  IconApps,
+  IconArrowUpRight,
+  IconCopy,
+  IconMail,
+  IconPhone,
+  useIcons,
+} from 'twenty-ui/icon';
 import { useCopyToClipboard } from '~/hooks/useCopyToClipboard';
 
 export const useGetSecondaryFieldButton = () => {
@@ -23,6 +32,13 @@ export const useGetSecondaryFieldButton = () => {
   const isEmailField = isFieldEmails(fieldDefinition);
 
   const { openEmail } = useOpenEmailInAppOrFallback({ skip: !isEmailField });
+
+  const fieldValueCommandMenuItems = useFieldValueCommandMenuItems({
+    fieldType: fieldDefinition.type,
+    objectNameSingular: fieldDefinition.metadata.objectMetadataNameSingular,
+  });
+  const { openFieldValueCommandMenuItem } = useOpenFieldValueCommandMenuItem();
+  const { getIcon } = useIcons();
 
   const fieldValue = useRecordFieldValue<
     FieldPhonesValue | FieldEmailsValue | FieldLinksValue | undefined
@@ -55,7 +71,22 @@ export const useGetSecondaryFieldButton = () => {
 
   let openLinkOnClick: () => void = () => {};
   let copyOnClick: () => void = () => {};
-  let openInAppOnClick: () => void = () => {};
+
+  const [firstFieldValueCommandMenuItem] = fieldValueCommandMenuItems;
+
+  // Without an app providing a command, "open in app" degrades to the plain link.
+  let openInAppOnClick: () => void = () => {
+    if (isDefined(firstFieldValueCommandMenuItem)) {
+      openFieldValueCommandMenuItem({
+        item: firstFieldValueCommandMenuItem,
+        value: fieldValue,
+      });
+
+      return;
+    }
+
+    openLinkOnClick();
+  };
 
   if (isFieldPhones(fieldDefinition)) {
     const { primaryPhoneCallingCode = '', primaryPhoneNumber = '' } =
@@ -104,7 +135,11 @@ export const useGetSecondaryFieldButton = () => {
   const iconByAction = {
     [FieldMetadataSettingsOnClickAction.OPEN_LINK]: IconArrowUpRight,
     [FieldMetadataSettingsOnClickAction.COPY]: IconCopy,
-    [FieldMetadataSettingsOnClickAction.OPEN_IN_APP]: IconMail,
+    [FieldMetadataSettingsOnClickAction.OPEN_IN_APP]: isEmailField
+      ? IconMail
+      : isFieldPhones(fieldDefinition)
+        ? IconPhone
+        : IconApps,
   };
 
   const ariaLabelByAction = {
@@ -113,11 +148,29 @@ export const useGetSecondaryFieldButton = () => {
     [FieldMetadataSettingsOnClickAction.OPEN_IN_APP]: t`Open in app`,
   };
 
+  // For emails OPEN_IN_APP composes a mail, so every item keeps its own button.
+  const isFirstItemBoundToOpenInApp =
+    !isEmailField &&
+    (mainActionOnClick === FieldMetadataSettingsOnClickAction.OPEN_IN_APP ||
+      secondaryActionOnClick ===
+        FieldMetadataSettingsOnClickAction.OPEN_IN_APP);
+
+  const fieldValueCommandMenuItemButtons = (
+    isFirstItemBoundToOpenInApp
+      ? fieldValueCommandMenuItems.slice(1)
+      : fieldValueCommandMenuItems
+  ).map((item) => ({
+    onClick: () => openFieldValueCommandMenuItem({ item, value: fieldValue }),
+    Icon: getIcon(item.icon, 'IconApps'),
+    ariaLabel: item.label,
+  }));
+
   return [
     {
       onClick: onClickByAction[secondaryActionOnClick],
       Icon: iconByAction[secondaryActionOnClick],
       ariaLabel: ariaLabelByAction[secondaryActionOnClick],
     },
+    ...fieldValueCommandMenuItemButtons,
   ];
 };

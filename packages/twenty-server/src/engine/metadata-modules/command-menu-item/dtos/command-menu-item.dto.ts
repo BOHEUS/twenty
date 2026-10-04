@@ -19,7 +19,10 @@ import {
 
 import { type AuthoredOverrides } from 'src/engine/metadata-modules/overrides/types/authored-overrides.type';
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
-import { CommandMenuItemAvailabilityType } from 'twenty-shared/types';
+import {
+  CommandMenuItemAvailabilityType,
+  FieldMetadataType,
+} from 'twenty-shared/types';
 import { type CommandMenuItemOverrides } from 'src/engine/metadata-modules/command-menu-item/entities/command-menu-item.entity';
 import { CommandMenuItemPayloadUnion } from 'src/engine/metadata-modules/command-menu-item/dtos/command-menu-item-payload.union';
 import { type PathCommandMenuItemPayload } from 'src/engine/metadata-modules/command-menu-item/dtos/types/path-command-menu-item-payload.type';
@@ -86,6 +89,11 @@ export class CommandMenuItemDTO {
   @IsEnum(CommandMenuItemAvailabilityType)
   @Field(() => CommandMenuItemAvailabilityType)
   availabilityType: CommandMenuItemAvailabilityType;
+
+  @IsEnum(FieldMetadataType)
+  @IsOptional()
+  @Field(() => FieldMetadataType, { nullable: true })
+  availabilityFieldType?: FieldMetadataType;
 
   @IsOptional()
   @Field(() => CommandMenuItemPayloadUnion, { nullable: true })

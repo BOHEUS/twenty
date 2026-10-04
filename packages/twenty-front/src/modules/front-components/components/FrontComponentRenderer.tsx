@@ -15,7 +15,10 @@ import { useQuery } from '@apollo/client/react';
 import { t } from '@lingui/core/macro';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { FrontComponentRenderer as SharedFrontComponentRenderer } from 'twenty-front-component-renderer';
-import { type FrontComponentToolCall } from 'twenty-sdk/front-component';
+import {
+  type FrontComponentFieldContext,
+  type FrontComponentToolCall,
+} from 'twenty-sdk/front-component';
 import { isDefined } from 'twenty-shared/utils';
 import { useToast } from 'twenty-ui/components';
 import { useThemeColorScheme } from 'twenty-ui/theme';
@@ -31,6 +34,7 @@ type FrontComponentRendererProps = {
   commandMenuItemId?: string;
   selectedRecordIds?: string[];
   objectNameSingular?: string;
+  fieldContext?: FrontComponentFieldContext;
   timelineActivityId?: string;
   toolCall?: FrontComponentToolCall;
   loadingFallback?: ReactNode;
@@ -46,6 +50,7 @@ type FrontComponentRendererContentProps = {
   commandMenuItemId?: string;
   selectedRecordIds?: string[];
   objectNameSingular?: string;
+  fieldContext?: FrontComponentFieldContext;
   timelineActivityId?: string;
   toolCall?: FrontComponentToolCall;
   loadingFallback?: ReactNode;
@@ -57,6 +62,7 @@ export const FrontComponentRenderer = ({
   commandMenuItemId,
   selectedRecordIds,
   objectNameSingular,
+  fieldContext,
   timelineActivityId,
   toolCall,
   loadingFallback,
@@ -86,6 +92,7 @@ export const FrontComponentRenderer = ({
           commandMenuItemId={commandMenuItemId}
           selectedRecordIds={selectedRecordIds}
           objectNameSingular={objectNameSingular}
+          fieldContext={fieldContext}
           timelineActivityId={timelineActivityId}
           toolCall={toolCall}
           loadingFallback={loadingFallback}
@@ -101,6 +108,7 @@ const FrontComponentRendererContent = ({
   commandMenuItemId,
   selectedRecordIds,
   objectNameSingular,
+  fieldContext,
   timelineActivityId,
   toolCall,
   loadingFallback,
@@ -128,6 +136,7 @@ const FrontComponentRendererContent = ({
     commandMenuItemId,
     selectedRecordIds,
     objectNameSingular,
+    fieldContext,
     timelineActivityId,
     toolCall,
     colorScheme,
