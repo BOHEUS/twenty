@@ -750,6 +750,24 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
+    description:
+      'Throttle limit for server route webhook resolvers, per application registration. Resolvers run in the app owner workspace for every tenant, so they do not share the owner workspace execution bucket',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  SERVER_ROUTE_RESOLVER_THROTTLE_LIMIT = 5000;
+
+  // milliseconds
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
+    description: 'Time-to-live for the server route webhook resolver throttle',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  SERVER_ROUTE_RESOLVER_THROTTLE_TTL = 60_000;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
     description: 'Region for AWS Lambda functions',
     type: ConfigVariableType.STRING,
   })

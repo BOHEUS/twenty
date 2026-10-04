@@ -42,6 +42,8 @@ import { buildApplicationLogEnvelopes } from 'src/engine/core-modules/event-logs
 import { parseApplicationLogLines } from 'src/engine/core-modules/event-logs/producers/application-log/parse-application-log-lines';
 import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
 import { LogicFunctionDriverFactory } from 'src/engine/core-modules/logic-function/logic-function-drivers/logic-function-driver.factory';
+import { type LogicFunctionExecutionThrottle } from 'src/engine/core-modules/logic-function/logic-function-executor/types/logic-function-execution-throttle.type';
+import { buildWorkspaceLogicFunctionExecutionThrottle } from 'src/engine/core-modules/logic-function/logic-function-executor/utils/build-workspace-logic-function-execution-throttle.util';
 import { computeLogicFunctionExecutionCreditsMicro } from 'src/engine/core-modules/logic-function/logic-function-executor/utils/compute-logic-function-execution-credits-micro.util';
 import { resolveWorkspaceMemberIdForUser } from 'src/engine/core-modules/logic-function/logic-function-executor/utils/resolve-workspace-member-id-for-user.util';
 import { LogicFunctionPrebuiltWarmUpService } from 'src/engine/core-modules/logic-function/logic-function-prebuilt-warm-up/logic-function-prebuilt-warm-up.service';
@@ -136,6 +138,7 @@ export class LogicFunctionExecutorService {
     workspaceDeletionRequestTimestamp,
     retry = { retryCount: 0, maxRetries: 0 },
     shouldEnforceUsageLimits = true,
+    throttle,
   }: {
     logicFunctionId: string;
     workspaceId: string;
@@ -146,6 +149,7 @@ export class LogicFunctionExecutorService {
     workspaceDeletionRequestTimestamp?: string;
     retry?: LogicFunctionRetryContext;
     shouldEnforceUsageLimits?: boolean;
+    throttle?: LogicFunctionExecutionThrottle;
   }): Promise<LogicFunctionExecuteResult> {
     const { flatApplication, flatLogicFunction, applicationVariableMaps } =
       await this.getFlatEntitiesOrThrow({
@@ -156,7 +160,18 @@ export class LogicFunctionExecutorService {
     // Before the shared workspace throttle so a stopped app's flood cannot drain other apps' token bucket.
     await this.assertApplicationNotStopped(flatApplication);
 
-    await this.throttleExecution(workspaceId);
+    await this.throttleExecution(
+      throttle ??
+        buildWorkspaceLogicFunctionExecutionThrottle({
+          workspaceId,
+          maxTokens: this.twentyConfigService.get(
+            'LOGIC_FUNCTION_EXEC_THROTTLE_LIMIT',
+          ),
+          windowMs: this.twentyConfigService.get(
+            'LOGIC_FUNCTION_EXEC_THROTTLE_TTL',
+          ),
+        }),
+    );
 
     if (shouldEnforceUsageLimits) {
       await this.assertExecutionAllowed({
@@ -318,13 +333,17 @@ export class LogicFunctionExecutorService {
     });
   }
 
-  private async throttleExecution(workspaceId: string) {
+  private async throttleExecution({
+    key,
+    maxTokens,
+    windowMs,
+  }: LogicFunctionExecutionThrottle) {
     try {
       await this.throttlerService.tokenBucketThrottleOrThrow(
-        `${workspaceId}-logic-function-execution`,
+        key,
         1,
-        this.twentyConfigService.get('LOGIC_FUNCTION_EXEC_THROTTLE_LIMIT'),
-        this.twentyConfigService.get('LOGIC_FUNCTION_EXEC_THROTTLE_TTL'),
+        maxTokens,
+        windowMs,
       );
     } catch (error) {
       if (

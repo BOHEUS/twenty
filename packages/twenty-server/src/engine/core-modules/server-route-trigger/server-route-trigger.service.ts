@@ -33,6 +33,8 @@ import {
   ServerRouteTriggerException,
   ServerRouteTriggerExceptionCode,
 } from 'src/engine/core-modules/server-route-trigger/exceptions/server-route-trigger.exception';
+import { type LogicFunctionExecutionThrottle } from 'src/engine/core-modules/logic-function/logic-function-executor/types/logic-function-execution-throttle.type';
+import { buildServerRouteResolverThrottle } from 'src/engine/core-modules/server-route-trigger/utils/build-server-route-resolver-throttle.util';
 import { parseResolverDispatchResultOrThrow } from 'src/engine/core-modules/server-route-trigger/utils/parse-resolver-dispatch-result-or-throw.util';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { LogicFunctionEntity } from 'src/engine/metadata-modules/logic-function/logic-function.entity';
@@ -124,6 +126,15 @@ export class ServerRouteTriggerService {
       logicFunctionUniversalIdentifier: resolver.universalIdentifier,
       workspaceId: resolver.workspaceId,
       payload: event,
+      throttle: buildServerRouteResolverThrottle({
+        applicationRegistrationId,
+        maxTokens: this.twentyConfigService.get(
+          'SERVER_ROUTE_RESOLVER_THROTTLE_LIMIT',
+        ),
+        windowMs: this.twentyConfigService.get(
+          'SERVER_ROUTE_RESOLVER_THROTTLE_TTL',
+        ),
+      }),
     });
 
     if (isDefined(resolverResult.error)) {
@@ -291,10 +302,12 @@ export class ServerRouteTriggerService {
     logicFunctionUniversalIdentifier,
     workspaceId,
     payload,
+    throttle,
   }: {
     logicFunctionUniversalIdentifier: string;
     workspaceId: string;
     payload: object;
+    throttle: LogicFunctionExecutionThrottle;
   }): Promise<{ data: object | null; error?: { errorMessage: string } }> {
     const logicFunction = await this.findLogicFunctionOrFail({
       logicFunctionUniversalIdentifier,
@@ -306,6 +319,7 @@ export class ServerRouteTriggerService {
         logicFunctionId: logicFunction.id,
         workspaceId,
         payload,
+        throttle,
       });
     } catch (error) {
       if (isUsageRefusedError(error)) {
