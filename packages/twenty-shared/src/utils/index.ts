@@ -216,6 +216,8 @@ export { parseJson } from './parseJson';
 export { isE164PhoneNumber } from './phones/isE164PhoneNumber';
 export type { NormalizePhoneNumberToE164Input } from './phones/normalizePhoneNumberToE164';
 export { normalizePhoneNumberToE164 } from './phones/normalizePhoneNumberToE164';
+export type { SplitE164PhoneNumber } from './phones/splitE164PhoneNumber';
+export { splitE164PhoneNumber } from './phones/splitE164PhoneNumber';
 export { removePropertiesFromRecord } from './removePropertiesFromRecord';
 export { removeUndefinedFields } from './removeUndefinedFields';
 export { resolveRichTextVariables } from './rich-text-variable-resolver';

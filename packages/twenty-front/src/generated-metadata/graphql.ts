@@ -2158,6 +2158,7 @@ export enum FeatureFlagKey {
   IS_RECORD_CREATION_FORM_ENABLED = 'IS_RECORD_CREATION_FORM_ENABLED',
   IS_RECORD_LEVEL_SHARING_ENABLED = 'IS_RECORD_LEVEL_SHARING_ENABLED',
   IS_REST_METADATA_API_NEW_FORMAT_DIRECT = 'IS_REST_METADATA_API_NEW_FORMAT_DIRECT',
+  IS_TELEPHONY_ENABLED = 'IS_TELEPHONY_ENABLED',
   IS_VALIDATION_RULES_ENABLED = 'IS_VALIDATION_RULES_ENABLED',
   IS_WEBHOOK_RATE_LIMIT_ENABLED = 'IS_WEBHOOK_RATE_LIMIT_ENABLED',
   IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED = 'IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED',
@@ -5112,6 +5113,33 @@ export enum PermissionFlagType {
   WORKSPACE_MEMBERS = 'WORKSPACE_MEMBERS'
 }
 
+export type PhoneLookupCandidate = {
+  __typename?: 'PhoneLookupCandidate';
+  matchBasis: PhoneLookupMatchBasis;
+  matchedPhoneNumber: Scalars['String']['output'];
+  personId: Scalars['UUID']['output'];
+};
+
+export type PhoneLookupInput = {
+  /** ISO 3166-1 alpha-2 country used for numbers stored or given without a calling code */
+  defaultCountryCode?: InputMaybe<Scalars['String']['input']>;
+  phoneNumber: Scalars['String']['input'];
+};
+
+export enum PhoneLookupMatchBasis {
+  ADDITIONAL_PHONE = 'ADDITIONAL_PHONE',
+  PRIMARY_PHONE = 'PRIMARY_PHONE'
+}
+
+export type PhoneLookupResult = {
+  __typename?: 'PhoneLookupResult';
+  candidates: Array<PhoneLookupCandidate>;
+  /** True when the candidate scan hit its cap, so matching people may be missing from candidates */
+  isTruncated: Scalars['Boolean']['output'];
+  /** E.164 form of the input, null when it could not be placed */
+  normalizedPhoneNumber?: Maybe<Scalars['String']['output']>;
+};
+
 export type PieChartConfiguration = {
   __typename?: 'PieChartConfiguration';
   aggregateFieldMetadataId: Scalars['UUID']['output'];
@@ -5341,6 +5369,7 @@ export type Query = {
   isApplicationStopped: Scalars['Boolean']['output'];
   lineChartData: LineChartData;
   listPlans: Array<BillingPlan>;
+  lookupPeopleByPhoneNumber: PhoneLookupResult;
   messageSuppressions: MessageSuppressionList;
   metadataTranslations: Array<MetadataTranslation>;
   minimalMetadata: MinimalMetadata;
@@ -5765,6 +5794,11 @@ export type QueryIsApplicationStoppedArgs = {
 
 export type QueryLineChartDataArgs = {
   input: LineChartDataInput;
+};
+
+
+export type QueryLookupPeopleByPhoneNumberArgs = {
+  input: PhoneLookupInput;
 };
 
 

@@ -190,6 +190,12 @@ export type {
   PermissionFlagPermissionType,
   PermissionFlagManifest,
 } from './permissionFlagManifestType';
+export type {
+  PhoneLookupMatchBasis,
+  PhoneLookupInput,
+  PhoneLookupCandidate,
+  PhoneLookupResult,
+} from './phoneLookupType';
 export type { PostInstallLogicFunctionApplicationManifest } from './postInstallLogicFunctionApplicationType';
 export type { PreInstallLogicFunctionApplicationManifest } from './preInstallLogicFunctionApplicationType';
 export type { RoleManifestGrant } from './roleManifestGrantType';

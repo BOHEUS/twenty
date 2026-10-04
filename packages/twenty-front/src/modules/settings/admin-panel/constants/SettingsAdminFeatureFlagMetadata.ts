@@ -86,4 +86,8 @@ export const SETTINGS_ADMIN_FEATURE_FLAG_METADATA: Partial<
     label: msg`Skip unchanged calendar records`,
     description: msg`Only write calendar events and participants that changed since the last sync.`,
   },
+  [FeatureFlagKey.IS_TELEPHONY_ENABLED]: {
+    label: msg`Telephony`,
+    description: msg`Let apps look up people by phone number, the base for dialer integrations.`,
+  },
 };

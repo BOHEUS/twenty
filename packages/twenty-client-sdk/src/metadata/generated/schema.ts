@@ -1706,7 +1706,7 @@ export interface FeatureFlag {
     __typename: 'FeatureFlag'
 }
 
-export type FeatureFlagKey = 'IS_APPLICATION_WORKFLOWS_ENABLED' | 'IS_ASYNC_CSV_EXPORT_ENABLED' | 'IS_CONFIGURABLE_SEARCH_FIELDS_ENABLED' | 'IS_JSON_FILTER_ENABLED' | 'IS_MESSAGE_CAMPAIGN_ENABLED' | 'IS_REST_METADATA_API_NEW_FORMAT_DIRECT' | 'IS_LOGIC_FUNCTION_PREBUILT_MODE_ENABLED' | 'IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED' | 'IS_AI_CHAT_SHARING_DROPDOWN_ENABLED' | 'IS_INITIAL_OBJECT_VIEW_ENABLED' | 'IS_WEBHOOK_RATE_LIMIT_ENABLED' | 'IS_DEFERRED_WORKSPACE_MIGRATION_ACTIONS_ENABLED' | 'IS_EXECUTION_QUOTA_ENABLED' | 'IS_RECORD_CREATION_FORM_ENABLED' | 'IS_LOGS_SETTINGS_SECTION_ENABLED' | 'IS_CONVERSATIONS_TAB_ENABLED' | 'IS_VALIDATION_RULES_ENABLED' | 'IS_RECORD_LEVEL_SHARING_ENABLED' | 'IS_WORKFLOW_SEND_CHAT_MESSAGE_ENABLED' | 'IS_CALENDAR_SYNC_SKIP_UNCHANGED_RECORDS_ENABLED'
+export type FeatureFlagKey = 'IS_APPLICATION_WORKFLOWS_ENABLED' | 'IS_ASYNC_CSV_EXPORT_ENABLED' | 'IS_CONFIGURABLE_SEARCH_FIELDS_ENABLED' | 'IS_JSON_FILTER_ENABLED' | 'IS_MESSAGE_CAMPAIGN_ENABLED' | 'IS_REST_METADATA_API_NEW_FORMAT_DIRECT' | 'IS_LOGIC_FUNCTION_PREBUILT_MODE_ENABLED' | 'IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED' | 'IS_AI_CHAT_SHARING_DROPDOWN_ENABLED' | 'IS_INITIAL_OBJECT_VIEW_ENABLED' | 'IS_WEBHOOK_RATE_LIMIT_ENABLED' | 'IS_DEFERRED_WORKSPACE_MIGRATION_ACTIONS_ENABLED' | 'IS_EXECUTION_QUOTA_ENABLED' | 'IS_RECORD_CREATION_FORM_ENABLED' | 'IS_LOGS_SETTINGS_SECTION_ENABLED' | 'IS_CONVERSATIONS_TAB_ENABLED' | 'IS_VALIDATION_RULES_ENABLED' | 'IS_RECORD_LEVEL_SHARING_ENABLED' | 'IS_WORKFLOW_SEND_CHAT_MESSAGE_ENABLED' | 'IS_CALENDAR_SYNC_SKIP_UNCHANGED_RECORDS_ENABLED' | 'IS_TELEPHONY_ENABLED'
 
 export interface WorkspaceUrls {
     customUrl?: Scalars['String']
@@ -3377,6 +3377,24 @@ export interface MinimalMetadata {
     __typename: 'MinimalMetadata'
 }
 
+export interface PhoneLookupCandidate {
+    personId: Scalars['UUID']
+    matchBasis: PhoneLookupMatchBasis
+    matchedPhoneNumber: Scalars['String']
+    __typename: 'PhoneLookupCandidate'
+}
+
+export type PhoneLookupMatchBasis = 'PRIMARY_PHONE' | 'ADDITIONAL_PHONE'
+
+export interface PhoneLookupResult {
+    /** E.164 form of the input, null when it could not be placed */
+    normalizedPhoneNumber?: Scalars['String']
+    candidates: PhoneLookupCandidate[]
+    /** True when the candidate scan hit its cap, so matching people may be missing from candidates */
+    isTruncated: Scalars['Boolean']
+    __typename: 'PhoneLookupResult'
+}
+
 export interface Query {
     recordSharing: RecordSharingDTO
     recordPermissions: RecordPermissionsResult[]
@@ -3475,6 +3493,7 @@ export interface Query {
     webhook?: Webhook
     myMessageFolders: MessageFolder[]
     myCalendarChannels: CalendarChannel[]
+    lookupPeopleByPhoneNumber: PhoneLookupResult
     getPermissionFlags: PermissionFlag[]
     minimalMetadata: MinimalMetadata
     appKeyValue?: AppKeyValue
@@ -7330,6 +7349,24 @@ export interface MinimalMetadataGenqlSelection{
     __scalar?: boolean | number
 }
 
+export interface PhoneLookupCandidateGenqlSelection{
+    personId?: boolean | number
+    matchBasis?: boolean | number
+    matchedPhoneNumber?: boolean | number
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
+export interface PhoneLookupResultGenqlSelection{
+    /** E.164 form of the input, null when it could not be placed */
+    normalizedPhoneNumber?: boolean | number
+    candidates?: PhoneLookupCandidateGenqlSelection
+    /** True when the candidate scan hit its cap, so matching people may be missing from candidates */
+    isTruncated?: boolean | number
+    __typename?: boolean | number
+    __scalar?: boolean | number
+}
+
 export interface QueryGenqlSelection{
     recordSharing?: (RecordSharingDTOGenqlSelection & { __args: {target: RecordTargetInput} })
     recordPermissions?: (RecordPermissionsResultGenqlSelection & { __args: {targets: RecordTargetInput[]} })
@@ -7440,6 +7477,7 @@ export interface QueryGenqlSelection{
     webhook?: (WebhookGenqlSelection & { __args: {id: Scalars['UUID']} })
     myMessageFolders?: (MessageFolderGenqlSelection & { __args?: {messageChannelId?: (Scalars['UUID'] | null)} })
     myCalendarChannels?: (CalendarChannelGenqlSelection & { __args?: {connectedAccountId?: (Scalars['UUID'] | null)} })
+    lookupPeopleByPhoneNumber?: (PhoneLookupResultGenqlSelection & { __args: {input: PhoneLookupInput} })
     getPermissionFlags?: PermissionFlagGenqlSelection
     minimalMetadata?: MinimalMetadataGenqlSelection
     appKeyValue?: (AppKeyValueGenqlSelection & { __args: {key: Scalars['String'], scope?: (AppKeyValueScope | null)} })
@@ -7506,6 +7544,10 @@ export interface PreviewMessageCampaignAudienceInput {listId: Scalars['String'],
 export interface FindMessageSuppressionsInput {reason?: (MessageSuppressionReason | null),searchTerm?: (Scalars['String'] | null),unsubscribeTopicId?: (Scalars['UUID'] | null),limit: Scalars['Int'],offset: Scalars['Int']}
 
 export interface ListAppMessageChannelsInput {connectedAccountId?: (Scalars['UUID'] | null)}
+
+export interface PhoneLookupInput {phoneNumber: Scalars['String'],
+/** ISO 3166-1 alpha-2 country used for numbers stored or given without a calling code */
+defaultCountryCode?: (Scalars['String'] | null)}
 
 export interface ListAppConnectionsInput {providerName?: (Scalars['String'] | null),userWorkspaceId?: (Scalars['String'] | null),visibility?: (Scalars['String'] | null)}
 
@@ -10781,6 +10823,22 @@ export interface CreateRecordExportInput {objectMetadataId: Scalars['UUID'],fiel
     
 
 
+    const PhoneLookupCandidate_possibleTypes: string[] = ['PhoneLookupCandidate']
+    export const isPhoneLookupCandidate = (obj?: { __typename?: any } | null): obj is PhoneLookupCandidate => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isPhoneLookupCandidate"')
+      return PhoneLookupCandidate_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
+    const PhoneLookupResult_possibleTypes: string[] = ['PhoneLookupResult']
+    export const isPhoneLookupResult = (obj?: { __typename?: any } | null): obj is PhoneLookupResult => {
+      if (!obj?.__typename) throw new Error('__typename is missing in "isPhoneLookupResult"')
+      return PhoneLookupResult_possibleTypes.includes(obj.__typename)
+    }
+    
+
+
     const Query_possibleTypes: string[] = ['Query']
     export const isQuery = (obj?: { __typename?: any } | null): obj is Query => {
       if (!obj?.__typename) throw new Error('__typename is missing in "isQuery"')
@@ -11413,7 +11471,8 @@ export const enumFeatureFlagKey = {
    IS_VALIDATION_RULES_ENABLED: 'IS_VALIDATION_RULES_ENABLED' as const,
    IS_RECORD_LEVEL_SHARING_ENABLED: 'IS_RECORD_LEVEL_SHARING_ENABLED' as const,
    IS_WORKFLOW_SEND_CHAT_MESSAGE_ENABLED: 'IS_WORKFLOW_SEND_CHAT_MESSAGE_ENABLED' as const,
-   IS_CALENDAR_SYNC_SKIP_UNCHANGED_RECORDS_ENABLED: 'IS_CALENDAR_SYNC_SKIP_UNCHANGED_RECORDS_ENABLED' as const
+   IS_CALENDAR_SYNC_SKIP_UNCHANGED_RECORDS_ENABLED: 'IS_CALENDAR_SYNC_SKIP_UNCHANGED_RECORDS_ENABLED' as const,
+   IS_TELEPHONY_ENABLED: 'IS_TELEPHONY_ENABLED' as const
 }
 
 export const enumIdentityProviderType = {
@@ -11716,6 +11775,11 @@ export const enumAllMetadataName = {
    validationRule: 'validationRule' as const,
    workflow: 'workflow' as const,
    workflowVersion: 'workflowVersion' as const
+}
+
+export const enumPhoneLookupMatchBasis = {
+   PRIMARY_PHONE: 'PRIMARY_PHONE' as const,
+   ADDITIONAL_PHONE: 'ADDITIONAL_PHONE' as const
 }
 
 export const enumEventLogTable = {

@@ -2135,6 +2135,7 @@ enum FeatureFlagKey {
   IS_RECORD_LEVEL_SHARING_ENABLED
   IS_WORKFLOW_SEND_CHAT_MESSAGE_ENABLED
   IS_CALENDAR_SYNC_SKIP_UNCHANGED_RECORDS_ENABLED
+  IS_TELEPHONY_ENABLED
 }
 
 type WorkspaceUrls {
@@ -3863,6 +3864,28 @@ type MinimalMetadata {
   collectionHashes: [CollectionHash!]!
 }
 
+type PhoneLookupCandidate {
+  personId: UUID!
+  matchBasis: PhoneLookupMatchBasis!
+  matchedPhoneNumber: String!
+}
+
+enum PhoneLookupMatchBasis {
+  PRIMARY_PHONE
+  ADDITIONAL_PHONE
+}
+
+type PhoneLookupResult {
+  """E.164 form of the input, null when it could not be placed"""
+  normalizedPhoneNumber: String
+  candidates: [PhoneLookupCandidate!]!
+
+  """
+  True when the candidate scan hit its cap, so matching people may be missing from candidates
+  """
+  isTruncated: Boolean!
+}
+
 type Query {
   recordSharing(target: RecordTargetInput!): RecordSharingDTO!
   recordPermissions(targets: [RecordTargetInput!]!): [RecordPermissionsResult!]!
@@ -3979,6 +4002,7 @@ type Query {
   webhook(id: UUID!): Webhook
   myMessageFolders(messageChannelId: UUID): [MessageFolder!]!
   myCalendarChannels(connectedAccountId: UUID): [CalendarChannel!]!
+  lookupPeopleByPhoneNumber(input: PhoneLookupInput!): PhoneLookupResult!
   getPermissionFlags: [PermissionFlag!]!
   minimalMetadata: MinimalMetadata!
   appKeyValue(key: String!, scope: AppKeyValueScope = WORKSPACE): AppKeyValue
@@ -4084,6 +4108,15 @@ input FindMessageSuppressionsInput {
 
 input ListAppMessageChannelsInput {
   connectedAccountId: UUID
+}
+
+input PhoneLookupInput {
+  phoneNumber: String!
+
+  """
+  ISO 3166-1 alpha-2 country used for numbers stored or given without a calling code
+  """
+  defaultCountryCode: String
 }
 
 input ListAppConnectionsInput {
