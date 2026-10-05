@@ -1,8 +1,13 @@
 import { defineLogicFunction, RoutePayload } from 'twenty-sdk/define';
-import { WhatsAppWebhook } from 'src/logic-functions/types/whatsapp-webhook-message.type';
+import {
+  type WhatsAppPhoneNumberNameUpdateValue,
+  WhatsAppWebhook
+} from 'src/logic-functions/types/whatsapp-webhook-message.type';
 import { validateWebhookPayload } from 'src/logic-functions/data/validate-webhook-payload.util';
-import { enqueueJobs } from "twenty-sdk/logic-function";
+import { enqueueJobs, updateMessageChannel } from "twenty-sdk/logic-function";
 import { WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
+import { updateTwentyMessageChannel } from "src/logic-functions/data/update-message-channel.util";
+import { sendInboxNotification } from "src/logic-functions/data/send-inbox-notification.util";
 
 const handler = async (
   params: RoutePayload<WhatsAppWebhook>,
@@ -43,6 +48,8 @@ const handler = async (
     for (const change of entry.changes) {
       switch (change.field) {
         case "account_alerts":
+          if ('a' in change.value)
+            break;
         case "account_review_update":
         case "account_update":
         case "automatic_events":
@@ -54,11 +61,20 @@ const handler = async (
         case "partner_solutions":
         case "payment_configuration_update":
         case "phone_number_name_update":
+          if ('a' in change.value){
+            await updateTwentyMessageChannel();
+          }
+          break;
         case "phone_number_quality_update":
+          await sendInboxNotification();
+          break;
         case "security":
         case "smb_app_state_sync":
         case "smb_message_echoes":
+
         case "template_category_update":
+          await sendInboxNotification();
+          break;
         case "user_preferences":
           return {
             success: false,

@@ -79,7 +79,6 @@ const handler = async (params: {
   }
   let text: string = '';
   let file: WhatsappFile | undefined;
-  // messageParticipants are not reused
   switch (messages.type) {
     case 'audio': {
       file = {
