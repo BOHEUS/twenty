@@ -113,7 +113,7 @@ false
 {{- .Values.server.env.REDIS_URL -}}
 {{- else if .Values.redisInternal.enabled -}}
 {{- $host := printf "%s-redis" (include "twenty.fullname" .) -}}
-{{- printf "redis://%s.%s.svc.cluster.local:6379" $host (include "twenty.namespace" .) -}}
+{{- printf "redis://%s.%s.svc.cluster.local:%v" $host (include "twenty.namespace" .) (.Values.redisInternal.service.port | default 6379) -}}
 {{- else -}}
 {{- $host := .Values.redis.external.host | default "redis" -}}
 {{- $port := .Values.redis.external.port | default 6379 -}}
@@ -134,8 +134,7 @@ false
 {{- $host := (index .Values.server.ingress.hosts 0).host -}}
 {{- $tls := gt (len .Values.server.ingress.tls) 0 -}}
 {{- $scheme := ternary "https" "http" $tls -}}
-{{- $port := ternary 443 80 $tls -}}
-{{- printf "%s://%s:%v" $scheme $host $port -}}
+{{- printf "%s://%s" $scheme $host -}}
 {{- else -}}
 {{- $svc := printf "%s-server" (include "twenty.fullname" .) -}}
 {{- $ns := include "twenty.namespace" . -}}

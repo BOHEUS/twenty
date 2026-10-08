@@ -27,6 +27,10 @@ spec:
         app.kubernetes.io/component: worker
     spec:
       serviceAccountName: {{ include "twenty.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
 {{- toYaml .Values.securityContext | nindent 8 }}
       {{- with .Values.worker.nodeSelector }}
@@ -56,12 +60,24 @@ spec:
             - -c
             - |
               until pg_isready -h {{ if .Values.db.enabled }}{{ include "twenty.fullname" . }}-db{{ else }}{{ .Values.db.external.host }}{{ end }} \
-                               -p {{ if .Values.db.enabled }}5432{{ else }}{{ .Values.db.external.port | default 5432 }}{{ end }} \
-                               -U postgres; do
+                               -p {{ if .Values.db.enabled }}5432{{ else }}{{ .Values.db.external.port | default 5432 }}{{ end }}; do
                 echo "Waiting for database socket..."
                 sleep 2
               done
               echo "Database socket is ready!"
+        {{- if .Values.server.enabled }}
+        - name: wait-for-server
+          image: postgres:16-alpine
+          command:
+            - sh
+            - -c
+            - |
+              until wget -q -O /dev/null http://{{ include "twenty.fullname" . }}-server:{{ .Values.server.service.port }}/healthz; do
+                echo "Waiting for server (database migrations)..."
+                sleep 5
+              done
+              echo "Server is ready!"
+        {{- end }}
       containers:
         - name: worker
           {{- $img := include "twenty.worker.image" . }}
@@ -115,6 +131,6 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.worker.resources | nindent 12 }}
-          stdin: {{ default true .Values.worker.stdin }}
-          tty: {{ default true .Values.worker.tty }}
+          stdin: {{ .Values.worker.stdin }}
+          tty: {{ .Values.worker.tty }}
 {{- end }}

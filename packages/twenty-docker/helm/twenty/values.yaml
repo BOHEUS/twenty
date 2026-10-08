@@ -4,6 +4,9 @@ image:
   tag: ""  # defaults to Chart.yaml appVersion
   pullPolicy: IfNotPresent
 
+# Pull secrets applied to all pods (server, worker, internal db and redis)
+imagePullSecrets: []
+
 nameOverride: ""
 fullnameOverride: ""
 
@@ -21,7 +24,9 @@ securityContext:
   runAsUser: 1000
   fsGroup: 1000
 
-# Storage backend: local or s3
+# Storage backend: local or s3.
+# With "local" the files live on the server's PVC only; the worker cannot read them.
+# Use s3 for any deployment that relies on worker jobs touching uploaded files.
 storage:
   type: local
   s3:
@@ -36,7 +41,10 @@ storage:
     # accessKeyIdKey: accessKeyId
     # secretAccessKeyKey: secretAccessKey
 
-# Auth tokens (random if not provided)
+# Auth tokens (random if not provided).
+# The random value is only stable across upgrades with a live cluster lookup. With Argo CD,
+# Flux or `helm template`, set accessToken (and db.internal.appPassword /
+# db.internal.env.PGPASSWORD_SUPERUSER) explicitly, or point at pre-created Secrets.
 secrets:
   tokens:
     create: true
@@ -105,6 +113,7 @@ server:
     accessModes:
       - ReadWriteOnce
 
+  extraVolumes: []
   extraVolumeMounts: []
 
   # Pod scheduling and DNS
@@ -145,6 +154,8 @@ worker:
   replicaCount: 1
   image: {}
   command: ["yarn", "worker:prod"]
+  stdin: true
+  tty: true
 
   resources:
     requests:
@@ -189,7 +200,7 @@ db:
         - ReadWriteOnce
     env:
       PGUSER_SUPERUSER: postgres
-      PGPASSWORD_SUPERUSER: postgres
+      PGPASSWORD_SUPERUSER: ""  # random if empty
       SPILO_PROVIDER: local
       ALLOW_NOSSL: "true"
 

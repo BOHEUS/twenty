@@ -74,3 +74,19 @@ tests:
       - matchRegex:
           path: spec.template.spec.containers[0].image
           pattern: ":v1.14.0$"
+
+  - it: waits for the server before starting
+    set:
+      server.enabled: true
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: wait-for-server
+
+  - it: skips the server wait when the server is disabled
+    set:
+      server.enabled: false
+    asserts:
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 1
