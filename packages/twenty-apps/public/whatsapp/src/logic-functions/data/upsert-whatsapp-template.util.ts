@@ -1,13 +1,15 @@
 import { CoreApiClient } from 'twenty-client-sdk/core';
 
 type UpsertWhatsAppTemplateParams = {
-  metaTemplateId: number;
+  metaTemplateId: number | string;
   name: string;
   language: string;
   category?: string;
   status?: string;
   quality?: string;
   rejectedReason?: string | null;
+  parameterFormat?: string;
+  components?: object;
 };
 
 export const upsertWhatsAppTemplate = async ({
