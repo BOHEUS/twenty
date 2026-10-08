@@ -1,12 +1,10 @@
 import { defineLogicFunction, RoutePayload } from 'twenty-sdk/define';
-import {
-  type WhatsAppPhoneNumberNameUpdateValue,
-  WhatsAppWebhook
-} from 'src/logic-functions/types/whatsapp-webhook-message.type';
+import { WhatsAppWebhook } from 'src/logic-functions/types/whatsapp-webhook-message.type';
 import { validateWebhookPayload } from 'src/logic-functions/data/validate-webhook-payload.util';
-import { enqueueJobs, updateMessageChannel } from "twenty-sdk/logic-function";
+import { enqueueJobs } from "twenty-sdk/logic-function";
 import { WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
 import { updateTwentyMessageChannel } from "src/logic-functions/data/update-message-channel.util";
+import { upsertWhatsAppTemplate } from "src/logic-functions/data/upsert-whatsapp-template.util";
 import { sendInboxNotification } from "src/logic-functions/data/send-inbox-notification.util";
 
 const handler = async (
@@ -48,20 +46,50 @@ const handler = async (
     for (const change of entry.changes) {
       switch (change.field) {
         case "account_alerts":
-          if ('a' in change.value)
-            break;
+          await sendInboxNotification();
+          break;
         case "account_review_update":
+          await sendInboxNotification();
+          break;
         case "account_update":
+          await sendInboxNotification();
+          break;
         case "automatic_events":
         case "business_capability_update":
         case "history":
         case "message_template_components_update":
+          await upsertWhatsAppTemplate({
+            metaTemplateId: change.value.message_template_id,
+            name: change.value.message_template_name,
+            language: change.value.message_template_language,
+          });
+          break;
         case "message_template_quality_update":
+          await upsertWhatsAppTemplate({
+            metaTemplateId: change.value.message_template_id,
+            name: change.value.message_template_name,
+            language: change.value.message_template_language,
+            quality: change.value.new_quality_score,
+          });
+          break;
         case "message_template_status_update":
+          await upsertWhatsAppTemplate({
+            metaTemplateId: change.value.message_template_id,
+            name: change.value.message_template_name,
+            language: change.value.message_template_language,
+            category: change.value.message_template_category,
+            status: change.value.event,
+            rejectedReason:
+              change.value.rejection_info?.reason ??
+              (change.value.reason === null || change.value.reason === 'NONE'
+                ? null
+                : change.value.reason),
+          });
+          break;
         case "partner_solutions":
         case "payment_configuration_update":
         case "phone_number_name_update":
-          if ('a' in change.value){
+          if ('a' in change.value) {
             await updateTwentyMessageChannel();
           }
           break;
@@ -71,16 +99,22 @@ const handler = async (
         case "security":
         case "smb_app_state_sync":
         case "smb_message_echoes":
-
-        case "template_category_update":
           await sendInboxNotification();
+          break;
+        case "template_category_update":
+          await upsertWhatsAppTemplate({
+            metaTemplateId: change.value.message_template_id,
+            name: change.value.message_template_name,
+            language: change.value.message_template_language,
+            category: change.value.new_category,
+          });
           break;
         case "user_preferences":
           return {
             success: false,
           }
         case "messages": {
-          if ('errors' in change.value){
+          if ('errors' in change.value) {
             return {
               success: false,
             }
@@ -97,7 +131,9 @@ const handler = async (
               delayMs: 500,
               jobs: [{
                 payload: {
-                  businessData: change.value.metadata, contacts: change.value.contacts[0], messages: change.value.messages,
+                  businessData: change.value.metadata,
+                  contacts: change.value.contacts[0],
+                  messages: change.value.messages,
                 }
               }]
             })

@@ -12,6 +12,7 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "allowUnreachableCode": false,
+    "noUncheckedIndexedAccess": true,
     "strict": true,
     "alwaysStrict": true,
     "noImplicitAny": true,

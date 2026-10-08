@@ -9,6 +9,12 @@ type SendInboxNotificationParams = {
   contact: WhatsAppWebhookMessageContacts;
   message: WhatsAppWebhookMessageContent;
   text: string;
+} | {
+  workspaceMemberId: string;
+  threadKey: string;
+  idempotencyKey: string;
+  title: string;
+  text: string;
 };
 
 export const sendInboxNotification = async ({
