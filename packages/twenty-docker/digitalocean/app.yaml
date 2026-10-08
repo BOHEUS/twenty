@@ -1,0 +1,107 @@
+name: twenty
+region: nyc
+
+databases:
+  - name: db
+    engine: PG
+    version: "16"
+  - name: cache
+    engine: VALKEY
+    version: "8"
+
+services:
+  - name: server
+    image:
+      registry_type: DOCKER_HUB
+      registry: twentycrm
+      repository: twenty
+      tag: latest
+    http_port: 3000
+    instance_size_slug: apps-s-1vcpu-2gb
+    health_check:
+      http_path: /healthz
+      initial_delay_seconds: 120
+    envs:
+      - key: PG_DATABASE_URL
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+      - key: REDIS_URL
+        scope: RUN_TIME
+        value: ${cache.DATABASE_URL}
+      - key: SERVER_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
+      - key: ENCRYPTION_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: STORAGE_TYPE
+        scope: RUN_TIME
+        value: s3
+      - key: STORAGE_S3_REGION
+        scope: RUN_TIME
+        value: REPLACE_ME
+      - key: STORAGE_S3_NAME
+        scope: RUN_TIME
+        value: REPLACE_ME
+      - key: STORAGE_S3_ENDPOINT
+        scope: RUN_TIME
+        value: REPLACE_ME
+      - key: STORAGE_S3_ACCESS_KEY_ID
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: STORAGE_S3_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+
+workers:
+  - name: worker
+    image:
+      registry_type: DOCKER_HUB
+      registry: twentycrm
+      repository: twenty
+      tag: latest
+    run_command: yarn worker:prod
+    instance_size_slug: apps-s-1vcpu-2gb
+    envs:
+      - key: PG_DATABASE_URL
+        scope: RUN_TIME
+        value: ${db.DATABASE_URL}
+      - key: REDIS_URL
+        scope: RUN_TIME
+        value: ${cache.DATABASE_URL}
+      - key: SERVER_URL
+        scope: RUN_TIME
+        value: ${APP_URL}
+      - key: DISABLE_DB_MIGRATIONS
+        scope: RUN_TIME
+        value: "true"
+      - key: DISABLE_CRON_JOBS_REGISTRATION
+        scope: RUN_TIME
+        value: "true"
+      - key: ENCRYPTION_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: STORAGE_TYPE
+        scope: RUN_TIME
+        value: s3
+      - key: STORAGE_S3_REGION
+        scope: RUN_TIME
+        value: REPLACE_ME
+      - key: STORAGE_S3_NAME
+        scope: RUN_TIME
+        value: REPLACE_ME
+      - key: STORAGE_S3_ENDPOINT
+        scope: RUN_TIME
+        value: REPLACE_ME
+      - key: STORAGE_S3_ACCESS_KEY_ID
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME
+      - key: STORAGE_S3_SECRET_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: REPLACE_ME

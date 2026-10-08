@@ -37,6 +37,18 @@ dmesg | grep -i "out of memory"
 
 An out-of-memory kill on a small droplet is the most common cause: resize the droplet or add swap, then run `docker compose up -d` again.
 
+## App Platform
+
+[`digitalocean/app.yaml`](digitalocean/app.yaml) is an App Platform spec with the server, the worker, a Postgres database and a Valkey (Redis) database. The image is pulled from Docker Hub, so nothing is built.
+
+The "Deploy to DO" button cannot be used: it only supports a single service plus an optional dev database, and Twenty needs a worker and Redis as well. Deploy the spec directly instead.
+
+1. Create a DigitalOcean Space and an access key. App Platform has no persistent disk, so files must go to S3-compatible storage.
+2. In `app.yaml`, replace every `REPLACE_ME`: `ENCRYPTION_KEY` (`openssl rand -base64 32`, same value for server and worker) and the `STORAGE_S3_*` values for your Space. Pin `tag` to a release instead of `latest`.
+3. Deploy: `doctl apps create --spec packages/twenty-docker/digitalocean/app.yaml`, or use "Import app spec" in the DigitalOcean console.
+
+The database components are created as dev databases. For production, attach a managed cluster by adding `production: true` and `cluster_name` to each database entry.
+
 ## Going further
 
 - Back up the `db-data` and `server-local-data` volumes, or use a DigitalOcean Managed PostgreSQL database by setting `PG_DATABASE_HOST` and the related variables in `.env`.
