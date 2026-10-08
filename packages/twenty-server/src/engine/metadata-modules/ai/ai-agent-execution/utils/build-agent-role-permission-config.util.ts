@@ -1,17 +1,24 @@
 import { isDefined } from 'twenty-shared/utils';
 
-import { type RolePermissionConfig } from 'src/engine/twenty-orm/types/role-permission-config';
+import { type RolePermissionConfig } from 'src/engine/twenty-orm/types/role-permission-config.type';
 
 export const buildAgentRolePermissionConfig = ({
   agentRoleId,
   runAsRoleId,
+  additionalRoleRestrictionIds = [],
 }: {
-  agentRoleId: string;
+  agentRoleId: string | undefined;
   runAsRoleId?: string;
+  additionalRoleRestrictionIds?: string[];
 }): RolePermissionConfig => {
-  if (isDefined(runAsRoleId)) {
-    return { intersectionOf: [runAsRoleId] };
+  const baseRoleId = isDefined(runAsRoleId) ? runAsRoleId : agentRoleId;
+
+  // without a role the agent reads nothing, however its restrictions narrow it
+  if (!isDefined(baseRoleId)) {
+    return { intersectionOf: [] };
   }
 
-  return { intersectionOf: [agentRoleId] };
+  return {
+    intersectionOf: [...new Set([baseRoleId, ...additionalRoleRestrictionIds])],
+  };
 };

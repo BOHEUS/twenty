@@ -14,7 +14,7 @@ import {
   resolveOrderByLeaves,
 } from 'src/engine/api/utils/resolve-order-by-leaves.utils';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
-import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
+import { type OrmFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/orm-flat-field-metadata.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 
 export interface CursorData {
@@ -46,11 +46,8 @@ export const encodeCursor = <T extends ObjectRecord = ObjectRecord>({
   order: ObjectRecordOrderBy | undefined;
   flatObjectMetadata: FlatObjectMetadata;
   flatObjectMetadataMaps?: FlatEntityMaps<FlatObjectMetadata>;
-  flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>;
-  // Sort values read from the scan's raw rows by the find-many runner: they
-  // carry the exact SQL values (NULLs included) the continuation must mirror.
-  // Falling back to the formatted record covers callers without them (e.g.
-  // nested connections), whose cursors do not continue a root scan.
+  flatFieldMetadataMaps: FlatEntityMaps<OrmFlatFieldMetadata>;
+  // Exact SQL values (NULLs included) the continuation must mirror; absent for nested connections
   orderByValuesFromScan?: Record<string, unknown>;
 }): string => {
   // oxlint-disable-next-line typescript/no-explicit-any
@@ -62,9 +59,6 @@ export const encodeCursor = <T extends ObjectRecord = ObjectRecord>({
     flatObjectMetadataMaps,
     flatFieldMetadataMaps,
   }).filter(checkIfLeafCanCarryCursorValue)) {
-    // Read the ordered value along the leaf's path: a null container yields
-    // null (the row belongs to the NULL block of the ordering), a missing one
-    // yields undefined, which JSON serialization drops
     const [rootKey, ...nestedKeys] = leaf.path;
     const valueSource = orderByValuesFromScan ?? objectRecord;
     let leafValue: unknown = valueSource[rootKey];
@@ -76,13 +70,10 @@ export const encodeCursor = <T extends ObjectRecord = ObjectRecord>({
       leafValue = isPlainObject(leafValue) ? leafValue[key] : undefined;
     }
 
-    // An unloaded relation cannot contribute a value at all: leave the key out
-    // instead of writing an empty object
     if (leaf.kind === 'relation' && leafValue === undefined) {
       continue;
     }
 
-    // Write it back under the same path
     let container = orderByValues;
 
     for (const key of leaf.path.slice(0, -1)) {
@@ -101,7 +92,7 @@ export const encodeCursor = <T extends ObjectRecord = ObjectRecord>({
 };
 
 export const encodeCursorData = (cursorData: CursorData) => {
-  return Buffer.from(JSON.stringify(cursorData)).toString('base64');
+  return Buffer.from(JSON.stringify(cursorData)).toString('base64url');
 };
 
 export const getCursor = (

@@ -1,3 +1,4 @@
+import { HTTPMethod } from 'twenty-shared/types';
 import { buildBaseManifest } from 'test/integration/metadata/suites/application/utils/build-base-manifest.util';
 import { cleanupApplicationAndAppRegistration } from 'test/integration/metadata/suites/application/utils/cleanup-application-and-app-registration.util';
 import { setupApplicationForSync } from 'test/integration/metadata/suites/application/utils/setup-application-for-sync.util';
@@ -42,7 +43,7 @@ const buildManifestWithLogicFunction = ({
         builtHandlerChecksum: 'checksum-cleanup',
         httpRouteTriggerSettings: {
           path: '/cleanup',
-          httpMethod: 'POST',
+          httpMethod: HTTPMethod.POST,
           isAuthRequired: true,
         },
       },
@@ -113,6 +114,7 @@ describe('Uninstall application logic function hook', () => {
       .mockResolvedValue({
         data: {},
         duration: 1,
+        billedDurationMs: 1,
         logs: '',
         status: LogicFunctionExecutionStatus.SUCCESS,
       });
@@ -241,6 +243,7 @@ describe('Uninstall application logic function hook', () => {
     executeSpy.mockResolvedValue({
       data: null,
       duration: 1,
+      billedDurationMs: 1,
       logs: '',
       status: LogicFunctionExecutionStatus.ERROR,
       error: {

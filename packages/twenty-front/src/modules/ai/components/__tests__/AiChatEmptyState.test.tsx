@@ -1,12 +1,12 @@
+import { AGENT_CHAT_NEW_THREAD_DRAFT_KEY } from '@/ai/states/agentChatDraftsByThreadIdState';
 import { render } from '@testing-library/react';
 import { Provider as JotaiProvider } from 'jotai';
 import { type ReactNode } from 'react';
 
 import { AiChatEmptyState } from '@/ai/components/AiChatEmptyState';
-import { AgentChatComponentInstanceContext } from '@/ai/contexts/AgentChatComponentInstanceContext';
 import { agentChatDisplayedThreadState } from '@/ai/states/agentChatDisplayedThreadState';
-import { agentChatIsAwaitingFirstChunkComponentFamilyState } from '@/ai/states/agentChatIsAwaitingFirstChunkComponentFamilyState';
-import { agentChatIsStreamingComponentFamilyState } from '@/ai/states/agentChatIsStreamingComponentFamilyState';
+import { agentChatIsAwaitingFirstChunkFamilyState } from '@/ai/states/agentChatIsAwaitingFirstChunkFamilyState';
+import { agentChatIsStreamingFamilyState } from '@/ai/states/agentChatIsStreamingFamilyState';
 import { currentAiChatThreadState } from '@/ai/states/currentAiChatThreadState';
 import {
   jotaiStore,
@@ -17,17 +17,10 @@ jest.mock('@/ai/components/suggested-prompts/AiChatSuggestedPrompts', () => ({
   AiChatSuggestedPrompts: () => <div data-testid="suggested-prompts" />,
 }));
 
-const INSTANCE_ID = 'aiChatEmptyStateTest';
-const THREAD_ID = 'thread-1';
+const THREAD_ID = AGENT_CHAT_NEW_THREAD_DRAFT_KEY;
 
 const Wrapper = ({ children }: { children: ReactNode }) => (
-  <JotaiProvider store={jotaiStore}>
-    <AgentChatComponentInstanceContext.Provider
-      value={{ instanceId: INSTANCE_ID }}
-    >
-      {children}
-    </AgentChatComponentInstanceContext.Provider>
-  </JotaiProvider>
+  <JotaiProvider store={jotaiStore}>{children}</JotaiProvider>
 );
 
 describe('AiChatEmptyState', () => {
@@ -39,7 +32,7 @@ describe('AiChatEmptyState', () => {
   });
 
   it('should render the suggested prompts when there is no message, no error and nothing loading', () => {
-    const { getByTestId } = render(<AiChatEmptyState editor={null} />, {
+    const { getByTestId } = render(<AiChatEmptyState />, {
       wrapper: Wrapper,
     });
 
@@ -48,14 +41,13 @@ describe('AiChatEmptyState', () => {
 
   it('should render nothing when the current thread is awaiting its first chunk', () => {
     jotaiStore.set(
-      agentChatIsAwaitingFirstChunkComponentFamilyState.atomFamily({
-        instanceId: INSTANCE_ID,
-        familyKey: { threadId: THREAD_ID },
+      agentChatIsAwaitingFirstChunkFamilyState.atomFamily({
+        threadId: THREAD_ID,
       }),
       true,
     );
 
-    const { container } = render(<AiChatEmptyState editor={null} />, {
+    const { container } = render(<AiChatEmptyState />, {
       wrapper: Wrapper,
     });
 
@@ -64,14 +56,11 @@ describe('AiChatEmptyState', () => {
 
   it('should render nothing when the current thread is streaming', () => {
     jotaiStore.set(
-      agentChatIsStreamingComponentFamilyState.atomFamily({
-        instanceId: INSTANCE_ID,
-        familyKey: { threadId: THREAD_ID },
-      }),
+      agentChatIsStreamingFamilyState.atomFamily({ threadId: THREAD_ID }),
       true,
     );
 
-    const { container } = render(<AiChatEmptyState editor={null} />, {
+    const { container } = render(<AiChatEmptyState />, {
       wrapper: Wrapper,
     });
 

@@ -20,7 +20,19 @@ export const computeStandardAttachmentViews = (
         type: ViewType.TABLE,
         key: ViewKey.INDEX,
         position: 0,
-        icon: 'IconList',
+        icon: 'IconTable',
+      },
+    }),
+    attachmentRecordPageFields: createStandardViewFlatMetadata({
+      ...args,
+      objectName: 'attachment',
+      context: {
+        viewName: 'attachmentRecordPageFields',
+        name: 'Attachment Record Page Fields',
+        type: ViewType.FIELDS_WIDGET,
+        key: null,
+        position: 0,
+        icon: 'IconListDetails',
       },
     }),
   };

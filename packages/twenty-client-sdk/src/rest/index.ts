@@ -6,13 +6,12 @@ import {
   DEFAULT_FUNCTIONS_URL_NAME,
 } from 'twenty-shared/application';
 
+import { type TwentyClientRunAs } from '../shared/twenty-client-run-as.type';
+
+export type { TwentyClientRunAs };
+
 const isDefined = <T>(value: T): value is NonNullable<T> =>
   value !== null && value !== undefined;
-
-// The default acts as the person who triggered the run, limited to their role
-// intersected with the application's, and as the application alone when nobody
-// triggered it. 'application' asks for the application's access either way.
-export type TwentyClientRunAs = 'user' | 'application';
 
 export type RestApiClientOptions = {
   baseUrl?: string;
@@ -63,8 +62,7 @@ const getProcessEnvironment = (): ProcessEnvironment => {
 
 const isAppRoutePath = (path: string): boolean => /^\/?s\//.test(path);
 
-// The server serves app routes under /s/; isolated functions domains serve
-// them at the root, so the marker prefix is stripped before joining.
+// Isolated functions domains serve app routes at the root, without the server's /s/ prefix.
 const stripAppRoutePrefix = (path: string): string =>
   path.replace(/^(\/?)s\//, '$1');
 
@@ -194,9 +192,7 @@ export class RestApiClient {
       return { baseUrl: this.resolveBaseUrl(), path };
     }
 
-    // /s/ marks an app HTTP route. TWENTY_FUNCTIONS_URL is a complete base
-    // URL (isolated domains serve routes at the root, self-host bakes /s in);
-    // fall back to the same-site /s route when it is not injected.
+    // TWENTY_FUNCTIONS_URL is a complete base URL (isolated domains serve at the root, self-host bakes /s in).
     return {
       baseUrl: this.resolveFunctionsBaseUrl() ?? `${this.resolveBaseUrl()}/s`,
       path: stripAppRoutePrefix(path),

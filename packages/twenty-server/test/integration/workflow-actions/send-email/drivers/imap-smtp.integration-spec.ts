@@ -27,7 +27,7 @@ describe('SEND_EMAIL workflow action on SMTP (integration)', () => {
 
   beforeAll(async () => {
     await updateConfigVariable({
-      input: { key: 'OUTBOUND_HTTP_SAFE_MODE_ENABLED', value: false },
+      input: { key: 'OUTBOUND_HTTP_ALLOWED_INTERNAL_HOSTS', value: ['*'] },
     });
 
     greenmail = await startGreenmailContainer({
@@ -70,7 +70,7 @@ describe('SEND_EMAIL workflow action on SMTP (integration)', () => {
 
   afterAll(async () => {
     await updateConfigVariable({
-      input: { key: 'OUTBOUND_HTTP_SAFE_MODE_ENABLED', value: true },
+      input: { key: 'OUTBOUND_HTTP_ALLOWED_INTERNAL_HOSTS', value: [] },
     }).catch(() => undefined);
 
     if (isNonEmptyString(connectedAccountId)) {
@@ -150,5 +150,37 @@ describe('SEND_EMAIL workflow action on SMTP (integration)', () => {
         expect.objectContaining({ handle: HANDLE, role: 'BCC' }),
       ]),
     );
+  }, 300000);
+
+  it('fails the step when the from handle is not a verified alias', async () => {
+    const subject = `IMAP/SMTP workflow rejected sender ${randomUUID()}`;
+
+    const workflowRun = await runWorkflowActionStep({
+      name: 'IMAP/SMTP rejected sender send email workflow',
+      stepType: 'SEND_EMAIL',
+      input: {
+        connectedAccountId,
+        fromHandle: 'not-my-alias@acme.test',
+        recipients: { to: HANDLE, cc: '', bcc: '' },
+        subject,
+        body: '<p>SMTP workflow rejected body</p>',
+      },
+    });
+
+    expect(workflowRun).toMatchObject({
+      status: 'FAILED',
+      stepStatus: 'FAILED',
+      stepError: expect.stringContaining(
+        'is not the connected account handle nor one of its verified aliases',
+      ),
+    });
+    expect(
+      await findRecordNodesByFilter<{ id: string }>(
+        'message',
+        'messages',
+        'id',
+        { subject: { eq: subject } },
+      ),
+    ).toEqual([]);
   }, 300000);
 });

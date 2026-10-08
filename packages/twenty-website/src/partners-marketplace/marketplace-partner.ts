@@ -29,12 +29,13 @@ export type MarketplacePartner = {
   hourlyRateUsd: number | null;
   projectBudgetMinUsd: number | null;
   links: PartnerLinks;
-  /** Flat profile URLs from `/s/partner-by-slug`; preferred over typed `links` on profile pages. */
+  // Flat profile URLs from `/s/partner-by-slug`; preferred over typed `links` on profile pages.
   linkUrls?: readonly string[];
   profilePictureUrl: string;
   city: string;
   country: string;
   skills: readonly string[];
+  superPartner: boolean;
   services: readonly PartnerService[];
   portfolio: readonly PartnerCaseStudy[];
   clients: readonly PartnerClient[];

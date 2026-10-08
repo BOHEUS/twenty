@@ -1,10 +1,11 @@
 import { useIsPageLayoutInEditMode } from '@/page-layout/hooks/useIsPageLayoutInEditMode';
-import { WIDGET_HEADER_ACTION_COMPONENT_BY_WIDGET_TYPE } from '@/page-layout/widgets/constants/WidgetHeaderActionComponentByWidgetType';
 import { useCurrentWidgetOrNull } from '@/page-layout/widgets/hooks/useCurrentWidgetOrNull';
+import { getWidgetHeaderActionDefinition } from '@/page-layout/widgets/utils/getWidgetHeaderActionDefinition';
+import { WidgetHeaderCommandMenuItems } from '@/page-layout/widgets/widget-card/components/WidgetHeaderCommandMenuItems';
 import { useLayoutRenderingContext } from '@/ui/layout/contexts/LayoutRenderingContext';
 import { styled } from '@linaria/react';
 import { isDefined } from 'twenty-shared/utils';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { WidgetType } from '~/generated-metadata/graphql';
 
 const StyledActionsContainer = styled.div`
@@ -22,19 +23,31 @@ export const WidgetCardHeaderActionsRenderer = () => {
     return null;
   }
 
-  // Activity actions create records, so they hide while the layout is being
-  // arranged. Field widgets keep their actions: see-all is a read-only link,
-  // and edit hides itself through useFieldWidgetActionVisibility.
+  // Activity actions create records, so they hide while arranging; field widget actions handle their own visibility.
   if (isPageLayoutInEditMode && widget.type !== WidgetType.FIELD) {
     return null;
   }
 
-  const HeaderActionComponent =
-    WIDGET_HEADER_ACTION_COMPONENT_BY_WIDGET_TYPE[widget.type];
+  const headerActionDefinition = getWidgetHeaderActionDefinition(widget);
 
-  if (!isDefined(HeaderActionComponent)) {
+  if (!isDefined(headerActionDefinition)) {
     return null;
   }
+
+  if (headerActionDefinition.kind === 'command-menu-items') {
+    return (
+      <StyledActionsContainer>
+        <WidgetHeaderCommandMenuItems
+          applicationId={widget.applicationId}
+          commandMenuItemUniversalIdentifiers={
+            headerActionDefinition.commandMenuItemUniversalIdentifiers
+          }
+        />
+      </StyledActionsContainer>
+    );
+  }
+
+  const HeaderActionComponent = headerActionDefinition.Component;
 
   return (
     <StyledActionsContainer>

@@ -12,7 +12,7 @@ import { convertOrderByToFindOptionsOrder } from 'src/engine/api/graphql/graphql
 import { computeOrderByLeafColumn } from 'src/engine/api/utils/compute-order-by-leaf-column.util';
 import { resolveOrderByLeaves } from 'src/engine/api/utils/resolve-order-by-leaves.utils';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
-import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
+import { type OrmFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/orm-flat-field-metadata.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 
 import { type OrderByClause } from './types/order-by-condition.type';
@@ -22,19 +22,16 @@ import { type RelationJoinInfo } from './types/relation-join-info.type';
 // Re-export types for backward compatibility
 export { OrderByClause, ParseOrderByResult, RelationJoinInfo };
 
-// Compiles SQL ORDER BY clauses from the resolved orderBy leaves: walking,
-// validation and permission checks live in resolveOrderByLeaves, shared with
-// column selection and the cursor utilities, so the scan order can never
-// diverge from what cursors continue.
+// Leaves come from resolveOrderByLeaves, shared with cursors, so the scan order cannot diverge from cursor continuation
 export class GraphqlQueryOrderFieldParser {
   private flatObjectMetadata: FlatObjectMetadata;
   private flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>;
-  private flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>;
+  private flatFieldMetadataMaps: FlatEntityMaps<OrmFlatFieldMetadata>;
 
   constructor(
     flatObjectMetadata: FlatObjectMetadata,
     flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>,
-    flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>,
+    flatFieldMetadataMaps: FlatEntityMaps<OrmFlatFieldMetadata>,
   ) {
     this.flatObjectMetadata = flatObjectMetadata;
     this.flatObjectMetadataMaps = flatObjectMetadataMaps;

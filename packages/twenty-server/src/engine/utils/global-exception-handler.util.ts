@@ -42,6 +42,8 @@ export const graphQLErrorCodesToFilter = [
   ErrorCode.CONFLICT,
   ErrorCode.BAD_USER_INPUT,
   ErrorCode.METADATA_VALIDATION_FAILED,
+  ErrorCode.RATE_LIMITED,
+  ErrorCode.QUOTA_EXHAUSTED,
 ];
 
 export const handleExceptionAndConvertToGraphQLError = (
@@ -112,7 +114,7 @@ export const handleException = <
   shouldBeCapturedBySentry = true,
 }: {
   exception: T;
-  exceptionHandlerService: ExceptionHandlerService;
+  exceptionHandlerService: Pick<ExceptionHandlerService, 'captureExceptions'>;
   user?: ExceptionHandlerUser;
   workspace?: ExceptionHandlerWorkspace;
   statusCode?: number;

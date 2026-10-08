@@ -1,19 +1,17 @@
 import { SkeletonLoader } from '@/activities/components/SkeletonLoader';
 import { TaskList } from '@/activities/tasks/components/TaskList';
 import { type Task } from '@/activities/types/Task';
+import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
+import { AnimatedPlaceholder } from '@/ui/feedback/empty-state/components/AnimatedPlaceholder/AnimatedPlaceholder';
+import { EmptyState } from '@/ui/feedback/empty-state/components/EmptyState';
 import { styled } from '@linaria/react';
 import { t } from '@lingui/core/macro';
 import groupBy from 'lodash.groupby';
+import { CoreObjectNameSingular } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import {
-  AnimatedPlaceholder,
-  AnimatedPlaceholderEmptyContainer,
-  AnimatedPlaceholderEmptySubTitle,
-  AnimatedPlaceholderEmptyTextContainer,
-  AnimatedPlaceholderEmptyTitle,
-} from 'twenty-ui/feedback';
+
 import { IconPlus } from 'twenty-ui/icon';
-import { Button } from 'twenty-ui/input';
+import { Button } from 'twenty-ui/primitives/input';
 
 const StyledContainer = styled.div`
   display: flex;
@@ -32,6 +30,14 @@ export const TaskGroupsContent = ({
   onCreateTask,
   tasks,
 }: TaskGroupsContentProps) => {
+  const { objectMetadataItem: taskObjectMetadataItem } = useObjectMetadataItem({
+    objectNameSingular: CoreObjectNameSingular.Task,
+  });
+
+  const taskStatusOptions = taskObjectMetadataItem.fields.find(
+    (field) => field.name === 'status',
+  )?.options;
+
   const isTasksEmpty = tasks.length === 0;
 
   if (isLoading && isTasksEmpty) {
@@ -40,25 +46,22 @@ export const TaskGroupsContent = ({
 
   if (isTasksEmpty) {
     return (
-      <AnimatedPlaceholderEmptyContainer>
+      <EmptyState.Root>
         <AnimatedPlaceholder type="noTask" />
-        <AnimatedPlaceholderEmptyTextContainer>
-          <AnimatedPlaceholderEmptyTitle>
-            {t`Mission accomplished!`}
-          </AnimatedPlaceholderEmptyTitle>
-          <AnimatedPlaceholderEmptySubTitle>
+        <EmptyState.Content>
+          <EmptyState.Title>{t`Mission accomplished!`}</EmptyState.Title>
+          <EmptyState.Description>
             {t`All tasks addressed. Maintain the momentum.`}
-          </AnimatedPlaceholderEmptySubTitle>
-        </AnimatedPlaceholderEmptyTextContainer>
+          </EmptyState.Description>
+        </EmptyState.Content>
         {isDefined(onCreateTask) && (
           <Button
-            Icon={IconPlus}
-            title={t`New task`}
-            variant="secondary"
+            startIcon={<IconPlus />}
             onClick={onCreateTask}
-          />
+            variant="outline"
+          >{t`New task`}</Button>
         )}
-      </AnimatedPlaceholderEmptyContainer>
+      </EmptyState.Root>
     );
   }
 
@@ -68,9 +71,23 @@ export const TaskGroupsContent = ({
 
   return (
     <StyledContainer>
-      {sortedTasksByStatus.map(([status, tasksByStatus]: [string, Task[]]) => (
-        <TaskList key={status} title={status} tasks={tasksByStatus} />
-      ))}
+      {sortedTasksByStatus.map(
+        ([status, tasksByStatus]: [string, Task[]], index) => {
+          const statusOption = taskStatusOptions?.find(
+            (option) => option.value === status,
+          );
+
+          return (
+            <TaskList
+              key={status}
+              title={statusOption?.label ?? status}
+              titleColor={statusOption?.color ?? 'transparent'}
+              tasks={tasksByStatus}
+              isFirst={index === 0}
+            />
+          );
+        },
+      )}
     </StyledContainer>
   );
 };

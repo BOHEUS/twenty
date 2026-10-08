@@ -4,6 +4,13 @@ import { Inject, Injectable } from '@nestjs/common';
 import { type Milliseconds } from 'cache-manager';
 import { type RedisCache } from 'cache-manager-redis-yet';
 
+import { isDefined } from 'twenty-shared/utils';
+
+import {
+  CacheStorageException,
+  CacheStorageExceptionCode,
+} from 'src/engine/core-modules/cache-storage/exceptions/cache-storage.exception';
+import { type CacheScript } from 'src/engine/core-modules/cache-storage/types/cache-script.type';
 import { CacheStorageNamespace } from 'src/engine/core-modules/cache-storage/types/cache-storage-namespace.enum';
 
 @Injectable()
@@ -120,6 +127,37 @@ export class CacheStorageService {
     }
   }
 
+  async msetAndMdel<T = unknown>({
+    entries,
+    keysToDelete,
+  }: {
+    entries: Array<{ key: string; value: T; ttl?: Milliseconds }>;
+    keysToDelete: string[];
+  }): Promise<void> {
+    if (!this.isRedisCache(this.cache)) {
+      throw new CacheStorageException(
+        'msetAndMdel is only supported with Redis cache',
+        CacheStorageExceptionCode.REDIS_CACHE_REQUIRED,
+      );
+    }
+
+    const transaction = this.cache.store.client.multi();
+
+    for (const { key, value, ttl } of entries) {
+      transaction.set(
+        this.getKey(key),
+        JSON.stringify(value),
+        isDefined(ttl) && ttl > 0 ? { PX: ttl } : {},
+      );
+    }
+
+    if (keysToDelete.length > 0) {
+      transaction.del(keysToDelete.map((key) => this.getKey(key)));
+    }
+
+    await transaction.exec();
+  }
+
   async setAdd(key: string, value: string[], ttl?: Milliseconds) {
     if (value.length === 0) {
       return;
@@ -221,9 +259,7 @@ export class CacheStorageService {
 
     do {
       const result = await redisClient.scan(cursor, {
-        // Through getKey, not the namespace alone: under NODE_ENV=test every
-        // key carries a further prefix, so a raw namespace match scans for
-        // keys that do not exist and the flush silently does nothing.
+        // Through getKey: under NODE_ENV=test keys carry an extra prefix, so a raw namespace match flushes nothing.
         MATCH: this.getKey(scanPattern),
         COUNT: 100,
       });
@@ -381,6 +417,35 @@ end`;
       keys: [this.getKey(key)],
       arguments: [field, value],
     }) as Promise<number>;
+  }
+
+  async runScript<TResult>({
+    script,
+    keys,
+    args,
+  }: {
+    script: CacheScript;
+    keys: string[];
+    args: string[];
+  }): Promise<TResult> {
+    if (!this.isRedisCache(this.cache)) {
+      throw new CacheStorageException(
+        'runScript is only supported with Redis cache',
+        CacheStorageExceptionCode.REDIS_CACHE_REQUIRED,
+      );
+    }
+
+    try {
+      return (await this.cache.store.client.eval(script.source, {
+        keys: keys.map((key) => this.getKey(key)),
+        arguments: args,
+      })) as TResult;
+    } catch (error) {
+      throw new CacheStorageException(
+        `Cache script "${script.name}" failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+        CacheStorageExceptionCode.SCRIPT_EXECUTION_FAILED,
+      );
+    }
   }
 
   async hashSetWithExpire({

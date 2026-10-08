@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko\n"
 "Project-Id-Version: 05979aaf4e7789e4424376136c855f77\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2026-08-20 16:13\n"
+"PO-Revision-Date: 2026-10-07 16:20\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -72,6 +72,11 @@ msgstr "{labelText} 필터"
 #: src/partners-marketplace/FilterDropdown.tsx
 msgid "{labelText} filter, {0} selected"
 msgstr "{labelText} 필터, {0}개 선택됨"
+
+#. js-lingui-id: WWLSqV
+#: src/partners-marketplace/FilterBar.tsx
+msgid "{totalCount, plural, one {# certified partner ready to take on your project} other {# certified partners ready to take on your project}}"
+msgstr "{totalCount, plural, other {프로젝트를 맡을 준비가 된 인증 파트너 #명}}"
 
 #. js-lingui-id: 0Qb9by
 #: src/case-studies/case-study-stories.ts
@@ -716,7 +721,7 @@ msgstr "새로운 유지 관리 모드로, 관리자가 민감한 작업 중에 
 #. js-lingui-id: iIggw/
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "A new onboarding experience"
-msgstr "새로운 온보딩 경험 제공하기."
+msgstr "새로운 온보딩 경험 제공하기"
 
 #. js-lingui-id: P5BDuh
 #: src/case-studies/case-study-stories.ts
@@ -727,6 +732,11 @@ msgstr "성장을 위해 준비된 *플랫폼*"
 #: src/case-studies/case-study-stories.ts
 msgid "A platform ready to grow"
 msgstr "성장을 준비한 플랫폼"
+
+#. js-lingui-id: GGXFEW
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "A proper home on mobile"
+msgstr "모바일에 알맞은 홈"
 
 #. js-lingui-id: vbJW8I
 #: src/case-studies/case-study-stories.ts
@@ -814,15 +824,15 @@ msgstr "계정 담당자"
 msgid "Action"
 msgstr "동작"
 
-#. js-lingui-id: Kqfsda
+#. js-lingui-id: rBxOyl
 #: src/platform/routing/static-website-routes.ts
-msgid "Activate your Twenty enterprise license after checkout and copy your key into your self-hosted instance."
-msgstr "결제 후 Twenty 엔터프라이즈 라이선스를 활성화하고, 키를 자체 호스팅 인스턴스에 복사하세요."
+msgid "Activate your Twenty Organization license after checkout and copy your key into your self-hosted instance."
+msgstr "결제 후 Twenty Organization 라이선스를 활성화하고 키를 자체 호스팅 인스턴스에 복사하세요."
 
-#. js-lingui-id: muhZ+X
+#. js-lingui-id: iSbLT2
 #: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
-msgid "Activating your enterprise license…"
-msgstr "엔터프라이즈 라이선스를 활성화하는 중…"
+msgid "Activating your Organization license…"
+msgstr "Organization 라이선스를 활성화하는 중…"
 
 #. js-lingui-id: +cggij
 #: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
@@ -889,6 +899,11 @@ msgstr "새로운 전용 필드 위젯으로 레이아웃 안에 리치 텍스�
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Add Several emails for one contact"
 msgstr "하나의 연락처에 여러 이메일 추가"
+
+#. js-lingui-id: /01kre
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Add shared instructions, playbooks, and other rich text with the new Note widget. Insert widgets exactly where you want them, and unpin the first tab when your layout needs more room."
+msgstr "새 메모 위젯으로 공유 지침, 플레이북 및 기타 서식 있는 텍스트를 추가하세요. 원하는 위치에 정확히 위젯을 삽입하고, 레이아웃에 더 많은 공간이 필요할 때 첫 번째 탭을 고정 해제하세요."
 
 #. js-lingui-id: hWkQMS
 #: src/sections/product-feature/TasksVisual/components/AddTaskButton.tsx
@@ -972,6 +987,16 @@ msgstr "Afghanistan 🇦🇫"
 #: src/partners-marketplace/served-geo-labels.ts
 msgid "Africa"
 msgstr "아프리카"
+
+#. js-lingui-id: 7X/+39
+#: src/sections/faq/partner-faq.data.ts
+msgid "Agencies and freelancers apply through the Twenty partner program page, which lists the requirements and carries the application form."
+msgstr "에이전시와 프리랜서는 요구 사항과 신청서가 있는 Twenty 파트너 프로그램 페이지를 통해 신청합니다."
+
+#. js-lingui-id: CHjiD2
+#: src/sections/partner-lead/PartnerBecomeStrip.tsx
+msgid "Agencies and freelancers can apply to join the certified directory."
+msgstr "에이전시와 프리랜서는 인증 디렉터리에 등록을 신청할 수 있습니다."
 
 #. js-lingui-id: NmHsVh
 #: src/partner-application/data/partner-team-type-options.ts
@@ -1084,6 +1109,11 @@ msgstr "마이그레이션 *워크플로에서의 AI 활용*"
 #: src/case-studies/case-study-stories.ts
 msgid "AI in the migration workflow"
 msgstr "마이그레이션 워크플로에서의 AI 활용"
+
+#. js-lingui-id: CKvvwf
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "AI settings now show each model’s provider, price per million tokens, context window, maximum output, and data residency."
+msgstr "이제 AI 설정에서 각 모델의 제공업체, 100만 토큰당 가격, 컨텍스트 윈도우, 최대 출력 및 데이터 레지던시를 확인할 수 있습니다."
 
 #. js-lingui-id: t97j+F
 #: src/case-studies/case-study-catalog.ts
@@ -1254,6 +1284,11 @@ msgstr "4월"
 msgid "Arabic"
 msgstr "아랍어"
 
+#. js-lingui-id: Qrqy7n
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Arabic and Hebrew read right to left"
+msgstr "아랍어와 히브리어는 오른쪽에서 왼쪽으로 읽습니다."
+
 #. js-lingui-id: uicv6Z
 #: src/case-studies/case-study-stories.ts
 #: src/case-studies/case-study-stories.ts
@@ -1269,6 +1304,11 @@ msgstr "Argentina 🇦🇷"
 #: src/partner-application/data/partner-country-options.ts
 msgid "Armenia 🇦🇲"
 msgstr "Armenia 🇦🇲"
+
+#. js-lingui-id: hgvS2c
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Ask AI to attach files you upload in chat directly to records."
+msgstr "AI에게 채팅에서 업로드한 파일을 레코드에 직접 첨부하도록 요청하세요."
 
 #. js-lingui-id: GYKCBW
 #: src/platform/releases/ReleaseNotes.tsx
@@ -1289,6 +1329,16 @@ msgstr "견고한 CRM을 조합하고 반복하며 적응시키되, *빠르게 �
 #: src/sections/product-feature/data/feature-tiles.ts
 msgid "Assign owners and due dates"
 msgstr "담당자와 마감일 지정"
+
+#. js-lingui-id: eo0HU7
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "At least one shipped Twenty implementation — customer or internal — with a link that shows the work. Solo freelancers and agencies both qualify."
+msgstr "작업 내용을 보여 주는 링크가 포함된, 고객용 또는 내부용으로 제공 완료된 Twenty 구현 사례가 하나 이상 필요합니다. 개인 프리랜서와 에이전시 모두 자격이 있습니다."
+
+#. js-lingui-id: PbTDQ4
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Attach files to records with AI"
+msgstr "AI로 레코드에 파일 첨부"
 
 #. js-lingui-id: awzjg/
 #: src/platform/releases/ReleaseNotes.tsx
@@ -1406,6 +1456,7 @@ msgstr "천재가 되어 보세요!"
 
 #. js-lingui-id: 6ZCRfT
 #: src/sections/partner-signoff/PartnerSignoff.tsx
+#: src/sections/partner-lead/PartnerBecomeStrip.tsx
 #: src/sections/partner-hero/PartnerHero.tsx
 msgid "Become a partner"
 msgstr "파트너 되기"
@@ -1414,6 +1465,16 @@ msgstr "파트너 되기"
 #: src/platform/routing/static-website-routes.ts
 msgid "Become a Twenty Partner — Apply"
 msgstr "Twenty 파트너 되기 — 신청"
+
+#. js-lingui-id: 8x+SS7
+#: src/platform/routing/static-website-routes.ts
+msgid "Become a Twenty Partner — Join the Open Source CRM Ecosystem"
+msgstr "Twenty 파트너 되기 — 오픈 소스 CRM 생태계에 참여하세요"
+
+#. js-lingui-id: r8MUXZ
+#: src/sections/faq/BecomePartnerFaq.tsx
+msgid "Becoming *a Twenty partner*"
+msgstr "*Twenty 파트너* 되기"
 
 #. js-lingui-id: 83Wi6G
 #: src/sections/home-stepper/data/stepper.data.ts
@@ -1454,6 +1515,11 @@ msgstr "Benjamin Reynolds"
 #: src/sections/testimonials/partner-testimonials.data.ts
 msgid "Bertrams"
 msgstr "Bertrams"
+
+#. js-lingui-id: CrZWSz
+#: src/partner-application/partner-application-copy.ts
+msgid "Best proof first: a live Twenty instance URL, a public repo, or a YouTube link. Loom, Drive and file links are accepted but slower to review."
+msgstr "가장 좋은 증빙 자료 우선: 실제 운영 중인 Twenty 인스턴스 URL, 공개 리포지토리 또는 YouTube 링크를 제출해 주세요. Loom, Drive 및 파일 링크도 허용되지만 검토에 더 오래 걸립니다."
 
 #. js-lingui-id: BSmDFu
 #: src/platform/releases/ReleaseNotes.tsx
@@ -1527,13 +1593,19 @@ msgstr "Brazil 🇧🇷"
 
 #. js-lingui-id: hKAV/O
 #: src/sections/pricing-engagement-band/PricingEngagementBand.tsx
+#: src/sections/partner-hero/BrowseDirectoryButton.tsx
 msgid "Browse partners"
 msgstr "파트너 찾아보기"
 
-#. js-lingui-id: bmk2dj
-#: src/platform/routing/static-website-routes.ts
-msgid "Browse Twenty's certified partners — the agencies and individuals who migrate, customise, host, and support the open source CRM across regions, languages, and deployment models."
-msgstr "Twenty 공인 파트너 — 지역, 언어, 배포 모델 전반에서 오픈 소스 CRM을 마이그레이션, 커스터마이즈, 호스팅, 지원하는 에이전시와 개인 파트너를 둘러보세요."
+#. js-lingui-id: jkVxe+
+#: src/sections/partner-lead/PartnerDirectory.tsx
+msgid "Browse the *certified partners*"
+msgstr "*공인 파트너* 둘러보기"
+
+#. js-lingui-id: pB7UCU
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Browse your records in a compact list, now available to everyone. Group records and see the fields that matter in a layout that adapts to desktop and mobile."
+msgstr "이제 모든 사용자가 사용할 수 있는 간결한 목록에서 레코드를 찾아보세요. 레코드를 그룹화하고 데스크톱과 모바일에 맞게 조정되는 레이아웃에서 중요한 필드를 확인하세요."
 
 #. js-lingui-id: VX4eI/
 #: src/partner-application/data/partner-country-options.ts
@@ -1625,6 +1697,11 @@ msgstr "벤더 종속에 데인 AC&T, 마침내 진짜로 소유한 CRM을 구�
 msgid "Burundi 🇧🇮"
 msgstr "Burundi 🇧🇮"
 
+#. js-lingui-id: s61NQg
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "Buyers submit a project brief with scope, timeline, and budget. We hand-pick the certified partners who fit and make the introduction within 48 hours."
+msgstr "구매자는 범위, 일정, 예산이 포함된 프로젝트 개요를 제출합니다. 적합한 공인 파트너를 엄선하여 48시간 이내에 연결해 드립니다."
+
 #. js-lingui-id: L40Ae7
 #: src/partner-application/partner-application-copy.ts
 msgid "Calendar / booking link"
@@ -1635,6 +1712,11 @@ msgstr "캘린더 / 예약 링크"
 msgid "Calendar View for Objects"
 msgstr "오브젝트용 캘린더 뷰"
 
+#. js-lingui-id: RZgOeI
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Call recordings that have no video now come with an audio player, so click-to-seek and transcript highlighting work there too."
+msgstr "동영상이 없는 통화 녹화에는 이제 오디오 플레이어가 제공되므로, 클릭하여 탐색 및 대화록 강조 표시도 사용할 수 있습니다."
+
 #. js-lingui-id: 4yFkf9
 #: src/partner-application/data/partner-country-options.ts
 msgid "Cambodia 🇰🇭"
@@ -1644,6 +1726,11 @@ msgstr "Cambodia 🇰🇭"
 #: src/partner-application/data/partner-country-options.ts
 msgid "Cameroon 🇨🇲"
 msgstr "Cameroon 🇨🇲"
+
+#. js-lingui-id: lhDlM3
+#: src/sections/faq/partner-faq.data.ts
+msgid "Can a partner run my migration?"
+msgstr "파트너가 마이그레이션을 진행해 줄 수 있나요?"
 
 #. js-lingui-id: wCALve
 #: src/sections/faq/faq.data.ts
@@ -1712,6 +1799,16 @@ msgstr "카테고리"
 msgid "Central African Republic 🇨🇫"
 msgstr "Central African Republic 🇨🇫"
 
+#. js-lingui-id: n6B8ue
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "Certification, plus a directory profile your clients can verify. The best partners also receive client briefs matched to their scope."
+msgstr "인증과 함께 고객이 확인할 수 있는 디렉터리 프로필을 제공합니다. 우수 파트너에게는 서비스 범위에 맞는 고객 프로젝트 개요도 제공됩니다."
+
+#. js-lingui-id: 4W4gsr
+#: src/sections/partner-hero/PartnerLeadHero.tsx
+msgid "Certified partners who set up your CRM to match how your company works, from the migration to the custom apps."
+msgstr "마이그레이션부터 맞춤형 앱까지, 회사의 업무 방식에 맞게 CRM을 설정해 주는 인증된 파트너."
+
 #. js-lingui-id: iI3Dq9
 #: src/partner-application/data/partner-country-options.ts
 msgid "Chad 🇹🇩"
@@ -1768,6 +1865,16 @@ msgstr "워크스페이스에서 싱크할 Gmail 라벨이나 Outlook 폴더를 
 msgid "Choose how to display dates in any field using a universal Unicode date format that best suits your use case."
 msgstr "범용 유니코드 날짜 형식을 사용해, 어떤 필드에서든 용도에 가장 적합한 방식으로 날짜를 표시할 수 있습니다."
 
+#. js-lingui-id: BZEHq1
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Choose how your AI should behave on a single slider, from Extra Fast to Extra Smart, instead of picking a model by name. Each tier shows what it trades in speed, cost, and intelligence."
+msgstr "모델을 이름으로 선택하는 대신 단일 슬라이더에서 매우 빠름부터 매우 스마트함까지 AI의 작동 방식을 선택하세요. 각 등급에서는 속도, 비용 및 지능 간의 절충 사항을 보여 줍니다."
+
+#. js-lingui-id: oXetDh
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Choose where records open"
+msgstr "레코드가 열리는 위치 선택"
+
 #. js-lingui-id: uOuvkn
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Choose which part of a name or address field a view should sort by directly from the sort chip."
@@ -1793,6 +1900,11 @@ msgstr "필터 초기화"
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Clearer dashboard numbers"
 msgstr "더 명확해진 대시보드 숫자"
+
+#. js-lingui-id: +W4YRD
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "Click Become a partner and complete the short application: who you are, what you cover, and one real Twenty project with proof. We review every application against real, shipped work — acceptance is selective."
+msgstr "파트너 되기를 클릭하고 간단한 신청서를 작성하세요. 자신이 누구인지, 어떤 서비스를 제공하는지, 그리고 증빙 자료가 있는 실제 Twenty 프로젝트 한 건을 입력합니다. 모든 신청서는 실제로 출시된 작업물을 기준으로 검토하며, 선별적으로 승인합니다."
 
 #. js-lingui-id: yz7wBu
 #: src/partners-marketplace/CaseStudyModal.tsx
@@ -2073,10 +2185,10 @@ msgstr "복사"
 msgid "Copy a call recording's transcript or video link directly from the record page."
 msgstr "레코드 페이지에서 통화 녹음의 대화 내용 또는 동영상 링크를 직접 복사하세요."
 
-#. js-lingui-id: 7qTWwB
+#. js-lingui-id: aJGQVy
 #: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
-msgid "Copy the enterprise key above."
-msgstr "위의 엔터프라이즈 키를 복사하세요."
+msgid "Copy the Organization key above."
+msgstr "위의 Organization 키를 복사하세요."
 
 #. js-lingui-id: PXnj76
 #: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
@@ -2132,6 +2244,11 @@ msgstr "더 깔끔한 내비게이션 설정으로 사이드바 항목을 더 �
 #: src/sections/menu/data/menu.ts
 msgid "Create apps on Twenty"
 msgstr "Twenty에서 앱 만들기"
+
+#. js-lingui-id: CA2rtv
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Create calendar events directly from a record’s timeline, with the current contact prefilled as a guest."
+msgstr "레코드의 타임라인에서 직접 캘린더 이벤트를 만들고, 현재 연락처를 게스트로 미리 입력하세요."
 
 #. js-lingui-id: yAL7FY
 #: src/sections/pricing-plans/plans-data.ts
@@ -2364,6 +2481,11 @@ msgstr "사용자 지정 레이아웃"
 msgid "Custom objects"
 msgstr "커스텀 오브젝트"
 
+#. js-lingui-id: 14p823
+#: src/sections/partner-lead/partner-services.data.ts
+msgid "Custom objects, workflows and apps built on the platform."
+msgstr "플랫폼을 기반으로 구축된 맞춤형 객체, 워크플로 및 앱입니다."
+
 #. js-lingui-id: y5pLQH
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Custom sidebar"
@@ -2421,6 +2543,11 @@ msgstr "고객"
 #: src/sections/pricing-plan-table/plan-table-data.ts
 msgid "Customization"
 msgstr "커스터마이징"
+
+#. js-lingui-id: hiB8fo
+#: src/sections/partner-lead/partner-services.data.ts
+msgid "Customization & apps"
+msgstr "커스터마이징 및 앱"
 
 #. js-lingui-id: 4urq82
 #: src/sections/compare/compare-data.ts
@@ -2519,6 +2646,11 @@ msgstr "날짜 및 시간"
 msgid "Datetime Field"
 msgstr "Datetime 필드"
 
+#. js-lingui-id: oLDLdM
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Day and week calendar views"
+msgstr "일별 및 주별 캘린더 보기"
+
 #. js-lingui-id: xqKvBR
 #: src/sections/product-feature/DashboardVisual/DashboardVisual.tsx
 msgid "Deals by month"
@@ -2544,6 +2676,11 @@ msgstr "딜, 연락처, 제품만 가능"
 msgid "Dear Team, I am pleased to submit our proposal for your consideration. We have carefully reviewed your requirements."
 msgstr "팀 여러분께, 검토를 위해 제안을 제출하게 되어 기쁩니다. 귀하의 요구 사항을 면밀히 검토했습니다."
 
+#. js-lingui-id: JG4DOf
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Decide whether records open in the side panel or as a full page, set per object and as your own preference in Settings > Experience."
+msgstr "레코드를 사이드 패널에서 열지 전체 페이지로 열지 결정하고, 객체별로 설정하거나 설정 > 경험에서 개인 기본 설정으로 지정하세요."
+
 #. js-lingui-id: 4UlR5Y
 #: src/sections/pricing-plans/plans-data.ts
 #: src/sections/pricing-plans/plans-data.ts
@@ -2556,6 +2693,11 @@ msgstr "전담 지원 및 SLA"
 msgid "Default position/visibility for field…"
 msgstr "필드의 기본 위치/가시성…"
 
+#. js-lingui-id: IOhXZ5
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Delete a workflow step from the diagram"
+msgstr "다이어그램에서 워크플로 단계 삭제"
+
 #. js-lingui-id: 9RARjP
 #: src/sections/product-stepper/DataModelVisual/data/data-model-data.ts
 msgid "Demos"
@@ -2565,6 +2707,11 @@ msgstr "데모"
 #: src/partner-application/data/partner-country-options.ts
 msgid "Denmark 🇩🇰"
 msgstr "Denmark 🇩🇰"
+
+#. js-lingui-id: w9Q2vI
+#: src/sections/partner-lead/partner-services.data.ts
+msgid "Deploy, upgrade and operate Twenty on your own infrastructure."
+msgstr "자체 인프라에서 Twenty를 배포, 업그레이드 및 운영합니다."
 
 #. js-lingui-id: 59TXqJ
 #: src/partner-application/partner-application-copy.ts
@@ -2603,6 +2750,11 @@ msgstr "개발자는 이제 새로운 Array 필드 유형을 활용하여 사전
 msgid "Developers can now use webhooks to synchronize customer data updates in real-time across applications."
 msgstr "개발자는 이제 웹훅을 사용해 애플리케이션 전반에서 고객 데이터 업데이트를 실시간으로 동기화할 수 있습니다."
 
+#. js-lingui-id: SxCLpb
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Dictate prompts in supported browsers, and get suggested actions based on the page you are viewing."
+msgstr "지원되는 브라우저에서 프롬프트를 음성으로 입력하고, 보고 있는 페이지를 기반으로 제안되는 작업을 받아보세요."
+
 #. js-lingui-id: C39swB
 #: src/partners-marketplace/MarketplaceBriefPrompt.tsx
 msgid "Didn't find the *right partner*?"
@@ -2627,6 +2779,11 @@ msgstr "디지털 및 정보 담당 이사, Elevate Consulting"
 msgid "Director, W3villa Technologies, Partner"
 msgstr "Director, W3villa Technologies, 파트너"
 
+#. js-lingui-id: GhgbAN
+#: src/sections/partner-lead/PartnerDirectory.tsx
+msgid "Directory"
+msgstr "디렉터리"
+
 #. js-lingui-id: 30qcNY
 #: src/sections/menu/data/menu.ts
 #: src/sections/footer/footer.data.ts
@@ -2643,6 +2800,11 @@ msgstr "Twenty, #1 오픈 소스 CRM의 최신 기능과 향상점을 확인하�
 #: src/sections/menu/data/menu.ts
 msgid "Discover what's new"
 msgstr "새로 나온 소식 살펴보기"
+
+#. js-lingui-id: EVc4nZ
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Display records two relationships away directly on a record page—for example, opportunities associated with a company’s contacts."
+msgstr "레코드 페이지에서 두 단계 떨어진 관계의 레코드를 직접 표시하세요. 예를 들어 회사 연락처와 연결된 영업 기회가 있습니다."
 
 #. js-lingui-id: /Gu7LB
 #: src/platform/releases/ReleaseNotes.tsx
@@ -2663,6 +2825,16 @@ msgstr "Djibouti 🇩🇯"
 #: src/sections/faq/faq.data.ts
 msgid "Do I need a developer to customize Twenty?"
 msgstr "Twenty를 커스터마이징하려면 개발자가 꼭 필요하나요?"
+
+#. js-lingui-id: ISZL/U
+#: src/sections/faq/partner-faq.data.ts
+msgid "Do partners support self-hosting?"
+msgstr "파트너가 셀프 호스팅을 지원하나요?"
+
+#. js-lingui-id: xSh4Vw
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "Does it cost anything?"
+msgstr "비용이 드나요?"
 
 #. js-lingui-id: Zx22Ih
 #: src/sections/faq/faq.data.ts
@@ -2687,6 +2859,7 @@ msgstr "남의 생태계에 갇히지 마세요. Twenty의 개발자 경험은 �
 #. js-lingui-id: DPfwMq
 #: src/sections/product-stepper/LayoutVisual/LayoutVisual.tsx
 #: src/partner-application/partner-application-copy.ts
+#: src/client-brief/client-brief-copy.ts
 msgid "Done"
 msgstr "완료"
 
@@ -2801,6 +2974,11 @@ msgstr "더 쉬운 필드 편집"
 msgid "Easier layouts"
 msgstr "더 쉬운 레이아웃 구성"
 
+#. js-lingui-id: CgFsbd
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Easier workflow editing"
+msgstr "더 쉬운 워크플로 편집"
+
 #. js-lingui-id: hEtClO
 #: src/partner-application/data/partner-country-options.ts
 msgid "Ecuador 🇪🇨"
@@ -2810,6 +2988,11 @@ msgstr "Ecuador 🇪🇨"
 #: src/sections/product-stepper/LayoutVisual/LayoutVisual.tsx
 msgid "Edit actions"
 msgstr "동작 편집"
+
+#. js-lingui-id: V4B1Gm
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Edit deactivated objects"
+msgstr "비활성화된 객체 편집"
 
 #. js-lingui-id: 0cnnX+
 #: src/platform/releases/ReleaseNotes.tsx
@@ -2856,11 +3039,6 @@ msgstr "Elevate Consulting은 Twenty를 청구, Teams, 리소스 관리, 그리�
 msgid "Elevate's CEO was so impressed with Twenty he started recommending it to clients before the internal setup was even complete. The team is exploring bringing Twenty to client projects as part of their consulting practice, including as the backend for custom-built products tailored to specific operational needs."
 msgstr "Elevate의 CEO는 Twenty에 깊은 인상을 받아 내부 설정이 완료되기도 전에 고객에게 추천하기 시작했습니다. 팀은 Twenty를 컨설팅 실무의 일부로 고객 프로젝트에 도입하는 방안을 모색 중이며, 특정 운영 니즈에 맞춘 커스텀 제품의 백엔드로 Twenty를 활용하는 것도 포함됩니다."
 
-#. js-lingui-id: FNyrb0
-#: src/sections/product-feature/data/feature-tiles.ts
-msgid "Email & Calendar"
-msgstr "이메일 및 캘린더"
-
 #. js-lingui-id: jTgK6B
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Email and calendar Blocklist"
@@ -2902,6 +3080,7 @@ msgid "Emails"
 msgstr "이메일"
 
 #. js-lingui-id: XGd8Wo
+#: src/sections/product-feature/data/feature-tiles.ts
 #: src/sections/pricing-plan-table/plan-table-data.ts
 msgid "Emails & Calendar"
 msgstr "이메일 및 캘린더"
@@ -3012,16 +3191,6 @@ msgstr "유효한 URL을 입력하세요(http:// 또는 https://로 시작)."
 msgid "Enterprise"
 msgstr "Enterprise"
 
-#. js-lingui-id: 87BcPj
-#: src/sections/enterprise-activate/EnterpriseActivateHero.tsx
-msgid "Enterprise *activation*"
-msgstr "엔터프라이즈 *활성화*"
-
-#. js-lingui-id: NTskGY
-#: src/platform/routing/static-website-routes.ts
-msgid "Enterprise Activation | Twenty"
-msgstr "엔터프라이즈 활성화 | Twenty"
-
 #. js-lingui-id: aDpB6R
 #: src/sections/compare/compare-data.ts
 msgid "Enterprise edition"
@@ -3088,6 +3257,11 @@ msgstr "교육 자료조차 축하할 만한 훌륭한 기능입니다."
 msgid "Every new release of Twenty, the #1 Open Source CRM, with changelogs, demos, and the highlights teams care about most."
 msgstr "최신 변경 로그, 데모, 팀이 가장 중요하게 여기는 하이라이트와 함께, 오픈 소스 CRM 1위 Twenty의 모든 새 릴리스를 확인하세요."
 
+#. js-lingui-id: xt/iek
+#: src/sections/faq/partner-faq.data.ts
+msgid "Every partner is certified by Twenty and reviewed on delivered projects, technical depth, and customer feedback before joining the directory."
+msgstr "모든 파트너는 디렉터리에 등록되기 전에 Twenty의 인증을 받고, 완료한 프로젝트, 기술적 전문성 및 고객 피드백을 기준으로 검토됩니다."
+
 #. js-lingui-id: rkZTD7
 #: src/sections/product-feature/data/feature-tiles.ts
 msgid "Every thread, on the right record."
@@ -3134,7 +3308,7 @@ msgstr "30개 이상의 언어를 추가로 지원하여, 사용자가 선호하
 #. js-lingui-id: bKBhgb
 #: src/partner-application/partner-application-copy.ts
 msgid "Experience"
-msgstr "경력 및 경험을 알려 주세요."
+msgstr "경력 및 경험을 알려 주세요"
 
 #. js-lingui-id: 14xdUh
 #: src/platform/releases/ReleaseNotes.tsx
@@ -3149,7 +3323,7 @@ msgstr "11번째 권한부터 시작되는 엔터프라이즈급 세분화 권�
 #. js-lingui-id: PXKAnm
 #: src/partner-application/partner-application-copy.ts
 msgid "Expertise"
-msgstr "전문성을 알려 주세요."
+msgstr "전문성을 알려 주세요"
 
 #. js-lingui-id: JTM5zS
 #: src/sections/case-study-promo/CaseStudyPromo.tsx
@@ -3186,10 +3360,10 @@ msgstr "상영 연장!"
 msgid "Extra Dataverse storage (10 GB)"
 msgstr "추가 Dataverse 스토리지(10 GB)"
 
-#. js-lingui-id: tX4pRm
+#. js-lingui-id: QfD5h1
 #: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
-msgid "Failed to activate enterprise key. Please try again."
-msgstr "엔터프라이즈 키를 활성화하지 못했습니다. 다시 시도해 주세요."
+msgid "Failed to activate Organization key. Please try again."
+msgstr "Organization 키를 활성화하지 못했습니다. 다시 시도해 주세요."
 
 #. js-lingui-id: byb/Zh
 #: src/sections/compare/CompareReceipt.tsx
@@ -3256,10 +3430,10 @@ msgstr "추천 앱"
 msgid "Feb"
 msgstr "2월"
 
-#. js-lingui-id: hXRm6J
+#. js-lingui-id: ATTTRk
 #: src/platform/releases/ReleaseNotes.tsx
-msgid "Field Level Permission"
-msgstr "필드 수준 권한"
+msgid "Field descriptions on hover"
+msgstr "마우스를 올리면 표시되는 필드 설명"
 
 #. js-lingui-id: 3Y3//3
 #: src/platform/releases/ReleaseNotes.tsx
@@ -3279,6 +3453,11 @@ msgstr "필드 위젯이 더 많은 관계 유형을 지원하여, 사용자 지
 #. js-lingui-id: e6BgMV
 #: src/sections/pricing-plan-table/plan-table-data.ts
 msgid "Field-level permissions"
+msgstr "필드 단위 권한"
+
+#. js-lingui-id: kNlm1B
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Field-Level Permissions"
 msgstr "필드 단위 권한"
 
 #. js-lingui-id: RnX5oc
@@ -3321,6 +3500,11 @@ msgstr "카테고리별로 앱 필터링"
 msgid "Filter by Multi-Select"
 msgstr "Multi-Select로 필터링"
 
+#. js-lingui-id: V5L7Y4
+#: src/sections/partner-lead/PartnerDirectory.tsx
+msgid "Filter by region, language, and specialty, then read a profile and book a call with the partner yourself."
+msgstr "지역, 언어, 전문 분야로 필터링한 다음 프로필을 읽고 직접 파트너와 통화를 예약하세요."
+
 #. js-lingui-id: bOidm7
 #: src/partners-marketplace/FilterBar.tsx
 msgid "Filter partners"
@@ -3351,26 +3535,15 @@ msgstr "AI 채팅 목록에서 대화를 필터링, 보관 및 관리하세요."
 msgid "Filtered metrics from any object"
 msgstr "임의 오브젝트에서 필터링된 지표"
 
-#. js-lingui-id: sRUAXp
-#: src/platform/routing/static-website-routes.ts
-msgid "Find a certified Twenty partner to migrate, customise, and operate your open source CRM, or join the ecosystem and grow your practice with us."
-msgstr "인증된 Twenty 파트너를 찾아 오픈 소스 CRM의 마이그레이션, 커스터마이징, 운영을 맡기거나, 생태계에 합류해 저희와 함께 비즈니스를 성장시키세요."
-
-#. js-lingui-id: TJ7HQl
-#: src/sections/partner-signoff/PartnerSignoff.tsx
-#: src/sections/partner-hero/PartnerHero.tsx
-msgid "Find a partner"
-msgstr "파트너 찾기"
-
 #. js-lingui-id: MD032e
 #: src/sections/menu/data/menu.ts
 msgid "Find a Twenty partner"
 msgstr "Twenty 파트너 찾기"
 
-#. js-lingui-id: S6CEQ9
+#. js-lingui-id: AwJQl7
 #: src/platform/routing/static-website-routes.ts
-msgid "Find a Twenty Partner — Open Source CRM Marketplace"
-msgstr "Twenty 파트너 찾기 — 오픈 소스 CRM 마켓플레이스"
+msgid "Find a Twenty Partner — Certified Open Source CRM Experts"
+msgstr "Twenty 파트너 찾기 — 공인 오픈 소스 CRM 전문가"
 
 #. js-lingui-id: RiVrPY
 #: src/platform/releases/ReleaseNotes.tsx
@@ -3381,11 +3554,6 @@ msgstr "마켓플레이스에서 People Data Labs, Last Contact, Call Recorder �
 #: src/sections/pricing-engagement-band/PricingEngagementBand.tsx
 msgid "Find the right partner to implement, customize, and tailor Twenty to your team."
 msgstr "Twenty를 도입·커스터마이징해 팀에 딱 맞게 조정해 줄 적합한 파트너를 찾아보세요."
-
-#. js-lingui-id: 5asqas
-#: src/partners-marketplace/MarketplaceHeader.tsx
-msgid "Find your *Twenty partner*"
-msgstr "나만의 *Twenty 파트너*를 찾아보세요"
 
 #. js-lingui-id: 9V48qi
 #: src/partner-application/data/partner-country-options.ts
@@ -3488,6 +3656,11 @@ msgstr "창립자, Nine Dots Ventures"
 #: src/sections/testimonials/partner-testimonials.data.ts
 msgid "Founder, Wintactix"
 msgstr "창립자, Wintactix"
+
+#. js-lingui-id: iAVWWq
+#: src/sections/partner-lead/PartnerServicesExplainer.tsx
+msgid "Four kinds of work, delivered by teams that build on Twenty every day."
+msgstr "매일 Twenty를 기반으로 구축하는 팀이 제공하는 네 가지 업무 유형입니다."
 
 #. js-lingui-id: 671GY5
 #: src/partner-application/data/partner-country-options.ts
@@ -3636,8 +3809,20 @@ msgstr "독일어"
 msgid "Germany 🇩🇪"
 msgstr "Germany 🇩🇪"
 
+#. js-lingui-id: WoPlNk
+#: src/sections/partner-hero/PartnerHero.tsx
+msgid "Get certified as a Twenty partner: a vetted badge, a directory profile your clients can check, and matched client briefs for the best partners."
+msgstr "Twenty 파트너로 인증받으세요. 검증된 배지, 고객이 확인할 수 있는 디렉터리 프로필, 그리고 우수 파트너를 위한 매칭 고객 프로젝트 개요를 제공합니다."
+
+#. js-lingui-id: zn+MlF
+#: src/platform/routing/static-website-routes.ts
+msgid "Get help with Twenty, whether you run it on our cloud or host it yourself, including the Twenty app for Slack."
+msgstr "클라우드에서 Twenty를 실행하든 직접 호스팅하든, Slack용 Twenty 앱을 포함하여 Twenty 관련 도움을 받으세요."
+
 #. js-lingui-id: b+jRGN
-#: src/partners-marketplace/MarketplaceMatchCard.tsx
+#: src/sections/partner-lead/PartnerDirectoryPanel.tsx
+#: src/sections/partner-hero/PartnerLeadHero.tsx
+#: src/client-brief/ClientBriefModal.tsx
 msgid "Get matched"
 msgstr "매칭 받기"
 
@@ -3807,6 +3992,11 @@ msgstr "변경 사항 숨기기"
 msgid "Hindi"
 msgstr "힌디어"
 
+#. js-lingui-id: 6NGgln
+#: src/sections/partner-hero/PartnerLeadHero.tsx
+msgid "Hire the people who *build on Twenty*"
+msgstr "*Twenty를 구축하는* 사람들을 채용하세요"
+
 #. js-lingui-id: qfSbUb
 #: src/case-studies/case-study-stories.ts
 msgid "His approach was unconventional. Instead of mapping fields manually, scripting transforms, and validating data step by step, he handed the job to agentic AI tools with a brief: where the data lives, the GitHub repo for the target platform, and the Railway deployment. Start, and only return if something breaks beyond a 70% confidence fix."
@@ -3864,6 +4054,11 @@ msgstr "시간당"
 msgid "Hourly rate *"
 msgstr "시간당 요율 *"
 
+#. js-lingui-id: c+5807
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Hover a column header or a field label to read that field’s description, instead of opening settings to find it."
+msgstr "설정을 열어 찾는 대신 열 머리글이나 필드 레이블 위에 마우스를 올려 해당 필드의 설명을 확인하세요."
+
 #. js-lingui-id: XnFo3G
 #: src/case-studies/case-study-stories.ts
 msgid "How AC&T Education Migration and Flycoder replaced a shuttered vendor CRM with self-hosted Twenty, with 90%+ lower cost and full ownership."
@@ -3873,6 +4068,31 @@ msgstr "AC&T Education Migration과 Flycoder가 셧다운된 벤더 CRM을 Twent
 #: src/case-studies/case-study-stories.ts
 msgid "How Alternative Partners migrated from Salesforce to self-hosted Twenty using agentic AI in the implementation loop: fast migration, durable ownership."
 msgstr "Alternative Partners가 구현 과정에 에이전틱 AI를 투입해 Salesforce에서 Twenty 자체 호스팅으로 마이그레이션한 방법: 빠른 이전, 오래가는 소유권."
+
+#. js-lingui-id: Xtipai
+#: src/sections/faq/partner-faq.data.ts
+msgid "How are partners vetted?"
+msgstr "파트너는 어떻게 검증되나요?"
+
+#. js-lingui-id: rdK0XI
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "How do client briefs reach me?"
+msgstr "고객 프로젝트 개요는 어떻게 받나요?"
+
+#. js-lingui-id: YEWCmQ
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "How do I apply?"
+msgstr "어떻게 신청하나요?"
+
+#. js-lingui-id: 8Cnrle
+#: src/sections/faq/partner-faq.data.ts
+msgid "How do I become a partner?"
+msgstr "어떻게 파트너가 되나요?"
+
+#. js-lingui-id: eNrG1o
+#: src/sections/faq/partner-faq.data.ts
+msgid "How does matching work?"
+msgstr "매칭은 어떻게 이루어지나요?"
 
 #. js-lingui-id: +MLOVo
 #: src/case-studies/case-study-stories.ts
@@ -4152,6 +4372,11 @@ msgstr "무한 스크롤은 여전히 \"곧 제공\" 상태지만, 송장은 이
 msgid "Inline image previews"
 msgstr "인라인 이미지 미리보기"
 
+#. js-lingui-id: IWtI58
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Insert actions into existing branches and drag connections to a different step without losing your configuration. Find variables faster by searching fields across all workflow steps."
+msgstr "구성을 잃지 않고 기존 분기에 작업을 삽입하고 연결을 다른 단계로 드래그하세요. 모든 워크플로 단계에서 필드를 검색하여 변수를 더 빠르게 찾으세요."
+
 #. js-lingui-id: /eL+82
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Inspect AI calls, code output, HTTP requests, and emails for every step of a workflow run."
@@ -4183,6 +4408,11 @@ msgstr "공유 타르볼 앱 설치"
 #: src/case-studies/case-study-stories.ts
 msgid "Integration"
 msgstr "통합"
+
+#. js-lingui-id: mQhHfc
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Interactive call recordings"
+msgstr "대화형 통화 녹음"
 
 #. js-lingui-id: OChKCc
 #: src/platform/routing/static-website-routes.ts
@@ -4338,16 +4568,16 @@ msgstr "우리 생태계에 합류하여, 오픈 소스 프리미티브로 기�
 msgid "Join our growing partner ecosystem"
 msgstr "성장 중인 파트너 생태계에 합류하세요"
 
-#. js-lingui-id: VQIurp
-#: src/sections/partner-signoff/PartnerSignoff.tsx
-msgid "Join our partner ecosystem and help businesses take control of their CRM."
-msgstr "우리 파트너 생태계에 합류해, 기업이 CRM을 직접 통제할 수 있도록 도와주세요."
-
 #. js-lingui-id: m/pXki
 #: src/sections/customers-catalog-signoff/CustomersCatalogSignoff.tsx
 #: src/sections/case-study-detail/CustomersCaseStudySignoff.tsx
 msgid "Join the teams that chose to own their CRM. Start building with Twenty today."
 msgstr "CRM을 스스로 소유하기로 선택한 팀에 합류하세요. 지금 Twenty로 구축을 시작해 보세요."
+
+#. js-lingui-id: DqW4G2
+#: src/platform/routing/static-website-routes.ts
+msgid "Join the Twenty partner ecosystem: implement, migrate, and support the #1 open source CRM, and grow your practice with the teams building it."
+msgstr "Twenty 파트너 생태계에 참여하세요. 최고의 오픈 소스 CRM을 구현, 마이그레이션 및 지원하고, 이를 구축하는 팀과 함께 비즈니스를 성장시키세요."
 
 #. js-lingui-id: QbxNys
 #: src/partner-application/data/partner-country-options.ts
@@ -4513,6 +4743,11 @@ msgstr "자세히 알아보기"
 msgid "Learn more about {0}"
 msgstr "{0}에 대해 자세히 알아보기"
 
+#. js-lingui-id: s7B7gx
+#: src/sections/partner-lead/PartnerBecomeStrip.tsx
+msgid "Learn more about the partner program"
+msgstr "파트너 프로그램 자세히 알아보기"
+
 #. js-lingui-id: wB0DGn
 #: src/partner-application/data/partner-country-options.ts
 msgid "Lebanon 🇱🇧"
@@ -4568,11 +4803,6 @@ msgstr "일반 객체와 마찬가지로, 작업과 회사에 사용자 지정 �
 msgid "Link field"
 msgstr "Link 필드"
 
-#. js-lingui-id: YOe6r4
-#: src/partner-application/partner-application-copy.ts
-msgid "Link that shows the work (Loom, GitHub, Notion, Drive, public write-up…). No public workspace? Share a short Loom."
-msgstr "작업물을 확인할 수 있는 링크를 입력해 주세요 (Loom, GitHub, Notion, Drive, 공개 문서 등). 공개 워크스페이스가 없나요? 짧은 Loom 영상을 공유해 주세요."
-
 #. js-lingui-id: gggTBm
 #: src/sections/footer/footer.data.ts
 msgid "LinkedIn"
@@ -4615,6 +4845,11 @@ msgstr "Pipedrive 공개 요금 페이지의 정가로, 연 단위 청구이며 
 msgid "List prices from Salesforce's public pricing page, billed annually, checked on July 30, 2026."
 msgstr "Salesforce 공개 요금 페이지의 정가로, 연 단위 청구이며 2026년 7월 30일 기준으로 확인한 가격입니다."
 
+#. js-lingui-id: 5NZpX8
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "List view"
+msgstr "목록 보기"
+
 #. js-lingui-id: 2WIZYd
 #: src/partner-application/data/partner-country-options.ts
 msgid "Lithuania 🇱🇹"
@@ -4653,6 +4888,7 @@ msgstr "양식을 불러오는 중…"
 
 #. js-lingui-id: Pwqkdw
 #: src/partner-application/PartnerApplicationModal.tsx
+#: src/client-brief/ClientBriefModal.tsx
 msgid "Loading…"
 msgstr "불러오는 중…"
 
@@ -4678,6 +4914,11 @@ msgstr "락인"
 #: src/sections/menu/components/MenuDrawer.tsx
 msgid "Log in"
 msgstr "로그인"
+
+#. js-lingui-id: LE5a4y
+#: src/sections/partner-hero/PartnerHero.tsx
+msgid "Looking to hire a partner?"
+msgstr "파트너를 고용하려고 하시나요?"
 
 #. js-lingui-id: 8xX9yd
 #: src/sections/product-feature/TasksVisual/data/tasks.ts
@@ -4776,7 +5017,6 @@ msgid "Mar"
 msgstr "3월"
 
 #. js-lingui-id: Zt5PUS
-#: src/partners-marketplace/MarketplaceHeader.tsx
 #: src/apps-marketplace/AppsMarketplaceHeader.tsx
 msgid "Marketplace"
 msgstr "마켓플레이스"
@@ -4861,6 +5101,11 @@ msgstr "Microsoft o365 연동"
 msgid "Middleware licensed separately"
 msgstr "미들웨어는 별도 라이선스"
 
+#. js-lingui-id: u6h8ps
+#: src/sections/partner-lead/partner-services.data.ts
+msgid "Migration"
+msgstr "마이그레이션"
+
 #. js-lingui-id: so04x6
 #: src/case-studies/case-study-stories.ts
 msgid "Mike and Azmat from Nine Dots stepped in to fix that, not by changing how Homeseller works, but by building a system that finally fit around it."
@@ -4936,6 +5181,11 @@ msgstr "더 많은 필드 관계"
 msgid "More Field Types, More Power"
 msgstr "더 많은 필드 유형, 더 강력한 기능"
 
+#. js-lingui-id: qlt+dy
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "More flexible record pages"
+msgstr "더 유연한 레코드 페이지"
+
 #. js-lingui-id: VqXuUv
 #: src/sections/pricing-salesfarce/salesfarce-data.ts
 msgid "More options available!"
@@ -4950,6 +5200,11 @@ msgstr "더 강력해진 검색"
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "More visual dashboard views"
 msgstr "더 시각적인 대시보드 보기"
+
+#. js-lingui-id: QsVNSj
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "More ways to work with AI"
+msgstr "AI로 작업하는 더 많은 방법"
 
 #. js-lingui-id: LAFO4Y
 #: src/partner-application/data/partner-country-options.ts
@@ -4975,6 +5230,11 @@ msgstr "레코드를 열기 전에 명령 모음 결과를 이동하며 중요�
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Move widgets between record page tabs with drag and drop, including directly onto an empty tab."
 msgstr "빈 탭으로 직접 이동하는 것을 포함하여 드래그 앤 드롭으로 레코드 페이지 탭 간에 위젯을 이동하세요."
+
+#. js-lingui-id: iTpW7h
+#: src/sections/partner-lead/partner-services.data.ts
+msgid "Move your data out of Salesforce, HubSpot or spreadsheets."
+msgstr "Salesforce, HubSpot 또는 스프레드시트에서 데이터를 이전하세요."
 
 #. js-lingui-id: EwJDrS
 #: src/partner-application/data/partner-country-options.ts
@@ -5208,6 +5468,11 @@ msgstr "이제 더 이상 남의 구조를 임대하지 않아도 됩니다."
 msgid "No partners match your filters"
 msgstr "필터에 맞는 파트너가 없습니다"
 
+#. js-lingui-id: KoCaEV
+#: src/partners-marketplace/FilterBar.tsx
+msgid "No partners to show right now"
+msgstr "현재 표시할 파트너가 없습니다"
+
 #. js-lingui-id: nDjC8E
 #: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
 msgid "No session ID provided. Please complete the checkout first."
@@ -5217,6 +5482,11 @@ msgstr "세션 ID가 제공되지 않았습니다. 먼저 결제를 완료해 �
 #: src/case-studies/case-study-catalog.ts
 msgid "No-code"
 msgstr "노코드"
+
+#. js-lingui-id: rNCZhO
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "No. Applying and being listed are free. You set your own rates and keep what you bill."
+msgstr "아니요. 신청 및 등록은 무료입니다. 요금은 직접 설정하며 청구한 금액을 그대로 받습니다."
 
 #. js-lingui-id: SiZ/7E
 #: src/sections/faq/faq.data.ts
@@ -5352,6 +5622,11 @@ msgstr "이 페이지에서"
 msgid "On Twenty"
 msgstr "Twenty에서"
 
+#. js-lingui-id: sRJVQ1
+#: src/sections/partner-lead/partner-services.data.ts
+msgid "Onboard your team and design your sales process."
+msgstr "팀을 온보딩하고 영업 프로세스를 설계하세요."
+
 #. js-lingui-id: gukxZ5
 #: src/sections/compare/compare-data.ts
 msgid "Onboarding"
@@ -5388,6 +5663,11 @@ msgstr "1회 필수 온보딩 요금"
 msgid "Only $5 for SSO. Practically a charity program."
 msgstr "SSO는 단돈 5달러. 사실상 자선 프로그램 수준입니다."
 
+#. js-lingui-id: Av5T3E
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Open a deactivated object from Settings and change it, instead of deleting it and building it again."
+msgstr "비활성화된 객체를 삭제하고 다시 만들지 않고 설정에서 열어 변경하세요."
+
 #. js-lingui-id: VWC0s5
 #. placeholder {0}: caseStudy.title
 #: src/partners-marketplace/PartnerSelectedWork.tsx
@@ -5399,10 +5679,10 @@ msgstr "케이스 스터디 열기: {0}"
 msgid "Open menu"
 msgstr "메뉴 열기"
 
-#. js-lingui-id: pkXQA+
+#. js-lingui-id: ChnLgw
 #: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
-msgid "Open your Twenty self-hosted instance Settings → Enterprise."
-msgstr "Twenty 자체 호스팅 인스턴스에서 Settings → Enterprise를 여세요."
+msgid "Open your Twenty self-hosted instance Settings → Admin Panel → Organization."
+msgstr "Twenty 자체 호스팅 인스턴스에서 Settings → Admin Panel → Organization을 여세요."
 
 #. js-lingui-id: r2NnGk
 #: src/sections/product-signoff/ProductSignoff.tsx
@@ -5434,6 +5714,16 @@ msgstr "기회"
 #: src/sections/pricing-plan-table/plan-table-data.ts
 msgid "Organization"
 msgstr "조직"
+
+#. js-lingui-id: hjEu3O
+#: src/sections/enterprise-activate/EnterpriseActivateHero.tsx
+msgid "Organization *activation*"
+msgstr "조직 *활성화*"
+
+#. js-lingui-id: CKppYD
+#: src/platform/routing/static-website-routes.ts
+msgid "Organization Activation | Twenty"
+msgstr "조직 활성화 | Twenty"
 
 #. js-lingui-id: 6BoFxZ
 #: src/sections/compare/compare-data.ts
@@ -5583,6 +5873,11 @@ msgstr "파트너십 - 4분기 전략"
 msgid "Paste the key and click Activate."
 msgstr "키를 붙여넣고 Activate를 클릭하세요."
 
+#. js-lingui-id: oKV11Q
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Pause the recording bot"
+msgstr "녹화 봇 일시 중지"
+
 #. js-lingui-id: 1wdjme
 #: src/sections/product-stepper/LayoutVisual/data/layout-data.ts
 #: src/sections/product-stepper/DataModelVisual/data/data-model-data.ts
@@ -5639,6 +5934,11 @@ msgstr "Peru 🇵🇪"
 msgid "Philippines 🇵🇭"
 msgstr "Philippines 🇵🇭"
 
+#. js-lingui-id: hyGrEm
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Pick an AI model by tier"
+msgstr "등급별 AI 모델 선택"
+
 #. js-lingui-id: we6gj5
 #: src/partner-application/partner-application-copy.ts
 msgid "Pick every category that applies."
@@ -5673,6 +5973,11 @@ msgstr "파이프라인, 연락처, 이메일 동기화"
 #: src/platform/routing/static-website-routes.ts
 msgid "Pipelines, custom objects, AI assistants, and a native API on top of Postgres. Twenty is the open source CRM with the modern UX teams actually want to use."
 msgstr "파이프라인, 커스텀 오브젝트, AI 도우미, Postgres 위의 네이티브 API까지. Twenty는 팀이 실제로 쓰고 싶어 하는 현대적 UX를 갖춘 오픈 소스 CRM입니다."
+
+#. js-lingui-id: NjL3pD
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Play audio-only recordings"
+msgstr "오디오 전용 녹화 재생"
 
 #. js-lingui-id: z7gnI9
 #: src/partner-application/partner-application-copy.ts
@@ -5897,6 +6202,12 @@ msgstr "2026년 1분기"
 msgid "Qatar 🇶🇦"
 msgstr "Qatar 🇶🇦"
 
+#. js-lingui-id: enzGAL
+#: src/sections/faq/PartnerFaq.tsx
+#: src/sections/faq/BecomePartnerFaq.tsx
+msgid "Questions"
+msgstr "질문"
+
 #. js-lingui-id: OialmJ
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Quickly identify who created a given record and what was the origin of the creation, whether it was through a CSV import, an API, or manual input."
@@ -5911,6 +6222,11 @@ msgstr "견적 기반"
 #: src/partners-marketplace/PartnerRatesPanel.tsx
 msgid "Rates"
 msgstr "요율"
+
+#. js-lingui-id: F4EefJ
+#: src/sections/faq/partner-faq.data.ts
+msgid "Rates vary by partner and scope. Each partner profile lists their published rates, and you can compare before booking a call."
+msgstr "요금은 파트너와 서비스 범위에 따라 다릅니다. 각 파트너 프로필에는 공개 요금이 표시되며, 통화를 예약하기 전에 비교할 수 있습니다."
 
 #. js-lingui-id: zXRspj
 #: src/platform/releases/ReleaseNotes.tsx
@@ -6014,6 +6330,11 @@ msgstr "이제 연결된 Google 캘린더의 반복 이벤트가 Twenty와 동�
 msgid "Recurring Google Calendar events"
 msgstr "반복되는 Google 캘린더 이벤트"
 
+#. js-lingui-id: pRH3vs
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Reference records and skills in AI chat"
+msgstr "AI 채팅에서 레코드 및 스킬 참조"
+
 #. js-lingui-id: q45OlW
 #: src/partners-marketplace/PartnerReachFacts.tsx
 #: src/partners-marketplace/FilterBar.tsx
@@ -6071,6 +6392,11 @@ msgstr "{0} 필터 제거"
 #: src/partner-application/partner-application-copy.ts
 msgid "Remove {skill}"
 msgstr "{skill} 제거"
+
+#. js-lingui-id: ChVv1j
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Remove a step from its node in the diagram, without opening the side panel first."
+msgstr "먼저 사이드 패널을 열지 않고 다이어그램에서 노드의 단계를 제거하세요."
 
 #. js-lingui-id: a/aGHe
 #: src/sections/product-feature/data/feature-tiles.ts
@@ -6422,6 +6748,11 @@ msgstr "*운영을 중단하지 않고* 확장하세요"
 msgid "Scale without breaking operations"
 msgstr "운영을 망가뜨리지 않고 확장하기"
 
+#. js-lingui-id: e7Ajb1
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Schedule meetings from records"
+msgstr "레코드에서 회의 예약"
+
 #. js-lingui-id: sQOyAb
 #: src/sections/product-feature/TasksVisual/data/tasks.ts
 msgid "Schedule security review"
@@ -6483,6 +6814,16 @@ msgstr ""
 msgid "See more features"
 msgstr "더 많은 기능 보기"
 
+#. js-lingui-id: zn1p6c
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "See related records across relationships"
+msgstr "관계 전반에서 관련 레코드 보기"
+
+#. js-lingui-id: B79UH5
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "See the devices on your account"
+msgstr "계정의 기기 보기"
+
 #. js-lingui-id: 8Zhz04
 #: src/sections/compare/ComparePage.tsx
 msgid "See Twenty pricing"
@@ -6492,6 +6833,11 @@ msgstr "Twenty 요금제 보기"
 #: src/sections/three-cards/product-three-cards-data.ts
 msgid "See updates as they happen. Work with your team and agents seamlessly."
 msgstr "변경 사항이 발생하는 즉시 확인하고, 팀과 에이전트와의 협업을 끊김 없이 이어가세요."
+
+#. js-lingui-id: DlPcBc
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "See what a model costs and where it runs"
+msgstr "모델 비용과 실행 위치 확인"
 
 #. js-lingui-id: 0kgOPB
 #. placeholder {0}: LATEST_RELEASE.release
@@ -6556,6 +6902,11 @@ msgstr "자체 호스팅은 AC&T가 벤더 리스크를 지지 않는다는 뜻�
 msgid "Self-hosted means control"
 msgstr "자체 호스팅은 곧 제어권이라는 의미입니다."
 
+#. js-lingui-id: L6yOTN
+#: src/sections/partner-lead/partner-services.data.ts
+msgid "Self-hosted operations"
+msgstr "셀프 호스팅 운영"
+
 #. js-lingui-id: WxVgfh
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Self-hosted workspaces can now track usage more cleanly with usage-based billing support."
@@ -6563,6 +6914,7 @@ msgstr "이제 자체 호스팅 워크스페이스는 사용량 기반 과금을
 
 #. js-lingui-id: GrBvv/
 #: src/sections/pricing-salesfarce/salesfarce-data.ts
+#: src/sections/pricing-plans/SelfHostToggle.tsx
 #: src/sections/pricing-plan-table/plan-table-data.ts
 #: src/sections/enterprise-activate/EnterpriseActivateHero.tsx
 #: src/client-brief/client-brief-copy.ts
@@ -6586,15 +6938,15 @@ msgstr "셀프 온보딩"
 msgid "Self-serve, partners optional"
 msgstr "셀프 서비스, 파트너는 선택 사항"
 
-#. js-lingui-id: NaHz2o
-#: src/sections/pricing-plans/SelfHostToggle.tsx
-msgid "Selfhosting"
-msgstr "자체 호스팅"
-
 #. js-lingui-id: i/TzEU
 #: src/sections/product-stepper/WorkflowVisual/data/workflow-data.ts
 msgid "Send Email"
 msgstr "이메일 보내기"
+
+#. js-lingui-id: ig4Kg0
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Send email from aliases"
+msgstr "별칭에서 이메일 보내기"
 
 #. js-lingui-id: pi1oME
 #: src/app-preview/terminal/TerminalSendButton.tsx
@@ -6605,6 +6957,11 @@ msgstr "메시지 보내기"
 #: src/sections/product-feature/TasksVisual/data/tasks.ts
 msgid "Send NDA"
 msgstr "NDA 보내기"
+
+#. js-lingui-id: FK/sMg
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Send outbound emails using a verified alias on your connected account."
+msgstr "연결된 계정에서 확인된 별칭을 사용하여 발신 이메일을 보내세요."
 
 #. js-lingui-id: uW79Hr
 #: src/sections/product-feature/TasksVisual/data/tasks.ts
@@ -6627,9 +6984,15 @@ msgid "Serbia 🇷🇸"
 msgstr "Serbia 🇷🇸"
 
 #. js-lingui-id: MILoeL
+#: src/sections/partner-lead/PartnerServicesExplainer.tsx
 #: src/partners-marketplace/PartnerServices.tsx
 msgid "Services"
 msgstr "서비스"
+
+#. js-lingui-id: y/35JB
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Settings > Profile now lists every device with an active session, marks the one you are on, and lets you sign out any of the others."
+msgstr "이제 설정 > 프로필에서 활성 세션이 있는 모든 기기를 나열하고, 현재 사용 중인 기기를 표시하며, 다른 기기에서 로그아웃할 수 있습니다."
 
 #. js-lingui-id: 62gxWx
 #: src/partner-application/data/partner-country-options.ts
@@ -6640,6 +7003,11 @@ msgstr "Seychelles 🇸🇨"
 #: src/sections/compare/compare-data.ts
 msgid "Shape records to your business"
 msgstr "비즈니스에 맞게 레코드 구조화"
+
+#. js-lingui-id: 3PvOYS
+#: src/sections/faq/partner-faq.data.ts
+msgid "Share a short brief on your project, timeline, and budget. We hand-pick certified partners who fit and introduce you within 48 hours."
+msgstr "프로젝트, 일정, 예산에 관한 간단한 개요를 공유하세요. 적합한 공인 파트너를 엄선하여 48시간 이내에 연결해 드립니다."
 
 #. js-lingui-id: vn7QMM
 #: src/platform/releases/ReleaseNotes.tsx
@@ -6685,11 +7053,6 @@ msgstr "대시보드 위젯에서 레코드를 일반 테이블뿐 아니라 그
 #: src/partners-marketplace/FilterBar.tsx
 msgid "Showing {visibleCount} of {totalCount} partners"
 msgstr "총 {totalCount}개 파트너 중 {visibleCount}개 표시 중"
-
-#. js-lingui-id: I89wN/
-#: src/partners-marketplace/FilterBar.tsx
-msgid "Showing all {totalCount} partners"
-msgstr "총 {totalCount}개 파트너 모두 표시 중"
 
 #. js-lingui-id: 9k9PMD
 #: src/platform/releases/ReleaseNotes.tsx
@@ -6976,6 +7339,11 @@ msgstr "커스텀과 싸우는 건 그만두고, *Twenty와 함께 구축을 시
 msgid "Stop settling for trade-offs."
 msgstr "타협에 만족하는 일을 멈추세요."
 
+#. js-lingui-id: 8b3N0u
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Stop the call recorder from joining calendar meetings with one workspace setting, rather than uninstalling the app. The Recording Bot preference now reads On only when a bot is really scheduled."
+msgstr "앱을 제거하는 대신 워크스페이스 설정 하나로 통화 녹화기가 캘린더 회의에 참여하지 않도록 하세요. 이제 녹화 봇 기본 설정은 봇이 실제로 예약된 경우에만 켜짐으로 표시됩니다."
+
 #. js-lingui-id: hjgBcp
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "Stop Workflow Button"
@@ -7002,8 +7370,8 @@ msgid "Subdomain (yourco.twenty.com)"
 msgstr "서브도메인(yourco.twenty.com)"
 
 #. js-lingui-id: 578pU6
-#: src/partners-marketplace/PartnerProfileCtas.tsx
-#: src/partners-marketplace/MarketplaceBriefPrompt.tsx
+#: src/app/[locale]/(site)/partners/page.tsx
+#: src/app/[locale]/(site)/partners/profile/[slug]/page.tsx
 msgid "Submit a brief"
 msgstr "요청서 제출"
 
@@ -7043,11 +7411,22 @@ msgstr "Success 플랜 할증"
 msgid "Sudan 🇸🇩"
 msgstr "Sudan 🇸🇩"
 
+#. js-lingui-id: 388eZi
+#: src/partners-marketplace/marketplace-copy.ts
+msgid "Super partner"
+msgstr "슈퍼 파트너"
+
 #. js-lingui-id: XYLcNv
 #: src/sections/pricing-plan-table/plan-table-data.ts
 #: src/sections/compare/compare-data.ts
+#: src/app/[locale]/(site)/support/page.tsx
 msgid "Support"
 msgstr "지원"
+
+#. js-lingui-id: RgtAtw
+#: src/platform/routing/static-website-routes.ts
+msgid "Support | Twenty"
+msgstr "지원 | Twenty"
 
 #. js-lingui-id: Aq66kg
 #: src/partner-application/data/partner-country-options.ts
@@ -7073,6 +7452,11 @@ msgstr "Sweden 🇸🇪"
 #: src/partners-marketplace/spoken-language-labels.ts
 msgid "Swedish"
 msgstr "스웨덴어"
+
+#. js-lingui-id: VRCum/
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Switch between day, week, and month views to explore your calendar. Day and week views are now available by default."
+msgstr "일별, 주별, 월별 보기 간에 전환하여 캘린더를 살펴보세요. 이제 일별 및 주별 보기가 기본으로 제공됩니다."
 
 #. js-lingui-id: IImT5c
 #: src/partner-application/data/partner-country-options.ts
@@ -7197,6 +7581,11 @@ msgid ""
 msgstr ""
 "필요한 내용을 알려 주세요\n"
 "*저희가 알맞은 파트너를 찾아드립니다*"
+
+#. js-lingui-id: cgFMCg
+#: src/platform/routing/static-website-routes.ts
+msgid "Tell us what you need and get matched with a certified Twenty partner in 48 hours, or browse the directory of agencies and consultants who migrate, customise, and operate the open source CRM."
+msgstr "필요한 사항을 알려주시면 48시간 이내에 공인 Twenty 파트너와 매칭해 드립니다. 또는 오픈 소스 CRM을 마이그레이션, 커스터마이징 및 운영하는 에이전시와 컨설턴트의 디렉터리를 둘러보세요."
 
 #. js-lingui-id: kjnQvE
 #: src/partners-marketplace/MarketplaceBriefPrompt.tsx
@@ -7372,6 +7761,11 @@ msgstr "거대한 모놀리식 시스템"
 msgid "The In-house Burden"
 msgstr "사내 구축의 짐"
 
+#. js-lingui-id: 6U7fek
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "The interface now mirrors for right-to-left languages, so Arabic and Hebrew workspaces read in their own direction."
+msgstr "이제 인터페이스가 오른쪽에서 왼쪽으로 읽는 언어에 맞게 미러링되므로 아랍어 및 히브리어 워크스페이스가 각 언어의 읽기 방향으로 표시됩니다."
+
 #. js-lingui-id: ZNzKXV
 #: src/case-studies/case-study-stories.ts
 msgid "The key decision was not to build everything from scratch. Twenty covers the data model, permissions, authentication, and workflow engine, the parts that would have taken months to rebuild, so the team could focus on product-specific logic."
@@ -7404,6 +7798,11 @@ msgid ""
 msgstr ""
 "리스트 가격은 시작에 불과합니다.\n"
 "실제 팀이 사용하기 시작하면 인보이스가 어떻게 바뀌는지 보여드립니다."
+
+#. js-lingui-id: 5V+Mch
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "The navigation menu is now a page of its own, with a real address and a way back. Create actions appear as icons in page headers, and the bottom bar no longer sits on top of your content."
+msgstr "이제 탐색 메뉴는 실제 주소와 돌아가는 방법을 갖춘 독립된 페이지가 되었습니다. 만들기 작업은 페이지 헤더에 아이콘으로 표시되며, 하단 바는 더 이상 콘텐츠 위에 놓이지 않습니다."
 
 #. js-lingui-id: nf1NnD
 #: src/platform/releases/ReleaseNotes.tsx
@@ -7610,6 +8009,11 @@ msgstr "모든 릴리스를 추적하고, 최신 기능의 변경 로그·하이
 msgid "Track relationships, manage pipelines, and take action quickly with an intuitive CRM that helps your team move faster from day one with confidence."
 msgstr "관계를 추적하고, 파이프라인을 관리하며, 직관적인 CRM으로 빠르게 행동하여 첫날부터 팀이 자신 있게 더 빠르게 움직일 수 있도록 돕습니다."
 
+#. js-lingui-id: OYcL1T
+#: src/sections/partner-lead/partner-services.data.ts
+msgid "Training & RevOps"
+msgstr "교육 및 RevOps"
+
 #. js-lingui-id: MtCqjl
 #: src/partners-marketplace/data/partner-scope-options.ts
 #: src/partner-application/data/partner-scope-options.ts
@@ -7791,11 +8195,6 @@ msgstr "Twenty가 모든 것을 단순하게 만들어 줍니다. 깔끔하고 �
 msgid "Twenty partner ecosystem"
 msgstr "Twenty 파트너 에코시스템"
 
-#. js-lingui-id: 4SJucz
-#: src/platform/routing/static-website-routes.ts
-msgid "Twenty Partners — Certified Open Source CRM Implementers"
-msgstr "Twenty 파트너 — 공인 오픈 소스 CRM 구현 파트너"
-
 #. js-lingui-id: vD7S1X
 #. placeholder {0}: LATEST_RELEASE.release
 #. placeholder {1}: LATEST_RELEASE.title
@@ -7873,20 +8272,20 @@ msgstr "Twenty vs SAP Sales Cloud"
 msgid "Twenty vs SAP Sales Cloud Pricing — The Real Cost Compared"
 msgstr "Twenty vs SAP Sales Cloud 요금 — 실제 비용 비교"
 
-#. js-lingui-id: abTOgp
-#: src/partners-marketplace/MarketplaceHeader.tsx
-msgid "Twenty's certified partners help teams migrate, customise, and operate the open source CRM across regions, languages, and deployment models. Browse profiles and book a call, or <0>tell us what you need</0> and we'll match you."
-msgstr "Twenty 공인 파트너는 팀이 지역, 언어, 배포 모델 전반에 걸쳐 오픈 소스 CRM을 마이그레이션하고 커스터마이즈하며 운영할 수 있도록 돕습니다. 프로필을 살펴보고 전화를 예약하시거나, <0>필요한 내용을 알려 주세요</0>. 그러면 저희가 매칭해 드립니다."
-
-#. js-lingui-id: tuvLv1
-#: src/platform/releases/ReleaseNotes.tsx
-msgid "Two Factor Authentication"
-msgstr "2단계 인증"
-
 #. js-lingui-id: EIU345
 #: src/sections/pricing-plan-table/plan-table-data.ts
 msgid "Two-factor authentication"
 msgstr "2단계 인증"
+
+#. js-lingui-id: C4pKXW
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Two-Factor Authentication"
+msgstr "2단계 인증"
+
+#. js-lingui-id: QMyFdb
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Type <0>@</0> to point the chat at a record, or <1>/</1> to pick one of your workspace’s skills. Both suggest matches as you type."
+msgstr "<0>@</0>를 입력하여 채팅에서 레코드를 지정하거나 <1>/</1>를 입력하여 워크스페이스의 스킬 중 하나를 선택하세요. 둘 다 입력하는 동안 일치 항목을 제안합니다."
 
 #. js-lingui-id: O+vc/1
 #: src/partner-application/partner-application-copy.ts
@@ -8209,10 +8608,25 @@ msgstr "W3villa Technologies는 임시방편이 아닌, 제대로 된 제품으�
 msgid "W3villa used Twenty as a production-grade framework for the data model, permissions, authentication, and workflow engine they would otherwise have rebuilt themselves."
 msgstr "W3villa는 Twenty를 데이터 모델, 권한, 인증, 워크플로 엔진용 프로덕션급 프레임워크로 활용해, 스스로 다시 구축해야 했을 요소들을 대체했습니다."
 
+#. js-lingui-id: +uJeMJ
+#: src/sections/partner-lead/PartnerBecomeStrip.tsx
+msgid "Want to *offer* Twenty services?"
+msgstr "Twenty 서비스를 *제공*하고 싶으신가요?"
+
+#. js-lingui-id: 9cL2b3
+#: src/platform/releases/ReleaseNotes.tsx
+msgid "Watch recordings alongside their transcripts. Click a transcript entry to jump to that moment, and follow along with highlighted words and automatic scrolling during playback."
+msgstr "녹음과 함께 녹취록을 확인하세요. 녹취록 항목을 클릭하여 해당 시점으로 이동하고, 재생 중에는 강조 표시되는 단어와 자동 스크롤을 따라가세요."
+
 #. js-lingui-id: k1Pevc
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "We are pleased to reopen the cloud subscription to everyone. No more waiting!"
 msgstr "클라우드 구독을 모든 사용자에게 다시 개방하게 되어 기쁩니다. 더 이상 기다리실 필요가 없습니다!"
+
+#. js-lingui-id: CtEyix
+#: src/sections/partner-signoff/PartnerSignoff.tsx
+msgid "We certify real builders only. Every application is reviewed against a shipped Twenty project — send yours with proof."
+msgstr "실제 구축 경험이 있는 사람만 인증합니다. 모든 신청서는 출시된 Twenty 프로젝트를 기준으로 검토되므로, 증빙 자료와 함께 프로젝트를 제출하세요."
 
 #. js-lingui-id: 8CHatv
 #: src/partner-application/partner-application-copy.ts
@@ -8225,14 +8639,10 @@ msgid "We could not submit your brief. Please try again in a moment."
 msgstr "요청서를 제출할 수 없습니다. 잠시 후 다시 시도해 주세요."
 
 #. js-lingui-id: ofRgSN
+#: src/sections/testimonials/testimonials.data.ts
 #: src/case-studies/case-study-stories.ts
 msgid "We did not want to patch over the problem. We wanted to build something institutions could rely on at scale, and that meant starting from a foundation solid enough to support the full complexity of what we had in mind."
 msgstr "우리는 문제를 임시방편으로 덮어두고 싶지 않았습니다. 기관들이 대규모로 신뢰할 수 있는 무언가를 만들고 싶었고, 그건 우리가 구상한 모든 복잡성을 제대로 떠받칠 수 있을 만큼 견고한 기반에서 시작해야 한다는 뜻이었습니다."
-
-#. js-lingui-id: MjWeUE
-#: src/sections/testimonials/testimonials.data.ts
-msgid "We didn't want to patch over the problem. We wanted to build something institutions could rely on at scale, and that meant starting from a foundation solid enough to support the full complexity of what we had in mind."
-msgstr "우리는 문제를 땜질식으로 덮어두고 싶지 않았습니다. 기관들이 대규모로 신뢰할 수 있는 무언가를 만들고 싶었고, 그것은 우리가 구상한 전체 복잡성을 떠받칠 만큼 견고한 기반에서 출발해야 한다는 뜻이었습니다."
 
 #. js-lingui-id: GVxbgf
 #: src/platform/releases/ReleaseNotes.tsx
@@ -8244,15 +8654,15 @@ msgstr "페이지마다 500ms 이상을 줄여 앱 성능을 개선했습니다.
 msgid "We have significantly enhanced our search performance, making it feel instantaneous when searching for records such as people, companies, or tasks."
 msgstr "검색 성능을 크게 향상해, 사람·회사·작업 같은 레코드를 검색할 때 거의 즉각적으로 느껴지도록 만들었습니다."
 
+#. js-lingui-id: d4cXeX
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "We review your delivered projects, technical depth, and customer feedback before you join the directory. Certified partners carry the badge on their profile."
+msgstr "디렉터리에 등록되기 전에 완료한 프로젝트, 기술적 전문성 및 고객 피드백을 검토합니다. 공인 파트너는 프로필에 배지를 표시합니다."
+
 #. js-lingui-id: l7iJRt
 #: src/platform/releases/ReleaseNotes.tsx
 msgid "We started a major ⌘K revamp that now understands the context to display appropriate actions. For example, on a record page, you can add the record as a favorite, or if you select multiple records on an index, you can export them as a CSV."
 msgstr "이제 컨텍스트를 이해해 적절한 액션을 보여주는 대대적인 ⌘K 개편을 시작했습니다. 예를 들어, 레코드 페이지에서는 해당 레코드를 즐겨찾기에 추가할 수 있고, 인덱스에서 여러 레코드를 선택했다면 CSV로 내보낼 수 있습니다."
-
-#. js-lingui-id: d5CWI6
-#: src/sections/partner-hero/PartnerHero.tsx
-msgid "We're building the #1 Open Source CRM, but we can't do it alone. Join our partner ecosystem and grow with us."
-msgstr "우리는 최고의 오픈 소스 CRM을 만들고 있지만, 혼자서는 할 수 없습니다. 파트너 에코시스템에 참여해 우리와 함께 성장하세요."
 
 #. js-lingui-id: DFlq8J
 #: src/platform/releases/ReleaseNotes.tsx
@@ -8305,11 +8715,21 @@ msgstr "웹사이트"
 msgid "Website or GitHub *"
 msgstr "웹사이트 또는 GitHub *"
 
+#. js-lingui-id: KINqeH
+#: src/sections/partner-lead/PartnerServicesExplainer.tsx
+msgid "What a Twenty partner does"
+msgstr "Twenty 파트너가 하는 일"
+
 #. js-lingui-id: Lx0cVD
 #: src/partners-marketplace/data/partner-scope-options.ts
 #: src/partner-application/data/partner-scope-options.ts
 msgid "What an admin can do without writing code."
 msgstr "관리자가 코드를 작성하지 않고 할 수 있는 모든 것."
+
+#. js-lingui-id: va07TZ
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "What are the requirements?"
+msgstr "요구 사항은 무엇인가요?"
 
 #. js-lingui-id: Z34FQq
 #: src/case-studies/case-study-stories.ts
@@ -8321,6 +8741,16 @@ msgstr "Olivier를 설득한 것은 플랫폼의 유연성과 그 지향점이�
 msgid "What costs extra over there"
 msgstr "저쪽에서 추가로 드는 비용"
 
+#. js-lingui-id: iGY4LD
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "What do I get as a partner?"
+msgstr "파트너가 되면 무엇을 받을 수 있나요?"
+
+#. js-lingui-id: VkIKlY
+#: src/sections/faq/partner-faq.data.ts
+msgid "What do partners charge?"
+msgstr "파트너 요금은 얼마인가요?"
+
 #. js-lingui-id: SMBgOd
 #: src/client-brief/client-brief-copy.ts
 msgid "What do you need help with? *"
@@ -8331,45 +8761,40 @@ msgstr "어떤 도움을 필요로 하시나요? *"
 msgid ""
 "What does\n"
 "*Dynamics 365* really cost?"
-msgstr ""
-"\n"
-"*Dynamics 365*의 실제 비용은 얼마일까요?"
+msgstr "*Dynamics 365*의 실제 비용은 얼마일까요?"
 
 #. js-lingui-id: ndwi6c
 #: src/sections/compare/compare-data.ts
 msgid ""
 "What does\n"
 "*HubSpot* really cost?"
-msgstr ""
-"\n"
-"*HubSpot*의 실제 비용은 얼마일까요?"
+msgstr "*HubSpot*의 실제 비용은 얼마일까요?"
 
 #. js-lingui-id: QSAZlS
 #: src/sections/compare/compare-data.ts
 msgid ""
 "What does\n"
 "*Pipedrive* really cost?"
-msgstr ""
-"\n"
-"*Pipedrive*의 실제 비용은 얼마일까요?"
+msgstr "*Pipedrive*의 실제 비용은 얼마일까요?"
 
 #. js-lingui-id: rv6SWP
 #: src/sections/compare/compare-data.ts
 msgid ""
 "What does\n"
 "*Salesforce* really cost?"
-msgstr ""
-"\n"
-"*Salesforce*의 실제 비용은 얼마일까요?"
+msgstr "*Salesforce*의 실제 비용은 얼마일까요?"
 
 #. js-lingui-id: mdVDDM
 #: src/sections/compare/compare-data.ts
 msgid ""
 "What does\n"
 "*SAP Sales Cloud* really cost?"
-msgstr ""
-"\n"
-"*SAP Sales Cloud*의 실제 비용은 얼마일까요?"
+msgstr "*SAP Sales Cloud*의 실제 비용은 얼마일까요?"
+
+#. js-lingui-id: MIVJ8U
+#: src/sections/faq/become-partner-faq.data.ts
+msgid "What does certification involve?"
+msgstr "인증 절차에는 무엇이 포함되나요?"
 
 #. js-lingui-id: phiBjc
 #: src/sections/faq/faq.data.ts
@@ -8611,6 +9036,11 @@ msgstr "*실제로 활용되는* 워크플로"
 msgid "Workflows that actually get used"
 msgstr "실제로 사용되는 워크플로"
 
+#. js-lingui-id: k7EuGf
+#: src/sections/faq/PartnerFaq.tsx
+msgid "Working with *a Twenty partner*"
+msgstr "*Twenty 파트너*와 협업하기"
+
 #. js-lingui-id: pmUArF
 #: src/sections/product-stepper/LayoutVisual/LayoutVisual.tsx
 #: src/sections/pricing-plan-table/plan-table-data.ts
@@ -8701,6 +9131,16 @@ msgstr "예. 모든 클라우드 워크스페이스에는 기본 MCP 서버가 �
 #: src/sections/faq/faq.data.ts
 msgid "Yes. Import your data via CSV, or use our API for 50,000+ records. Our partners can handle the full migration for you."
 msgstr "예. CSV로 데이터를 가져오거나, 50,000개 이상의 레코드는 API를 사용해 주세요. 파트너들이 전체 마이그레이션을 대신 처리해 줄 수 있습니다."
+
+#. js-lingui-id: xsbHte
+#: src/sections/faq/partner-faq.data.ts
+msgid "Yes. Migration partners move your data out of Salesforce, HubSpot, or spreadsheets, and can own the full cutover for you."
+msgstr "예. 마이그레이션 파트너는 Salesforce, HubSpot 또는 스프레드시트에서 데이터를 이전하고, 전체 전환 작업을 맡아 진행할 수 있습니다."
+
+#. js-lingui-id: DaIKN4
+#: src/sections/faq/partner-faq.data.ts
+msgid "Yes. Some partners specialise in deploying, upgrading, and operating self-hosted Twenty instances on your own infrastructure."
+msgstr "예. 일부 파트너는 자체 인프라에서 셀프 호스팅 Twenty 인스턴스를 배포, 업그레이드 및 운영하는 데 특화되어 있습니다."
 
 #. js-lingui-id: 8m0eN9
 #: src/sections/faq/faq.data.ts
@@ -8832,16 +9272,6 @@ msgstr "요청서"
 msgid "Your checkout is complete. Follow the steps below to copy your license key into your Twenty instance."
 msgstr "결제가 완료되었습니다. 아래 단계에 따라 라이선스 키를 Twenty 인스턴스에 복사하세요."
 
-#. js-lingui-id: krHgj1
-#: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
-msgid "Your enterprise key"
-msgstr "엔터프라이즈 키"
-
-#. js-lingui-id: +dxjCu
-#: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
-msgid "Your enterprise license has been activated successfully."
-msgstr "엔터프라이즈 라이선스가 성공적으로 활성화되었습니다."
-
 #. js-lingui-id: pEQiCY
 #: src/partner-application/partner-application-copy.ts
 msgid "Your name *"
@@ -8851,6 +9281,16 @@ msgstr "이름 *"
 #: src/sections/product-feature/data/feature-tiles.ts
 msgid "Your network, fully mapped."
 msgstr "당신의 네트워크를 완전히 매핑하세요."
+
+#. js-lingui-id: 91Ysnw
+#: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
+msgid "Your Organization key"
+msgstr "조직 키"
+
+#. js-lingui-id: sarabV
+#: src/sections/enterprise-activate/EnterpriseActivateClient.tsx
+msgid "Your Organization license has been activated successfully."
+msgstr "조직 라이선스가 성공적으로 활성화되었습니다."
 
 #. js-lingui-id: sgod9b
 #: src/platform/releases/ReleaseNotes.tsx

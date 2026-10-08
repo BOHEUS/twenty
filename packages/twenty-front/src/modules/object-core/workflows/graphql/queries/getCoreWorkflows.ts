@@ -6,20 +6,26 @@ export const GET_CORE_WORKFLOWS = gql`
     $after: String
     $orderBy: CoreWorkflowOrderByField
     $orderByDirection: CoreWorkflowOrderByDirection
+    $filter: CoreWorkflowFilterInput
+    $includeSystem: Boolean
   ) {
     coreWorkflows(
       first: $first
       after: $after
       orderBy: $orderBy
       orderByDirection: $orderByDirection
+      filter: $filter
+      includeSystem: $includeSystem
     ) {
       edges {
         node {
           id
           name
           statuses
-          applicationId
           workspaceWorkflowId
+          isSystem
+          visibility
+          canChangeVisibility
           updatedAt
         }
         cursor

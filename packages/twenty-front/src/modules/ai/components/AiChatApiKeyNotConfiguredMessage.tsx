@@ -1,4 +1,5 @@
-import { AiChatBanner } from '@/ai/components/AiChatBanner';
+import { InlineBanner } from 'twenty-ui/components/feedback';
+import { AiChatInlineBanner } from '@/ai/components/AiChatInlineBanner';
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { getDocumentationUrl } from '@/support/utils/getDocumentationUrl';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
@@ -18,12 +19,13 @@ export const AiChatApiKeyNotConfiguredMessage = () => {
   };
 
   return (
-    <AiChatBanner
-      message={t`AI not configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, or XAI_API_KEY in your environment.`}
-      variant="warning"
-      buttonTitle={t`View Docs`}
-      buttonIcon={IconExternalLink}
-      buttonOnClick={handleDocsClick}
-    />
+    <AiChatInlineBanner
+      action={
+        <InlineBanner.Action
+          startIcon={<IconExternalLink />}
+          onClick={handleDocsClick}
+        >{t`View Docs`}</InlineBanner.Action>
+      }
+    >{t`Add an API key to enable AI.`}</AiChatInlineBanner>
   );
 };

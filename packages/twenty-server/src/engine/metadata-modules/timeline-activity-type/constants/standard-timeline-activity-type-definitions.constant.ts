@@ -2,27 +2,38 @@ import { type MessageDescriptor } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
 import {
+  STANDARD_TIMELINE_ACTIVITY_RENDERER_UNIVERSAL_IDENTIFIERS,
   type TimelineActivityAction,
-  type TimelineActivityRenderer,
 } from 'twenty-shared/timeline';
 
-export type StandardTimelineActivityTypeDefinition = {
+type StandardTimelineActivityTypeDefinitionSource = {
   name: string;
   universalIdentifier: string;
   label: MessageDescriptor;
-  action: TimelineActivityAction | null;
   icon: string | null;
-  renderer: TimelineActivityRenderer | null;
-  objectUniversalIdentifier: string | null;
+  frontComponentUniversalIdentifier: string | null;
+  emit: {
+    on: TimelineActivityAction;
+    objectUniversalIdentifier: string | null;
+    through?: {
+      relationFieldUniversalIdentifier: string;
+      triggerFieldUniversalIdentifiers?: string[];
+      happensAtFieldUniversalIdentifier?: string;
+    };
+  };
 };
 
-// The vocabulary a timeline row is stamped from. Types carrying an object are
-// preferred for events about that object's records, so a note link renders
-// through its own component; the ones carrying none are the fallback for every
-// other object and for a record's own changes. The stored `name` column these
-// replace conflated the action with the source object and could not tell a
-// linked record being deleted from the link itself being removed.
-export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivityTypeDefinition[] =
+export type StandardTimelineActivityTypeDefinition =
+  StandardTimelineActivityTypeDefinitionSource & {
+    action: TimelineActivityAction;
+    objectUniversalIdentifier: string | null;
+    targetRelationFieldUniversalIdentifier?: string;
+    triggerFieldUniversalIdentifiers?: string[];
+    happensAtFieldUniversalIdentifier?: string;
+  };
+
+// Wildcard emitters are standard-only fallbacks; application manifests require an object on every emitter
+const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITION_SOURCES: StandardTimelineActivityTypeDefinitionSource[] =
   [
     {
       name: 'recordCreated',
@@ -31,10 +42,9 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `was created by`,
         context: 'timelineActivityType.label',
       }),
-      action: 'created',
       icon: 'IconCirclePlus',
-      renderer: null,
-      objectUniversalIdentifier: null,
+      frontComponentUniversalIdentifier: null,
+      emit: { on: 'created', objectUniversalIdentifier: null },
     },
     {
       name: 'recordUpdated',
@@ -43,10 +53,9 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `updated`,
         context: 'timelineActivityType.label',
       }),
-      action: 'updated',
       icon: 'IconEditCircle',
-      renderer: null,
-      objectUniversalIdentifier: null,
+      frontComponentUniversalIdentifier: null,
+      emit: { on: 'updated', objectUniversalIdentifier: null },
     },
     {
       name: 'recordDeleted',
@@ -55,10 +64,9 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `was deleted by`,
         context: 'timelineActivityType.label',
       }),
-      action: 'deleted',
       icon: 'IconTrash',
-      renderer: null,
-      objectUniversalIdentifier: null,
+      frontComponentUniversalIdentifier: null,
+      emit: { on: 'deleted', objectUniversalIdentifier: null },
     },
     {
       name: 'recordRestored',
@@ -67,10 +75,9 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `was restored by`,
         context: 'timelineActivityType.label',
       }),
-      action: 'restored',
       icon: 'IconRestore',
-      renderer: null,
-      objectUniversalIdentifier: null,
+      frontComponentUniversalIdentifier: null,
+      emit: { on: 'restored', objectUniversalIdentifier: null },
     },
     {
       name: 'recordLinked',
@@ -79,10 +86,9 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `was linked by`,
         context: 'timelineActivityType.label',
       }),
-      action: 'linked',
       icon: 'IconLink',
-      renderer: null,
-      objectUniversalIdentifier: null,
+      frontComponentUniversalIdentifier: null,
+      emit: { on: 'linked', objectUniversalIdentifier: null },
     },
     {
       name: 'recordUnlinked',
@@ -91,10 +97,9 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `was unlinked by`,
         context: 'timelineActivityType.label',
       }),
-      action: 'unlinked',
       icon: 'IconUnlink',
-      renderer: null,
-      objectUniversalIdentifier: null,
+      frontComponentUniversalIdentifier: null,
+      emit: { on: 'unlinked', objectUniversalIdentifier: null },
     },
     {
       name: 'noteLinked',
@@ -103,10 +108,16 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `linked a related note`,
         context: 'timelineActivityType.label',
       }),
-      action: 'linked',
       icon: 'IconLink',
-      renderer: 'activity',
-      objectUniversalIdentifier: STANDARD_OBJECTS.note.universalIdentifier,
+      frontComponentUniversalIdentifier: null,
+      emit: {
+        on: 'linked',
+        objectUniversalIdentifier: STANDARD_OBJECTS.note.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.note.fields.noteTargets.universalIdentifier,
+        },
+      },
     },
     {
       name: 'noteUnlinked',
@@ -115,10 +126,16 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `unlinked a related note`,
         context: 'timelineActivityType.label',
       }),
-      action: 'unlinked',
       icon: 'IconUnlink',
-      renderer: 'activity',
-      objectUniversalIdentifier: STANDARD_OBJECTS.note.universalIdentifier,
+      frontComponentUniversalIdentifier: null,
+      emit: {
+        on: 'unlinked',
+        objectUniversalIdentifier: STANDARD_OBJECTS.note.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.note.fields.noteTargets.universalIdentifier,
+        },
+      },
     },
     {
       name: 'noteUpdated',
@@ -127,10 +144,19 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `updated a related note`,
         context: 'timelineActivityType.label',
       }),
-      action: 'updated',
       icon: 'IconEditCircle',
-      renderer: 'activity',
-      objectUniversalIdentifier: STANDARD_OBJECTS.note.universalIdentifier,
+      frontComponentUniversalIdentifier: null,
+      emit: {
+        on: 'updated',
+        objectUniversalIdentifier: STANDARD_OBJECTS.note.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.note.fields.noteTargets.universalIdentifier,
+          triggerFieldUniversalIdentifiers: [
+            STANDARD_OBJECTS.note.fields.title.universalIdentifier,
+          ],
+        },
+      },
     },
     {
       name: 'taskLinked',
@@ -139,10 +165,16 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `linked a related task`,
         context: 'timelineActivityType.label',
       }),
-      action: 'linked',
       icon: 'IconLink',
-      renderer: 'activity',
-      objectUniversalIdentifier: STANDARD_OBJECTS.task.universalIdentifier,
+      frontComponentUniversalIdentifier: null,
+      emit: {
+        on: 'linked',
+        objectUniversalIdentifier: STANDARD_OBJECTS.task.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.task.fields.taskTargets.universalIdentifier,
+        },
+      },
     },
     {
       name: 'taskUnlinked',
@@ -151,10 +183,16 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `unlinked a related task`,
         context: 'timelineActivityType.label',
       }),
-      action: 'unlinked',
       icon: 'IconUnlink',
-      renderer: 'activity',
-      objectUniversalIdentifier: STANDARD_OBJECTS.task.universalIdentifier,
+      frontComponentUniversalIdentifier: null,
+      emit: {
+        on: 'unlinked',
+        objectUniversalIdentifier: STANDARD_OBJECTS.task.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.task.fields.taskTargets.universalIdentifier,
+        },
+      },
     },
     {
       name: 'taskUpdated',
@@ -163,10 +201,19 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `updated a related task`,
         context: 'timelineActivityType.label',
       }),
-      action: 'updated',
       icon: 'IconEditCircle',
-      renderer: 'activity',
-      objectUniversalIdentifier: STANDARD_OBJECTS.task.universalIdentifier,
+      frontComponentUniversalIdentifier: null,
+      emit: {
+        on: 'updated',
+        objectUniversalIdentifier: STANDARD_OBJECTS.task.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.task.fields.taskTargets.universalIdentifier,
+          triggerFieldUniversalIdentifiers: [
+            STANDARD_OBJECTS.task.fields.title.universalIdentifier,
+          ],
+        },
+      },
     },
     {
       name: 'messageLinked',
@@ -175,10 +222,20 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `sent or received an email`,
         context: 'timelineActivityType.label',
       }),
-      action: 'linked',
       icon: 'IconMail',
-      renderer: 'message',
-      objectUniversalIdentifier: STANDARD_OBJECTS.message.universalIdentifier,
+      frontComponentUniversalIdentifier:
+        STANDARD_TIMELINE_ACTIVITY_RENDERER_UNIVERSAL_IDENTIFIERS.message,
+      emit: {
+        on: 'linked',
+        objectUniversalIdentifier: STANDARD_OBJECTS.message.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.message.fields.messageParticipants
+              .universalIdentifier,
+          happensAtFieldUniversalIdentifier:
+            STANDARD_OBJECTS.message.fields.receivedAt.universalIdentifier,
+        },
+      },
     },
     {
       name: 'calendarEventLinked',
@@ -187,10 +244,72 @@ export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivi
         message: `attended a calendar event`,
         context: 'timelineActivityType.label',
       }),
-      action: 'linked',
       icon: 'IconCalendar',
-      renderer: 'calendarEvent',
-      objectUniversalIdentifier:
-        STANDARD_OBJECTS.calendarEvent.universalIdentifier,
+      frontComponentUniversalIdentifier:
+        STANDARD_TIMELINE_ACTIVITY_RENDERER_UNIVERSAL_IDENTIFIERS.calendarEvent,
+      emit: {
+        on: 'linked',
+        objectUniversalIdentifier:
+          STANDARD_OBJECTS.calendarEvent.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.calendarEvent.fields.calendarEventParticipants
+              .universalIdentifier,
+          happensAtFieldUniversalIdentifier:
+            STANDARD_OBJECTS.calendarEvent.fields.startsAt.universalIdentifier,
+        },
+      },
+    },
+    {
+      name: 'attachmentLinked',
+      universalIdentifier: '20202020-0d1a-4f0e-8a55-1c0a2f0a2c11',
+      label: msg({
+        message: `attached a file`,
+        context: 'timelineActivityType.label',
+      }),
+      icon: 'IconPaperclip',
+      frontComponentUniversalIdentifier: null,
+      emit: {
+        on: 'linked',
+        objectUniversalIdentifier:
+          STANDARD_OBJECTS.attachment.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.attachment.fields.targetPerson.universalIdentifier,
+        },
+      },
+    },
+    {
+      name: 'attachmentUnlinked',
+      universalIdentifier: '20202020-0d1a-4f0e-8a55-1c0a2f0a2c12',
+      label: msg({
+        message: `removed an attachment`,
+        context: 'timelineActivityType.label',
+      }),
+      icon: 'IconUnlink',
+      frontComponentUniversalIdentifier: null,
+      emit: {
+        on: 'unlinked',
+        objectUniversalIdentifier:
+          STANDARD_OBJECTS.attachment.universalIdentifier,
+        through: {
+          relationFieldUniversalIdentifier:
+            STANDARD_OBJECTS.attachment.fields.targetPerson.universalIdentifier,
+        },
+      },
     },
   ];
+
+// Normalized properties keep the committed 2.34 upgrade command stable
+export const STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITIONS: StandardTimelineActivityTypeDefinition[] =
+  STANDARD_TIMELINE_ACTIVITY_TYPE_DEFINITION_SOURCES.map((definition) => ({
+    ...definition,
+    action: definition.emit.on,
+    objectUniversalIdentifier: definition.emit.objectUniversalIdentifier,
+    targetRelationFieldUniversalIdentifier:
+      definition.emit.through?.relationFieldUniversalIdentifier,
+    triggerFieldUniversalIdentifiers:
+      definition.emit.through?.triggerFieldUniversalIdentifiers,
+    happensAtFieldUniversalIdentifier:
+      definition.emit.through?.happensAtFieldUniversalIdentifier,
+  }));

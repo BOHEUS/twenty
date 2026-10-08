@@ -1,6 +1,18 @@
 import { ArgsType, Field, Int, registerEnumType } from '@nestjs/graphql';
 
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+
+import { CoreWorkflowFilterInput } from 'src/engine/core-modules/workflow/dtos/core-workflow-filter.input';
 
 export enum CoreWorkflowOrderByField {
   NAME = 'name',
@@ -46,4 +58,14 @@ export class CoreWorkflowsArgs {
   })
   @IsEnum(CoreWorkflowOrderByDirection)
   orderByDirection: CoreWorkflowOrderByDirection;
+
+  @Field(() => CoreWorkflowFilterInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CoreWorkflowFilterInput)
+  filter?: CoreWorkflowFilterInput | null;
+
+  @Field(() => Boolean, { nullable: true, defaultValue: false })
+  @IsBoolean()
+  includeSystem: boolean;
 }

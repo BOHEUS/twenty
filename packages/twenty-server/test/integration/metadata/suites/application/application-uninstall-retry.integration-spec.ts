@@ -1,3 +1,4 @@
+import { HTTPMethod } from 'twenty-shared/types';
 import { randomUUID } from 'crypto';
 
 import { activateWorkspace } from 'test/integration/graphql/utils/activate-workspace.util';
@@ -28,6 +29,7 @@ type InstalledApplication = {
 const SUCCESSFUL_EXECUTION_RESULT = {
   data: {},
   duration: 1,
+  billedDurationMs: 1,
   logs: '',
   status: LogicFunctionExecutionStatus.SUCCESS,
 };
@@ -35,6 +37,7 @@ const SUCCESSFUL_EXECUTION_RESULT = {
 const FAILED_EXECUTION_RESULT = {
   data: null,
   duration: 1,
+  billedDurationMs: 1,
   logs: '',
   status: LogicFunctionExecutionStatus.ERROR,
   error: {
@@ -77,7 +80,7 @@ const buildManifestWithUninstallHook = ({
         builtHandlerChecksum: 'checksum-cleanup',
         httpRouteTriggerSettings: {
           path: '/cleanup',
-          httpMethod: 'POST',
+          httpMethod: HTTPMethod.POST,
           isAuthRequired: true,
         },
       },

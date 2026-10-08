@@ -32,9 +32,9 @@ export const buildWorkflowRunStandardFlatFieldMetadatas = ({
     context: {
       fieldName: 'id',
       type: FieldMetadataType.UUID,
-      label: i18nLabel(msg({ message: `Id`, context: 'fieldMetadata.label' })),
+      label: i18nLabel(msg({ message: `ID`, context: 'fieldMetadata.label' })),
       description: i18nLabel(
-        msg({ message: `Id`, context: 'fieldMetadata.description' }),
+        msg({ message: `ID`, context: 'fieldMetadata.description' }),
       ),
       icon: 'Icon123',
       isSystem: true,
@@ -428,6 +428,62 @@ export const buildWorkflowRunStandardFlatFieldMetadatas = ({
     twentyStandardApplicationId,
     now,
   }),
+  coreWorkflowId: createStandardFieldFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      fieldName: 'coreWorkflowId',
+      type: FieldMetadataType.UUID,
+      label: i18nLabel(
+        msg({
+          message: `Core workflow id`,
+          context: 'fieldMetadata.label',
+        }),
+      ),
+      description: i18nLabel(
+        msg({
+          message: `Reference to the core workflow row`,
+          context: 'fieldMetadata.description',
+        }),
+      ),
+      icon: 'IconSettingsAutomation',
+      isSystem: true,
+      isNullable: true,
+      isUIEditable: false,
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
+  coreWorkflowVersionId: createStandardFieldFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      fieldName: 'coreWorkflowVersionId',
+      type: FieldMetadataType.UUID,
+      label: i18nLabel(
+        msg({
+          message: `Core workflow version id`,
+          context: 'fieldMetadata.label',
+        }),
+      ),
+      description: i18nLabel(
+        msg({
+          message: `Reference to the core workflowVersion row`,
+          context: 'fieldMetadata.description',
+        }),
+      ),
+      icon: 'IconSettingsAutomation',
+      isSystem: true,
+      isNullable: true,
+      isUIEditable: false,
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
   position: createStandardFieldFlatMetadata({
     objectName,
     workspaceId,
@@ -496,7 +552,7 @@ export const buildWorkflowRunStandardFlatFieldMetadatas = ({
         }),
       ),
       icon: 'IconVersions',
-      isNullable: false,
+      isNullable: true,
       isUIEditable: false,
       targetObjectName: 'workflowVersion',
       targetFieldName: 'runs',
@@ -528,7 +584,7 @@ export const buildWorkflowRunStandardFlatFieldMetadatas = ({
         }),
       ),
       icon: 'IconSettingsAutomation',
-      isNullable: false,
+      isNullable: true,
       isUIEditable: false,
       targetObjectName: 'workflow',
       targetFieldName: 'runs',

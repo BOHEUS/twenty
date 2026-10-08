@@ -4,7 +4,6 @@ import { isNonEmptyString } from '@sniptt/guards';
 import { type FieldCurrencyValue } from '@/object-record/record-field/ui/types/FieldMetadata';
 import { CurrencyInput } from '@/ui/field/input/components/CurrencyInput';
 import { CurrencyCode } from 'twenty-shared/constants';
-
 import { useCurrencyField } from '@/object-record/record-field/ui/meta-types/hooks/useCurrencyField';
 
 import { FieldInputEventContext } from '@/object-record/record-field/ui/contexts/FieldInputEventContext';
@@ -15,10 +14,10 @@ import { isFieldCurrencyValue } from '@/object-record/record-field/ui/types/guar
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
 import { useContext } from 'react';
 import { convertCurrencyAmountToCurrencyMicros } from '~/utils/convertCurrencyToCurrencyMicros';
-import { isUndefinedOrNull } from '~/utils/isUndefinedOrNull';
+import { isDefined } from 'twenty-shared/utils';
 
 export const CurrencyFieldInput = () => {
-  const { fieldValue, draftValue, setDraftValue, defaultValue, decimals } =
+  const { fieldValue, draftValue, setDraftValue, defaultValue } =
     useCurrencyField();
 
   const { onClickOutside, onEnter, onEscape, onShiftTab, onTab } = useContext(
@@ -41,12 +40,19 @@ export const CurrencyFieldInput = () => {
 
   const draftCurrencyCodeIsEmptyIsNotEmpty =
     isNonEmptyString(draftCurrencyCode);
+  const recordCurrencyCode = isFieldCurrencyValue(fieldValue)
+    ? fieldValue.currencyCode
+    : undefined;
+
+  const recordCurrencyCodeIsNotEmpty = isNonEmptyString(recordCurrencyCode);
 
   const currencyCode = draftCurrencyCodeIsEmptyIsNotEmpty
     ? draftCurrencyCode
-    : defaultCurrencyCodeIsNotEmpty
-      ? defaultCurrencyCodeWithoutSQLQuotes
-      : CurrencyCode.USD;
+    : recordCurrencyCodeIsNotEmpty
+      ? recordCurrencyCode
+      : defaultCurrencyCodeIsNotEmpty
+        ? defaultCurrencyCodeWithoutSQLQuotes
+        : CurrencyCode.USD;
 
   const getNewCurrencyValue = ({
     amountText,
@@ -116,7 +122,7 @@ export const CurrencyFieldInput = () => {
 
   const handleSelect = (newValue: string) => {
     setDraftValue({
-      amount: isUndefinedOrNull(draftValue?.amount) ? '' : draftValue?.amount,
+      amount: !isDefined(draftValue?.amount) ? '' : draftValue?.amount,
       currencyCode: newValue as CurrencyCode,
     });
   };
@@ -126,7 +132,6 @@ export const CurrencyFieldInput = () => {
       instanceId={instanceId}
       value={draftValue?.amount?.toString() ?? ''}
       currencyCode={currencyCode}
-      decimals={decimals}
       autoFocus
       placeholder={t`Currency`}
       onClickOutside={handleClickOutside}
