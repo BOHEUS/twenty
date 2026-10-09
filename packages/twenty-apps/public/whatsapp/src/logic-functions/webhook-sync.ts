@@ -5,6 +5,7 @@ import { enqueueJobs } from "twenty-sdk/logic-function";
 import { WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER } from "src/constants/universal-identifiers";
 import { updateTwentyMessageChannel } from "src/logic-functions/data/update-message-channel.util";
 import { upsertWhatsAppTemplate } from "src/logic-functions/data/upsert-whatsapp-template.util";
+import { buildHistoryParseJobs } from "src/logic-functions/data/build-history-parse-jobs.util";
 import { sendInboxNotification } from "src/logic-functions/data/send-inbox-notification.util";
 
 const handler = async (
@@ -56,7 +57,24 @@ const handler = async (
           break;
         case "automatic_events":
         case "business_capability_update":
-        case "history":
+          break;
+        case "history": {
+          for (const chunk of change.value.history) {
+            if ('errors' in chunk) {
+              console.error('WhatsApp history sync failed', chunk.errors);
+            }
+          }
+          const jobs = buildHistoryParseJobs(change.value.metadata, change.value.history);
+          if (jobs.length > 0) {
+            await enqueueJobs({
+              logicFunctionUniversalIdentifier: WHATSAPP_LOGIC_FUNCTION_PARSE_MESSAGE_UNIVERSAL_IDENTIFIER,
+              retryLimit: 3,
+              delayMs: 500,
+              jobs,
+            });
+          }
+          break;
+        }
         case "message_template_components_update":
           await upsertWhatsAppTemplate({
             metaTemplateId: change.value.message_template_id,
