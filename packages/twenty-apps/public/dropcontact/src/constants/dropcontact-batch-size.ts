@@ -1,0 +1,1 @@
+export const DROPCONTACT_BATCH_SIZE = 250;
