@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ApplicationRegistrationLookupModule } from 'src/engine/core-modules/application/application-registration/application-registration-lookup/application-registration-lookup.module';
 import { ApplicationRegistrationModule } from 'src/engine/core-modules/application/application-registration/application-registration.module';
 import { ApplicationManifestModule } from 'src/engine/core-modules/application/application-manifest/application-manifest.module';
+import { ApplicationDependencyModule } from 'src/engine/core-modules/application/application-dependency/application-dependency.module';
 import { ApplicationLookupModule } from 'src/engine/core-modules/application/application-lookup/application-lookup.module';
 import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { ApplicationPackageModule } from 'src/engine/core-modules/application/application-package/application-package.module';
@@ -25,6 +26,7 @@ import { WorkspaceManyOrAllFlatEntityMapsCacheModule } from 'src/engine/metadata
 @Module({
   imports: [
     WorkspaceManyOrAllFlatEntityMapsCacheModule,
+    ApplicationDependencyModule,
     ApplicationLookupModule,
     ApplicationModule,
     ApplicationManifestModule,

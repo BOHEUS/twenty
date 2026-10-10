@@ -11,6 +11,7 @@ import {
 import { type ApplicationInput } from 'src/engine/core-modules/application/application-development/dtos/application.input';
 import { type DevelopmentApplicationDTO } from 'src/engine/core-modules/application/application-development/dtos/development-application.dto';
 import { type WorkspaceMigrationDTO } from 'src/engine/core-modules/application/application-development/dtos/workspace-migration.dto';
+import { ApplicationDependencyService } from 'src/engine/core-modules/application/application-dependency/application-dependency.service';
 import { APPLICATION_DEPENDENCY_LOCK_OPTIONS } from 'src/engine/core-modules/application/application-install/constants/application-dependency-lock-options.constant';
 import { buildApplicationDependencyLockKey } from 'src/engine/core-modules/application/application-install/utils/build-application-dependency-lock-key.util';
 import { ApplicationManifestApplyService } from 'src/engine/core-modules/application/application-manifest/application-manifest-apply.service';
@@ -50,6 +51,7 @@ export class ApplicationDevelopmentService {
     private readonly applicationRegistrationLookupService: ApplicationRegistrationLookupService,
     private readonly applicationRegistrationAssetService: ApplicationRegistrationAssetService,
     private readonly applicationVersionValidationService: ApplicationVersionValidationService,
+    private readonly applicationDependencyService: ApplicationDependencyService,
     private readonly fileStorageService: FileStorageService,
     private readonly throttlerService: ThrottlerService,
     private readonly cacheLockService: CacheLockService,
@@ -158,6 +160,15 @@ export class ApplicationDevelopmentService {
     );
 
     if (dryRun === true) {
+      await this.applicationDependencyService.assertRequiredApplicationsAreInstalledOrThrow(
+        {
+          applicationUniversalIdentifier:
+            manifest.application.universalIdentifier,
+          requiredApplications: manifest.application.requiredApplications,
+          workspaceId,
+        },
+      );
+
       const { workspaceMigration } =
         await this.applicationSyncService.synchronizeFromManifest({
           workspaceId,
@@ -277,6 +288,15 @@ export class ApplicationDevelopmentService {
         ApplicationExceptionCode.APPLICATION_NOT_FOUND,
       );
     }
+
+    await this.applicationDependencyService.assertRequiredApplicationsAreInstalledOrThrow(
+      {
+        applicationUniversalIdentifier:
+          manifest.application.universalIdentifier,
+        requiredApplications: manifest.application.requiredApplications,
+        workspaceId,
+      },
+    );
 
     const { workspaceMigration } =
       await this.applicationManifestApplyService.applyManifestToWorkspace({
