@@ -11,6 +11,8 @@ import {
 import { type ApplicationInput } from 'src/engine/core-modules/application/application-development/dtos/application.input';
 import { type DevelopmentApplicationDTO } from 'src/engine/core-modules/application/application-development/dtos/development-application.dto';
 import { type WorkspaceMigrationDTO } from 'src/engine/core-modules/application/application-development/dtos/workspace-migration.dto';
+import { APPLICATION_DEPENDENCY_LOCK_OPTIONS } from 'src/engine/core-modules/application/application-install/constants/application-dependency-lock-options.constant';
+import { buildApplicationDependencyLockKey } from 'src/engine/core-modules/application/application-install/utils/build-application-dependency-lock-key.util';
 import { ApplicationManifestApplyService } from 'src/engine/core-modules/application/application-manifest/application-manifest-apply.service';
 import { ApplicationSyncService } from 'src/engine/core-modules/application/application-manifest/application-sync.service';
 import { ApplicationManifestExportService } from 'src/engine/core-modules/application/application-manifest/services/application-manifest-export.service';
@@ -174,10 +176,15 @@ export class ApplicationDevelopmentService {
 
     return this.cacheLockService.withLock(
       () =>
-        this.applyManifestSync(
-          manifest,
-          workspaceId,
-          shouldInferDeletionFromMissingEntities,
+        this.cacheLockService.withLock(
+          () =>
+            this.applyManifestSync(
+              manifest,
+              workspaceId,
+              shouldInferDeletionFromMissingEntities,
+            ),
+          buildApplicationDependencyLockKey({ workspaceId }),
+          APPLICATION_DEPENDENCY_LOCK_OPTIONS,
         ),
       `app-sync:${workspaceId}`,
       APP_SYNC_LOCK_OPTIONS,
