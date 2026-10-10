@@ -1,0 +1,53 @@
+export type HunterCompany = {
+  id?: string | null;
+  name?: string | null;
+  legalName?: string | null;
+  domain?: string | null;
+  domainAliases?: string[] | null;
+  category?: {
+    sector?: string | null;
+    industryGroup?: string | null;
+    industry?: string | null;
+    subIndustry?: string | null;
+    gicsCode?: string | null;
+    sicCode?: string | null;
+    naicsCode?: string | null;
+  } | null;
+  tags?: string[] | null;
+  description?: string | null;
+  foundedYear?: number | null;
+  location?: string | null;
+  timeZone?: string | null;
+  geo?: {
+    streetAddress?: string | null;
+    city?: string | null;
+    postalCode?: string | null;
+    state?: string | null;
+    country?: string | null;
+    countryCode?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  } | null;
+  facebook?: { handle?: string | null } | null;
+  linkedin?: { handle?: string | null } | null;
+  twitter?: { handle?: string | null } | null;
+  crunchbase?: { handle?: string | null } | null;
+  instagram?: { handle?: string | null } | null;
+  type?: string | null;
+  ticker?: string | null;
+  phone?: string | null;
+  metrics?: {
+    employees?: string | null;
+    employeesCount?: number | null;
+    marketCap?: number | null;
+    raised?: number | null;
+    annualRevenue?: number | null;
+    estimatedAnnualRevenue?: string | null;
+    trafficRank?: string | null;
+  } | null;
+  tech?: string[] | null;
+  techCategories?: string[] | null;
+  fundingRounds?: Record<string, unknown>[] | null;
+  parent?: { domain?: string | null } | null;
+  ultimateParent?: { domain?: string | null } | null;
+};

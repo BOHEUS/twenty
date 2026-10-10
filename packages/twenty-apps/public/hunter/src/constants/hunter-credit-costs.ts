@@ -1,0 +1,2 @@
+export const HUNTER_EMAIL_FINDER_CREDITS = 1;
+export const HUNTER_ENRICHMENT_CREDITS = 0.2;
