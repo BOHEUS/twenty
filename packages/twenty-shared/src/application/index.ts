@@ -94,6 +94,7 @@ export { DEFAULT_SETTINGS_MENU_ITEM_POSITION } from './constants/DefaultSettings
 export { FRONT_COMPONENT_SHARED_DEPENDENCIES_BUILT_PATH } from './constants/FrontComponentSharedDependenciesBuiltPath';
 export { FRONT_COMPONENT_SHARED_DEPENDENCIES_IMPORT_SPECIFIER } from './constants/FrontComponentSharedDependenciesImportSpecifier';
 export { GENERATED_DIR } from './constants/GeneratedDirectory';
+export { MAX_REQUIRED_APPLICATIONS } from './constants/MaxRequiredApplications';
 export { MINIMUM_UNIVERSAL_IDENTIFIER_UUID_VERSION } from './constants/MinimumUniversalIdentifierUuidVersion';
 export { NODE_ESM_CJS_BANNER } from './constants/NodeEsmCjsBanner';
 export { OUTPUT_DIR } from './constants/OutputDirectory';
@@ -209,6 +210,7 @@ export type {
 } from './permissionFlagManifestType';
 export type { PostInstallLogicFunctionApplicationManifest } from './postInstallLogicFunctionApplicationType';
 export type { PreInstallLogicFunctionApplicationManifest } from './preInstallLogicFunctionApplicationType';
+export type { RequiredApplicationManifest } from './requiredApplicationManifestType';
 export type { RoleManifestGrant } from './roleManifestGrantType';
 export type {
   ObjectPermissionManifest,
@@ -260,6 +262,7 @@ export {
   serializeApplicationVariableValue,
   deserializeApplicationVariableValue,
 } from './utils/applicationVariableValueSerialization';
+export { findRequiredApplicationsManifestErrors } from './utils/findRequiredApplicationsManifestErrors';
 export type { EffectiveObjectPermissions } from './utils/getEffectiveObjectPermissionsFromRoleManifest';
 export {
   ROLE_LEVEL_FLAG_BY_OBJECT_PERMISSION_ACTION,

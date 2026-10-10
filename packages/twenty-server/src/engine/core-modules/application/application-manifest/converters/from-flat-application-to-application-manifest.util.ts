@@ -10,6 +10,7 @@ export type FlatApplicationHeader = Pick<
   | 'description'
   | 'logo'
   | 'billing'
+  | 'requiredApplications'
   | 'grantedCapabilities'
   | 'packageJsonChecksum'
   | 'yarnLockChecksum'
@@ -34,6 +35,9 @@ export const fromFlatApplicationToApplicationManifest = ({
   ...(isDefined(flatApplication.billing) &&
   !isEmptyObject(flatApplication.billing)
     ? { billing: flatApplication.billing }
+    : {}),
+  ...(isNonEmptyArray(flatApplication.requiredApplications)
+    ? { requiredApplications: flatApplication.requiredApplications }
     : {}),
   ...(isNonEmptyArray(flatApplication.grantedCapabilities)
     ? { requestedCapabilities: flatApplication.grantedCapabilities }

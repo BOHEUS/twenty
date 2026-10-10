@@ -1,0 +1,1 @@
+export const MAX_REQUIRED_APPLICATIONS = 20;
