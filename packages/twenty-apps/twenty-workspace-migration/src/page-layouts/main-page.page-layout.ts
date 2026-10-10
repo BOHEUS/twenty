@@ -24,7 +24,7 @@ export default definePageLayout({
           universalIdentifier: MIGRATION_STATUS_WIDGET_UNIVERSAL_IDENTIFIER,
           title: 'Migration status',
           type: 'FRONT_COMPONENT',
-          gridPosition: { row: 0, column: 0, rowSpan: 12, columnSpan: 12 },
+          position: { row: 0, column: 0, rowSpan: 12, columnSpan: 12, layoutMode: PageLayoutTabLayoutMode.GRID },
           configuration: {
             configurationType: 'FRONT_COMPONENT',
             frontComponentUniversalIdentifier:
