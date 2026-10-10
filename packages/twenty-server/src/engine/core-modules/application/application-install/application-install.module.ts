@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { WorkspaceIteratorModule } from 'src/database/commands/command-runners/workspace-iterator.module';
 import { CacheLockModule } from 'src/engine/core-modules/cache-lock/cache-lock.module';
 import { ApplicationRegistrationEntity } from 'src/engine/core-modules/application/application-registration/application-registration.entity';
+import { ApplicationDependencyModule } from 'src/engine/core-modules/application/application-dependency/application-dependency.module';
 import { ApplicationLookupModule } from 'src/engine/core-modules/application/application-lookup/application-lookup.module';
 import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { ApplicationManifestModule } from 'src/engine/core-modules/application/application-manifest/application-manifest.module';
@@ -26,6 +27,7 @@ import { ApplicationRegistrationLookupModule } from 'src/engine/core-modules/app
 @Module({
   imports: [
     ApplicationRegistrationLookupModule,
+    ApplicationDependencyModule,
     WorkspaceManyOrAllFlatEntityMapsCacheModule,
     TypeOrmModule.forFeature([
       ApplicationEntity,

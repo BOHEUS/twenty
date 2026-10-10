@@ -9,7 +9,7 @@ import {
   Manifest,
 } from 'twenty-shared/application';
 import { FileFolder } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
+import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 import { Repository } from 'typeorm';
 
 import { buildApplicationFileList } from 'src/engine/core-modules/application/application-install/utils/build-application-file-list.util';
@@ -33,6 +33,7 @@ import {
   ApplicationException,
   ApplicationExceptionCode,
 } from 'src/engine/core-modules/application/application.exception';
+import { ApplicationDependencyService } from 'src/engine/core-modules/application/application-dependency/application-dependency.service';
 import { ApplicationLookupService } from 'src/engine/core-modules/application/application-lookup/application-lookup.service';
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
 import {
@@ -78,6 +79,7 @@ export class ApplicationInstallService {
     private readonly applicationLookupService: ApplicationLookupService,
     private readonly applicationPackageFetcherService: ApplicationPackageFetcherService,
     private readonly applicationVersionValidationService: ApplicationVersionValidationService,
+    private readonly applicationDependencyService: ApplicationDependencyService,
     private readonly applicationSyncService: ApplicationSyncService,
     private readonly applicationManifestApplyService: ApplicationManifestApplyService,
     private readonly fileStorageService: FileStorageService,
@@ -209,8 +211,13 @@ export class ApplicationInstallService {
         });
 
       // An upgrade replaces what the rest of the workspace sees of this
-      // application, while a fresh install of an independent one does not
-      const isDependencyLockRequired = isDefined(existingApplication);
+      // application, and an install with requirements reads other
+      // applications, while a fresh install of an independent one does neither
+      const isDependencyLockRequired =
+        isDefined(existingApplication) ||
+        isNonEmptyArray(
+          resolvedPackage.manifest.application.requiredApplications,
+        );
 
       return isDependencyLockRequired
         ? await this.cacheLockService.withLock(
@@ -331,6 +338,15 @@ export class ApplicationInstallService {
         );
       }
     }
+
+    await this.applicationDependencyService.assertRequiredApplicationsAreInstalledOrThrow(
+      {
+        applicationUniversalIdentifier: universalIdentifier,
+        requiredApplications:
+          resolvedPackage.manifest.application.requiredApplications,
+        workspaceId: params.workspaceId,
+      },
+    );
 
     const isVersionUpgrade = isDefined(existingApplication);
 
