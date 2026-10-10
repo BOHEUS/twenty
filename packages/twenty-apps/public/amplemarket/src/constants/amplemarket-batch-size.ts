@@ -1,0 +1,1 @@
+export const AMPLEMARKET_BATCH_SIZE = 25;

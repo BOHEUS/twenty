@@ -1,0 +1,43 @@
+import { type AmplemarketCompany } from 'src/types/amplemarket-company';
+
+export const AMPLEMARKET_COMPANY_DATA_MOCK: AmplemarketCompany = {
+  id: 'company-1',
+  name: 'Acme Corp',
+  website: 'https://www.acme.com',
+  linkedin_url: 'https://www.linkedin.com/company/acme',
+  keywords: ['anvils'],
+  industry: 'Manufacturing',
+  type: 'Privately Held',
+  size: '51-200 employees',
+  overview: 'Makes anvils.',
+  founded_year: 2004,
+  traffic_rank: 12000,
+  followers: 3400,
+  estimated_number_of_employees: 120,
+  estimated_revenue: '$10M-$100M',
+  revenue: 25000000,
+  locations: [
+    {
+      address: '9 Side St, Dallas, TX 75201, United States',
+      is_primary: false,
+      city: 'Dallas',
+      country: 'United States',
+    },
+    {
+      address: '1 Main St, Austin, TX 78701, United States',
+      is_primary: true,
+      city: 'Austin',
+      state: 'Texas',
+      postal_code: '78701',
+      country: 'United States',
+    },
+  ],
+  sic_codes: [3499],
+  naics_codes: ['332999'],
+  is_b2b: true,
+  is_b2c: false,
+  technologies: ['Salesforce'],
+  total_funding: 12000000,
+  latest_funding_stage: 'series_a',
+  latest_funding_date: '2024-05-01',
+};
