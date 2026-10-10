@@ -8,6 +8,7 @@ import { type ApplicationCapability } from '@/application/applicationCapabilityT
 import { type ApplicationBilling } from './applicationBillingType';
 import { type ApplicationCategory } from './applicationCategoryType';
 import { type ApplicationVariables } from './applicationVariablesType';
+import { type RequiredApplicationManifest } from './requiredApplicationManifestType';
 import { type ServerVariables } from './server-variables.type';
 import { type SyncableEntityOptions } from './syncableEntityOptionsType';
 
@@ -18,6 +19,7 @@ export type ApplicationManifest = SyncableEntityOptions & {
   requestedCapabilities?: ApplicationCapability[];
   applicationVariables?: ApplicationVariables;
   billing?: ApplicationBilling;
+  requiredApplications?: RequiredApplicationManifest[];
   serverVariables?: ServerVariables;
   author?: string;
   category?: ApplicationCategory;

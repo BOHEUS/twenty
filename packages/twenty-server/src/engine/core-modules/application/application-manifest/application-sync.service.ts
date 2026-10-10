@@ -1,6 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 
-import { type Manifest } from 'twenty-shared/application';
+import { msg } from '@lingui/core/macro';
+import {
+  findRequiredApplicationsManifestErrors,
+  type Manifest,
+} from 'twenty-shared/application';
 import { ALL_METADATA_NAME } from 'twenty-shared/metadata';
 import { FileFolder } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
@@ -33,6 +37,8 @@ import { type FlatApplication } from 'src/engine/core-modules/application/types/
 import { FileStorageService } from 'src/engine/core-modules/file-storage/services/file-storage.service';
 import { LOGIC_FUNCTION_DRIVER_FACTORY_TOKEN } from 'src/engine/core-modules/logic-function/logic-function-drivers/constants/logic-function-driver-factory.token';
 import { type LogicFunctionDriverFactory } from 'src/engine/core-modules/logic-function/logic-function-drivers/logic-function-driver.factory';
+import { isValidSemverRange } from 'src/engine/core-modules/application/utils/is-valid-semver-range.util';
+import { toRequiredApplications } from 'src/engine/core-modules/application/utils/to-required-applications.util';
 import { findReservedVariableNamesInApplicationManifest } from 'src/engine/core-modules/application/utils/find-reserved-variable-names-in-application-manifest.util';
 import { type AllFlatEntityOperationRecordByMetadataName } from 'src/engine/metadata-modules/flat-entity/types/all-flat-entity-operation-record-by-metadata-name.type';
 import { getMetadataFlatEntityMapsKey } from 'src/engine/metadata-modules/flat-entity/utils/get-metadata-flat-entity-maps-key.util';
@@ -92,6 +98,22 @@ export class ApplicationSyncService {
       throw new ApplicationException(
         `Variable names are reserved: ${reservedVariableNames.join(', ')}`,
         ApplicationExceptionCode.INVALID_INPUT,
+      );
+    }
+
+    const invalidRequiredApplications = findRequiredApplicationsManifestErrors({
+      universalIdentifier: manifest.application.universalIdentifier,
+      requiredApplications: manifest.application.requiredApplications,
+      isValidVersionRange: isValidSemverRange,
+    });
+
+    if (invalidRequiredApplications.length > 0) {
+      throw new ApplicationException(
+        `Invalid required applications: ${invalidRequiredApplications.join('; ')}`,
+        ApplicationExceptionCode.INVALID_INPUT,
+        {
+          userFriendlyMessage: msg`This app declares invalid required applications. Contact its developer.`,
+        },
       );
     }
 
@@ -192,6 +214,9 @@ export class ApplicationSyncService {
       yarnLockFileId: null,
       availablePackages: {},
       billing: manifest.application.billing ?? {},
+      requiredApplications: toRequiredApplications(
+        manifest.application.requiredApplications,
+      ),
       grantedCapabilities: toApplicationCapabilities(
         manifest.application.requestedCapabilities,
       ),
@@ -301,6 +326,9 @@ export class ApplicationSyncService {
         packageJsonChecksum: manifest.application.packageJsonChecksum,
         yarnLockChecksum: manifest.application.yarnLockChecksum,
         billing: manifest.application.billing ?? {},
+        requiredApplications: toRequiredApplications(
+          manifest.application.requiredApplications,
+        ),
         grantedCapabilities: resolveSyncedApplicationCapabilities({
           sourceType: application.sourceType,
           grantedCapabilities: application.grantedCapabilities,

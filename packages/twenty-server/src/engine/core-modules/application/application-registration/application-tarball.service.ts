@@ -6,6 +6,7 @@ import { tmpdir } from 'os';
 import { isAbsolute, join, relative, resolve } from 'path';
 import { pipeline } from 'stream/promises';
 
+import { msg } from '@lingui/core/macro';
 import { FileFolder } from 'twenty-shared/types';
 import { isDefined, isValidUuid } from 'twenty-shared/utils';
 import { Like, Repository } from 'typeorm';
@@ -38,11 +39,16 @@ import {
   type FileUploadStorageLocation,
 } from 'src/engine/core-modules/file/file-upload/services/file-upload-completion.service';
 import { FILE_STATUS } from 'src/engine/core-modules/file/types/file-status.type';
+import { isValidSemverRange } from 'src/engine/core-modules/application/utils/is-valid-semver-range.util';
 import { findReservedVariableNamesInApplicationManifest } from 'src/engine/core-modules/application/utils/find-reserved-variable-names-in-application-manifest.util';
 import { removeFileFolderFromFileEntityPath } from 'src/engine/core-modules/file/utils/remove-file-folder-from-file-entity-path.utils';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
-import type { ApplicationManifest, Manifest } from 'twenty-shared/application';
+import {
+  type ApplicationManifest,
+  findRequiredApplicationsManifestErrors,
+  type Manifest,
+} from 'twenty-shared/application';
 
 const TARBALL_FILE_NAME = 'app.tar.gz';
 
@@ -404,6 +410,22 @@ export class ApplicationTarballService {
       throw new ApplicationRegistrationException(
         `Variable names are reserved: ${reservedVariableNames.join(', ')}`,
         ApplicationRegistrationExceptionCode.INVALID_INPUT,
+      );
+    }
+
+    const invalidRequiredApplications = findRequiredApplicationsManifestErrors({
+      universalIdentifier: manifest.application.universalIdentifier,
+      requiredApplications: manifest.application.requiredApplications,
+      isValidVersionRange: isValidSemverRange,
+    });
+
+    if (invalidRequiredApplications.length > 0) {
+      throw new ApplicationRegistrationException(
+        `Invalid required applications: ${invalidRequiredApplications.join('; ')}`,
+        ApplicationRegistrationExceptionCode.INVALID_INPUT,
+        {
+          userFriendlyMessage: msg`This app declares invalid required applications. Contact its developer.`,
+        },
       );
     }
 

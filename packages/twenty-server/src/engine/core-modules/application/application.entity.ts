@@ -3,6 +3,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import {
   type ApplicationBilling,
   type ApplicationCapability,
+  type RequiredApplicationManifest,
 } from 'twenty-shared/application';
 import {
   Column,
@@ -135,6 +136,13 @@ export class ApplicationEntity extends WorkspaceRelatedEntity {
       '2.42.0_AddApplicationGrantedCapabilitiesFastInstanceCommand_1790088525621',
   })
   grantedCapabilities: ApplicationCapability[];
+
+  @Column({ type: 'jsonb', nullable: false, default: [] })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.47.0_AddApplicationRequiredApplicationsFastInstanceCommand_1791627179033',
+  })
+  requiredApplications: RequiredApplicationManifest[];
 
   @Column({ nullable: true, type: 'uuid' })
   logicFunctionLayerId: string | null;

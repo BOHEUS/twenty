@@ -1,7 +1,9 @@
 import { isNonEmptyString } from '@sniptt/guards';
+import semver from 'semver';
 import {
   APPLICATION_CATEGORIES,
   APPLICATION_VARIABLE_SCOPES,
+  findRequiredApplicationsManifestErrors,
   isApplicationVariableScope,
   isKnownApplicationCategory,
   isRecurringChargePeriod,
@@ -153,6 +155,15 @@ export const defineApplication: DefineEntity<ApplicationConfig> = (config) => {
       );
     }
   }
+
+  errors.push(
+    ...findRequiredApplicationsManifestErrors({
+      universalIdentifier: config.universalIdentifier,
+      requiredApplications: config.requiredApplications,
+      isValidVersionRange: (versionRange) =>
+        isDefined(semver.validRange(versionRange)),
+    }),
+  );
 
   if (config.defaultRoleUniversalIdentifier) {
     warnings.push(

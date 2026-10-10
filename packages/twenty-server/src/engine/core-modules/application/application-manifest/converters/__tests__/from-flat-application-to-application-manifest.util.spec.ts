@@ -13,6 +13,7 @@ const buildFlatApplication = (
   description: 'Tickets for support',
   logo: null,
   billing: {},
+  requiredApplications: [],
   grantedCapabilities: [],
   packageJsonChecksum: 'package-json-checksum',
   yarnLockChecksum: 'yarn-lock-checksum',
@@ -59,6 +60,22 @@ describe('fromFlatApplicationToApplicationManifest', () => {
         defaultRoleUniversalIdentifier: ROLE_UID,
       }),
     ).toMatchObject({ requestedCapabilities: ['microphone', 'camera'] });
+  });
+
+  it('should emit declared required applications', () => {
+    const requiredApplications = [
+      {
+        universalIdentifier: 'required-application-universal-identifier',
+        versionRange: '^1.0.0',
+      },
+    ];
+
+    expect(
+      fromFlatApplicationToApplicationManifest({
+        flatApplication: buildFlatApplication({ requiredApplications }),
+        defaultRoleUniversalIdentifier: ROLE_UID,
+      }),
+    ).toMatchObject({ requiredApplications });
   });
 
   it('should default a missing description to an empty string', () => {

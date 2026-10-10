@@ -437,6 +437,49 @@ describe('defineApplication', () => {
     );
   });
 
+  it('should accept required applications with and without a version range', () => {
+    const result = defineApplication({
+      universalIdentifier: 'a9faf5f8-cf7e-4f24-9d37-fd523c30febe',
+      displayName: 'My App',
+      description: 'My app description',
+      requiredApplications: [
+        {
+          universalIdentifier: '0f4d43b5-46e6-4a43-9d64-3c2f4f3c4f0b',
+          versionRange: '^1.2.0',
+        },
+        { universalIdentifier: '9d4a7a51-63fa-45d5-a7b6-12e9f3e4fb0c' },
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.config?.requiredApplications).toHaveLength(2);
+  });
+
+  it('should return errors for invalid required applications', () => {
+    const result = defineApplication({
+      universalIdentifier: 'a9faf5f8-cf7e-4f24-9d37-fd523c30febe',
+      displayName: 'My App',
+      description: 'My app description',
+      requiredApplications: [
+        { universalIdentifier: 'not-a-uuid' },
+        { universalIdentifier: 'a9faf5f8-cf7e-4f24-9d37-fd523c30febe' },
+        {
+          universalIdentifier: '0f4d43b5-46e6-4a43-9d64-3c2f4f3c4f0b',
+          versionRange: 'latest',
+        },
+        { universalIdentifier: '0f4d43b5-46e6-4a43-9d64-3c2f4f3c4f0b' },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.errors).toEqual([
+      'Required application universalIdentifier "not-a-uuid" must be a valid UUID',
+      'Application cannot require itself',
+      'Required application "0f4d43b5-46e6-4a43-9d64-3c2f4f3c4f0b" has an invalid versionRange "latest". Must be a valid semver range.',
+      'Required application "0f4d43b5-46e6-4a43-9d64-3c2f4f3c4f0b" is declared more than once',
+    ]);
+  });
+
   it('should return error when universalIdentifier is missing', () => {
     const config = {
       displayName: 'My App',
