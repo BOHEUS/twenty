@@ -17,20 +17,24 @@ export type ApplicationSchemaScopeFlatEntityIds = {
 
 export const computeApplicationSchemaScopeFlatEntityIds = ({
   applicationId,
+  requiredApplicationIds = [],
   twentyStandardApplicationId,
   flatObjectMetadataMaps,
   flatFieldMetadataMaps,
   flatIndexMaps,
 }: {
   applicationId: string;
+  requiredApplicationIds?: string[];
   twentyStandardApplicationId?: string;
   flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>;
   flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>;
   flatIndexMaps?: FlatEntityMaps<FlatIndexMetadata>;
 }): ApplicationSchemaScopeFlatEntityIds => {
+  const ownerApplicationIds = [applicationId, ...requiredApplicationIds];
+
   const scopeApplicationIds = isDefined(twentyStandardApplicationId)
-    ? [twentyStandardApplicationId, applicationId]
-    : [applicationId];
+    ? [twentyStandardApplicationId, ...ownerApplicationIds]
+    : ownerApplicationIds;
 
   const flatObjectMetadataIds = new Set(
     scopeApplicationIds.flatMap((scopeApplicationId) =>
@@ -50,10 +54,14 @@ export const computeApplicationSchemaScopeFlatEntityIds = ({
     ),
   );
 
-  const relationFlatFieldMetadatasToVisit = findFlatEntitiesByApplicationId({
-    applicationId,
-    flatEntityMaps: flatFieldMetadataMaps,
-  }).filter(isMorphOrRelationFlatFieldMetadata);
+  const relationFlatFieldMetadatasToVisit = ownerApplicationIds
+    .flatMap((ownerApplicationId) =>
+      findFlatEntitiesByApplicationId({
+        applicationId: ownerApplicationId,
+        flatEntityMaps: flatFieldMetadataMaps,
+      }),
+    )
+    .filter(isMorphOrRelationFlatFieldMetadata);
 
   while (relationFlatFieldMetadatasToVisit.length > 0) {
     const relationFlatFieldMetadata = relationFlatFieldMetadatasToVisit.pop();

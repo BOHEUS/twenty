@@ -93,12 +93,24 @@ export class WorkspaceGraphqlSchemaSDLService {
           TWENTY_STANDARD_APPLICATION.universalIdentifier
         ];
 
+      // Read during the upgrade window too, when the column is not loaded yet
+      const requiredApplications =
+        flatApplicationMaps?.byId[applicationId]?.requiredApplications ?? [];
+
+      const requiredApplicationIds = requiredApplications
+        .map(
+          ({ universalIdentifier }) =>
+            flatApplicationMaps?.idByUniversalIdentifier[universalIdentifier],
+        )
+        .filter(isDefined);
+
       const {
         flatObjectMetadataIds,
         flatFieldMetadataIds,
         flatIndexMetadataIds,
       } = computeApplicationSchemaScopeFlatEntityIds({
         applicationId,
+        requiredApplicationIds,
         twentyStandardApplicationId,
         flatObjectMetadataMaps: allFlatObjectMetadataMaps,
         flatFieldMetadataMaps: allFlatFieldMetadataMaps,

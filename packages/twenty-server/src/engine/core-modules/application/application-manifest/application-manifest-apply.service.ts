@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 
 import { type Manifest } from 'twenty-shared/application';
-import { isDefined } from 'twenty-shared/utils';
+import { fastDeepEqual, isDefined } from 'twenty-shared/utils';
 
+import { ApplicationDependencyService } from 'src/engine/core-modules/application/application-dependency/application-dependency.service';
 import { ApplicationSyncService } from 'src/engine/core-modules/application/application-manifest/application-sync.service';
 import { ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
 import { ApplicationRegistrationSourceType } from 'src/engine/core-modules/application/application-registration/enums/application-registration-source-type.enum';
@@ -18,6 +19,7 @@ export class ApplicationManifestApplyService {
     private readonly applicationSyncService: ApplicationSyncService,
     private readonly sdkClientGenerationService: SdkClientGenerationService,
     private readonly applicationRegistrationService: ApplicationRegistrationService,
+    private readonly applicationDependencyService: ApplicationDependencyService,
   ) {}
 
   async applyManifestToWorkspace({
@@ -34,7 +36,12 @@ export class ApplicationManifestApplyService {
     applicationRegistrationId?: string;
     application: Pick<
       ApplicationEntity,
-      'id' | 'universalIdentifier' | 'version'
+      | 'id'
+      | 'universalIdentifier'
+      | 'version'
+      | 'requiredApplications'
+      | 'universalIdentifier'
+      | 'version'
     >;
     inferDeletionFromMissingEntities?: boolean;
     // Installs and upgrades force regeneration so function-only upgrades pick
@@ -51,6 +58,12 @@ export class ApplicationManifestApplyService {
     // generated regardless of schema changes.
     const isFirstApply = !isDefined(application.version);
 
+    // Required applications widen the client schema without any metadata change
+    const haveRequiredApplicationsChanged = !fastDeepEqual(
+      application.requiredApplications ?? [],
+      manifest.application.requiredApplications ?? [],
+    );
+
     const { workspaceMigration, hasSchemaMetadataChanged } =
       await this.applicationSyncService.synchronizeFromManifest({
         workspaceId,
@@ -60,13 +73,39 @@ export class ApplicationManifestApplyService {
         persistVersion,
       });
 
-    if (forceSdkClientGeneration || isFirstApply || hasSchemaMetadataChanged) {
+    if (
+      forceSdkClientGeneration ||
+      isFirstApply ||
+      hasSchemaMetadataChanged ||
+      haveRequiredApplicationsChanged
+    ) {
       await this.sdkClientGenerationService.generateSdkClientForApplication({
         workspaceId,
         applicationId: application.id,
         applicationUniversalIdentifier: application.universalIdentifier,
         trigger: 'manifest-sync',
       });
+    }
+
+    // Dependent applications' clients embed this application's schema
+    if (hasSchemaMetadataChanged) {
+      const dependentApplications =
+        await this.applicationDependencyService.findDependentApplications({
+          applicationUniversalIdentifier: application.universalIdentifier,
+          workspaceId,
+        });
+
+      for (const dependentApplication of dependentApplications) {
+        await this.sdkClientGenerationService.enqueueSdkClientGenerationForApplication(
+          {
+            workspaceId,
+            applicationId: dependentApplication.id,
+            applicationUniversalIdentifier:
+              dependentApplication.universalIdentifier,
+            trigger: 'required-application-change',
+          },
+        );
+      }
     }
 
     return { workspaceMigration, hasSchemaMetadataChanged };

@@ -6,4 +6,5 @@ export type SdkClientGenerationTrigger =
   | 'manifest-sync'
   | 'missing-archive'
   | 'dev-seeder'
+  | 'required-application-change'
   | 'unknown';

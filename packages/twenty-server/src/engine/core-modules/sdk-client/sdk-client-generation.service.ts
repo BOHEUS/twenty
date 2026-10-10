@@ -77,7 +77,7 @@ export class SdkClientGenerationService {
     );
   }
 
-  private async enqueueSdkClientGenerationForApplication({
+  async enqueueSdkClientGenerationForApplication({
     workspaceId,
     applicationId,
     applicationUniversalIdentifier,

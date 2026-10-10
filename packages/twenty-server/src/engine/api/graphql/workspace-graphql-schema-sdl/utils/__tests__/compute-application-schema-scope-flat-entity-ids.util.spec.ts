@@ -274,6 +274,51 @@ describe('computeApplicationSchemaScopeFlatEntityIds', () => {
     expect(result.flatFieldMetadataIds).toEqual(['standard-owned-to-app-c']);
   });
 
+  it('includes the entities of required applications and follows their relations', () => {
+    const result = computeApplicationSchemaScopeFlatEntityIds({
+      applicationId: APP_B_ID,
+      requiredApplicationIds: [APP_A_ID],
+      twentyStandardApplicationId: STANDARD_APPLICATION_ID,
+      ...buildMaps({
+        fields: [
+          APP_A_NAME_FIELD,
+          APP_A_OTHER_NAME_FIELD,
+          APP_C_NAME_FIELD,
+          buildField({
+            id: 'app-a-field-on-standard-object',
+            applicationId: APP_A_ID,
+            objectMetadataId: STANDARD_OBJECT_ID,
+          }),
+          buildField({
+            id: 'app-a-to-app-c',
+            applicationId: APP_A_ID,
+            objectMetadataId: APP_A_OBJECT_ID,
+            relationTargetObjectMetadataId: APP_C_OBJECT_ID,
+          }),
+        ],
+      }),
+    });
+
+    expect(result.flatObjectMetadataIds.sort()).toEqual(
+      [
+        APP_A_OBJECT_ID,
+        APP_A_OTHER_OBJECT_ID,
+        APP_B_OBJECT_ID,
+        APP_C_OBJECT_ID,
+        STANDARD_OBJECT_ID,
+      ].sort(),
+    );
+    expect(result.flatFieldMetadataIds.sort()).toEqual(
+      [
+        'app-a-field-on-standard-object',
+        'app-a-name',
+        'app-a-other-name',
+        'app-a-to-app-c',
+        'app-c-name',
+      ].sort(),
+    );
+  });
+
   it('selects the indexes of each in-scope object owned by the scope or by the object application', () => {
     const result = computeForAppB(
       buildMaps({
