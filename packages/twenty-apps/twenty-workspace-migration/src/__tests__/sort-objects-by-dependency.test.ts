@@ -97,13 +97,13 @@ describe('sortObjectsByDependency', () => {
     expect(result.map((object) => object.nameSingular)).toEqual(['company', 'person']);
   });
 
-  it('ignores MORPH_RELATION fields entirely, even ones shaped like a MANY_TO_ONE target', () => {
-    const note = buildObject('note', 'u-note', [buildMorphRelationField('company')]);
+  it('orders a MORPH_RELATION MANY_TO_ONE target before the object that points at it', () => {
+    const noteTarget = buildObject('noteTarget', 'u-note-target', [buildMorphRelationField('company')]);
     const company = buildObject('company', 'u-company');
 
-    const result = sortObjectsByDependency([note, company]);
+    const result = sortObjectsByDependency([noteTarget, company]);
 
-    expect(result.map((object) => object.nameSingular)).toEqual(['note', 'company']);
+    expect(result.map((object) => object.nameSingular)).toEqual(['company', 'noteTarget']);
   });
 
   it('treats a relation target absent from the input list as no constraint', () => {

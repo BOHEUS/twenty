@@ -13,6 +13,7 @@ import { migrateNavigationMenuItems } from "src/logic-functions/migration/migrat
 import { migrateRoles } from "src/logic-functions/migration/migrate-roles.util";
 import { migrateWebhooks } from "src/logic-functions/migration/migrate-webhooks.util";
 import { migrateSkills } from "src/logic-functions/migration/migrate-skills.util";
+import { migrateMessageSuppressions } from "src/logic-functions/migration/migrate-message-suppressions.util";
 import { executeWithRetry } from "src/logic-functions/utils/execute-with-retry.util";
 import { executeWithRetryAndCheckpoint } from "src/logic-functions/utils/execute-with-retry-and-checkpoint.util";
 
@@ -55,6 +56,12 @@ export const stage7 = async (sourceWorkspace: AxiosInstance, targetWorkspace: Ax
       executeWithRetryAndCheckpoint(() => findRoles(targetWorkspace)),
     ]);
     if (await migrateRoles(targetWorkspace, sourceRoles, targetRoles, targetObjectIdBySourceObjectId, targetFieldIdBySourceFieldId) === false) {
+      return;
+    }
+  }
+
+  if (migrationState.migratedMessageSuppressions === false) {
+    if (await migrateMessageSuppressions(sourceWorkspace, targetWorkspace) === false) {
       return;
     }
   }

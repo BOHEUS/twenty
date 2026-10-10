@@ -3,6 +3,8 @@ import { postGraphql } from "src/logic-functions/requests/graphql-client.util";
 import { capitalize } from "src/logic-functions/utils/capitalize.util";
 import { toGraphQlLiteral } from "src/logic-functions/utils/to-graphql-literal.util";
 
+// Upserting on the preserved source id makes replaying a page safe: a resumed invocation can
+// resend records an earlier one already created before its checkpoint was saved.
 export const createManyRecords = async (
   client: AxiosInstance,
   namePlural: string,
@@ -11,7 +13,7 @@ export const createManyRecords = async (
 ): Promise<{ id: string }[]> => {
   const operationName = `create${capitalize(namePlural)}`;
   const mutation = `mutation ${operationName} {
-  ${operationName}(data: ${toGraphQlLiteral(data, enumDataKeys)}) {
+  ${operationName}(data: ${toGraphQlLiteral(data, enumDataKeys)}, upsert: true) {
     id
   }
 }`;

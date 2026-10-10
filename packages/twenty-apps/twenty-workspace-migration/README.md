@@ -5,23 +5,24 @@ A Twenty App that migrates data from one Twenty workspace into another over the 
 ## Features
 
 - **Schema sync** - compares custom and standard objects/fields between the source and target workspace and recreates whatever's missing (relation dependencies are respected, so a field can't be created before the object it points at exists).
-- **Record migration** - copies records for every non-system, non-omitted object, in dependency order, remapping relation foreign keys from source-workspace ids to target-workspace ids as it goes.
+- **Record migration** - copies records for every non-system, non-omitted object (plus the note/task target, call recording, email campaign and email list system objects), in dependency order, remapping relation foreign keys (morph relations such as note and task targets included) from source-workspace ids to target-workspace ids as it goes. Files in FILES fields (person avatars, call recordings, custom FILES fields) are re-uploaded into the target workspace the same way attachments are.
 - **Views, dashboards, record page layouts, navigation menu items, skills, webhooks, roles** - migrated with their sub-entities (view filters/sorts/groups, page layout tabs/widgets, role permissions and row-level permission predicates, etc.), deduplicated against the target workspace where a stable id or natural key exists. A navigation menu item that links directly to a dashboard or a custom record page layout resolves correctly because dashboards and page layouts are migrated first.
 - **Attachments** - each attachment's underlying file is downloaded from the source workspace and re-uploaded into the target workspace's own storage before the record is created, since files are stored workspace-scoped server-side. Attachment target links are discovered dynamically from the live schema, so this covers any non-system object - standard (Company, Person, ...) or custom (user-created or app-installed) - not just a fixed list.
+- **Email campaigns** - unsubscribe topics are matched by name (created when missing), campaigns, email lists and list members are copied with the records, and unsubscribes and bounces are recreated in the target workspace, so people who opted out in the source aren't emailed from the target. A scheduled campaign comes across as a draft to reschedule, since its send was queued in the source workspace. Skipped with a warning when either workspace doesn't have email campaigns enabled.
 - **Duration estimate** - before any data moves, the migration logs a worst-case time estimate based on record counts and non-batchable entity counts (views, dashboards, page layouts, attachments, ...), so you know roughly what to expect.
-- **Checkpointing and self-resumption** - migration progress is saved to this app's own key-value store after every stage (and periodically during long stages), and the app re-triggers its own HTTP route to continue automatically - a run cut off by the platform's timeout picks back up on its own rather than needing a manual re-invocation.
+- **Checkpointing and self-resumption** - migration progress is saved to this app's own key-value store after every stage (and periodically during long stages), and the app re-triggers its own HTTP route to continue automatically - a run cut off by the platform's timeout picks back up on its own rather than needing a manual re-invocation. Only one run executes at a time: starting again while a run is in progress is refused. **Reset** on the status page clears the saved progress so the next run starts over from stage 1.
 
 ## How it works
 
 The migration runs as a single logic function (`src/logic-functions/entry-point.ts`), organized into stages:
 
 1. Read installed apps and workspace members (source and target must have the same apps at the same version; missing workspace members are reported instead of silently dropping their data), then log a worst-case duration estimate.
-2. Compare objects and fields between the two workspaces, recreate missing ones and update ones that differ, and precompute the attachment target-field mapping used later by stage 8.
+2. Compare objects and fields between the two workspaces, recreate missing ones and update ones that differ, precompute the attachment target-field mapping used later by stage 8, and match unsubscribe topics so campaigns can reference them in stage 3.
 3. Migrate records, in relation-dependency order.
 4. Migrate views.
 5. Migrate dashboards.
 6. Migrate custom record page layouts.
-7. Migrate navigation menu items, skills, webhooks, and roles - deliberately after dashboards and record page layouts, since a navigation menu item can link directly to either.
+7. Migrate navigation menu items, skills, webhooks, roles and message suppressions - deliberately after dashboards and record page layouts, since a navigation menu item can link directly to either.
 8. Migrate attachments (and their files).
 
 A logic function has a hard execution timeout; this app tracks its own elapsed runtime and stops cleanly at a stage/object boundary before that limit hits, checkpoints its state, and triggers a fresh invocation of itself to continue - rather than being killed mid-request or requiring a manual re-run.
@@ -42,9 +43,13 @@ The target workspace must already have every workspace member that owns/is assig
 ## Known limitations
 
 - **Workflows aren't migrated** (`workflow`, `workflowRun`, `workflowVersion`, `workflowAutomatedTrigger`) - the public API doesn't allow creating or fully updating workflow versions for API-key callers, so there's no way to recreate a workflow's steps/trigger through this tool.
+- **Integration-owned system data isn't migrated** - emails and calendar events (and their participants and threads), AI chat threads, campaign delivery records, record shares, and short links. They depend on connected accounts, users or sharing grants that don't exist in the target workspace, or the server only lets itself write them; mail and calendar are synced again from the provider once the accounts are reconnected in the target workspace.
+- **Blocklists aren't migrated** - the server only lets a signed-in user manage their own blocklist entries, so an API key can't create them. Each member re-adds theirs in the target workspace.
 - **Activity history isn't migrated** (`timelineActivity`) - a deliberate choice, not an API limitation; audit history tied to the source workspace generally isn't meaningful to replay into a new one.
+- **Record shares aren't migrated** (`recordShare`) - a deliberate choice. Access granted on individual records in the source has to be granted again in the target.
+- **Suppressions lose some detail.** They're recreated through the same mutation as a manual unsubscribe, so bounces and spam complaints become unsubscribes from every campaign: they still block campaigns but no longer transactional emails. Tracking opt-outs aren't migrated, since recreating them as unsubscribes would block people who never opted out. Campaign delivery history (who was sent what) can't be migrated, and a campaign that was mid-send in the source stays in that state rather than becoming sendable again.
 - **Row-level permission predicates require an Enterprise plan on both workspaces.** They're migrated best-effort; if the target workspace's plan doesn't have the feature enabled, that role's predicates are skipped with a warning instead of failing the whole migration.
-- **Re-running isn't fully idempotent.** Views, skills, webhooks, dashboards, roles, and attachments are deduplicated (by reused id, natural key, or label), but plain record migration has no dedupe by source id - re-running after records were already created will create duplicates.
+- **Re-running re-uploads files.** Records keep their source id and are upserted on it, and views, skills, webhooks, dashboards and roles are deduplicated (by reused id, natural key, or label), so re-running doesn't create duplicates. Files on attachments and FILES fields are uploaded again though, leaving the earlier copies unreferenced in the target workspace's storage.
 
 ## Getting started
 

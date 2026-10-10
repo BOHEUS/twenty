@@ -19,6 +19,25 @@ type SourceDashboard = {
   position: number;
 };
 
+// Dashboards keep their source id in the target, so an id already present there means an earlier
+// invocation created it along with its page layout. Recreating it would mint a second page
+// layout, since createPageLayout always generates a fresh id.
+const findExistingTargetPageLayoutIdByDashboardId = async (targetWorkspace: AxiosInstance): Promise<Map<string, string | null>> => {
+  const pageLayoutIdByDashboardId = new Map<string, string | null>();
+  let after: string | null = null;
+
+  while (true) {
+    const page = await executeWithRetry(() => findManyRecords<{ pageLayoutId: string | null }>(targetWorkspace, 'dashboards', 'pageLayoutId', after));
+    for (const { node } of page.edges) {
+      pageLayoutIdByDashboardId.set(node.id, node.pageLayoutId);
+    }
+    if (page.pageInfo.hasNextPage === false || page.pageInfo.endCursor === null) {
+      return pageLayoutIdByDashboardId;
+    }
+    after = page.pageInfo.endCursor;
+  }
+};
+
 export const migrateDashboards = async (
   sourceWorkspace: AxiosInstance,
   targetWorkspace: AxiosInstance,
@@ -30,6 +49,7 @@ export const migrateDashboards = async (
 ) => {
   const sourcePageLayouts = await executeWithRetry(() => findPageLayouts(sourceWorkspace, 'DASHBOARD'));
   const sourcePageLayoutById = new Map(sourcePageLayouts.map((layout) => [layout.id, layout]));
+  const existingTargetPageLayoutIdByDashboardId = await findExistingTargetPageLayoutIdByDashboardId(targetWorkspace);
 
   let createdCount = 0;
   let after: string | null = migrationState.objectRecordsToMigrate.get('dashboards') ?? null;
@@ -42,6 +62,16 @@ export const migrateDashboards = async (
       const title = dashboard.title;
 
       decrementEstimate({ otherRecordCount: REQUESTS_PER_DASHBOARD });
+
+      if (existingTargetPageLayoutIdByDashboardId.has(dashboardId)) {
+        const existingTargetPageLayoutId = existingTargetPageLayoutIdByDashboardId.get(dashboardId);
+        // Navigation menu items linking to this dashboard's layout resolve through this map.
+        if (typeof existingTargetPageLayoutId === 'string') {
+          targetPageLayoutIdBySourcePageLayoutId.set(dashboard.pageLayoutId, existingTargetPageLayoutId);
+        }
+        recordIds.migratedRecordIds.add(dashboardId);
+        continue;
+      }
 
       const sourcePageLayout = sourcePageLayoutById.get(dashboard.pageLayoutId);
       if (sourcePageLayout === undefined) {

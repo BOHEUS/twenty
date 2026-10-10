@@ -12,12 +12,17 @@ import { extractNodes } from "src/logic-functions/utils/extract-nodes.util";
 import { mapEntities } from "src/logic-functions/utils/map-entities.util";
 import { fieldsToOmit, objectsToOmit, sourceAppsToOmit } from "src/constants/to-omit";
 import { buildFieldToCreate } from "src/logic-functions/utils/build-field-to-create.util";
-import { saveMigrationStateCheckpointAndStop, setStateRef } from "src/logic-functions/utils/migration-state.util";
+import {
+  saveMigrationStateCheckpoint,
+  saveMigrationStateCheckpointAndStop,
+  setStateRef
+} from "src/logic-functions/utils/migration-state.util";
 import { executeWithRetry } from "src/logic-functions/utils/execute-with-retry.util";
 import { estimateMigrationDuration } from "src/logic-functions/utils/estimate-migration-duration.util";
 import { logger } from "src/logic-functions/utils/logger.util";
 import { stopIfTimeBudgetExceeded } from "src/logic-functions/utils/time-budget.util";
 import { fetchCurrentWorkspace } from "src/logic-functions/requests/fetch-current-workspace.util";
+import { buildRecordMigrationOrder } from "src/logic-functions/utils/build-record-migration-order.util";
 
 export const stage1 = async (sourceWorkspace: AxiosInstance, targetWorkspace: AxiosInstance) => {
   const currentWorkspace = await executeWithRetry(() => fetchCurrentWorkspace(sourceWorkspace));
@@ -40,6 +45,8 @@ export const stage1 = async (sourceWorkspace: AxiosInstance, targetWorkspace: Ax
   const missingAppsIds = sourceAppsIds.filter((app) => Object.keys(targetApps).indexOf(app) < 0);
   if (missingAppsIds.length > 0) {
     logger.error(`Install missing apps: ${missingAppsIds.map(id => sourceApps[id].name).join(', ')}`);
+    // Saved so the status page shows why the migration stopped.
+    await saveMigrationStateCheckpoint();
     return;
   }
   // check if apps have the same version
@@ -51,6 +58,7 @@ export const stage1 = async (sourceWorkspace: AxiosInstance, targetWorkspace: Ax
   }
   if (diffVerApps.length > 0) {
     logger.error(`Update following apps to latest version: ${diffVerApps.map(id => sourceApps[id].name).join(', ')}`);
+    await saveMigrationStateCheckpoint();
     return;
   }
 
@@ -61,6 +69,7 @@ export const stage1 = async (sourceWorkspace: AxiosInstance, targetWorkspace: Ax
   const missingWorkspaceMembers = sourceWorkspaceMembers.filter(mem => targetWorkspaceMemberByEmail.get(mem.userEmail) === undefined);
   if (missingWorkspaceMembers.length > 0) {
     logger.error(`Add missing workspace members before proceeding: ${missingWorkspaceMembers.map(mem => mem.userEmail).join(', ')}`);
+    await saveMigrationStateCheckpoint();
     return;
   }
   // merge both workspaceMembers arrays into one
@@ -171,6 +180,7 @@ export const stage1 = async (sourceWorkspace: AxiosInstance, targetWorkspace: Ax
 
   const { estimatedMinutes, batchableRecordCount, otherRecordCount } = await estimateMigrationDuration(
     sourceWorkspace,
+    buildRecordMigrationOrder([...mappedSourceObjects.values()]).map((object) => object.namePlural),
   );
   logger.log(`Estimated migration time: ~${estimatedMinutes} minute(s) worst case (${batchableRecordCount} record(s) via createManyRecords, ${otherRecordCount} attachment(s))`);
 

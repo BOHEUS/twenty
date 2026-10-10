@@ -12,7 +12,7 @@ import { Role } from "src/logic-functions/types/role.type";
 import { View } from "src/logic-functions/types/view-entities.type";
 import { NavigationMenuItem } from "src/logic-functions/types/navigation-menu-item.type";
 import { executeWithRetry } from "src/logic-functions/utils/execute-with-retry.util";
-import { objectsToOmitFromCounting } from "src/constants/to-omit";
+import { findMessageSuppressions } from "src/logic-functions/requests/find-message-suppressions.util";
 
 export type MigrationDurationEstimate = {
   batchableRecordCount: number;
@@ -89,27 +89,27 @@ export const decrementEstimate = (consumed: { batchableRecordCount?: number; oth
 
 export const estimateMigrationDuration = async (
   sourceWorkspace: AxiosInstance,
+  recordMigrationNamesPlural: string[],
 ): Promise<MigrationDurationEstimate> => {
   const recordCountsByNamePlural = await executeWithRetry(() => findObjectRecordCounts(sourceWorkspace));
   const dashboardCount = recordCountsByNamePlural.get('dashboards') ?? 0;
   const attachmentCount = recordCountsByNamePlural.get('attachments') ?? 0;
-  for (const obj of objectsToOmitFromCounting) {
-    recordCountsByNamePlural.delete(obj);
-  }
-  let batchableRecordCount = 0;
-  for (const object of recordCountsByNamePlural.values()) {
-    batchableRecordCount += object ?? 0;
-  }
+  const batchableRecordCount = recordMigrationNamesPlural.reduce(
+    (sum, namePlural) => sum + (recordCountsByNamePlural.get(namePlural) ?? 0),
+    0,
+  );
 
   // Independent reads, so they go out together - awaited one by one they were six sequential
   // round trips inside stage1's already-unbudgeted preamble.
-  const [views, navigationMenuItems, skills, webhooks, roles, recordPageLayouts] = await Promise.all([
+  const [views, navigationMenuItems, skills, webhooks, roles, recordPageLayouts, messageSuppressionCount] = await Promise.all([
     executeWithRetry(() => findViews(sourceWorkspace)),
     executeWithRetry(() => findNavigationMenuItems(sourceWorkspace)),
     executeWithRetry(() => findSkills(sourceWorkspace)),
     executeWithRetry(() => findWebhooks(sourceWorkspace)),
     executeWithRetry(() => findRoles(sourceWorkspace)),
     executeWithRetry(() => findPageLayouts(sourceWorkspace, 'RECORD_PAGE')),
+    // A workspace without email campaigns can't serve suppressions, and has none to migrate.
+    executeWithRetry(() => findMessageSuppressions(sourceWorkspace, 0, 1)).then((page) => page.totalCount, () => 0),
   ]);
 
   const customSkillCount = skills.filter((skill) => skill.isCustom).length;
@@ -126,7 +126,8 @@ export const estimateMigrationDuration = async (
     + countRoleRequests(roles)
     + dashboardCount * REQUESTS_PER_DASHBOARD
     + customRecordPageLayoutCount * REQUESTS_PER_RECORD_PAGE_LAYOUT
-    + attachmentCount * REQUESTS_PER_ATTACHMENT;
+    + attachmentCount * REQUESTS_PER_ATTACHMENT
+    + messageSuppressionCount;
 
   return {
     batchableRecordCount,

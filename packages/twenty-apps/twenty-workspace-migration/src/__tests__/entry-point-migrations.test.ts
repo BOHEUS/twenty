@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import axios from 'axios';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { migrateWebhooks } from 'src/logic-functions/migration/migrate-webhooks.util';
 import { FieldMetadataType } from 'src/logic-functions/types/field-metadata-type.enum';
-import { FieldsListType, ObjectOpenRecordIn, ObjectType } from 'src/logic-functions/types/find-objects-fields.type';
+import { FieldsListType, ObjectOpenRecordIn, ObjectType, RelationType } from 'src/logic-functions/types/find-objects-fields.type';
 import { View } from 'src/logic-functions/types/view-entities.type';
 import { Skill } from 'src/logic-functions/types/skill.type';
 import { Webhook } from 'src/logic-functions/types/webhook.type';
@@ -17,6 +18,7 @@ import { Role } from "src/logic-functions/types/role.type";
 import { migrateDashboards } from "src/logic-functions/migration/migrate-dashboards.util";
 import { migrateNavigationMenuItems } from "src/logic-functions/migration/migrate-navigation-menu-items.util";
 import { NavigationMenuItem } from "src/logic-functions/types/navigation-menu-item.type";
+import { migrationState } from "src/logic-functions/utils/migration-state.util";
 
 describe('migrateSkills', () => {
   const buildSkill = (overrides: Partial<Skill> = {}): Skill => ({
@@ -383,6 +385,120 @@ describe('migrateRecordsForObject', () => {
     await expect(
       migrateRecordsForObject(sourceClient, targetClient, taskObject, buildTestRecordIds()),
     ).rejects.toThrow('created under a different id');
+  });
+
+  it('upserts records so a replayed page does not fail on ids an earlier invocation created', async () => {
+    const { client: sourceClient } = createMockGraphqlClient({
+      findManyTasks: {
+        tasks: { edges: [{ node: { id: 'source-task-1', title: 'Task A' } }], pageInfo: { hasNextPage: false, endCursor: null } },
+      },
+    });
+    const { client: targetClient, calls: targetCalls } = createMockGraphqlClient({
+      createTasks: { createTasks: [{ id: 'source-task-1' }] },
+    });
+
+    await migrateRecordsForObject(sourceClient, targetClient, taskObject, buildTestRecordIds());
+
+    expect(targetCalls.find((call) => call.operationName === 'createTasks')?.query).toContain('upsert: true');
+  });
+
+  it('migrates each morph relation target through its own foreign key', async () => {
+    const noteTargetObject: ObjectType = {
+      ...taskObject,
+      id: 'source-object-note-target',
+      namePlural: 'noteTargets',
+      nameSingular: 'noteTarget',
+      fieldsList: [{
+        ...buildTitleField(),
+        id: 'field-target',
+        name: 'target',
+        type: FieldMetadataType.MORPH_RELATION,
+        relation: null,
+        morphRelations: [
+          { type: RelationType.MANY_TO_ONE, targetObjectMetadata: { nameSingular: 'company' }, targetFieldMetadata: { label: 'Notes', icon: 'IconNotes' } },
+          { type: RelationType.MANY_TO_ONE, targetObjectMetadata: { nameSingular: 'person' }, targetFieldMetadata: { label: 'Notes', icon: 'IconNotes' } },
+        ],
+      } as FieldsListType],
+    };
+    const { client: sourceClient, calls: sourceCalls } = createMockGraphqlClient({
+      findManyNoteTargets: {
+        noteTargets: {
+          edges: [{ node: { id: 'note-target-1', targetCompanyId: 'company-1', targetPersonId: null } }],
+          pageInfo: { hasNextPage: false, endCursor: null },
+        },
+      },
+    });
+    const { client: targetClient, calls: targetCalls } = createMockGraphqlClient({
+      createNoteTargets: { createNoteTargets: [{ id: 'note-target-1' }] },
+    });
+
+    await migrateRecordsForObject(sourceClient, targetClient, noteTargetObject, buildTestRecordIds(['company-1']));
+
+    expect(sourceCalls[0].query).toContain('targetCompanyId');
+    expect(sourceCalls[0].query).toContain('targetPersonId');
+    expect(targetCalls[0].query).toContain('targetCompanyId: "company-1"');
+  });
+
+  describe('FILES fields', () => {
+    const personObject: ObjectType = {
+      ...taskObject,
+      id: 'source-object-person',
+      namePlural: 'people',
+      nameSingular: 'person',
+      fieldsList: [{
+        ...buildTitleField(),
+        id: 'source-field-avatar-file',
+        name: 'avatarFile',
+        type: FieldMetadataType.FILES,
+        settings: { maxNumberOfValues: 1 },
+      } as FieldsListType],
+    };
+    const sourcePeoplePage = {
+      findManyPeople: {
+        people: {
+          edges: [{ node: { id: 'person-1', avatarFile: [{ fileId: 'source-file-1', label: 'avatar', extension: 'png', url: 'https://source/avatar.png' }] } }],
+          pageInfo: { hasNextPage: false, endCursor: null },
+        },
+      },
+    };
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      migrationState.targetFieldIdBySourceFieldId = new Map();
+    });
+
+    it('selects the file subfields and re-uploads each file into the target workspace', async () => {
+      migrationState.targetFieldIdBySourceFieldId = new Map([['source-field-avatar-file', 'target-field-avatar-file']]);
+      vi.spyOn(axios, 'get').mockResolvedValue({ data: new ArrayBuffer(4) });
+      const putSpy = vi.spyOn(axios, 'put').mockResolvedValue({});
+      const { client: sourceClient, calls: sourceCalls } = createMockGraphqlClient(sourcePeoplePage);
+      const { client: targetClient, calls: targetCalls } = createMockGraphqlClient({
+        createFileUpload: { createFileUpload: { fileId: 'target-file-1', uploadUrl: 'https://target/upload', contentType: 'image/png', expiresAt: '' } },
+        completeFileUpload: { completeFileUpload: { id: 'target-file-1', path: '', url: '' } },
+        createPeople: { createPeople: [{ id: 'person-1' }] },
+      });
+
+      await migrateRecordsForObject(sourceClient, targetClient, personObject, buildTestRecordIds());
+
+      expect(sourceCalls[0].query).toContain('avatarFile { fileId label extension url }');
+      expect(targetCalls.find((call) => call.operationName === 'createFileUpload')?.variables.fieldMetadataId).toBe('target-field-avatar-file');
+      expect(putSpy).toHaveBeenCalledWith('https://target/upload', expect.any(ArrayBuffer), expect.anything());
+      const createQuery = targetCalls.find((call) => call.operationName === 'createPeople')?.query;
+      expect(createQuery).toContain('avatarFile: [{fileId: "target-file-1", label: "avatar"}]');
+      expect(createQuery).not.toContain('source-file-1');
+    });
+
+    it('leaves the files out rather than writing source file ids when the target has no matching field', async () => {
+      const { client: sourceClient } = createMockGraphqlClient(sourcePeoplePage);
+      const { client: targetClient, calls: targetCalls } = createMockGraphqlClient({
+        createPeople: { createPeople: [{ id: 'person-1' }] },
+      });
+
+      await migrateRecordsForObject(sourceClient, targetClient, personObject, buildTestRecordIds());
+
+      expect(targetCalls.map((call) => call.operationName)).toEqual(['createPeople']);
+      expect(targetCalls[0].query).not.toContain('avatarFile');
+    });
   });
 
   it('does not call createTasks at all when the source object has no records', async () => {
@@ -763,13 +879,15 @@ describe('migrateDashboards', () => {
       findPageLayouts: { getPageLayouts: [{ id: 'layout-1', name: 'Dashboard Layout', type: 'DASHBOARD', objectMetadataId: null, isSystemSideEffect: false, tabs: [] }] },
     });
     const { client: targetClient, calls: targetCalls } = createMockGraphqlClient({
-      findManyDashboards: { dashboards: { edges: [{ node: { id: 'dash-1' } }], pageInfo: { hasNextPage: false, endCursor: null } } },
+      findManyDashboards: { dashboards: { edges: [{ node: { id: 'dash-1', pageLayoutId: 'target-layout-1' } }], pageInfo: { hasNextPage: false, endCursor: null } } },
     });
     const recordIds = buildTestRecordIds();
+    const targetPageLayoutIdBySourcePageLayoutId = new Map<string, string>();
 
-    await migrateDashboards(sourceClient, targetClient, new Map(), new Map(), recordIds, new Map(), new Map());
+    await migrateDashboards(sourceClient, targetClient, new Map(), new Map(), recordIds, targetPageLayoutIdBySourcePageLayoutId, new Map());
 
     expect(recordIds.migratedRecordIds.has('dash-1')).toBe(true);
+    expect(targetPageLayoutIdBySourcePageLayoutId.get('layout-1')).toBe('target-layout-1');
     expect(targetCalls.filter((call) => call.operationName === 'createDashboards')).toHaveLength(0);
   });
 });

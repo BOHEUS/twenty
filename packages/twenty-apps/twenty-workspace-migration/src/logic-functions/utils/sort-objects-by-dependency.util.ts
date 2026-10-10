@@ -1,7 +1,7 @@
-import { FieldMetadataType } from "src/logic-functions/types/field-metadata-type.enum";
-import { ObjectType, RelationType } from "src/logic-functions/types/find-objects-fields.type";
+import { ObjectType } from "src/logic-functions/types/find-objects-fields.type";
+import { getManyToOneRelationTargets } from "src/logic-functions/utils/get-many-to-one-relation-targets.util";
 
-// Orders objects so that, for every MANY_TO_ONE relation field, the object it targets
+// Orders objects so that, for every MANY_TO_ONE relation (morph targets included), the object it targets
 // (if present in the input list) comes out earlier - relation targets must exist before
 // a field or record pointing at them can be created. Relation targets not present in the
 // input list (e.g. already-existing objects outside the set being ordered) are ignored:
@@ -21,17 +21,8 @@ export const sortObjectsByDependency = (objects: ObjectType[]): ObjectType[] => 
     }
     visiting.add(object.universalIdentifier);
 
-    for (const field of object.fieldsList) {
-      if (field.type !== FieldMetadataType.RELATION) {
-        continue;
-      }
-      if (field.relation?.type !== RelationType.MANY_TO_ONE) {
-        continue;
-      }
-
-      const target = byNameSingular.get(
-        field.relation.targetObjectMetadata.nameSingular,
-      );
+    for (const { targetNameSingular } of object.fieldsList.flatMap(getManyToOneRelationTargets)) {
+      const target = byNameSingular.get(targetNameSingular);
 
       if (target !== undefined && target.universalIdentifier !== object.universalIdentifier) {
         visit(target);

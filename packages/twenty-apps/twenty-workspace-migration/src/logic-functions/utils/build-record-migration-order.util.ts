@@ -1,5 +1,5 @@
 import { ObjectType } from "src/logic-functions/types/find-objects-fields.type";
-import { objectsToOmitFromRecordMigration } from "src/constants/to-omit";
+import { objectsToOmitFromRecordMigration, systemObjectsToMigrate } from "src/constants/to-omit";
 import { sortObjectsByDependency } from "src/logic-functions/utils/sort-objects-by-dependency.util";
 
 // The order is derived rather than persisted: stage3 tracks progress through it with an index,
@@ -7,6 +7,8 @@ import { sortObjectsByDependency } from "src/logic-functions/utils/sort-objects-
 export const buildRecordMigrationOrder = (sourceWorkspaceObjects: ObjectType[]): ObjectType[] =>
   sortObjectsByDependency(
     sourceWorkspaceObjects.filter(
-      (object) => objectsToOmitFromRecordMigration.includes(object.nameSingular) === false,
+      (object) =>
+        (object.isSystem === false || systemObjectsToMigrate.includes(object.nameSingular))
+        && objectsToOmitFromRecordMigration.includes(object.nameSingular) === false,
     ),
   );

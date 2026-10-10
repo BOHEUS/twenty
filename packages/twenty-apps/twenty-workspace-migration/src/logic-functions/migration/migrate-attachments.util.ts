@@ -1,8 +1,7 @@
-import axios, { type AxiosInstance } from "axios";
+import { type AxiosInstance } from "axios";
 import { findManyRecords } from "src/logic-functions/requests/find-many-records.util";
 import { createManyRecords } from "src/logic-functions/requests/create-many-records.util";
-import { createFileUpload } from "src/logic-functions/requests/create-file-upload.util";
-import { completeFileUpload } from "src/logic-functions/requests/complete-file-upload.util";
+import { copyFileToTargetWorkspace, SOURCE_FILE_SELECTION_SET, type SourceFile } from "src/logic-functions/utils/copy-file-to-target-workspace.util";
 import { executeWithRetryAndCheckpoint } from "src/logic-functions/utils/execute-with-retry-and-checkpoint.util";
 import { logger } from "src/logic-functions/utils/logger.util";
 import { migrationState } from "src/logic-functions/utils/migration-state.util";
@@ -11,24 +10,15 @@ import { stopIfTimeBudgetExceeded } from "src/logic-functions/utils/time-budget.
 import { RecordIdResolution, resolveTargetRecordId } from "src/logic-functions/utils/record-id-resolution.util";
 import { REQUESTS_PER_ATTACHMENT, decrementEstimate } from "src/logic-functions/utils/estimate-migration-duration.util";
 
-type SourceAttachmentFile = {
-  fileId: string;
-  label: string;
-  extension: string;
-  url: string;
-};
-
 // The target foreign-key names are discovered at runtime from the source schema, so they can
 // only be reached through the index signature; name and file are always selected.
 type SourceAttachment = Record<string, unknown> & {
   name: string;
-  file: SourceAttachmentFile[] | null;
+  file: SourceFile[] | null;
 };
 
-// Copies a source attachment's underlying file into the target workspace's own storage (files
-// are stored workspace-scoped server-side, so reusing the source record's `file.fileId`/path
-// verbatim would point at a file that doesn't exist for the target workspace) and only then
-// creates the Attachment record pointing at the freshly uploaded copy.
+// Copies a source attachment's underlying file into the target workspace's own storage and
+// only then creates the Attachment record pointing at the freshly uploaded copy.
 export const migrateAttachments = async (
   sourceWorkspace: AxiosInstance,
   targetWorkspace: AxiosInstance,
@@ -51,12 +41,7 @@ export const migrateAttachments = async (
   const selectionSet = `id
 ${targetForeignKeyNames.join('\n')}
 name
-file {
-  fileId
-  label
-  extension
-  url
-}`;
+file ${SOURCE_FILE_SELECTION_SET}`;
 
   // Attachments are the slowest thing to migrate (a download plus an upload each), so a large
   // workspace spans many invocations - the cursor is persisted per page to resume from.
@@ -99,25 +84,12 @@ file {
         }
 
         try {
-          const filename = sourceFile.extension ? `${sourceFile.label}.${sourceFile.extension}` : sourceFile.label;
-          const fileBytes = (await executeWithRetryAndCheckpoint(() =>
-            axios.get<ArrayBuffer>(sourceFile.url, { responseType: 'arraybuffer' }),
-          )).data;
-
-          const uploadTarget = await executeWithRetryAndCheckpoint(() =>
-            createFileUpload(targetWorkspace, filename, fileBytes.byteLength, targetFileFieldId),
-          );
-
-          await executeWithRetryAndCheckpoint(() =>
-            axios.put(uploadTarget.uploadUrl, fileBytes, { headers: { 'Content-Type': uploadTarget.contentType } }),
-          );
-
-          await executeWithRetryAndCheckpoint(() => completeFileUpload(targetWorkspace, uploadTarget.fileId));
+          const targetFile = await copyFileToTargetWorkspace(targetWorkspace, sourceFile, targetFileFieldId);
 
           attachmentsToCreate.push({
             id: attachmentId,
             name,
-            file: [{ fileId: uploadTarget.fileId, label: sourceFile.label }],
+            file: [targetFile],
             ...targetFields,
           });
         } catch (error) {

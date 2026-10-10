@@ -4,11 +4,11 @@ import { logger } from "src/logic-functions/utils/logger.util";
 
 const OWN_ROUTE_FLUSH_MS = 5_000;
 
-export const postToOwnRoute = async (): Promise<boolean> => {
+export const postToOwnRoute = async (body: Record<string, unknown>): Promise<boolean> => {
   try {
     const client = new RestApiClient();
 
-    await client.post(`/s${TRIGGER_ROUTE_PATH}`, '', {
+    await client.post(`/s${TRIGGER_ROUTE_PATH}`, body, {
       signal: AbortSignal.timeout(OWN_ROUTE_FLUSH_MS)
     });
 

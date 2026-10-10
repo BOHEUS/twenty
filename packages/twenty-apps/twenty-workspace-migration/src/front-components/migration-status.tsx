@@ -1,8 +1,9 @@
 import { defineFrontComponent } from 'twenty-sdk/define';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { RestApiClient } from 'twenty-client-sdk/rest';
-import { IconPlayerPlay } from 'twenty-ui/icon';
+import { IconPlayerPlay, IconRefresh } from 'twenty-ui/icon';
 
+import { MIGRATION_RESET_ROUTE_PATH } from 'src/constants/migration-reset-route-path';
 import { MIGRATION_STATUS_ROUTE_PATH } from 'src/constants/migration-status-route-path';
 import { TRIGGER_ROUTE_PATH } from 'src/constants/trigger-route-path';
 import { MIGRATION_STATUS_FRONT_COMPONENT_UNIVERSAL_IDENTIFIER } from 'src/constants/universal-identifiers';
@@ -43,12 +44,12 @@ const theme = {
 
 const STAGE_LABELS: Record<number, string> = {
   1: 'Checking apps & workspace members, estimating duration',
-  2: 'Syncing schema (objects & fields)',
+  2: 'Syncing schema (objects, fields & unsubscribe topics)',
   3: 'Migrating records',
   4: 'Migrating views',
   5: 'Migrating dashboards',
   6: 'Migrating record page layouts',
-  7: 'Migrating navigation menu items, skills, webhooks & roles',
+  7: 'Migrating navigation menu items, skills, webhooks, roles & message suppressions',
   8: 'Migrating attachments',
   9: 'Complete',
 };
@@ -63,6 +64,7 @@ type MigrationStatusResponse = {
   stage: number;
   estimate: MigrationEstimate | null;
   logs: string[];
+  isRunning: boolean;
 };
 
 const logLineColor = (line: string): string => {
@@ -88,6 +90,7 @@ const styles: Record<string, CSSProperties> = {
     boxSizing: 'border-box',
   },
   header: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  actions: { display: 'flex', alignItems: 'center', gap: theme.spacing2 },
   title: { fontSize: theme.sizeLg, fontWeight: theme.weightSemiBold, margin: 0 },
   startButton: {
     display: 'inline-flex',
@@ -102,6 +105,21 @@ const styles: Record<string, CSSProperties> = {
     background: theme.blue,
     border: 'none',
     borderRadius: theme.radiusSm,
+  },
+  resetButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: theme.spacing2,
+    height: theme.spacing8,
+    padding: `0 ${theme.spacing3}`,
+    fontSize: theme.sizeSm,
+    fontFamily: theme.fontFamily,
+    fontWeight: theme.weightMedium,
+    color: theme.fontPrimary,
+    background: theme.bgSecondary,
+    border: `1px solid ${theme.borderLight}`,
+    borderRadius: theme.radiusSm,
+    cursor: 'pointer',
   },
   error: { fontSize: theme.sizeSm, color: theme.red, margin: 0 },
   card: {
@@ -136,7 +154,11 @@ const MigrationStatus = () => {
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false);
   const logsRef = useRef<HTMLDivElement | null>(null);
+
+  const fetchStatus = () =>
+    new RestApiClient().get<MigrationStatusResponse>(`/s${MIGRATION_STATUS_ROUTE_PATH}`);
 
   const handleStart = async () => {
     setStarting(true);
@@ -156,14 +178,28 @@ const MigrationStatus = () => {
     }
   };
 
+  // Reset throws away all progress, so it takes a second click to go through.
+  const handleReset = async () => {
+    if (!isConfirmingReset) {
+      setIsConfirmingReset(true);
+      return;
+    }
+    setIsConfirmingReset(false);
+    setStartError(null);
+    try {
+      await new RestApiClient().post(`/s${MIGRATION_RESET_ROUTE_PATH}`);
+      setStatus(await fetchStatus());
+    } catch (resetError) {
+      setStartError(resetError instanceof Error ? resetError.message : 'Failed to reset migration.');
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
     const poll = async () => {
       try {
-        const response = await new RestApiClient().get<MigrationStatusResponse>(
-          `/s${MIGRATION_STATUS_ROUTE_PATH}`,
-        );
+        const response = await fetchStatus();
         if (!cancelled) {
           setStatus(response);
           setError(null);
@@ -195,20 +231,30 @@ const MigrationStatus = () => {
 
   const stageLabel = status ? (STAGE_LABELS[status.stage] ?? `Stage ${status.stage}`) : null;
   const isComplete = status?.stage === 9;
+  const isRunning = status?.isRunning === true;
+  const isStartDisabled = starting || isRunning;
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
         <h2 style={styles.title}>Migration status</h2>
-        <button
-          type="button"
-          onClick={handleStart}
-          disabled={starting}
-          style={{ ...styles.startButton, cursor: starting ? 'not-allowed' : 'pointer', opacity: starting ? 0.6 : 1 }}
-        >
-          <IconPlayerPlay color={theme.fontInverted} size={theme.sizeMd} />
-          {starting ? 'Starting…' : 'Start migration'}
-        </button>
+        <div style={styles.actions}>
+          {status !== null && !isRunning && (
+            <button type="button" onClick={handleReset} style={styles.resetButton}>
+              <IconRefresh color={theme.fontPrimary} size={theme.sizeMd} />
+              {isConfirmingReset ? 'Confirm reset' : 'Reset'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={isStartDisabled}
+            style={{ ...styles.startButton, cursor: isStartDisabled ? 'not-allowed' : 'pointer', opacity: isStartDisabled ? 0.6 : 1 }}
+          >
+            <IconPlayerPlay color={theme.fontInverted} size={theme.sizeMd} />
+            {starting ? 'Starting…' : isRunning ? 'Running…' : 'Start migration'}
+          </button>
+        </div>
       </div>
 
       {(error !== null || startError !== null) && (

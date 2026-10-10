@@ -46,8 +46,6 @@ export const stage3 = async (sourceWorkspace: AxiosInstance, targetWorkspace: Ax
     return;
   }
 
-  setStateRef('sourceWorkspaceObjects', []);
-  setStateRef('targetWorkspaceObjects', []);
   // Nothing past this stage reads the schema snapshots, and they are the largest thing in the
   // checkpoint - dropping them keeps every later checkpoint small.
   setStateRef('sourceWorkspaceObjects', []);

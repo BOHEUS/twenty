@@ -1,4 +1,5 @@
-import { defineLogicFunction } from 'twenty-sdk/define';
+import { defineLogicFunction, type RoutePayload } from 'twenty-sdk/define';
+import { Response } from 'twenty-sdk/logic-function';
 import axios, { type AxiosInstance } from "axios";
 import {
   loadMigrationStateCheckpoint,
@@ -17,17 +18,29 @@ import { stage7 } from "src/logic-functions/stages/stage7";
 import { stage8 } from "src/logic-functions/stages/stage8";
 import { TRIGGER_ROUTE_PATH } from "src/constants/trigger-route-path";
 import { logger } from "src/logic-functions/utils/logger.util";
+import { acquireRunLock, releaseRunLockUnlessHandedOff } from "src/logic-functions/utils/run-lock.util";
 
 // On purpose for bigger requests like FindAllObjectsAndFields
 const API_CLIENT_TIMEOUT_MS = 60 * 1000;
 
-const handler = async () => {
+type TriggerBody = {
+  // Set only by the previous invocation of the same run when it hands over.
+  runId?: string;
+};
+
+const handler = async (event: RoutePayload<TriggerBody>): Promise<Response | void> => {
   if (process.env.TARGET_WORKSPACE_API_URL === undefined ||
     process.env.TARGET_WORKSPACE_API_KEY === undefined ||
     process.env.SOURCE_WORKSPACE_API_URL === undefined ||
     process.env.SOURCE_WORKSPACE_API_KEY === undefined) {
     logger.error('Missing variables, add them in Settings > Apps > Installed > Workspace migration > Settings');
     return;
+  }
+  if (await acquireRunLock(event.body?.runId) === false) {
+    return new Response(JSON.stringify({ error: 'A migration is already running' }), {
+      status: 409,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
   startTimeBudget();
 
@@ -46,14 +59,15 @@ const handler = async () => {
     }
   });
 
-  await loadMigrationStateCheckpoint();
-
   try {
+    await loadMigrationStateCheckpoint();
     await dispatchStage(sourceWorkspace, targetWorkspace);
   } catch (error) {
     logger.error(`Migration failed during stage ${migrationState.stage}: ${error instanceof Error ? error.message : String(error)}`);
     await saveMigrationStateCheckpoint();
     throw error;
+  } finally {
+    await releaseRunLockUnlessHandedOff();
   }
 };
 
@@ -63,7 +77,7 @@ const dispatchStage = async (sourceWorkspace: AxiosInstance, targetWorkspace: Ax
       await stage1(sourceWorkspace, targetWorkspace);
       break;
     case 2:
-      await stage2(targetWorkspace);
+      await stage2(sourceWorkspace, targetWorkspace);
       break;
     case 3:
       await stage3(sourceWorkspace, targetWorkspace);
@@ -92,7 +106,7 @@ const dispatchStage = async (sourceWorkspace: AxiosInstance, targetWorkspace: Ax
 export default defineLogicFunction({
   universalIdentifier: 'b058e57c-4ac6-4b18-b147-9099260da9de',
   name: 'entry-point',
-  description: 'Add a description for your logic function',
+  description: 'Runs the workspace migration one stage at a time, re-triggering itself until it completes.',
   timeoutSeconds: TIMEOUT_SECONDS,
   handler,
   httpRouteTriggerSettings: {

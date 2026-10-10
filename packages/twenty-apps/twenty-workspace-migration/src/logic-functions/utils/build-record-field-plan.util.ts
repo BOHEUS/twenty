@@ -1,5 +1,7 @@
 import { FieldMetadataType } from "src/logic-functions/types/field-metadata-type.enum";
-import { FieldsListType, RelationType } from "src/logic-functions/types/find-objects-fields.type";
+import { FieldsListType } from "src/logic-functions/types/find-objects-fields.type";
+import { getManyToOneRelationTargets } from "src/logic-functions/utils/get-many-to-one-relation-targets.util";
+import { SOURCE_FILE_SELECTION_SET } from "src/logic-functions/utils/copy-file-to-target-workspace.util";
 
 // Ground truth: packages/twenty-shared/src/constants/CompositeFieldTypeSubFieldsNames.ts
 // Read and write shapes for composite fields are identical, so this same subfield list
@@ -29,9 +31,11 @@ export type RecordFieldPlan = {
   // subset of dataKeys (SELECT/RATING: single value, MULTI_SELECT: array of values) whose values
   // are GraphQL enum literals and must be emitted unquoted rather than as quoted strings
   enumDataKeys: string[];
+  // subset of dataKeys holding FILES values, mapped to their source field id: the file ids in
+  // them are scoped to the source workspace, so the files must be copied before the create
+  filesSourceFieldIdByDataKey: Map<string, string>;
 };
 
-// MORPH_RELATION fields (polymorphic targets, e.g. note/task targets) are skipped: out of scope.
 // ONE_TO_MANY relation fields are skipped: they have no scalar column on this side of the relation.
 export const buildRecordFieldPlan = (
   fieldsList: FieldsListType[],
@@ -42,25 +46,27 @@ export const buildRecordFieldPlan = (
   const relationForeignKeyNames: string[] = [];
   const relationTargetNameSingularByForeignKeyName = new Map<string, string>();
   const enumDataKeys: string[] = [];
+  const filesSourceFieldIdByDataKey = new Map<string, string>();
 
   for (const field of fieldsList) {
     if (fieldsToOmit.includes(field.name)) {
       continue;
     }
 
-    if (field.type === FieldMetadataType.MORPH_RELATION) {
+    if (field.type === FieldMetadataType.RELATION || field.type === FieldMetadataType.MORPH_RELATION) {
+      for (const { foreignKeyName, targetNameSingular } of getManyToOneRelationTargets(field)) {
+        selectionParts.push(foreignKeyName);
+        dataKeys.push(foreignKeyName);
+        relationForeignKeyNames.push(foreignKeyName);
+        relationTargetNameSingularByForeignKeyName.set(foreignKeyName, targetNameSingular);
+      }
       continue;
     }
 
-    if (field.type === FieldMetadataType.RELATION) {
-      if (field.relation.type !== RelationType.MANY_TO_ONE) {
-        continue;
-      }
-      const foreignKeyName = `${field.name}Id`;
-      selectionParts.push(foreignKeyName);
-      dataKeys.push(foreignKeyName);
-      relationForeignKeyNames.push(foreignKeyName);
-      relationTargetNameSingularByForeignKeyName.set(foreignKeyName, field.relation.targetObjectMetadata.nameSingular);
+    if (field.type === FieldMetadataType.FILES) {
+      selectionParts.push(`${field.name} ${SOURCE_FILE_SELECTION_SET}`);
+      dataKeys.push(field.name);
+      filesSourceFieldIdByDataKey.set(field.name, field.id);
       continue;
     }
 
@@ -87,5 +93,6 @@ export const buildRecordFieldPlan = (
     relationForeignKeyNames,
     relationTargetNameSingularByForeignKeyName,
     enumDataKeys,
+    filesSourceFieldIdByDataKey,
   };
 };
