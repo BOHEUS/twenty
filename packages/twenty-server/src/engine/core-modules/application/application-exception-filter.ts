@@ -41,6 +41,7 @@ export class ApplicationExceptionFilter implements ExceptionFilter {
       case ApplicationExceptionCode.STANDARD_APPLICATION_NOT_EXPORTABLE:
       case ApplicationExceptionCode.REQUIRED_APPLICATION_NOT_INSTALLED:
       case ApplicationExceptionCode.REQUIRED_APPLICATION_VERSION_INCOMPATIBLE:
+      case ApplicationExceptionCode.APPLICATION_HAS_DEPENDENTS:
         throw new UserInputError(exception);
       case ApplicationExceptionCode.PACKAGE_RESOLUTION_FAILED:
       case ApplicationExceptionCode.POST_INSTALL_ERROR:

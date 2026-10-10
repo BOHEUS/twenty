@@ -35,6 +35,7 @@ export enum ApplicationExceptionCode {
   STANDARD_APPLICATION_NOT_EXPORTABLE = 'STANDARD_APPLICATION_NOT_EXPORTABLE',
   REQUIRED_APPLICATION_NOT_INSTALLED = 'REQUIRED_APPLICATION_NOT_INSTALLED',
   REQUIRED_APPLICATION_VERSION_INCOMPATIBLE = 'REQUIRED_APPLICATION_VERSION_INCOMPATIBLE',
+  APPLICATION_HAS_DEPENDENTS = 'APPLICATION_HAS_DEPENDENTS',
 }
 
 const getApplicationExceptionUserFriendlyMessage = (
@@ -99,6 +100,8 @@ const getApplicationExceptionUserFriendlyMessage = (
       return msg`This app depends on other apps that are not installed in this workspace. Install them first.`;
     case ApplicationExceptionCode.REQUIRED_APPLICATION_VERSION_INCOMPATIBLE:
       return msg`This app needs other versions of the apps it depends on. Upgrade them first.`;
+    case ApplicationExceptionCode.APPLICATION_HAS_DEPENDENTS:
+      return msg`Other apps depend on this app. Uninstall them first.`;
     default:
       assertUnreachable(code);
   }

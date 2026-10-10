@@ -51,6 +51,35 @@ export class ApplicationDependencyService {
     });
   }
 
+  async assertHasNoDependentApplicationsOrThrow({
+    applicationUniversalIdentifier,
+    workspaceId,
+  }: {
+    applicationUniversalIdentifier: string;
+    workspaceId: string;
+  }): Promise<void> {
+    const dependentApplications = await this.findDependentApplications({
+      applicationUniversalIdentifier,
+      workspaceId,
+    });
+
+    if (!isNonEmptyArray(dependentApplications)) {
+      return;
+    }
+
+    const dependentApplicationNames = dependentApplications
+      .map(({ name }) => name)
+      .join(', ');
+
+    throw new ApplicationException(
+      `Application ${applicationUniversalIdentifier} is required by ${dependentApplicationNames} in workspace ${workspaceId}`,
+      ApplicationExceptionCode.APPLICATION_HAS_DEPENDENTS,
+      {
+        userFriendlyMessage: msg`Other apps depend on this app: ${dependentApplicationNames}. Uninstall them first.`,
+      },
+    );
+  }
+
   async assertRequiredApplicationsAreInstalledOrThrow({
     applicationUniversalIdentifier,
     requiredApplications,
