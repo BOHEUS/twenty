@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { isDefined } from 'twenty-shared/utils';
 
+import { ApplicationDependencyService } from 'src/engine/core-modules/application/application-dependency/application-dependency.service';
 import { ApplicationSyncService } from 'src/engine/core-modules/application/application-manifest/application-sync.service';
 import { ApplicationException } from 'src/engine/core-modules/application/application.exception';
 import { ApplicationLookupService } from 'src/engine/core-modules/application/application-lookup/application-lookup.service';
@@ -24,6 +25,7 @@ export class ApplicationUninstallRunnerService {
     private readonly applicationLookupService: ApplicationLookupService,
     private readonly applicationService: ApplicationService,
     private readonly applicationSyncService: ApplicationSyncService,
+    private readonly applicationDependencyService: ApplicationDependencyService,
     private readonly metricsService: MetricsService,
     private readonly cacheLockService: CacheLockService,
   ) {}
@@ -60,12 +62,20 @@ export class ApplicationUninstallRunnerService {
       await this.cacheLockService.withLock(
         () =>
           this.cacheLockService.withLock(
-            () =>
-              this.applicationSyncService.uninstallApplication({
+            async () => {
+              await this.applicationDependencyService.assertHasNoDependentApplicationsOrThrow(
+                {
+                  applicationUniversalIdentifier: universalIdentifier,
+                  workspaceId,
+                },
+              );
+
+              await this.applicationSyncService.uninstallApplication({
                 applicationUniversalIdentifier: universalIdentifier,
                 workspaceId,
                 progressReporter,
-              }),
+              });
+            },
             buildApplicationDependencyLockKey({ workspaceId }),
             APPLICATION_DEPENDENCY_LOCK_OPTIONS,
           ),
