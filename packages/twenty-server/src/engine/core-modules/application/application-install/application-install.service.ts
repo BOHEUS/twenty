@@ -39,8 +39,10 @@ import {
   APPLICATION_INSTALL_STEPS,
   type ApplicationInstallStep,
 } from 'src/engine/core-modules/application/application-install/constants/application-install-steps.constant';
+import { APPLICATION_DEPENDENCY_LOCK_OPTIONS } from 'src/engine/core-modules/application/application-install/constants/application-dependency-lock-options.constant';
 import { APPLICATION_LIFECYCLE_LOCK_OPTIONS } from 'src/engine/core-modules/application/application-install/constants/application-lifecycle-lock-options.constant';
 import { type ApplicationLifecycleProgressReporter } from 'src/engine/core-modules/application/application-install/types/application-lifecycle-progress-reporter.type';
+import { buildApplicationDependencyLockKey } from 'src/engine/core-modules/application/application-install/utils/build-application-dependency-lock-key.util';
 import { buildApplicationLifecycleLockKey } from 'src/engine/core-modules/application/application-install/utils/build-application-lifecycle-lock-key.util';
 import { createApplicationLifecycleProgressReporter } from 'src/engine/core-modules/application/application-install/utils/create-application-lifecycle-progress-reporter.util';
 import { CacheLockService } from 'src/engine/core-modules/cache-lock/cache-lock.service';
@@ -197,13 +199,28 @@ export class ApplicationInstallService {
           workspaceId: params.workspaceId,
         });
 
-      return await this.runInstallWithMetrics({
-        appRegistration,
-        params,
-        resolvedPackage,
-        existingApplication,
-        progressReporter,
-      });
+      const runInstallWithMetrics = () =>
+        this.runInstallWithMetrics({
+          appRegistration,
+          params,
+          resolvedPackage,
+          existingApplication,
+          progressReporter,
+        });
+
+      // An upgrade replaces what the rest of the workspace sees of this
+      // application, while a fresh install of an independent one does not
+      const isDependencyLockRequired = isDefined(existingApplication);
+
+      return isDependencyLockRequired
+        ? await this.cacheLockService.withLock(
+            runInstallWithMetrics,
+            buildApplicationDependencyLockKey({
+              workspaceId: params.workspaceId,
+            }),
+            APPLICATION_DEPENDENCY_LOCK_OPTIONS,
+          )
+        : await runInstallWithMetrics();
     } finally {
       await this.applicationPackageFetcherService.cleanupExtractedDir(
         resolvedPackage.cleanupDir,

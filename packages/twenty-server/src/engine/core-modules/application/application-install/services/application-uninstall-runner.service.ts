@@ -7,8 +7,10 @@ import { ApplicationException } from 'src/engine/core-modules/application/applic
 import { ApplicationLookupService } from 'src/engine/core-modules/application/application-lookup/application-lookup.service';
 import { type ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
+import { APPLICATION_DEPENDENCY_LOCK_OPTIONS } from 'src/engine/core-modules/application/application-install/constants/application-dependency-lock-options.constant';
 import { APPLICATION_LIFECYCLE_LOCK_OPTIONS } from 'src/engine/core-modules/application/application-install/constants/application-lifecycle-lock-options.constant';
 import { APPLICATION_UNINSTALL_STEPS } from 'src/engine/core-modules/application/application-install/constants/application-uninstall-steps.constant';
+import { buildApplicationDependencyLockKey } from 'src/engine/core-modules/application/application-install/utils/build-application-dependency-lock-key.util';
 import { buildApplicationLifecycleLockKey } from 'src/engine/core-modules/application/application-install/utils/build-application-lifecycle-lock-key.util';
 import { createApplicationLifecycleProgressReporter } from 'src/engine/core-modules/application/application-install/utils/create-application-lifecycle-progress-reporter.util';
 import { CacheLockService } from 'src/engine/core-modules/cache-lock/cache-lock.service';
@@ -57,11 +59,16 @@ export class ApplicationUninstallRunnerService {
 
       await this.cacheLockService.withLock(
         () =>
-          this.applicationSyncService.uninstallApplication({
-            applicationUniversalIdentifier: universalIdentifier,
-            workspaceId,
-            progressReporter,
-          }),
+          this.cacheLockService.withLock(
+            () =>
+              this.applicationSyncService.uninstallApplication({
+                applicationUniversalIdentifier: universalIdentifier,
+                workspaceId,
+                progressReporter,
+              }),
+            buildApplicationDependencyLockKey({ workspaceId }),
+            APPLICATION_DEPENDENCY_LOCK_OPTIONS,
+          ),
         buildApplicationLifecycleLockKey({ workspaceId, universalIdentifier }),
         APPLICATION_LIFECYCLE_LOCK_OPTIONS,
       );
