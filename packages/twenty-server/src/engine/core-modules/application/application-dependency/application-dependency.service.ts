@@ -6,6 +6,7 @@ import { type RequiredApplicationManifest } from 'twenty-shared/application';
 import { isNonEmptyArray } from 'twenty-shared/utils';
 import { In, Repository } from 'typeorm';
 
+import { findDependentApplications } from 'src/engine/core-modules/application/application-dependency/utils/find-dependent-applications.util';
 import { findUnsatisfiedRequiredApplications } from 'src/engine/core-modules/application/application-dependency/utils/find-unsatisfied-required-applications.util';
 import { ApplicationRegistrationEntity } from 'src/engine/core-modules/application/application-registration/application-registration.entity';
 import {
@@ -17,6 +18,11 @@ import { assertRequiredApplicationsManifestIsValidOrThrow } from 'src/engine/cor
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 
+type DependentApplication = Pick<
+  ApplicationEntity,
+  'id' | 'universalIdentifier' | 'name' | 'requiredApplications'
+>;
+
 // Reads the database rather than the workspace cache: callers hold the
 // application dependency lock and must see every completed lifecycle change.
 @Injectable()
@@ -27,6 +33,23 @@ export class ApplicationDependencyService {
     @InjectRepository(ApplicationRegistrationEntity)
     private readonly applicationRegistrationRepository: Repository<ApplicationRegistrationEntity>,
   ) {}
+
+  async findDependentApplications({
+    applicationUniversalIdentifier,
+    workspaceId,
+  }: {
+    applicationUniversalIdentifier: string;
+    workspaceId: string;
+  }): Promise<DependentApplication[]> {
+    const applications = await this.applicationRepository.find(workspaceId, {
+      select: ['id', 'universalIdentifier', 'name', 'requiredApplications'],
+    });
+
+    return findDependentApplications({
+      applications,
+      applicationUniversalIdentifier,
+    });
+  }
 
   async assertRequiredApplicationsAreInstalledOrThrow({
     applicationUniversalIdentifier,
