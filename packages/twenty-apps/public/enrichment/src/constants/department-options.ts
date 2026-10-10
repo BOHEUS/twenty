@@ -1,0 +1,25 @@
+import { type SelectOption } from 'src/types/select-option';
+
+export const DEPARTMENT_OPTIONS: readonly SelectOption[] = [
+  { value: 'ENGINEERING', label: 'Engineering', color: 'blue' },
+  { value: 'IT', label: 'IT', color: 'green' },
+  { value: 'DATA', label: 'Data', color: 'purple' },
+  { value: 'PRODUCT', label: 'Product', color: 'orange' },
+  { value: 'DESIGN', label: 'Design', color: 'turquoise' },
+  { value: 'SALES', label: 'Sales', color: 'pink' },
+  { value: 'MARKETING', label: 'Marketing', color: 'yellow' },
+  { value: 'CUSTOMER_SUCCESS', label: 'Customer Success', color: 'sky' },
+  { value: 'SUPPORT', label: 'Support', color: 'red' },
+  { value: 'OPERATIONS', label: 'Operations', color: 'gray' },
+  { value: 'FINANCE', label: 'Finance', color: 'blue' },
+  { value: 'HUMAN_RESOURCES', label: 'Human Resources', color: 'green' },
+  { value: 'LEGAL', label: 'Legal', color: 'purple' },
+  { value: 'ADMINISTRATIVE', label: 'Administrative', color: 'orange' },
+  { value: 'RESEARCH', label: 'Research', color: 'turquoise' },
+  { value: 'PROCUREMENT', label: 'Procurement', color: 'pink' },
+  { value: 'MANUFACTURING', label: 'Manufacturing', color: 'yellow' },
+  { value: 'EDUCATION', label: 'Education', color: 'sky' },
+  { value: 'HEALTHCARE', label: 'Healthcare', color: 'red' },
+  { value: 'EXECUTIVE', label: 'Executive', color: 'gray' },
+  { value: 'OTHER', label: 'Other', color: 'blue' },
+];
