@@ -6,6 +6,7 @@ import { type RequiredApplicationManifest } from 'twenty-shared/application';
 import { isNonEmptyArray } from 'twenty-shared/utils';
 import { In, Repository } from 'typeorm';
 
+import { findDependentApplicationsRejectingVersion } from 'src/engine/core-modules/application/application-dependency/utils/find-dependent-applications-rejecting-version.util';
 import { findDependentApplications } from 'src/engine/core-modules/application/application-dependency/utils/find-dependent-applications.util';
 import { findUnsatisfiedRequiredApplications } from 'src/engine/core-modules/application/application-dependency/utils/find-unsatisfied-required-applications.util';
 import { ApplicationRegistrationEntity } from 'src/engine/core-modules/application/application-registration/application-registration.entity';
@@ -76,6 +77,58 @@ export class ApplicationDependencyService {
       ApplicationExceptionCode.APPLICATION_HAS_DEPENDENTS,
       {
         userFriendlyMessage: msg`Other apps depend on this app: ${dependentApplicationNames}. Uninstall them first.`,
+      },
+    );
+  }
+
+  async findDependentApplicationsRejectingVersion({
+    applicationUniversalIdentifier,
+    version,
+    workspaceId,
+  }: {
+    applicationUniversalIdentifier: string;
+    version: string;
+    workspaceId: string;
+  }): Promise<DependentApplication[]> {
+    return findDependentApplicationsRejectingVersion({
+      dependentApplications: await this.findDependentApplications({
+        applicationUniversalIdentifier,
+        workspaceId,
+      }),
+      applicationUniversalIdentifier,
+      version,
+    });
+  }
+
+  async assertDependentApplicationsAcceptVersionOrThrow({
+    applicationUniversalIdentifier,
+    version,
+    workspaceId,
+  }: {
+    applicationUniversalIdentifier: string;
+    version: string;
+    workspaceId: string;
+  }): Promise<void> {
+    const dependentApplicationsRejectingVersion =
+      await this.findDependentApplicationsRejectingVersion({
+        applicationUniversalIdentifier,
+        version,
+        workspaceId,
+      });
+
+    if (!isNonEmptyArray(dependentApplicationsRejectingVersion)) {
+      return;
+    }
+
+    const dependentApplicationNames = dependentApplicationsRejectingVersion
+      .map(({ name }) => name)
+      .join(', ');
+
+    throw new ApplicationException(
+      `Version ${version} of application ${applicationUniversalIdentifier} is outside the range required by ${dependentApplicationNames} in workspace ${workspaceId}`,
+      ApplicationExceptionCode.DEPENDENT_APPLICATION_VERSION_INCOMPATIBLE,
+      {
+        userFriendlyMessage: msg`Other apps do not support version ${version} of this app: ${dependentApplicationNames}. Upgrade them first.`,
       },
     );
   }

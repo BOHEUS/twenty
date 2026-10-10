@@ -6,6 +6,8 @@ icon: "wand-magic-sparkles"
 
 Use `defineField()` to add a field to an object you don't own — a standard Twenty object like Person or Company, or an object shipped by another installed app. Unlike inline fields declared inside [`defineObject`](/developers/extend/apps/data/objects), standalone fields require an `objectUniversalIdentifier` to specify which object they extend.
 
+When you build on another app's objects or fields, declare that app in [`requiredApplications`](/developers/extend/apps/config/application#required-applications) so it is installed before yours and cannot be removed from under it.
+
 ```ts src/fields/company-loyalty-tier.field.ts
 import { defineField, FieldType } from 'twenty-sdk/define';
 

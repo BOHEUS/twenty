@@ -10,6 +10,7 @@ Every app must have exactly one `defineApplication` call. It declares:
 - **Permissions** — which role its logic functions and front components run under.
 - **Media capabilities** *(optional)*: microphone or camera access requested by front components, approved separately from role permissions.
 - **Variables** *(optional)* — key–value pairs exposed to your code as environment variables.
+- **Required applications** *(optional)*: other apps this one depends on; see [Required applications](#required-applications).
 - **Pre-install / post-install / uninstall hooks** *(optional)* — see [Logic Functions](/developers/extend/apps/logic/logic-functions).
 - **Billing** *(optional)* — `billing.recurring` for subscription fees the platform raises automatically, `billing.operations` for what your app charges credits for, and `billing.description` for the marketplace; see [Charging Credits](/developers/extend/apps/logic/credits).
 
@@ -74,6 +75,37 @@ Declared capabilities appear during installation. Approval requires a workspace 
 An installed app without the required grant pauses capture and shows an approval dialog on first use, including older apps without capability declarations. Declining leaves capture blocked before browser permissions are requested. Package updates do not automatically grant additional access. Locally synced development apps receive the capabilities declared in their manifest.
 
 See [Media capture](/developers/extend/apps/layout/front-components#media-capture) for capture behavior and recording indicators.
+
+## Required applications
+
+Set `requiredApplications` when your app uses objects or fields that another app defines, for example a set of shared fields several apps write to. Each entry names the other app by its `universalIdentifier` and can restrict the versions it accepts with a semver `versionRange`.
+
+```ts
+import { defineApplication } from 'twenty-sdk/define';
+
+export default defineApplication({
+  universalIdentifier: '39783023-bcac-41e3-b0d2-ff1944d8465d',
+  displayName: 'My enrichment provider',
+  description: 'Fills the shared enrichment fields from my provider',
+  requiredApplications: [
+    {
+      universalIdentifier: '6f0b6f1e-2a63-4c55-9a1f-0d6d6e3f2b8a',
+      versionRange: '^1.2.0',
+    },
+  ],
+});
+```
+
+What declaring a required application does:
+
+- **Install and sync.** Your app only installs, upgrades or syncs once every required app is installed in the workspace and its version satisfies `versionRange`. Twenty does not install required apps for you: the user installs them first.
+- **Typed access.** Your app's API schema, and so the `twenty-client-sdk` client generated for it, includes the objects and fields of its required apps. When a required app changes its schema, your app's client is regenerated.
+- **Uninstall.** A required app cannot be uninstalled while your app is installed.
+- **Upgrades of the required app.** An upgrade to a version outside your `versionRange` is refused, and automatic upgrades skip it with a warning in the server logs. Keep ranges as wide as your app allows (for example `^1.2.0` rather than `1.2.0`) so the required app keeps receiving fixes.
+
+Declaring a required application does not grant permissions. What your app can read or write is still decided by [its role](/developers/extend/apps/config/roles).
+
+Each entry needs a valid universal identifier, an app cannot require itself or list the same app twice, `versionRange` must be a valid semver range, and an app can require at most 20 apps. A manifest that breaks these rules is rejected when the app is built, synced, published or installed. Only apps installed through the marketplace, a package or local development can be required: the workspace's built-in applications cannot.
 
 ## Variable types
 

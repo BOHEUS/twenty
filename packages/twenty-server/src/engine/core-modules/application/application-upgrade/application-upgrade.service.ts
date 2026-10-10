@@ -5,6 +5,7 @@ import chunk from 'lodash.chunk';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 import { In, Repository } from 'typeorm';
 
+import { ApplicationDependencyService } from 'src/engine/core-modules/application/application-dependency/application-dependency.service';
 import { ApplicationInstallService } from 'src/engine/core-modules/application/application-install/application-install.service';
 import { ApplicationVersionValidationService } from 'src/engine/core-modules/application/application-package/application-version-validation.service';
 import { ApplicationRegistrationEntity } from 'src/engine/core-modules/application/application-registration/application-registration.entity';
@@ -43,6 +44,7 @@ export class ApplicationUpgradeService {
     @InjectRepository(ApplicationEntity)
     private readonly unscopedApplicationRepository: Repository<ApplicationEntity>,
     private readonly applicationInstallService: ApplicationInstallService,
+    private readonly applicationDependencyService: ApplicationDependencyService,
     private readonly applicationVersionValidationService: ApplicationVersionValidationService,
     private readonly workspaceVersionService: WorkspaceVersionService,
     @InjectMessageQueue(MessageQueue.applicationUpgradeQueue)
@@ -279,6 +281,23 @@ export class ApplicationUpgradeService {
     if (application.version === targetVersion) {
       this.logger.log(
         `Skipping upgrade of ${appRegistration.universalIdentifier} on workspace ${workspaceId}: already on version ${targetVersion}`,
+      );
+
+      return;
+    }
+
+    const dependentApplicationsRejectingVersion =
+      await this.applicationDependencyService.findDependentApplicationsRejectingVersion(
+        {
+          applicationUniversalIdentifier: application.universalIdentifier,
+          version: targetVersion,
+          workspaceId,
+        },
+      );
+
+    if (isNonEmptyArray(dependentApplicationsRejectingVersion)) {
+      this.logger.warn(
+        `Skipping upgrade of ${appRegistration.universalIdentifier} on workspace ${workspaceId}: version ${targetVersion} is outside the range required by ${dependentApplicationsRejectingVersion.map(({ name }) => name).join(', ')}`,
       );
 
       return;
