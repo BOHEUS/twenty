@@ -37,6 +37,7 @@ export enum ApplicationExceptionCode {
   REQUIRED_APPLICATION_VERSION_INCOMPATIBLE = 'REQUIRED_APPLICATION_VERSION_INCOMPATIBLE',
   CIRCULAR_REQUIRED_APPLICATIONS = 'CIRCULAR_REQUIRED_APPLICATIONS',
   APPLICATION_HAS_DEPENDENTS = 'APPLICATION_HAS_DEPENDENTS',
+  DEPENDENT_APPLICATION_VERSION_INCOMPATIBLE = 'DEPENDENT_APPLICATION_VERSION_INCOMPATIBLE',
 }
 
 const getApplicationExceptionUserFriendlyMessage = (
@@ -105,6 +106,8 @@ const getApplicationExceptionUserFriendlyMessage = (
       return msg`Apps cannot require each other. Contact the app's developer.`;
     case ApplicationExceptionCode.APPLICATION_HAS_DEPENDENTS:
       return msg`Other apps depend on this app. Uninstall them first.`;
+    case ApplicationExceptionCode.DEPENDENT_APPLICATION_VERSION_INCOMPATIBLE:
+      return msg`Other apps do not support this version of the app. Upgrade them first.`;
     default:
       assertUnreachable(code);
   }

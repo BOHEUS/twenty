@@ -43,6 +43,7 @@ const applicationExceptionCodeToHttpStatus = (
     case ApplicationExceptionCode.REQUIRED_APPLICATION_VERSION_INCOMPATIBLE:
     case ApplicationExceptionCode.CIRCULAR_REQUIRED_APPLICATIONS:
     case ApplicationExceptionCode.APPLICATION_HAS_DEPENDENTS:
+    case ApplicationExceptionCode.DEPENDENT_APPLICATION_VERSION_INCOMPATIBLE:
       return 400;
     case ApplicationExceptionCode.PACKAGE_RESOLUTION_FAILED:
     case ApplicationExceptionCode.POST_INSTALL_ERROR:

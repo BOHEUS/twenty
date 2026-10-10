@@ -416,6 +416,14 @@ export class ApplicationInstallService {
             ],
           );
         }
+
+        await this.applicationDependencyService.assertDependentApplicationsAcceptVersionOrThrow(
+          {
+            applicationUniversalIdentifier: universalIdentifier,
+            version: incomingVersion,
+            workspaceId: params.workspaceId,
+          },
+        );
       }
 
       if (isVersionUpgrade && shouldApplyApprovedCapabilities) {
