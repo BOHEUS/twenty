@@ -1,0 +1,21 @@
+export type ExploriumCompanyData = {
+  business_id: string;
+  name?: string | null;
+  business_description?: string | null;
+  website?: string | null;
+  country_name?: string | null;
+  region_name?: string | null;
+  city_name?: string | null;
+  street?: string | null;
+  zip_code?: string | null;
+  naics?: string | null;
+  naics_description?: string | null;
+  sic_code?: string | null;
+  sic_code_description?: string | null;
+  ticker?: string | null;
+  number_of_employees_range?: string | null;
+  yearly_revenue_range?: string | null;
+  linkedin_industry_category?: string | null;
+  linkedin_profile?: string | null;
+  locations_distribution?: Record<string, unknown>[] | null;
+};
