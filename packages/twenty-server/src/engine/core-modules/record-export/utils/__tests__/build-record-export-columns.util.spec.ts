@@ -78,34 +78,77 @@ describe('buildRecordExportColumns', () => {
     ]);
   });
 
-  it.each([FieldMetadataType.RELATION, FieldMetadataType.MORPH_RELATION])(
-    'exports the foreign key only for a many-to-one %s',
-    (type) => {
-      expect(
-        buildRecordExportColumns([
+  it('exports the foreign key only for a many-to-one relation', () => {
+    expect(
+      buildRecordExportColumns([
+        getFlatFieldMetadataMock({
+          ...fieldDefaults,
+          type: FieldMetadataType.RELATION,
+          name: 'company',
+          label: 'Company',
+          settings: { relationType: RelationType.MANY_TO_ONE },
+        }),
+        getFlatFieldMetadataMock({
+          ...fieldDefaults,
+          type: FieldMetadataType.RELATION,
+          name: 'opportunities',
+          label: 'Opportunities',
+          settings: { relationType: RelationType.ONE_TO_MANY },
+        }),
+      ]),
+    ).toEqual([
+      idColumn,
+      {
+        fieldName: 'companyId',
+        label: 'Company Id',
+        type: FieldMetadataType.UUID,
+      },
+    ]);
+  });
+
+  it('exports one labeled foreign key per many-to-one morph relation target', () => {
+    expect(
+      buildRecordExportColumns(
+        [
           getFlatFieldMetadataMock({
             ...fieldDefaults,
-            type,
-            name: 'company',
-            label: 'Company',
+            type: FieldMetadataType.MORPH_RELATION,
+            name: 'ownerCompany',
+            label: 'Owner',
+            relationTargetObjectMetadataId: 'company',
             settings: { relationType: RelationType.MANY_TO_ONE },
           }),
           getFlatFieldMetadataMock({
             ...fieldDefaults,
-            type,
-            name: 'opportunities',
-            label: 'Opportunities',
+            type: FieldMetadataType.MORPH_RELATION,
+            name: 'ownerPerson',
+            label: 'Owner',
+            relationTargetObjectMetadataId: 'person',
+            settings: { relationType: RelationType.MANY_TO_ONE },
+          }),
+          getFlatFieldMetadataMock({
+            ...fieldDefaults,
+            type: FieldMetadataType.MORPH_RELATION,
+            name: 'targetOpportunities',
+            label: 'Targets',
+            relationTargetObjectMetadataId: 'opportunity',
             settings: { relationType: RelationType.ONE_TO_MANY },
           }),
-        ]),
-      ).toEqual([
-        idColumn,
-        {
-          fieldName: 'companyId',
-          label: 'Company Id',
-          type: FieldMetadataType.UUID,
-        },
-      ]);
-    },
-  );
+        ],
+        { company: 'Company', person: 'Person', opportunity: 'Opportunity' },
+      ),
+    ).toEqual([
+      idColumn,
+      {
+        fieldName: 'ownerCompanyId',
+        label: 'Owner Company Id',
+        type: FieldMetadataType.UUID,
+      },
+      {
+        fieldName: 'ownerPersonId',
+        label: 'Owner Person Id',
+        type: FieldMetadataType.UUID,
+      },
+    ]);
+  });
 });

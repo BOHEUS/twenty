@@ -22,6 +22,7 @@ import request from 'supertest';
 import { createManyOperation } from 'test/integration/graphql/utils/create-many-operation.util';
 import { destroyManyOperationFactory } from 'test/integration/graphql/utils/destroy-many-operation-factory.util';
 import { makeGraphqlApiRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
+import { upsertFieldPermissions } from 'test/integration/graphql/utils/upsert-field-permissions.util';
 import { upsertContainsRlsPredicate } from 'test/integration/graphql/utils/upsert-contains-rls-predicate.util';
 import { findManyObjectMetadata } from 'test/integration/metadata/suites/object-metadata/utils/find-many-object-metadata.util';
 import { upsertObjectPermissions } from 'test/integration/metadata/suites/object-permission/utils/upsert-object-permissions.util';
@@ -48,6 +49,7 @@ import { type RecordExportDTO } from 'src/engine/core-modules/record-export/dtos
 import { type RecordExportWorkspaceService } from 'src/engine/core-modules/record-export/services/record-export.workspace-service';
 import { type RecordExport } from 'src/engine/core-modules/record-export/types/record-export.type';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
+import { PERSON_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/person-data-seeds.constant';
 import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
 
 const client = request(`http://localhost:${APP_PORT}`);
@@ -1116,4 +1118,167 @@ describe('record export lifecycle (integration)', () => {
       expect(await fileExists(stored)).toBe(false);
     },
   );
+  describe('morph relations', () => {
+    const agreements = [
+      {
+        id: v4(),
+        caretakerPersonId: null as string | null,
+        caretakerCompanyId: null as string | null,
+      },
+      {
+        id: v4(),
+        caretakerPersonId: null as string | null,
+        caretakerCompanyId: null as string | null,
+      },
+    ];
+    let morphInput: CreateRecordExportInput;
+    let personObjectId: string;
+    let petCareAgreementObjectId: string;
+    let caretakerPersonFieldId: string;
+
+    const morphCsv = (columns: ('company' | 'person')[]) =>
+      [
+        [
+          'Id',
+          ...columns.map((column) =>
+            column === 'company'
+              ? 'Caretaker Company Id'
+              : 'Caretaker Person Id',
+          ),
+        ].join(','),
+        ...agreements.map((agreement) =>
+          [
+            agreement.id,
+            ...columns.map((column) =>
+              column === 'company'
+                ? (agreement.caretakerCompanyId ?? '')
+                : (agreement.caretakerPersonId ?? ''),
+            ),
+          ].join(','),
+        ),
+      ]
+        .map((line) => `${line}\n`)
+        .join('');
+
+    const exportMorphCsv = async () => {
+      const recordExport = await exportToCompletion(
+        morphInput,
+        APPLE_JONY_MEMBER_ACCESS_TOKEN,
+      );
+      const response = await download(recordExport).expect(200);
+
+      return response.text.replace(/^\uFEFF/, '');
+    };
+
+    beforeAll(async () => {
+      agreements.sort((left, right) => left.id.localeCompare(right.id));
+      agreements[0].caretakerCompanyId = companies[0].id;
+      agreements[1].caretakerPersonId = PERSON_DATA_SEED_IDS.ID_1;
+      const { objects } = await findManyObjectMetadata({
+        input: { filter: {}, paging: { first: 1000 } },
+        gqlFields: 'id nameSingular fieldsList { id name type }',
+        expectToFail: false,
+      });
+      const petCareAgreement = objects.find(
+        (object) => object.nameSingular === 'petCareAgreement',
+      )!;
+      petCareAgreementObjectId = petCareAgreement.id;
+      personObjectId = objects.find(
+        (object) => object.nameSingular === 'person',
+      )!.id;
+      const [caretakerPersonField] = await globalThis.testDataSource.query(
+        `SELECT id FROM core."fieldMetadata" WHERE "objectMetadataId" = $1 AND name = 'caretakerPerson'`,
+        [petCareAgreementObjectId],
+      );
+      caretakerPersonFieldId = caretakerPersonField.id;
+      morphInput = {
+        objectMetadataId: petCareAgreementObjectId,
+        // Clients send a single field for the whole morph group
+        fieldMetadataIds: [
+          petCareAgreement.fieldsList!.find((field) => field.name === 'id')!.id,
+          petCareAgreement.fieldsList!.find(
+            (field) => field.type === 'MORPH_RELATION',
+          )!.id,
+        ],
+        filter: { id: { in: agreements.map(({ id }) => id) } },
+        orderBy: [{ id: OrderByDirection.AscNullsLast }],
+      };
+      const result = await createManyOperation({
+        objectMetadataSingularName: 'petCareAgreement',
+        objectMetadataPluralName: 'petCareAgreements',
+        data: agreements,
+      });
+      expect(result.errors).toBeUndefined();
+    }, 60_000);
+
+    afterAll(async () => {
+      await makeGraphqlApiRequest(
+        destroyManyOperationFactory({
+          objectMetadataSingularName: 'petCareAgreement',
+          objectMetadataPluralName: 'petCareAgreements',
+          gqlFields: 'id',
+          filter: { id: { in: agreements.map(({ id }) => id) } },
+        }),
+      );
+    });
+
+    it('exports one labeled foreign key column per morph target', async () => {
+      expect(await exportMorphCsv()).toBe(morphCsv(['company', 'person']));
+    });
+
+    it('omits a morph target whose field the requester cannot read', async () => {
+      try {
+        const result = await upsertFieldPermissions({
+          roleId,
+          fieldPermissions: [
+            {
+              objectMetadataId: petCareAgreementObjectId,
+              fieldMetadataId: caretakerPersonFieldId,
+              canReadFieldValue: false,
+              canUpdateFieldValue: false,
+            },
+          ],
+        });
+        expect(result.errors).toBeUndefined();
+        expect(await exportMorphCsv()).toBe(morphCsv(['company']));
+      } finally {
+        await upsertFieldPermissions({
+          roleId,
+          fieldPermissions: [
+            {
+              objectMetadataId: petCareAgreementObjectId,
+              fieldMetadataId: caretakerPersonFieldId,
+              canReadFieldValue: null,
+              canUpdateFieldValue: null,
+            },
+          ],
+        });
+      }
+    });
+
+    it('omits a morph target whose object the requester cannot read', async () => {
+      try {
+        const result = await upsertObjectPermissions({
+          input: {
+            roleId,
+            objectPermissions: [
+              { objectMetadataId: personObjectId, canReadObjectRecords: false },
+            ],
+          },
+          expectToFail: false,
+        });
+        expect(result.errors).toBeUndefined();
+        expect(await exportMorphCsv()).toBe(morphCsv(['company']));
+      } finally {
+        await upsertObjectPermissions({
+          input: {
+            roleId,
+            objectPermissions: [
+              { objectMetadataId: personObjectId, canReadObjectRecords: true },
+            ],
+          },
+        });
+      }
+    });
+  });
 });

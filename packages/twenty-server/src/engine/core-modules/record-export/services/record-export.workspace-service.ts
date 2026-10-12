@@ -14,7 +14,7 @@ import { setTimeout } from 'node:timers/promises';
 import { type Readable } from 'stream';
 import { TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER } from 'twenty-shared/application';
 import { PermissionFlagType } from 'twenty-shared/constants';
-import { FileFolder } from 'twenty-shared/types';
+import { FieldMetadataType, FileFolder } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { v4 } from 'uuid';
 import { z } from 'zod';
@@ -54,6 +54,7 @@ import { type RecordExportDownloadTokenJwtPayload } from 'src/engine/core-module
 import { type RecordExportParameters } from 'src/engine/core-modules/record-export/types/record-export-parameters.type';
 import { type RecordExport } from 'src/engine/core-modules/record-export/types/record-export.type';
 import { buildRecordExportColumns } from 'src/engine/core-modules/record-export/utils/build-record-export-columns.util';
+import { expandMorphRelationExportFields } from 'src/engine/core-modules/record-export/utils/expand-morph-relation-export-fields.util';
 import { UserSessionCookieService } from 'src/engine/core-modules/user-session/services/user-session-cookie.service';
 import { hashUserSessionToken } from 'src/engine/core-modules/user-session/utils/hash-user-session-token.util';
 import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/user-workspace.service';
@@ -61,6 +62,7 @@ import { fromUserEntityToFlat } from 'src/engine/core-modules/user/utils/from-us
 import { fromWorkspaceEntityToFlat } from 'src/engine/core-modules/workspace/utils/from-workspace-entity-to-flat.util';
 import { ApplicationTranslationCatalogService } from 'src/engine/metadata-modules/application-translation-catalog/services/application-translation-catalog.service';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
+import { isFlatFieldMetadataOfType } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-flat-field-metadata-of-type.util';
 import { buildObjectIdByNameMaps } from 'src/engine/metadata-modules/flat-object-metadata/utils/build-object-id-by-name-maps.util';
 import { resolveEffectiveTranslatedFlatEntity } from 'src/engine/metadata-modules/overrides/utils/resolve-effective-translated-flat-entity.util';
 import { PermissionsService } from 'src/engine/metadata-modules/permissions/permissions.service';
@@ -539,37 +541,80 @@ export class RecordExportWorkspaceService {
     parameters: RecordExportParameters;
     authContext: UserWorkspaceAuthContext;
   }): Promise<RecordExportQueryContext> {
-    const { flatObjectMetadataMaps, flatFieldMetadataMaps } =
-      await this.workspaceCacheService.getOrRecompute(
-        authContext.workspace.id,
-        ['flatObjectMetadataMaps', 'flatFieldMetadataMaps'],
-      );
+    const {
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
+      rolesPermissions,
+      userWorkspaceRoleMap,
+    } = await this.workspaceCacheService.getOrRecompute(
+      authContext.workspace.id,
+      [
+        'flatObjectMetadataMaps',
+        'flatFieldMetadataMaps',
+        'rolesPermissions',
+        'userWorkspaceRoleMap',
+      ],
+    );
     const flatObjectMetadata = findFlatEntityByIdInFlatEntityMapsOrThrow({
       flatEntityMaps: flatObjectMetadataMaps,
       flatEntityId: parameters.objectMetadataId,
     });
-    const rawFields = parameters.fieldMetadataIds.map((fieldMetadataId) => {
-      const field = findFlatEntityByIdInFlatEntityMapsOrThrow({
-        flatEntityMaps: flatFieldMetadataMaps,
-        flatEntityId: fieldMetadataId,
-      });
+    const requestedFields = parameters.fieldMetadataIds.map(
+      (fieldMetadataId) => {
+        const field = findFlatEntityByIdInFlatEntityMapsOrThrow({
+          flatEntityMaps: flatFieldMetadataMaps,
+          flatEntityId: fieldMetadataId,
+        });
 
-      if (field.objectMetadataId !== flatObjectMetadata.id) {
-        throw new BadRequestException(
-          t`An export field is no longer available.`,
-        );
-      }
+        if (field.objectMetadataId !== flatObjectMetadata.id) {
+          throw new BadRequestException(
+            t`An export field is no longer available.`,
+          );
+        }
 
-      return field;
+        return field;
+      },
+    );
+    const userRoleId = userWorkspaceRoleMap[authContext.userWorkspaceId];
+    const rawFields = expandMorphRelationExportFields({
+      fields: requestedFields,
+      flatObjectMetadata,
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
+      objectsPermissions: isDefined(userRoleId)
+        ? (rolesPermissions[userRoleId] ?? {})
+        : {},
     });
+    const morphTargetObjects = rawFields
+      .filter((field) =>
+        isFlatFieldMetadataOfType(field, FieldMetadataType.MORPH_RELATION),
+      )
+      .map((field) =>
+        findFlatEntityByIdInFlatEntityMapsOrThrow({
+          flatEntityMaps: flatObjectMetadataMaps,
+          flatEntityId: field.relationTargetObjectMetadataId,
+        }),
+      );
     const getI18nContext =
       await this.applicationTranslationCatalogService.getI18nContextByApplicationId(
         {
-          applicationIds: rawFields.map((field) => field.applicationId),
+          applicationIds: [...rawFields, ...morphTargetObjects].map(
+            (flatEntity) => flatEntity.applicationId,
+          ),
           locale: authContext.workspaceMember.locale,
           workspaceId: authContext.workspace.id,
         },
       );
+    const morphTargetObjectLabelById = Object.fromEntries(
+      morphTargetObjects.map((targetObject) => [
+        targetObject.id,
+        resolveEffectiveTranslatedFlatEntity({
+          metadataName: 'objectMetadata',
+          flatEntity: targetObject,
+          i18nContext: getI18nContext(targetObject.applicationId),
+        }).labelSingular,
+      ]),
+    );
     const fields = rawFields.map((field) =>
       resolveEffectiveTranslatedFlatEntity({
         metadataName: 'fieldMetadata',
@@ -580,7 +625,10 @@ export class RecordExportWorkspaceService {
     if (fields.some((field) => !field.isActive)) {
       throw new BadRequestException(t`An export field is no longer available.`);
     }
-    const columns = buildRecordExportColumns(fields);
+    const columns = buildRecordExportColumns(
+      fields,
+      morphTargetObjectLabelById,
+    );
     const node: CommonSelectedFields = {};
 
     for (const column of columns) {

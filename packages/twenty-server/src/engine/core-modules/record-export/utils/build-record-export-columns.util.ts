@@ -9,6 +9,7 @@ import { isFlatFieldMetadataOfType } from 'src/engine/metadata-modules/flat-fiel
 
 export const buildRecordExportColumns = (
   fields: FlatFieldMetadata[],
+  morphTargetObjectLabelById: Record<string, string> = {},
 ): RecordExportColumn[] => [
   { fieldName: 'id', label: 'Id', type: FieldMetadataType.UUID },
   ...fields
@@ -18,17 +19,26 @@ export const buildRecordExportColumns = (
         isFlatFieldMetadataOfType(field, FieldMetadataType.RELATION) ||
         isFlatFieldMetadataOfType(field, FieldMetadataType.MORPH_RELATION)
       ) {
-        return field.settings.relationType === RelationType.MANY_TO_ONE
-          ? [
-              {
-                fieldName: computeMorphOrRelationFieldJoinColumnName({
-                  name: field.name,
-                }),
-                label: `${field.label} Id`,
-                type: FieldMetadataType.UUID,
-              },
-            ]
-          : [];
+        if (field.settings.relationType !== RelationType.MANY_TO_ONE) {
+          return [];
+        }
+
+        const label = isFlatFieldMetadataOfType(
+          field,
+          FieldMetadataType.MORPH_RELATION,
+        )
+          ? `${field.label} ${morphTargetObjectLabelById[field.relationTargetObjectMetadataId]} Id`
+          : `${field.label} Id`;
+
+        return [
+          {
+            fieldName: computeMorphOrRelationFieldJoinColumnName({
+              name: field.name,
+            }),
+            label,
+            type: FieldMetadataType.UUID,
+          },
+        ];
       }
 
       const subFields = isCompositeFieldMetadataType(field.type)
