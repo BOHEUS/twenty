@@ -134,4 +134,48 @@ describe('defineConnectionProvider', () => {
       ).toBe(true);
     },
   );
+
+  describe('apiKey type', () => {
+    const baseApiKeyConfig = {
+      universalIdentifier: '99fcd8e8-fbb1-4d2c-bc16-7c61ef3eaaab',
+      name: 'acme',
+      displayName: 'Acme',
+      type: 'apiKey' as const,
+      identifyAccountLogicFunction: {
+        universalIdentifier: 'b648f87b-1d26-4961-b974-0908fd991061',
+      },
+    };
+
+    it('returns success for a valid config', () => {
+      const result = defineConnectionProvider(baseApiKeyConfig);
+
+      expect(result.success).toBe(true);
+      expect(result.errors).toEqual([]);
+    });
+
+    it('requires an identifyAccountLogicFunction', () => {
+      const { identifyAccountLogicFunction: _, ...config } = baseApiKeyConfig;
+
+      const result = defineConnectionProvider(config);
+
+      expect(result.success).toBe(false);
+      expect(
+        result.errors.some((error) =>
+          error.includes('identifyAccountLogicFunction'),
+        ),
+      ).toBe(true);
+    });
+
+    it('rejects an oauth config block', () => {
+      const result = defineConnectionProvider({
+        ...baseApiKeyConfig,
+        oauth: baseValidConfig.oauth,
+      } as unknown as typeof baseApiKeyConfig);
+
+      expect(result.success).toBe(false);
+      expect(
+        result.errors.some((error) => error.includes('must not declare')),
+      ).toBe(true);
+    });
+  });
 });

@@ -4,6 +4,8 @@ import { isNonEmptyString } from '@sniptt/guards';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
 
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
+import { ConnectionProviderScope } from '~/generated-metadata/graphql';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
@@ -14,6 +16,7 @@ import { IconChevronRight, IconPlus } from 'twenty-ui/icon';
 import { Avatar, Status } from 'twenty-ui/primitives/data-display';
 import { Button } from 'twenty-ui/primitives/input';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
+import { SettingsApplicationApiKeyConnectionDialog } from '~/pages/settings/applications/components/SettingsApplicationApiKeyConnectionDialog';
 import { useApplicationConnectedAccounts } from '~/pages/settings/applications/hooks/useApplicationConnectedAccounts';
 import { useFindApplicationConnectionProviders } from '~/pages/settings/applications/hooks/useFindApplicationConnectionProviders';
 import { useTriggerAppOAuth } from '~/pages/settings/applications/hooks/useTriggerAppOAuth';
@@ -41,6 +44,7 @@ export const SettingsApplicationConnectionsSection = ({
   const { t } = useLingui();
   const theme = useTheme();
   const { triggerAppOAuth } = useTriggerAppOAuth();
+  const { openDialog } = useDialog();
   const { connectionProviders, loading } =
     useFindApplicationConnectionProviders(applicationId);
   const { accounts: connectedAccounts, loading: accountsLoading } =
@@ -57,6 +61,22 @@ export const SettingsApplicationConnectionsSection = ({
         const isClientCredentialsConfigured =
           provider.oauth?.isClientCredentialsConfigured ?? false;
         const canAddConnection = provider.scope === 'WORKSPACE';
+        const isReadyToConnect = !isOAuth || isClientCredentialsConfigured;
+        const apiKeyDialogId = `application-api-key-connection-${provider.id}`;
+
+        const handleAddConnection = () => {
+          if (isOAuth) {
+            triggerAppOAuth({
+              applicationId,
+              providerName: provider.name,
+              scope: 'WORKSPACE',
+            });
+
+            return;
+          }
+
+          openDialog(apiKeyDialogId);
+        };
 
         const providerConnections = connectedAccounts.filter(
           (account) => account.connectionProviderId === provider.id,
@@ -159,21 +179,23 @@ export const SettingsApplicationConnectionsSection = ({
                 </StyledTableRowsContainer>
               </Table>
             )}
-            {canAddConnection && isClientCredentialsConfigured && (
+            {canAddConnection && isReadyToConnect && (
               <StyledFooter>
                 <Button
                   startIcon={<IconPlus />}
                   size="sm"
-                  onClick={() =>
-                    triggerAppOAuth({
-                      applicationId,
-                      providerName: provider.name,
-                      scope: 'WORKSPACE',
-                    })
-                  }
+                  onClick={handleAddConnection}
                   variant="outline"
                 >{t`Add connection`}</Button>
               </StyledFooter>
+            )}
+            {canAddConnection && !isOAuth && (
+              <SettingsApplicationApiKeyConnectionDialog
+                dialogId={apiKeyDialogId}
+                applicationId={applicationId}
+                provider={provider}
+                scope={ConnectionProviderScope.WORKSPACE}
+              />
             )}
           </Section.Root>
         );

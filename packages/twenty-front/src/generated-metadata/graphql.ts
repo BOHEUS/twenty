@@ -1347,6 +1347,14 @@ export type CompleteApplicationFileUploadsResult = {
   files: Array<File>;
 };
 
+export type ConnectAppWithApiKeyInput = {
+  apiKey: Scalars['String']['input'];
+  applicationId: Scalars['UUID']['input'];
+  providerName: Scalars['String']['input'];
+  reconnectingConnectedAccountId?: InputMaybe<Scalars['ID']['input']>;
+  scope?: InputMaybe<ConnectionProviderScope>;
+};
+
 export type ConnectedAccountPublicDto = {
   __typename?: 'ConnectedAccountPublicDTO';
   applicationId?: Maybe<Scalars['UUID']['output']>;
@@ -3216,6 +3224,7 @@ export type Mutation = {
   completeNewWorkspaceLogoUpload: FileWithSignedUrl;
   completeWorkspaceLogoUpload: FileWithSignedUrl;
   completeWorkspaceMemberProfilePictureUpload: FileWithSignedUrl;
+  connectAppWithApiKey: Scalars['Boolean']['output'];
   createApiKey: ApiKey;
   createAppMessageChannel: MessageChannel;
   createApplicationFileUploads: CreateApplicationFileUploadsResult;
@@ -3588,6 +3597,11 @@ export type MutationCompleteWorkspaceLogoUploadArgs = {
 
 export type MutationCompleteWorkspaceMemberProfilePictureUploadArgs = {
   fileId: Scalars['String']['input'];
+};
+
+
+export type MutationConnectAppWithApiKeyArgs = {
+  input: ConnectAppWithApiKeyInput;
 };
 
 
@@ -10024,6 +10038,13 @@ export type GithubClaimAuthorizationUrlQueryVariables = Exact<{
 
 export type GithubClaimAuthorizationUrlQuery = { __typename?: 'Query', githubClaimAuthorizationUrl: string };
 
+export type ConnectAppWithApiKeyMutationVariables = Exact<{
+  input: ConnectAppWithApiKeyInput;
+}>;
+
+
+export type ConnectAppWithApiKeyMutation = { __typename?: 'Mutation', connectAppWithApiKey: boolean };
+
 export type TriggerUninstallApplicationMutationVariables = Exact<{
   input: TriggerUninstallApplicationInput;
 }>;
@@ -11251,6 +11272,7 @@ export const FindClaimableApplicationRegistrationDocument = {"kind":"Document","
 export const FindManyApplicationRegistrationsDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"FindManyApplicationRegistrations"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"findManyApplicationRegistrations"},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ApplicationRegistrationListItem"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ApplicationRegistrationListItem"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ApplicationRegistration"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"universalIdentifier"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"sourceType"}},{"kind":"Field","name":{"kind":"Name","value":"logoUrl"}}]}}]} as unknown as DocumentNode<FindManyApplicationRegistrationsQuery, FindManyApplicationRegistrationsQueryVariables>;
 export const FindOneApplicationRegistrationDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"FindOneApplicationRegistration"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"findOneApplicationRegistration"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"FragmentSpread","name":{"kind":"Name","value":"ApplicationRegistrationFragment"}}]}}]}},{"kind":"FragmentDefinition","name":{"kind":"Name","value":"ApplicationRegistrationFragment"},"typeCondition":{"kind":"NamedType","name":{"kind":"Name","value":"ApplicationRegistration"}},"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"universalIdentifier"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"logoUrl"}},{"kind":"Field","name":{"kind":"Name","value":"galleryImagesUrls"}},{"kind":"Field","name":{"kind":"Name","value":"oAuthClientId"}},{"kind":"Field","name":{"kind":"Name","value":"oAuthRedirectUris"}},{"kind":"Field","name":{"kind":"Name","value":"oAuthScopes"}},{"kind":"Field","name":{"kind":"Name","value":"sourceType"}},{"kind":"Field","name":{"kind":"Name","value":"sourcePackage"}},{"kind":"Field","name":{"kind":"Name","value":"latestAvailableVersion"}},{"kind":"Field","name":{"kind":"Name","value":"isListed"}},{"kind":"Field","name":{"kind":"Name","value":"isVetted"}},{"kind":"Field","name":{"kind":"Name","value":"isPreInstalled"}},{"kind":"Field","name":{"kind":"Name","value":"isConfigured"}},{"kind":"Field","name":{"kind":"Name","value":"ownerWorkspaceId"}},{"kind":"Field","name":{"kind":"Name","value":"createdAt"}},{"kind":"Field","name":{"kind":"Name","value":"updatedAt"}}]}}]} as unknown as DocumentNode<FindOneApplicationRegistrationQuery, FindOneApplicationRegistrationQueryVariables>;
 export const GithubClaimAuthorizationUrlDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"GithubClaimAuthorizationUrl"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"applicationRegistrationId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"githubClaimAuthorizationUrl"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"applicationRegistrationId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"applicationRegistrationId"}}}]}]}}]} as unknown as DocumentNode<GithubClaimAuthorizationUrlQuery, GithubClaimAuthorizationUrlQueryVariables>;
+export const ConnectAppWithApiKeyDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"ConnectAppWithApiKey"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ConnectAppWithApiKeyInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"connectAppWithApiKey"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}]}]}}]} as unknown as DocumentNode<ConnectAppWithApiKeyMutation, ConnectAppWithApiKeyMutationVariables>;
 export const TriggerUninstallApplicationDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"TriggerUninstallApplication"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"TriggerUninstallApplicationInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"triggerUninstallApplication"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"jobId"}}]}}]}}]} as unknown as DocumentNode<TriggerUninstallApplicationMutation, TriggerUninstallApplicationMutationVariables>;
 export const UninstallApplicationDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UninstallApplication"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"universalIdentifier"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"uninstallApplication"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"universalIdentifier"},"value":{"kind":"Variable","name":{"kind":"Name","value":"universalIdentifier"}}}]}]}}]} as unknown as DocumentNode<UninstallApplicationMutation, UninstallApplicationMutationVariables>;
 export const UpdateApplicationDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateApplication"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UUID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"input"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"UpdateApplicationInput"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateApplication"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"input"},"value":{"kind":"Variable","name":{"kind":"Name","value":"input"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"autoUpgrade"}}]}}]}}]} as unknown as DocumentNode<UpdateApplicationMutation, UpdateApplicationMutationVariables>;

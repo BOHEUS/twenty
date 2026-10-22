@@ -1237,6 +1237,14 @@ type CompleteApplicationFileUploadsResult {
   files: [File!]!
 }
 
+input ConnectAppWithApiKeyInput {
+  apiKey: String!
+  applicationId: UUID!
+  providerName: String!
+  reconnectingConnectedAccountId: ID
+  scope: ConnectionProviderScope
+}
+
 type ConnectedAccountPublicDTO {
   applicationId: UUID
   archivedAt: DateTime
@@ -3047,6 +3055,7 @@ type Mutation {
   completeNewWorkspaceLogoUpload(fileId: String!, workspaceId: String!): FileWithSignedUrl!
   completeWorkspaceLogoUpload(fileId: String!): FileWithSignedUrl!
   completeWorkspaceMemberProfilePictureUpload(fileId: String!): FileWithSignedUrl!
+  connectAppWithApiKey(input: ConnectAppWithApiKeyInput!): Boolean!
   createApiKey(input: CreateApiKeyInput!): ApiKey!
   createAppMessageChannel(input: CreateAppMessageChannelInput!): MessageChannel!
   createApplicationFileUploads(applicationUniversalIdentifier: String!, files: [ApplicationFileUploadRequestInput!]!): CreateApplicationFileUploadsResult!

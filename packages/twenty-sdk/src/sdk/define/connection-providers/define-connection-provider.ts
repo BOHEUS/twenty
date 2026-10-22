@@ -8,7 +8,7 @@ import {
 import { isDefined } from 'twenty-shared/utils';
 
 const PROVIDER_NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
-const SUPPORTED_TYPES = ['oauth'] as const;
+const SUPPORTED_TYPES = ['oauth', 'apiKey'] as const;
 
 type ConnectionProviderLogicFunctionKey = Extract<
   keyof ConnectionProviderManifest,
@@ -105,6 +105,19 @@ export const defineConnectionProvider: DefineEntity<
       if (!Array.isArray(oauth.scopes)) {
         errors.push('OAuth connection provider must declare a scopes array');
       }
+    }
+  }
+
+  if (config.type === 'apiKey') {
+    if (isDefined(config.oauth)) {
+      errors.push(
+        "Connection provider with type 'apiKey' must not declare an `oauth` config block",
+      );
+    }
+    if (!isDefined(config.identifyAccountLogicFunction)) {
+      errors.push(
+        "Connection provider with type 'apiKey' must declare an identifyAccountLogicFunction that validates the key against the upstream API",
+      );
     }
   }
 

@@ -184,4 +184,27 @@ describe('fromConnectionProviderManifestToUniversalFlatConnectionProvider', () =
     expect(result.oauthConfig?.tokenRequestContentType).toBe('json');
     expect(result.oauthConfig?.usePkce).toBe(true);
   });
+
+  it('stores no oauthConfig for an apiKey provider', () => {
+    const result =
+      fromConnectionProviderManifestToUniversalFlatConnectionProvider({
+        connectionProviderManifest: {
+          universalIdentifier: PROVIDER_UID,
+          name: 'acme',
+          displayName: 'Acme',
+          type: 'apiKey',
+          identifyAccountLogicFunction: {
+            universalIdentifier: 'b648f87b-1d26-4961-b974-0908fd991061',
+          },
+        },
+        applicationUniversalIdentifier: APP_UID,
+        now: NOW,
+      });
+
+    expect(result.type).toBe('apiKey');
+    expect(result.oauthConfig).toBeNull();
+    expect(result.identifyAccountLogicFunctionUniversalIdentifier).toBe(
+      'b648f87b-1d26-4961-b974-0908fd991061',
+    );
+  });
 });

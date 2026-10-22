@@ -25,10 +25,12 @@ import { TableRow } from '@/ui/layout/table/components/TableRow';
 import { TableSection } from '@/ui/layout/table/components/TableSection';
 import {
   ApplicationConnectedAccountsDocument,
+  ConnectionProviderScope,
   DeleteConnectedAccountDocument,
   FindOneApplicationDocument,
 } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import { SettingsApplicationApiKeyConnectionDialog } from '~/pages/settings/applications/components/SettingsApplicationApiKeyConnectionDialog';
 import { useFindApplicationConnectionProviders } from '~/pages/settings/applications/hooks/useFindApplicationConnectionProviders';
 import {
   type ApplicationConnectedAccount,
@@ -136,6 +138,9 @@ export const SettingsApplicationConnectionDetail = () => {
       : (connection?.handle ?? t`Connection`);
   const deleteModalId = `delete-application-connection-modal-${connectedAccountId}`;
   const shareWithWorkspaceModalId = `share-application-connection-with-workspace-modal-${connectedAccountId}`;
+  const reconnectApiKeyDialogId = `reconnect-application-api-key-connection-${connectedAccountId}`;
+  const shareApiKeyWithWorkspaceDialogId = `share-application-api-key-connection-with-workspace-${connectedAccountId}`;
+  const isApiKeyProvider = provider?.type === 'apiKey';
   const applicationSettingsPath = getSettingsPath(
     SettingsPath.ApplicationDetail,
     { applicationId },
@@ -149,6 +154,12 @@ export const SettingsApplicationConnectionDetail = () => {
 
   const handleReconnect = () => {
     if (connection === undefined || provider === undefined) {
+      return;
+    }
+
+    if (isApiKeyProvider) {
+      openDialog(reconnectApiKeyDialogId);
+
       return;
     }
 
@@ -233,22 +244,26 @@ export const SettingsApplicationConnectionDetail = () => {
           <Status color="green">{t`Connected`}</Status>
         ),
       },
-      {
-        key: 'scopes',
-        label: t`Granted OAuth scopes`,
-        value:
-          scopes.length > 0 ? (
-            <StyledScopeList>
-              {scopes.map((scope) => (
-                <Tag key={scope} color="gray">
-                  {scope}
-                </Tag>
-              ))}
-            </StyledScopeList>
-          ) : (
-            '-'
-          ),
-      },
+      ...(provider.type === 'oauth'
+        ? [
+            {
+              key: 'scopes',
+              label: t`Granted OAuth scopes`,
+              value:
+                scopes.length > 0 ? (
+                  <StyledScopeList>
+                    {scopes.map((scope) => (
+                      <Tag key={scope} color="gray">
+                        {scope}
+                      </Tag>
+                    ))}
+                  </StyledScopeList>
+                ) : (
+                  '-'
+                ),
+            },
+          ]
+        : []),
       {
         key: 'lastSignedInAt',
         label: t`Last signed in`,
@@ -323,7 +338,11 @@ export const SettingsApplicationConnectionDetail = () => {
             <Section.Root>
               <Section.Header
                 title={connectionLabel}
-                description={t`Manage this application's OAuth connection.`}
+                description={
+                  isApiKeyProvider
+                    ? t`Manage this application's API key connection.`
+                    : t`Manage this application's OAuth connection.`
+                }
               />
               <StyledActions>
                 {connection.authFailedAt && (
@@ -338,7 +357,13 @@ export const SettingsApplicationConnectionDetail = () => {
                   provider.scope === 'WORKSPACE' && (
                     <Button
                       startIcon={<IconUsers />}
-                      onClick={() => openDialog(shareWithWorkspaceModalId)}
+                      onClick={() =>
+                        openDialog(
+                          isApiKeyProvider
+                            ? shareApiKeyWithWorkspaceDialogId
+                            : shareWithWorkspaceModalId,
+                        )
+                      }
                       variant="outline"
                     >{t`Share with workspace`}</Button>
                   )}
@@ -353,7 +378,11 @@ export const SettingsApplicationConnectionDetail = () => {
             <Section.Root>
               <Section.Header
                 title={t`Details`}
-                description={t`OAuth credential metadata for this application connection`}
+                description={
+                  isApiKeyProvider
+                    ? t`API key credential metadata for this application connection`
+                    : t`OAuth credential metadata for this application connection`
+                }
               />
               <Table>
                 <TableRow gridTemplateColumns={DETAIL_GRID_TEMPLATE}>
@@ -389,6 +418,28 @@ export const SettingsApplicationConnectionDetail = () => {
               confirmButtonText={t`Disconnect`}
               loading={isDeleting}
             />
+            {isApiKeyProvider && (
+              <>
+                <SettingsApplicationApiKeyConnectionDialog
+                  dialogId={reconnectApiKeyDialogId}
+                  applicationId={applicationId}
+                  provider={provider}
+                  scope={
+                    connection.scope === 'WORKSPACE'
+                      ? ConnectionProviderScope.WORKSPACE
+                      : ConnectionProviderScope.USER
+                  }
+                  reconnectingConnectedAccountId={connection.id}
+                />
+                <SettingsApplicationApiKeyConnectionDialog
+                  dialogId={shareApiKeyWithWorkspaceDialogId}
+                  applicationId={applicationId}
+                  provider={provider}
+                  scope={ConnectionProviderScope.WORKSPACE}
+                  reconnectingConnectedAccountId={connection.id}
+                />
+              </>
+            )}
             <ConfirmationDialog
               dialogId={shareWithWorkspaceModalId}
               title={t`Share with workspace?`}

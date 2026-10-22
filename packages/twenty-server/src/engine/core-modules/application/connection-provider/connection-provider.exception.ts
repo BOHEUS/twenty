@@ -45,6 +45,8 @@ const getConnectionProviderExceptionUserFriendlyMessage = (
       return msg`You authorized a different account than the one this connection belongs to.`;
     case ConnectionProviderExceptionCode.CONNECTION_SCOPE_NOT_ALLOWED:
       return msg`This connection provider does not support this kind of connection.`;
+    case ConnectionProviderExceptionCode.API_KEY_REJECTED:
+      return msg`This API key was rejected.`;
     default:
       assertUnreachable(code);
   }

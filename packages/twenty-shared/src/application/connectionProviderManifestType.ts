@@ -2,14 +2,18 @@ import { type ConnectionProviderScope } from '@/application/connectionProviderSc
 import { type OAuthConnectionProviderConfig } from '@/application/oauthConnectionProviderConfigType';
 import { type SyncableEntityOptions } from '@/application/syncableEntityOptionsType';
 
-export type ConnectionProviderManifest = SyncableEntityOptions & {
+type BaseConnectionProviderManifest = SyncableEntityOptions & {
   name: string;
   displayName: string;
   logo?: string;
-  type: 'oauth';
   scope?: ConnectionProviderScope;
-  oauth: OAuthConnectionProviderConfig;
   identifyAccountLogicFunction?: SyncableEntityOptions;
   onConnectLogicFunction?: SyncableEntityOptions;
   onDisconnectLogicFunction?: SyncableEntityOptions;
 };
+
+export type ConnectionProviderManifest = BaseConnectionProviderManifest &
+  (
+    | { type: 'oauth'; oauth: OAuthConnectionProviderConfig }
+    | { type: 'apiKey'; oauth?: never }
+  );
