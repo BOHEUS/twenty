@@ -5,9 +5,9 @@ import { SaveAndCancelButtons } from '@/settings/components/SaveAndCancelButtons
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
 import { SettingsSkeletonLoader } from '@/settings/components/SettingsSkeletonLoader';
 import { SettingsDevelopersRoleSelector } from '@/settings/developers/components/SettingsDevelopersRoleSelector';
-import { EXPIRATION_DATES } from '@/settings/developers/constants/ExpirationDates';
+import { MAX_API_KEY_EXPIRATION_IN_DAYS } from '@/settings/developers/constants/MaxApiKeyExpirationInDays';
+import { NEVER_EXPIRE_DELTA_IN_YEARS } from '@/settings/developers/constants/NeverExpireDeltaInYears';
 import { apiKeyTokenFamilyState } from '@/settings/developers/states/apiKeyTokenFamilyState';
-import { Select } from '@/ui/input/components/Select';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { useMutation, useQuery } from '@apollo/client/react';
@@ -27,7 +27,7 @@ import { SETTINGS_DEVELOPERS_TABS } from '@/settings/developers/constants/Settin
 import { Section } from 'twenty-ui/components/layout';
 
 export const SettingsDevelopersApiKeysNew = () => {
-  const { t, i18n } = useLingui();
+  const { t } = useLingui();
   const [generateOneApiKeyToken] = useMutation(GenerateApiKeyTokenDocument);
   const navigateSettings = useNavigateSettings();
   const { data: rolesData, loading: rolesLoading } = useQuery(
@@ -37,10 +37,10 @@ export const SettingsDevelopersApiKeysNew = () => {
 
   const [formValues, setFormValues] = useState<{
     name: string;
-    expirationDate: number | null;
+    expirationInDays: string;
     roleId: string;
   }>({
-    expirationDate: EXPIRATION_DATES[5].value,
+    expirationInDays: '0',
     name: '',
     roleId: '',
   });
@@ -75,14 +75,23 @@ export const SettingsDevelopersApiKeysNew = () => {
     [jotaiStore],
   );
 
+  const expirationInDays = Number(formValues.expirationInDays);
+  const isExpirationValid =
+    formValues.expirationInDays.trim() !== '' &&
+    Number.isInteger(expirationInDays) &&
+    expirationInDays >= 0 &&
+    expirationInDays <= MAX_API_KEY_EXPIRATION_IN_DAYS;
+
   const handleSave = async () => {
-    if (!formValues.name) {
+    if (!formValues.name || !isExpirationValid) {
       return;
     }
 
     const expiresAt = addDays(
       new Date(),
-      formValues.expirationDate ?? 30,
+      expirationInDays === 0
+        ? NEVER_EXPIRE_DELTA_IN_YEARS * 365
+        : expirationInDays,
     ).toISOString();
 
     const roleIdToUse = formValues.roleId;
@@ -125,7 +134,8 @@ export const SettingsDevelopersApiKeysNew = () => {
     }
   };
 
-  const canSave = !!formValues.name && !!formValues.roleId;
+  const canSave =
+    !!formValues.name && !!formValues.roleId && isExpirationValid;
 
   if (rolesLoading) {
     return <SettingsSkeletonLoader />;
@@ -212,21 +222,29 @@ export const SettingsDevelopersApiKeysNew = () => {
         <Section.Root>
           <Section.Header
             title={t`Expiration Date`}
-            description={t`When the API key will expire.`}
+            description={t`Number of days until the API key expires.`}
           />
-          <Select
-            dropdownId="object-field-type-select"
-            options={EXPIRATION_DATES.map(({ label, value }) => ({
-              label: i18n._(label),
-              value,
-            }))}
-            value={formValues.expirationDate}
+          <SettingsTextInput
+            instanceId="api-key-new-expiration"
+            type="number"
+            min={0}
+            max={MAX_API_KEY_EXPIRATION_IN_DAYS}
+            step={1}
+            rightAdornment={t`days`}
+            hint={t`Set to 0 for a key that never expires.`}
+            error={
+              isExpirationValid
+                ? undefined
+                : t`Enter a whole number of days between 0 and ${MAX_API_KEY_EXPIRATION_IN_DAYS}.`
+            }
+            value={formValues.expirationInDays}
             onChange={(value) => {
               setFormValues((prevState) => ({
                 ...prevState,
-                expirationDate: value,
+                expirationInDays: value,
               }));
             }}
+            fullWidth
           />
         </Section.Root>
       </SettingsPageContainer>

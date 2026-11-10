@@ -1,0 +1,1 @@
+export const MAX_API_KEY_EXPIRATION_IN_DAYS = 365;
