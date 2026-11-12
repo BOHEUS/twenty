@@ -66,6 +66,7 @@ export const SidePanelCommandMenuItemDisplayPage = () => {
 
   const {
     coreObjectCommandIds,
+    coreObjectSectionContext,
     coreSelectionCommandIds,
     coreSelectionSectionContext,
   } = useCoreObjectsCommands();
@@ -73,7 +74,9 @@ export const SidePanelCommandMenuItemDisplayPage = () => {
   const selectionSectionContext = useCommandMenuItemSelectionSectionContext();
   const currentViewSectionContext =
     useCommandMenuItemCurrentViewSectionContext();
-  const objectSectionContext = useCommandMenuItemObjectSectionContext();
+  const metadataObjectSectionContext = useCommandMenuItemObjectSectionContext();
+  const objectSectionContext =
+    coreObjectSectionContext ?? metadataObjectSectionContext;
   const workspaceSectionContext = useCommandMenuItemWorkspaceSectionContext();
   const hasAiPermission = useHasPermissionFlag(PermissionFlagType.AI);
 
@@ -194,11 +197,11 @@ export const SidePanelCommandMenuItemDisplayPage = () => {
       ...commandMenuItemsBySection[section].map((item) => item.id),
       ...getSectionExtraItemIds(section),
     ]),
-    ...(shouldDisplayFallbackItems
-      ? fallbackCommandMenuItems.map((item) => item.id)
-      : []),
     ...(shouldDisplayFallbackItems && shouldDisplayAskAiFallbackItem
       ? [COMMAND_MENU_ASK_AI_FALLBACK_ITEM_ID]
+      : []),
+    ...(shouldDisplayFallbackItems
+      ? fallbackCommandMenuItems.map((item) => item.id)
       : []),
   ];
 
@@ -263,12 +266,12 @@ export const SidePanelCommandMenuItemDisplayPage = () => {
           }
           Icon={IconLifebuoy}
         >
-          {fallbackCommandMenuItems.map((item) => (
-            <CommandMenuItemRenderer item={item} key={item.id} />
-          ))}
           {shouldDisplayAskAiFallbackItem && (
             <CommandMenuAskAiFallbackItem prompt={trimmedSidePanelSearch} />
           )}
+          {fallbackCommandMenuItems.map((item) => (
+            <CommandMenuItemRenderer item={item} key={item.id} />
+          ))}
         </CommandMenuItemSectionGroup>
       )}
     </SidePanelList>

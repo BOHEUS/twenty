@@ -54,9 +54,11 @@ type ManyToOneRelationValue<
 
 type ManyToOneMetadataRelationsProperties = {
   [TSourceMetadataName in AllMetadataName]: {
-    [TRelationProperty in ExtractEntityManyToOneEntityRelationProperties<
-      MetadataEntity<TSourceMetadataName>
-    >]: ManyToOneRelationValue<TSourceMetadataName, TRelationProperty>;
+    [
+      TRelationProperty in ExtractEntityManyToOneEntityRelationProperties<
+        MetadataEntity<TSourceMetadataName>
+      >
+    ]: ManyToOneRelationValue<TSourceMetadataName, TRelationProperty>;
   };
 };
 
@@ -132,6 +134,27 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
       inverseOneToManyProperty: 'navigationMenuItems',
       isNullable: true,
       universalForeignKey: 'pageLayoutUniversalIdentifier',
+    },
+    agentChatChannel: {
+      metadataName: 'agentChatChannel',
+      foreignKey: 'agentChatChannelId',
+      inverseOneToManyProperty: 'navigationMenuItems',
+      isNullable: true,
+      universalForeignKey: 'agentChatChannelUniversalIdentifier',
+    },
+    workflow: {
+      metadataName: 'workflow',
+      foreignKey: 'workflowId',
+      inverseOneToManyProperty: 'navigationMenuItems',
+      isNullable: true,
+      universalForeignKey: 'workflowUniversalIdentifier',
+    },
+    agent: {
+      metadataName: 'agent',
+      foreignKey: 'agentId',
+      inverseOneToManyProperty: 'navigationMenuItems',
+      isNullable: true,
+      universalForeignKey: 'agentUniversalIdentifier',
     },
   },
   fieldMetadata: {
@@ -318,6 +341,14 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
       universalForeignKey: 'agentUniversalIdentifier',
     },
     apiKey: null,
+    webhook: {
+      metadataName: 'webhook',
+      foreignKey: 'webhookId',
+      inverseOneToManyProperty: null,
+      isNullable: true,
+      universalForeignKey: 'webhookUniversalIdentifier',
+    },
+    targetApplication: null,
     workspace: null,
     application: null,
   },
@@ -385,6 +416,21 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
       isNullable: false,
       universalForeignKey: 'fieldMetadataUniversalIdentifier',
     },
+    rowLevelPermissionPredicateGroup: {
+      metadataName: 'rowLevelPermissionPredicateGroup',
+      foreignKey: 'rowLevelPermissionPredicateGroupId',
+      inverseOneToManyProperty: null,
+      isNullable: true,
+      universalForeignKey:
+        'rowLevelPermissionPredicateGroupUniversalIdentifier',
+    },
+    rowLevelPermissionRule: {
+      metadataName: 'rowLevelPermissionRule',
+      foreignKey: 'rowLevelPermissionRuleId',
+      inverseOneToManyProperty: null,
+      isNullable: true,
+      universalForeignKey: 'rowLevelPermissionRuleUniversalIdentifier',
+    },
   },
   pageLayout: {
     workspace: null,
@@ -446,14 +492,21 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
     fieldMetadata: {
       metadataName: 'fieldMetadata',
       foreignKey: 'fieldMetadataId',
-      inverseOneToManyProperty: null,
+      inverseOneToManyProperty: 'rowLevelPermissionPredicates',
       isNullable: false,
       universalForeignKey: 'fieldMetadataUniversalIdentifier',
+    },
+    relationFieldMetadata: {
+      metadataName: 'fieldMetadata',
+      foreignKey: 'relationFieldMetadataId',
+      inverseOneToManyProperty: 'relationRowLevelPermissionPredicates',
+      isNullable: true,
+      universalForeignKey: 'relationFieldMetadataUniversalIdentifier',
     },
     workspaceMemberFieldMetadata: {
       metadataName: 'fieldMetadata',
       foreignKey: 'workspaceMemberFieldMetadataId',
-      inverseOneToManyProperty: null,
+      inverseOneToManyProperty: 'workspaceMemberRowLevelPermissionPredicates',
       isNullable: true,
       universalForeignKey: 'workspaceMemberFieldMetadataUniversalIdentifier',
     },
@@ -473,6 +526,13 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
         'rowLevelPermissionPredicateGroupUniversalIdentifier',
     },
     application: null,
+    rowLevelPermissionRule: {
+      metadataName: 'rowLevelPermissionRule',
+      foreignKey: 'rowLevelPermissionRuleId',
+      inverseOneToManyProperty: null,
+      isNullable: true,
+      universalForeignKey: 'rowLevelPermissionRuleUniversalIdentifier',
+    },
   },
   rowLevelPermissionPredicateGroup: {
     objectMetadata: {
@@ -496,6 +556,31 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
       isNullable: true,
       universalForeignKey:
         'parentRowLevelPermissionPredicateGroupUniversalIdentifier',
+    },
+    workspace: null,
+    application: null,
+    rowLevelPermissionRule: {
+      metadataName: 'rowLevelPermissionRule',
+      foreignKey: 'rowLevelPermissionRuleId',
+      inverseOneToManyProperty: null,
+      isNullable: true,
+      universalForeignKey: 'rowLevelPermissionRuleUniversalIdentifier',
+    },
+  },
+  rowLevelPermissionRule: {
+    objectMetadata: {
+      metadataName: 'objectMetadata',
+      foreignKey: 'objectMetadataId',
+      inverseOneToManyProperty: 'rowLevelPermissionRules',
+      isNullable: false,
+      universalForeignKey: 'objectMetadataUniversalIdentifier',
+    },
+    role: {
+      metadataName: 'role',
+      foreignKey: 'roleId',
+      inverseOneToManyProperty: 'rowLevelPermissionRules',
+      isNullable: false,
+      universalForeignKey: 'roleUniversalIdentifier',
     },
     workspace: null,
     application: null,
@@ -526,6 +611,17 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
     workspace: null,
     application: null,
   },
+  mcpServer: {
+    workspace: null,
+    application: null,
+    connectionProvider: {
+      metadataName: 'connectionProvider',
+      foreignKey: 'connectionProviderId',
+      inverseOneToManyProperty: null,
+      isNullable: true,
+      universalForeignKey: 'connectionProviderUniversalIdentifier',
+    },
+  },
   applicationVariable: {
     workspace: null,
     application: null,
@@ -549,6 +645,10 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
     },
   },
   connectionProvider: {
+    workspace: null,
+    application: null,
+  },
+  messagingProvider: {
     workspace: null,
     application: null,
   },
@@ -592,6 +692,49 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
       universalForeignKey: 'tsVectorFieldMetadataUniversalIdentifier',
     },
   },
+  fieldMetadataOption: {
+    workspace: null,
+    application: null,
+    fieldMetadata: {
+      metadataName: 'fieldMetadata',
+      foreignKey: 'fieldMetadataId',
+      inverseOneToManyProperty: 'fieldMetadataOptions',
+      isNullable: false,
+      universalForeignKey: 'fieldMetadataUniversalIdentifier',
+    },
+  },
+  relatedRecordPath: {
+    workspace: null,
+    application: null,
+    objectMetadata: {
+      metadataName: 'objectMetadata',
+      foreignKey: 'objectMetadataId',
+      inverseOneToManyProperty: null,
+      isNullable: false,
+      universalForeignKey: 'objectMetadataUniversalIdentifier',
+    },
+    firstFieldMetadata: {
+      metadataName: 'fieldMetadata',
+      foreignKey: 'firstFieldMetadataId',
+      inverseOneToManyProperty: null,
+      isNullable: false,
+      universalForeignKey: 'firstFieldMetadataUniversalIdentifier',
+    },
+    secondFieldMetadata: {
+      metadataName: 'fieldMetadata',
+      foreignKey: 'secondFieldMetadataId',
+      inverseOneToManyProperty: null,
+      isNullable: true,
+      universalForeignKey: 'secondFieldMetadataUniversalIdentifier',
+    },
+    thirdFieldMetadata: {
+      metadataName: 'fieldMetadata',
+      foreignKey: 'thirdFieldMetadataId',
+      inverseOneToManyProperty: null,
+      isNullable: true,
+      universalForeignKey: 'thirdFieldMetadataUniversalIdentifier',
+    },
+  },
   validationRule: {
     workspace: null,
     application: null,
@@ -618,6 +761,28 @@ export const ALL_MANY_TO_ONE_METADATA_RELATIONS = {
   workflowVersion: {
     workspace: null,
     application: null,
+  },
+  agentChatChannel: {
+    workspace: null,
+    application: null,
+  },
+  agentChatChannelRole: {
+    workspace: null,
+    application: null,
+    channel: {
+      metadataName: 'agentChatChannel',
+      foreignKey: 'channelId',
+      inverseOneToManyProperty: 'channelRoles',
+      isNullable: false,
+      universalForeignKey: 'channelUniversalIdentifier',
+    },
+    role: {
+      metadataName: 'role',
+      foreignKey: 'roleId',
+      inverseOneToManyProperty: 'agentChatChannelRoles',
+      isNullable: false,
+      universalForeignKey: 'roleUniversalIdentifier',
+    },
   },
 } as const satisfies ManyToOneMetadataRelationsProperties;
 

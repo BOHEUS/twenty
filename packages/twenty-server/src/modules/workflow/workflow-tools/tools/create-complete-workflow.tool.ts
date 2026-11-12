@@ -1,5 +1,7 @@
+import { isNonEmptyString } from '@sniptt/guards';
 import { isDefined } from 'twenty-shared/utils';
 import {
+  isWorkflowAiAgentGenerateStep,
   WORKFLOW_ACTION_FEATURE_FLAGS,
   workflowActionSchema,
   WorkflowActionType,
@@ -7,13 +9,13 @@ import {
 } from 'twenty-shared/workflow';
 import { z } from 'zod';
 
-import { WorkflowVersionStatus as CoreWorkflowVersionStatus } from 'src/engine/core-modules/workflow/entities/workflow-version.entity';
+import { type CreatedCoreWorkflow } from 'src/engine/core-modules/workflow/services/core-workflow-mutation.workspace-service';
 import {
   WorkflowVersionStepException,
   WorkflowVersionStepExceptionCode,
 } from 'src/modules/workflow/common/exceptions/workflow-version-step.exception';
+import { type WorkflowVersionEdge } from 'src/modules/workflow/workflow-builder/utils/assemble-workflow-version-content.util';
 import { type WorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
-import { DEFAULT_AGENT_WORKFLOW_ACTOR } from 'src/modules/workflow/workflow-tools/constants/default-agent-workflow-actor.constant';
 import { workflowStepConnectionOptionsSchema } from 'src/modules/workflow/workflow-tools/tools/schemas/workflow-step-connection-options.schema';
 import {
   type WorkflowToolContext,
@@ -51,14 +53,26 @@ const createCompleteWorkflowSchema = z.object({
     .describe('Whether to activate the workflow immediately (default: false)'),
 });
 
-type CreateCompleteWorkflowToolDeps = Pick<
-  WorkflowToolDependencies,
-  | 'coreWorkflowMutationService'
-  | 'coreWorkflowVersionListService'
-  | 'coreWorkflowVersionMutationService'
-  | 'coreWorkflowVersionWriteService'
-  | 'coreWorkflowLifecycleService'
->;
+type CreateCompleteWorkflowToolDeps = {
+  coreWorkflowMutationService: Pick<
+    WorkflowToolDependencies['coreWorkflowMutationService'],
+    'createWorkflowWithContent'
+  >;
+  coreWorkflowLifecycleService: Pick<
+    WorkflowToolDependencies['coreWorkflowLifecycleService'],
+    'activateCoreWorkflowVersion'
+  >;
+  workflowAiAgentStepAgentService: Pick<
+    WorkflowToolDependencies['workflowAiAgentStepAgentService'],
+    'findAgentRunnableByNewStepOrThrow'
+  >;
+};
+
+type CreateCompleteWorkflowFailure = {
+  success: false;
+  message: string;
+  error: string;
+};
 
 export const createCreateCompleteWorkflowTool = (
   deps: CreateCompleteWorkflowToolDeps,
@@ -73,9 +87,11 @@ CRITICAL SCHEMA REQUIREMENTS:
 - Each step MUST include: id (must be a valid UUID), name, type, valid, settings
 - CREATE_RECORD actions MUST have objectName and objectRecord in settings.input
 - objectRecord must contain actual field values, not just field names
+- Only UPDATE_RECORD takes settings.input.fieldsToUpdate: the fields to write, each with its value in objectRecord. CREATE_RECORD and UPSERT_RECORD write every field in objectRecord and refuse fieldsToUpdate
 - RICH_TEXT fields (e.g. a note/task "body") MUST be an object, not a string: { "markdown": "your text, may contain {{variables}}" }. A bare string is rejected.
 - Use "trigger" as the id for the trigger step in edges
 - Step positions are computed automatically; do not provide coordinates
+- settings.outputSchema can be {}: Twenty computes it for ITERATOR steps and derives it for record, form and trigger steps. For HTTP_REQUEST steps, set settings.expectedOutputSchema to an example response so later steps can reference its fields
 
 ITERATOR steps (loops):
 - An edge leaving an ITERATOR only enters the loop body when it carries sourceConnectionOptions: { connectedStepType: "ITERATOR", settings: { isConnectedToLoop: true } }. Without it the target is placed after the loop instead.
@@ -86,15 +102,14 @@ Common mistakes to avoid:
 - Using "RECORD_CREATED" instead of "DATABASE_EVENT"
 - Missing the "name" and "valid" fields in steps
 - Missing the "objectRecord" field in CREATE_RECORD actions
-- Using "fieldsToUpdate" instead of "objectRecord" in CREATE_RECORD actions
-- Including CODE steps in this tool — this tool does NOT create the underlying logic function needed by CODE steps. Instead, create the workflow without CODE steps first, then add CODE steps individually using create_workflow_version_step (which properly creates the logic function), then call update_logic_function_source to define the code.
-- Including AI_AGENT steps in this tool — this tool does NOT create the underlying agent needed by AI_AGENT steps. Instead, create the workflow without AI_AGENT steps first, then add AI_AGENT steps individually using create_workflow_version_step (which properly creates the agent), then call update_agent to configure the agent.
+- Omitting settings.input.code on CODE steps: write the TypeScript source there (exporting \`main\` as an async arrow function, \`export const main = async (params: { ... }) => { ... }\`, whose params receive settings.input.logicFunctionInput); do not set settings.input.logicFunctionId.
+- Setting an AI_AGENT step's agentId without being asked to run that agent: a step without agentId carries its own settings.input.instructions (system prompt), prompt (the message sent on each run), modelId, responseFormat and scope (the objects it may read or change, same shape as a role manifest's permissions, with object universal identifiers; no data access when unset). A step with agentId runs that existing agent: the agent supplies the instructions, model and permissions, and its response format unless the step sets settings.input.responseFormat.
 
 IMPORTANT: The tool schema provides comprehensive field descriptions, examples, and validation rules. Always refer to the schema for:
 - Field requirements and data types
 - Common object patterns and field structures
 - Proper relationship field formats
-- Variable reference syntax: {{trigger.fieldName}} for trigger data, {{<step-id>.fieldName}} for step outputs (step-id is the step's UUID, not its name). The path mirrors the step's output schema exactly and is addressed directly; Twenty does not add a "result" wrapper. A FIND_RECORDS step exposes {{<find-step-id>.all}} and {{<find-step-id>.first.id}}, not {{<find-step-id>.result.all}}.
+- Variable reference syntax: {{trigger.properties.after.fieldName}} for a DATABASE_EVENT trigger's record ({{trigger.properties.before.fieldName}} for deleted events), {{trigger.payload.fieldName}} for a MANUAL trigger's selected record, {{trigger.fieldName}} for a WEBHOOK trigger's request body, {{<step-id>.fieldName}} for step outputs (step-id is the step's UUID, not its name). The path mirrors the step's output schema exactly and is addressed directly; Twenty does not add a "result" wrapper. A FIND_RECORDS step exposes {{<find-step-id>.all}} and {{<find-step-id>.first.id}}, not {{<find-step-id>.result.all}}.
 - Error handling options
 
 This is the most efficient way for AI to create workflows as it handles all the complexity in one call.
@@ -117,110 +132,114 @@ Call validate_workflow once when the workflow is complete, before activating.`,
     }>;
     activate?: boolean;
   }) => {
-    try {
-      const { workspaceId } = context;
+    const creation = await createWorkflowOrBuildFailure({
+      deps,
+      workspaceId: context.workspaceId,
+      userWorkspaceId: context.userWorkspaceId,
+      name: parameters.name,
+      trigger: parameters.trigger,
+      steps: parameters.steps,
+      edges: parameters.edges ?? [],
+    });
 
-      assertStepTypesAreSupported(parameters.steps);
-
-      const coreWorkflow =
-        await deps.coreWorkflowMutationService.createWorkflow({
-          workspaceId,
-          createdBy: context.actorContext ?? DEFAULT_AGENT_WORKFLOW_ACTOR,
-          userWorkspaceId: undefined,
-          name: parameters.name,
-        });
-
-      const coreWorkflowVersionId = await findInitialDraftCoreVersionIdOrThrow({
-        deps,
-        workspaceId,
-        userWorkspaceId: context.userWorkspaceId,
-        coreWorkflowId: coreWorkflow.id,
-      });
-
-      const { coreWorkflowVersion } =
-        await deps.coreWorkflowVersionWriteService.getValidatedDraftCoreWorkflowVersion(
-          {
-            workspaceId,
-            userWorkspaceId: context.userWorkspaceId,
-            coreWorkflowVersionId,
-          },
-        );
-
-      await deps.coreWorkflowVersionWriteService.writeContentAndMirror({
-        workspaceId,
-        coreWorkflowVersionId,
-        expectedVersion: coreWorkflowVersion,
-        trigger: parameters.trigger,
-        steps: parameters.steps,
-      });
-
-      for (const edge of parameters.edges ?? []) {
-        await deps.coreWorkflowVersionMutationService.createEdge({
-          userWorkspaceId: context.userWorkspaceId,
-          source: edge.source,
-          target: edge.target,
-          sourceConnectionOptions: edge.sourceConnectionOptions,
-          coreWorkflowVersionId,
-          workspaceId,
-        });
-      }
-
-      await deps.coreWorkflowVersionMutationService.autoLayoutCoreWorkflowVersion(
-        {
-          workspaceId,
-          userWorkspaceId: context.userWorkspaceId,
-          coreWorkflowVersionId,
-        },
-      );
-
-      if (parameters.activate) {
-        await deps.coreWorkflowLifecycleService.activateCoreWorkflowVersion({
-          workspaceId,
-          userWorkspaceId: context.userWorkspaceId,
-          coreWorkflowVersionId,
-        });
-      }
-
-      return {
-        success: true,
-        message: `Workflow "${parameters.name}" created successfully with ${parameters.steps.length} steps`,
-        result: {
-          coreWorkflowId: coreWorkflow.id,
-          coreWorkflowVersionId,
-          name: parameters.name,
-          stepIds: parameters.steps.map((step) => step.id),
-        },
-        recordReferences: isDefined(coreWorkflow.workspaceWorkflowId)
-          ? [
-              {
-                objectNameSingular: 'workflow',
-                recordId: coreWorkflow.workspaceWorkflowId,
-                displayName: parameters.name,
-              },
-            ]
-          : [],
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: `Failed to create workflow "${parameters.name}": ${error.message}`,
-        error: error.message,
-      };
+    if ('failure' in creation) {
+      return creation.failure;
     }
+
+    const { coreWorkflow, coreWorkflowVersionId } = creation.createdWorkflow;
+
+    const result = {
+      coreWorkflowId: coreWorkflow.id,
+      coreWorkflowVersionId,
+      name: parameters.name,
+      stepIds: parameters.steps.map((step) => step.id),
+    };
+
+    if (parameters.activate) {
+      try {
+        await deps.coreWorkflowLifecycleService.activateCoreWorkflowVersion({
+          workspaceId: context.workspaceId,
+          userWorkspaceId: context.userWorkspaceId,
+          coreWorkflowVersionId,
+        });
+      } catch (error) {
+        return {
+          success: false,
+          message: `Workflow "${parameters.name}" was created as a draft but could not be activated: ${error.message}. Do not create it again: fix the draft (coreWorkflowVersionId ${coreWorkflowVersionId}), call validate_workflow, then activate_workflow_version.`,
+          error: error.message,
+          result,
+        };
+      }
+    }
+
+    return {
+      success: true,
+      message: `Workflow "${parameters.name}" created successfully with ${parameters.steps.length} steps`,
+      result,
+    };
   },
 });
 
-const assertStepTypesAreSupported = (steps: WorkflowAction[]): void => {
-  if (steps.some((step) => step.type === WorkflowActionType.CODE)) {
-    throw new WorkflowVersionStepException(
-      'CODE steps cannot be created via create_complete_workflow because it does not create the underlying logic function. Use create_workflow_version_step instead.',
-      WorkflowVersionStepExceptionCode.INVALID_REQUEST,
-    );
-  }
+const createWorkflowOrBuildFailure = async ({
+  deps,
+  workspaceId,
+  userWorkspaceId,
+  name,
+  trigger,
+  steps,
+  edges,
+}: {
+  deps: CreateCompleteWorkflowToolDeps;
+  workspaceId: string;
+  userWorkspaceId: string | undefined;
+  name: string;
+  trigger: WorkflowTrigger;
+  steps: WorkflowAction[];
+  edges: WorkflowVersionEdge[];
+}): Promise<
+  | { createdWorkflow: CreatedCoreWorkflow }
+  | { failure: CreateCompleteWorkflowFailure }
+> => {
+  try {
+    assertStepTypesAreSupported(steps);
+    await assertAiAgentStepsRunReusableAgentsOrThrow({
+      deps,
+      workspaceId,
+      steps,
+    });
 
-  if (steps.some((step) => step.type === WorkflowActionType.AI_AGENT)) {
+    return {
+      createdWorkflow:
+        await deps.coreWorkflowMutationService.createWorkflowWithContent({
+          workspaceId,
+          userWorkspaceId,
+          name,
+          trigger,
+          steps,
+          edges,
+        }),
+    };
+  } catch (error) {
+    return {
+      failure: {
+        success: false,
+        message: `Failed to create workflow "${name}", nothing was created: ${error.message}`,
+        error: error.message,
+      },
+    };
+  }
+};
+
+const assertStepTypesAreSupported = (steps: WorkflowAction[]): void => {
+  if (
+    steps.some(
+      (step) =>
+        step.type === WorkflowActionType.CODE &&
+        !isNonEmptyString(step.settings.input.code),
+    )
+  ) {
     throw new WorkflowVersionStepException(
-      'AI_AGENT steps cannot be created via create_complete_workflow because it does not create the underlying agent. Use create_workflow_version_step instead, then call update_agent to configure the agent.',
+      'CODE steps created via create_complete_workflow must carry their TypeScript source in settings.input.code.',
       WorkflowVersionStepExceptionCode.INVALID_REQUEST,
     );
   }
@@ -237,34 +256,31 @@ const assertStepTypesAreSupported = (steps: WorkflowAction[]): void => {
   }
 };
 
-const findInitialDraftCoreVersionIdOrThrow = async ({
+const assertAiAgentStepsRunReusableAgentsOrThrow = async ({
   deps,
   workspaceId,
-  userWorkspaceId,
-  coreWorkflowId,
+  steps,
 }: {
-  deps: CreateCompleteWorkflowToolDeps;
+  deps: Pick<CreateCompleteWorkflowToolDeps, 'workflowAiAgentStepAgentService'>;
   workspaceId: string;
-  userWorkspaceId: string | undefined;
-  coreWorkflowId: string;
-}): Promise<string> => {
-  const coreWorkflowVersions =
-    await deps.coreWorkflowVersionListService.findManyByCoreWorkflowId({
-      workspaceId,
-      userWorkspaceId,
-      coreWorkflowId,
-    });
-
-  const draftVersion = coreWorkflowVersions.find(
-    (version) => version.status === CoreWorkflowVersionStatus.DRAFT,
+  steps: WorkflowAction[];
+}): Promise<void> => {
+  const agentIds = new Set(
+    steps.flatMap((step) =>
+      step.type === WorkflowActionType.AI_AGENT &&
+      !isWorkflowAiAgentGenerateStep(step.settings.input) &&
+      isDefined(step.settings.input.agentId)
+        ? [step.settings.input.agentId]
+        : [],
+    ),
   );
 
-  if (!isDefined(draftVersion)) {
-    throw new WorkflowVersionStepException(
-      `Created workflow '${coreWorkflowId}' has no initial draft version`,
-      WorkflowVersionStepExceptionCode.NOT_FOUND,
-    );
-  }
-
-  return draftVersion.id;
+  await Promise.all(
+    [...agentIds].map((agentId) =>
+      deps.workflowAiAgentStepAgentService.findAgentRunnableByNewStepOrThrow({
+        agentId,
+        workspaceId,
+      }),
+    ),
+  );
 };

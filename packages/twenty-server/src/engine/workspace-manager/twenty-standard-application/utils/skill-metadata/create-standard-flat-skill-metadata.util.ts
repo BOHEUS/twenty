@@ -1,5 +1,8 @@
+import { msg } from '@lingui/core/macro';
+
 import { type FlatSkill } from 'src/engine/metadata-modules/flat-skill/types/flat-skill.type';
 import { type AllStandardSkillName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-skill-name.type';
+import { i18nLabel } from 'src/engine/workspace-manager/twenty-standard-application/utils/i18n-label.util';
 import {
   type CreateStandardSkillArgs,
   createStandardSkillFlatMetadata,
@@ -12,9 +15,15 @@ export const STANDARD_FLAT_SKILL_METADATA_BUILDERS_BY_SKILL_NAME = {
       context: {
         skillName: 'workflow-building',
         name: 'workflow-building',
-        label: 'Workflow Building',
-        description:
-          'Use when the user wants something to happen automatically: creating, changing, debugging or deleting a workflow, or phrasing a rule as when X happens do Y',
+        label: i18nLabel(
+          msg({ message: `Workflow Building`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use when the user wants something to happen automatically: creating, changing, debugging or deleting a workflow, or phrasing a rule as when X happens do Y`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconSettingsAutomation',
         content: `# Workflow Building Skill
 
@@ -33,7 +42,27 @@ You help users create and manage automation workflows.
 - **Triggers**: DATABASE_EVENT, MANUAL, CRON, WEBHOOK
 - **Steps**: CREATE_RECORD, SEND_EMAIL, CODE, LOGIC_FUNCTION, PICK_RECORD, CLASSIFY, etc.
 - **Data flow**: Use {{stepId.fieldName}} to reference previous step outputs
-- **Relationships**: Use nested objects like {"company": {"id": "{{reference}}"}}
+- **Relationships**: Set a relation by its foreign key, e.g. {"companyId": "{{reference}}"}. In UPDATE_RECORD, list that same key (companyId) in fieldsToUpdate
+
+## Linking Emails, Events, Notes and Tasks to Records
+
+Emails, calendar events, notes and tasks have no company, person or opportunity field. Each link is a separate junction record:
+
+| Linked item    | Junction object           | Parent key            |
+| -------------- | ------------------------- | --------------------- |
+| Email thread   | \`messageThreadTarget\`   | \`messageThreadId\`   |
+| Calendar event | \`calendarEventTarget\`   | \`calendarEventId\`   |
+| Note           | \`noteTarget\`            | \`noteId\`            |
+| Task           | \`taskTarget\`            | \`taskId\`            |
+
+Each junction has one foreign key per linkable object: \`targetCompanyId\`, \`targetPersonId\`, \`targetOpportunityId\`. Set exactly one. Custom objects add a \`target<ObjectName>Id\` key on \`noteTarget\` and \`taskTarget\` only. Check the junction's metadata for exact field names.
+
+To link, use CREATE_RECORD on the junction. Linking to several records means one junction record each:
+{ "objectName": "noteTarget", "objectRecord": { "noteId": "...", "targetCompanyId": "..." } }
+
+To react to a link, trigger on \`<junction>.created\`. The same keys are on {{trigger.properties.after}}. Email and calendar sync also create \`messageThreadTarget\` and \`calendarEventTarget\` records automatically (\`isManuallyAssigned\` false), so filter on \`isManuallyAssigned\` when only links made by a user should count.
+
+Not to be confused with \`attachment\`, which stores files.
 
 ## CRON Trigger Settings Schema
 
@@ -107,7 +136,7 @@ PICK_RECORD selects one record from a candidate pool (settings.input.recordIds) 
 CLASSIFY asks an AI model one or more typed questions about a single piece of text and returns a typed answer for each, so later steps can branch on the result. Reach for it when the user describes sorting, routing, triaging, tagging or rating something written — "route support emails to the right team", "flag angry replies", "rate how urgent this is". Prefer it over a CODE step for those: it needs no code and no logic function.
 
 settings.input takes:
-- **state** — the text every question is asked about. Usually a variable, e.g. "{{trigger.record.bodyV2.markdown}}".
+- **state** — the text every question is asked about. Usually a variable, e.g. "{{trigger.properties.after.bodyV2.markdown}}".
 - **questions** — an array. Each needs id (a UUID), name, type, instructions and criteria.
 - **modelId** — optional. Omit it to use the workspace's classification model, which is almost always what you want.
 
@@ -145,7 +174,6 @@ Do NOT call \`validate_workflow\` after every change. Call it exactly ONCE at th
 - Ensure workflow logic remains coherent
 
 Prioritize user understanding and workflow effectiveness.`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -156,9 +184,15 @@ Prioritize user understanding and workflow effectiveness.`,
       context: {
         skillName: 'data-manipulation',
         name: 'data-manipulation',
-        label: 'Data Manipulation',
-        description:
-          'Use when finding, filtering, creating, updating or importing records, and whenever a request needs sorting or touches more than a handful of rows',
+        label: i18nLabel(
+          msg({ message: `Data Manipulation`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use when finding, filtering, creating, updating or importing records, and whenever a request needs sorting or touches more than a handful of rows`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconDatabase',
         content: `# Data Manipulation Skill
 
@@ -246,14 +280,14 @@ This is free — it runs before the sandbox and does not add a code_interpreter 
    \`\`\`
    Never paginate through hundreds of existing records with \`find_many_*\` to find the ones you just created.
 5. **Confirm the mapping before writing.** Present the proposed column → field mapping to the user (source column → target field, relation strategy such as "Company matched by name → companyId", and any type coercions) and wait for them to confirm or adjust. Do not write anything before this confirmation.
-6. **Silently validate the mapping with a 2-row upsert.** Inside the same \`code_interpreter\` run, upsert just 2 rows as an internal correctness check. This is NOT a user-facing step: do not announce or narrate it. Only surface it if it FAILS — then report the error and the offending mapping so it can be fixed before the full import.
-7. **Write with bulk_upsert.** Prefer upsert so dedup on unique fields (e.g. email) is handled server-side and re-runs are idempotent:
+6. **Silently validate the mapping with a 2-row upsert.** Inside the same \`code_interpreter\` run, upsert just the first 2 rows as an internal correctness check. This is NOT a user-facing step: do not announce or narrate it. Only surface it if it FAILS — then report the error and the offending mapping so it can be fixed before the full import.
+7. **Write the remaining rows with bulk_upsert.** Write \`records[2:]\`, never the full list again: objects without a unique field (opportunities, tasks, notes, most custom objects) cannot dedupe, so the 2 check rows would be created twice. Prefer upsert so dedup on unique fields (e.g. email) is handled server-side and re-runs are idempotent:
    \`\`\`python
-   summary = twenty.bulk_upsert('people', records)
+   summary = twenty.bulk_upsert('people', records[2:])
    print(summary)  # { 'created': 4000, 'updated': 380, 'upserted': 4380, 'failed': 0, 'errors': [] }
    \`\`\`
    \`bulk_upsert\` batches at 200 (the platform maximum) and paginates to completion. Never stop at "partial" — if some batches failed, report the count and retry the failed offsets.
-8. **Report a compact summary only** — the \`created\` / \`updated\` / \`failed\` split plus a few sample errors. Never echo the created records back into the conversation.
+8. **Report a compact summary only** — the \`created\` / \`updated\` / \`failed\` split plus a few sample errors. Add the 2 check rows' \`created\` / \`updated\` counts so the totals cover every row. Never echo the created records back into the conversation.
 
 ### Anti-patterns — never do these
 
@@ -275,7 +309,6 @@ This is free — it runs before the sandbox and does not add a code_interpreter 
 Every tool round-trip re-sends the ENTIRE conversation (system prompt, loaded skills, and all prior tool inputs/outputs) as new input tokens, so a long thread makes every later step progressively more expensive. When the user finishes an import and moves on to a distinct objective (e.g. field configuration, segmentation, dashboards, or a second unrelated import), suggest starting a NEW thread for it rather than continuing in the same one, which resets the context and keeps cost low. Keep a single import (inspect, confirm, validate, write, report) within one thread.
 
 Prioritize data integrity and provide clear feedback on operations performed.`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -286,9 +319,15 @@ Prioritize data integrity and provide clear feedback on operations performed.`,
       context: {
         skillName: 'workspace-demo-seeding',
         name: 'workspace-demo-seeding',
-        label: 'Workspace Demo Seeding',
-        description:
-          'Use only when explicitly asked to fill a workspace with demonstration data for a given industry',
+        label: i18nLabel(
+          msg({ message: `Workspace Demo Seeding`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use only when explicitly asked to fill a workspace with demonstration data for a given industry`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconDatabase',
         content: `# Workspace Demo Seeding Skill
 You will transform the existing standard workspace into a fully custom demo tailored to the user's business type.
@@ -314,8 +353,6 @@ If you have to create multiple things you *MUST* use the relevant create many to
 - Use *create_many_field_metadata* to create all non-relation fields at once (including new fields on standard objects)
 - Use *create_many_relation_fields* to create all relation fields between objects at once (do this AFTER creating the objects and non-relation fields)
 
-If you have to wait use the navigate_app tool.
-
 For the fields you will create, make sure to create a good variety of field types to showcase the different capabilities of the platform, for example:
 - Create SELECT and SELECT_MULTIPLE field types for building demo board index views and table with groups views
 - Create DATE_TIME fields to be able to create calendar views
@@ -333,14 +370,11 @@ STEP 0: Present a plan to the user and wait for approval.
   - A brief description of the key relations between objects
 - Present this plan to the user and *wait for their confirmation or adjustments* before proceeding
 - Once approved, archive every existing custom object without asking for further confirmation: call get_object_metadata, keep the objects where isCustom is true, then set isActive to false on all of them in a single update_many_object_metadata call
-- Wait 3 seconds after deletions for the backend side effects to be completed
 
 STEP 1: Create all the custom objects at once with create_many_object_metadata
 name must start with lowercase letter and contain only alphanumeric letters
 
-STEP 2: Wait 3 seconds, for the backend side effects to be completed
-
-STEP 3: Create all NON-RELATION fields for ALL objects by batch with create_many_field_metadata.
+STEP 2: Create all NON-RELATION fields for ALL objects by batch with create_many_field_metadata.
 Do a separate batch call for each object.
 This includes:
 - New custom fields for the standard objects (Person, Company, Opportunity) — use their objectMetadataId from get_object_metadata
@@ -348,15 +382,11 @@ This includes:
 DO NOT include relation fields in this step. Only create TEXT, NUMBER, BOOLEAN, DATE_TIME, SELECT, MULTI_SELECT, CURRENCY, etc.
 SELECT option values must be UPPER_SNAKE_CASE
 
-STEP 4: Wait 3 seconds, for the backend side effects to be completed
-
-STEP 5: Create all RELATION fields between objects at once with create_many_relation_fields
+STEP 3: Create all RELATION fields between objects at once with create_many_relation_fields
 The name property should be camel-cased or the backend will throw, targetFieldLabel must be a string, targetFieldIcon must be a string, type must be one of the following values: MANY_TO_ONE, ONE_TO_MANY
 targetFieldIcon is like IconSomething, it's ok if it doesn't exist in the icon library, it will just be a blank icon, but it needs to be a string that starts with Icon and is in PascalCase
 
-STEP 6: Wait 3 seconds, for the backend side effects to be completed
-
-STEP 7: Rename and enrich the first N records of People, Companies, and Opportunities.
+STEP 4: Rename and enrich the first N records of People, Companies, and Opportunities.
 - Use find_many_people (limit: 50, orderBy: [{ position: "AscNullsFirst" }]), find_many_companies (limit: 50, orderBy: [{ position: "AscNullsFirst" }]), find_many_opportunities (limit: 50, orderBy: [{ position: "AscNullsFirst" }]) to get the IDs of the first records in each table
   - Ordering by position ascending gives the earliest-inserted records, which are contiguous in the table — this keeps the demo data tightly grouped and makes the workspace feel coherent
 - For each standard object, call update_one_person / update_one_company / update_one_opportunity **individually per record** (one call per record) to set domain-relevant names and field values:
@@ -365,36 +395,24 @@ STEP 7: Rename and enrich the first N records of People, Companies, and Opportun
   - **Opportunities**: replace name with a domain-relevant deal name (e.g. "Q2 retainer — Ashford & Partners", "New patient intake — Meridian Health").
   - Also set the new custom fields on each record: spread realistic values across SELECT fields, set plausible CURRENCY/NUMERIC amounts, set DATE_TIME fields around TODAY.
 - Do this one record at a time — the API does not support bulk individual updates with different values per record
-- Wait 3 seconds after finishing all updates for one object type before moving to the next
 
-STEP 7.5: Add view fields to the default views of standard objects to expose the new custom fields.
+STEP 5: Add view fields to the default views of standard objects to expose the new custom fields.
 For each of People, Companies, and Opportunities:
-- Navigate to the object's default view using the navigate_app tool
-- Wait 3 seconds
 - Use create_many_view_fields to add all the new custom fields to the default view so they are visible
   - Use decimal positions between 0 and 1 to insert them right after the label identifier field
-- Navigate to the object's default view again using the navigate_app tool so the user can see the enriched records
-- Wait 3 seconds
 
-STEP 8: For each new custom object, repeat ALL of the following sub-steps before moving to the next object:
-- Navigate the object's default view using the navigate_app tool
-- Wait 3 seconds, so the user has time to see the object default view
+STEP 6: For each new custom object, repeat ALL of the following sub-steps before moving to the next object:
 - Create the view fields for the default view, use the create_many_view_fields tool, and make sure to include all created fields, including the relation fields, so that we have a complete view of the object with all its fields.
   BE CAREFUL to use a position that will put those view fields right after the first label identifier field
   which has a position of 0 and the next system created fields which begin at 1, *so use decimal positions between 0 and 1*
   *YOU MUST CREATE ALL VIEW FIELDS FOR ALL FIELDS, INCLUDING RELATION FIELDS, IN THIS STEP, DO NOT LEAVE ANY FIELD WITHOUT A VIEW FIELD, OTHERWISE IT WILL NOT BE VISIBLE IN THE DEFAULT VIEW AND THE USER WON'T KNOW IT EXISTS*
 
-- **MANDATORY**: Navigate to the object's default view again using the navigate_app tool — YOU MUST DO THIS BEFORE EACH OBJECT'S DATA SEEDING, every single time, without exception
-- Wait 3 seconds
 - Seed relevant and realistic mock data for this object:
   - use the relevant tool to create many records for this object
   - between 20 and 50
   - with a coherent combination of values
   - link records to existing People and Companies using the relation fields you created
   - use dates that are around TODAY so it's relevant for seeing past / future and present records
-
-- **MANDATORY**: Navigate to the object's default view again using the navigate_app tool so the user can see the populated data — DO NOT SKIP THIS, even if you already navigated earlier in this loop iteration
-- Wait 3 seconds so the user has time to see the seeded records
 
 - Then create 2 to 3 additional views for this object, one at a time. For each view, complete ALL of the following sub-steps before creating the next view:
   - Create the view using the create_view tool:
@@ -408,18 +426,16 @@ STEP 8: For each new custom object, repeat ALL of the following sub-steps before
     - **KANBAN views**: Sort by a CURRENCY or NUMERIC field DESC (biggest value first) if one exists, or by createdAt DESC. Add a filter to exclude archived/cancelled records if such a SELECT option exists.
     - **CALENDAR views**: Sort by the date field ASC (earliest events first). Add a filter using IS_IN_FUTURE or IS_RELATIVE to show only upcoming records by default.
     - **TABLE with groups**: Sort by createdAt DESC (most recent first) and add a filter on a meaningful field (e.g. status IS_NOT "CANCELLED", or amount GREATER_THAN_OR_EQUAL to some threshold that keeps ~80% of the records visible).
-  - **MANDATORY**: Navigate to this view immediately using the navigate_app tool (navigateToView with the view id returned when you created it) — YOU MUST DO THIS FOR EVERY SINGLE VIEW, right after its fields/filters/sorts are set up, without exception
-  - Wait 3 seconds so the user can see the view and course-correct if needed
 
 Also create additional views for the standard objects (People, Companies, Opportunities) that showcase the new custom fields:
 - For People: a KANBAN view grouped by the new SELECT field you added (e.g. "By Specialisation", "By Status")
 - For Opportunities: a KANBAN view grouped by the new stage/status field (pipeline view)
 - For Companies: a TABLE view grouped by the new SELECT field
-Navigate to each view after creating it, using navigate_app with the view id returned when you created it. Wait 3 seconds.
 
-Loop STEP 8 for all the custom objects
+Share links to the configured objects and views so the user can open them when ready.
+
+Loop STEP 6 for all the custom objects
 `,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -430,9 +446,15 @@ Loop STEP 8 for all the custom objects
       context: {
         skillName: 'dashboard-building',
         name: 'dashboard-building',
-        label: 'Dashboard Building',
-        description:
-          'Use when the user asks for a dashboard, a chart, a metric tile or a report page, or wants to change one that exists',
+        label: i18nLabel(
+          msg({ message: `Dashboard Building`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use when the user asks for a dashboard, a chart, a metric tile or a report page, or wants to change one that exists`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconLayoutDashboard',
         content: `# Dashboard Building Skill
 
@@ -552,7 +574,7 @@ Step 1 — upsert_complete_view: {
   "fields": [{ "fieldName": "name" }, { "fieldName": "status" }, { "fieldName": "amount" }],
   "filters": [{ "fieldName": "status", "operand": "IS_NOT", "value": ["DONE"] }],
   "sorts": [{ "fieldName": "createdAt", "direction": "DESC" }]
-} → { "id": "<view-uuid>" }
+} → { "success": true, "message": "...", "result": { "id": "<view-uuid>", ... } }
 Step 2 — add_dashboard_widget: { "type": "RECORD_TABLE", "objectMetadataId": "<repair-object-uuid>", "configuration": { "configurationType": "RECORD_TABLE", "viewId": "<view-uuid>" }, "position": { "layoutMode": "GRID", "row": 0, "column": 0, "rowSpan": 8, "columnSpan": 12 } }
 
 ## Tabs
@@ -577,7 +599,6 @@ After creating a tab, use its returned tabId as pageLayoutTabId when calling add
 - Start simple, add complexity as needed
 - When modifying a chart, confirm whether the user wants to change settings or change chart type
 - Use RECORD_TABLE widgets to give users direct access to filtered record lists without leaving the dashboard`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -588,9 +609,15 @@ After creating a tab, use its returned tabId as pageLayoutTabId when calling add
       context: {
         skillName: 'metadata-building',
         name: 'metadata-building',
-        label: 'Metadata Building',
-        description:
-          'Use when the data model itself changes: adding or editing objects, fields, relations or select options',
+        label: i18nLabel(
+          msg({ message: `Metadata Building`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use when the data model itself changes: adding or editing objects, fields, relations or select options`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconBuildingSkyscraper',
         content: `# Metadata Building Skill
 
@@ -613,8 +640,8 @@ You help users manage their workspace data model by creating, updating, and orga
 
 ## Tool Output Format
 
-- **get_object_metadata** returns an array of objects. System objects (attachment, message, etc.) are returned as compact \`{id, nameSingular, namePlural}\`, which is enough to locate an object and read its id. Only pass \`includeFullSystemObjects: true\` when you specifically need a system object's full configuration (e.g. when creating relations to workspaceMember).
-- **get_field_metadata** returns an array of fields. System fields are returned as compact \`{id, name, type}\`, which is enough to know which fields exist and their types. Only pass \`includeFullSystemFields: true\` when you specifically need a system field's full configuration (settings, defaultValue, relation targets). Internal fields (searchVector, position, updatedBy) are always excluded. Null properties are omitted from non-system fields.
+- **get_object_metadata** returns its objects as an array under \`result.objects\`. System objects (attachment, message, etc.) are returned as compact \`{id, nameSingular, namePlural}\`, which is enough to locate an object and read its id. Only pass \`includeFullSystemObjects: true\` when you specifically need a system object's full configuration (e.g. when creating relations to workspaceMember).
+- **get_field_metadata** returns its fields as an array under \`result.fields\`. System fields are returned as compact \`{id, name, type}\`, which is enough to know which fields exist and their types. Only pass \`includeFullSystemFields: true\` when you specifically need a system field's full configuration (settings, defaultValue, relation targets). Internal fields (searchVector, position, updatedBy) are always excluded. Null properties are omitted from non-system fields.
 ## Field Types Available
 
 - **TEXT**: Simple text fields
@@ -658,7 +685,6 @@ You help users manage their workspace data model by creating, updating, and orga
 - Provide clear feedback on operations performed
 
 Prioritize data model integrity and user understanding.`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -669,9 +695,15 @@ Prioritize data model integrity and user understanding.`,
       context: {
         skillName: 'code-interpreter',
         name: 'code-interpreter',
-        label: 'Code Interpreter',
-        description:
-          'Use for Python over data the record tools cannot express: statistics, chart images, parsing an uploaded file. Do not use it for ordinary record reads and writes',
+        label: i18nLabel(
+          msg({ message: `Code Interpreter`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use for Python over data the record tools cannot express: statistics, chart images, parsing an uploaded file. Do not use it for ordinary record reads and writes`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconCode',
         content: `# Code Interpreter Skill
 
@@ -824,7 +856,6 @@ company_ids = twenty.lookup_by('companies', 'name', ['Acme', 'Globex'])
 \`\`\`
 
 For importing CSV/Excel/spreadsheet data, load the \`data-manipulation\` skill for the full recipe.`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -835,9 +866,15 @@ For importing CSV/Excel/spreadsheet data, load the \`data-manipulation\` skill f
       context: {
         skillName: 'xlsx',
         name: 'xlsx',
-        label: 'Excel & Spreadsheets',
-        description:
-          'Use whenever a spreadsheet is the input or the output, including formulas, formatting, charts and CSV conversion',
+        label: i18nLabel(
+          msg({ message: `Excel & Spreadsheets`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use whenever a spreadsheet is the input or the output, including formulas, formatting, charts and CSV conversion`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconFileSpreadsheet',
         content: `# Excel Processing Skill
 
@@ -962,7 +999,6 @@ If errors found, fix them and recalculate again.
 | Create Excel | openpyxl | \`Workbook()\` |
 | Add formula | openpyxl | \`sheet['B2'] = '=SUM(A1:A10)'\` |
 | Recalculate | script | \`python /home/user/scripts/xlsx/recalc.py file.xlsx\` |`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -973,9 +1009,15 @@ If errors found, fix them and recalculate again.
       context: {
         skillName: 'pdf',
         name: 'pdf',
-        label: 'PDF Processing',
-        description:
-          'Use whenever a PDF is involved: reading text or tables, filling a form, creating, merging or splitting one',
+        label: i18nLabel(
+          msg({ message: `PDF Processing`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use whenever a PDF is involved: reading text or tables, filling a form, creating, merging or splitting one`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconFileTypePdf',
         content: `# PDF Processing Skill
 
@@ -1100,7 +1142,6 @@ writer.write('/home/user/output/page1.pdf')
 | Validate fill | script | \`python create_validation_image.py filled.pdf\` |
 | Create PDF | reportlab | \`canvas.Canvas('out.pdf')\` |
 | Merge PDFs | PyPDF2 | \`PdfMerger()\` |`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -1111,9 +1152,15 @@ writer.write('/home/user/output/page1.pdf')
       context: {
         skillName: 'docx',
         name: 'docx',
-        label: 'Word Documents',
-        description:
-          'Use whenever a Word document is the input or the output, including templates, styles and tracked changes',
+        label: i18nLabel(
+          msg({ message: `Word Documents`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use whenever a Word document is the input or the output, including templates, styles and tracked changes`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconFileTypeDocx',
         content: `# Word Document Processing Skill
 
@@ -1259,7 +1306,6 @@ para.paragraph_format.space_after = Pt(12)
 | Unpack for editing | script | \`python unpack.py doc.docx ./out/\` |
 | Repack | script | \`python pack.py ./out/ doc.docx\` |
 | Validate | script | \`python validate.py doc.docx\` |`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -1270,9 +1316,15 @@ para.paragraph_format.space_after = Pt(12)
       context: {
         skillName: 'view-building',
         name: 'view-building',
-        label: 'View Building',
-        description:
-          'Use when creating or changing a view of any type, table, kanban or calendar, including the columns, filters, sorts and grouping on it',
+        label: i18nLabel(
+          msg({ message: `View Building`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use when creating or changing a view of any type, table, kanban or calendar, including the columns, filters, sorts and grouping on it`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconLayoutBoard',
         content: `# View Building Skill
 
@@ -1295,7 +1347,6 @@ You help users create and configure views, and the filters and sorts that decide
 - update_many_view_fields - Update column configuration
 - get_view_fields - List columns in a view
 - get_object_metadata / get_field_metadata - Discover objects and their fields
-- navigate_app - Navigate to a view after creation, by the view id returned by the tool that created it
 
 ## upsert_complete_view (preferred)
 
@@ -1327,7 +1378,7 @@ Example: { "objectNameSingular": "opportunity", "type": "KANBAN", "name": "Pipel
    - For CALENDAR: provide both \`calendarFieldName\` (a DATE/DATE_TIME field name) and \`calendarLayout\` ("DAY", "WEEK", or "MONTH").
    - For TABLE: No special configuration needed beyond the fields list.
 
-4. **Navigate**: Use navigate_app (navigateToView with the view id returned by upsert_complete_view) to show the user their new view.
+4. **Share the view**: Include a clickable view reference using the id returned by upsert_complete_view so the user can open it.
 
 ## KANBAN Best Practices
 
@@ -1351,7 +1402,8 @@ Example: { "objectNameSingular": "opportunity", "type": "KANBAN", "name": "Pipel
 
 | Field Type | Available Operators |
 |---|---|
-| TEXT, EMAILS, FULL_NAME, ADDRESS, LINKS, PHONES | CONTAINS, DOES_NOT_CONTAIN, IS_EMPTY, IS_NOT_EMPTY |
+| TEXT | CONTAINS, DOES_NOT_CONTAIN, IS, IS_NOT, IS_EMPTY, IS_NOT_EMPTY |
+| EMAILS, FULL_NAME, ADDRESS, LINKS, PHONES | CONTAINS, DOES_NOT_CONTAIN, IS_EMPTY, IS_NOT_EMPTY |
 | NUMBER, NUMERIC | IS, IS_NOT, GREATER_THAN_OR_EQUAL, LESS_THAN_OR_EQUAL, IS_EMPTY, IS_NOT_EMPTY |
 | CURRENCY | GREATER_THAN_OR_EQUAL, LESS_THAN_OR_EQUAL, IS_EMPTY, IS_NOT_EMPTY |
 | DATE, DATE_TIME | IS, IS_RELATIVE, IS_IN_PAST, IS_IN_FUTURE, IS_TODAY, IS_BEFORE, IS_AFTER, IS_EMPTY, IS_NOT_EMPTY |
@@ -1395,9 +1447,8 @@ Some fields carry sub-fields you filter on directly:
 
 - If the user is vague (e.g., "create a board"), ask which object they want to see
 - Suggest the most relevant view type based on the object's fields
-- After creating a view, always configure useful view fields and navigate to it
+- After creating a view, configure useful view fields and share a clickable view reference
 - Explain what each view type does so users can make informed choices`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -1408,9 +1459,15 @@ Some fields carry sub-fields you filter on directly:
       context: {
         skillName: 'pptx',
         name: 'pptx',
-        label: 'PowerPoint',
-        description:
-          'Use whenever a PowerPoint deck is the input or the output, including slides, templates, tables and charts',
+        label: i18nLabel(
+          msg({ message: `PowerPoint`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use whenever a PowerPoint deck is the input or the output, including slides, templates, tables and charts`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconPresentation',
         content: `# PowerPoint Processing Skill
 
@@ -1574,7 +1631,6 @@ python /home/user/scripts/pptx/replace.py input.pptx '{"{{company}}": "Acme Corp
 | Get slide inventory | script | \`python inventory.py pres.pptx\` |
 | Reorder slides | script | \`python rearrange.py pres.pptx '[2,1,3]' out.pptx\` |
 | Find/replace | script | \`python replace.py pres.pptx '{...}' out.pptx\` |`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -1585,9 +1641,13 @@ python /home/user/scripts/pptx/replace.py input.pptx '{"{{company}}": "Acme Corp
       context: {
         skillName: 'roles',
         name: 'roles',
-        label: 'Roles',
-        description:
-          'Use when the user asks who can see or change what: creating a role, editing permissions, or assigning a role to someone',
+        label: i18nLabel(msg({ message: `Roles`, context: 'skill.label' })),
+        description: i18nLabel(
+          msg({
+            message: `Use when the user asks who can see or change what: creating a role, editing permissions, or assigning a role to someone`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconLockAccess',
         content: `# Roles Skill
 
@@ -1675,7 +1735,6 @@ When the user names a person, resolve them to a workspace member first and resta
 ## After mutating
 
 Report what changed in plain terms: which role, what it can now do, and who is affected. If you changed overrides, restate the objects that are still overridden so the user can see nothing was dropped.`,
-        isCustom: false,
         isSystem: true,
       },
     }),
@@ -1686,9 +1745,15 @@ Report what changed in plain terms: which role, what it can now do, and who is a
       context: {
         skillName: 'meeting-prep',
         name: 'meeting-prep',
-        label: 'Meeting Prep',
-        description:
-          'Use before a call or a meeting, and whenever the user asks who am I talking to, brief me on this account, or what do I need to know before this conversation',
+        label: i18nLabel(
+          msg({ message: `Meeting Prep`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use before a call or a meeting, and whenever the user asks who am I talking to, brief me on this account, or what do I need to know before this conversation`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconCalendarEvent',
         content: `# Meeting Prep Skill
 
@@ -1723,7 +1788,6 @@ Reference every record you name so the user can click through to it.
 - This skill only reads. Do not create or update anything.
 - If the user has not said who the meeting is with, ask before gathering.
 - Keep it short. A brief nobody finishes is a brief nobody uses.`,
-        isCustom: false,
         isSystem: false,
       },
     }),
@@ -1734,9 +1798,15 @@ Reference every record you name so the user can click through to it.
       context: {
         skillName: 'deal-review',
         name: 'deal-review',
-        label: 'Deal Review',
-        description:
-          'Use when the user asks how a deal is doing, which deals are at risk, what is stuck or going quiet, or asks for a pipeline review',
+        label: i18nLabel(
+          msg({ message: `Deal Review`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use when the user asks how a deal is doing, which deals are at risk, what is stuck or going quiet, or asks for a pipeline review`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconTargetArrow',
         content: `# Deal Review Skill
 
@@ -1769,7 +1839,6 @@ Say which signals you could not evaluate and why. A review that hides its gaps i
 - This skill only reads. Propose the next step and let the user ask you to create the task.
 - Never call a deal at risk without naming the signal that says so.
 - Never guess at an amount or a date that is missing. Report it as missing.`,
-        isCustom: false,
         isSystem: false,
       },
     }),
@@ -1780,9 +1849,15 @@ Say which signals you could not evaluate and why. A review that hides its gaps i
       context: {
         skillName: 'crm-hygiene',
         name: 'crm-hygiene',
-        label: 'CRM Hygiene',
-        description:
-          'Use when the user asks to clean up the CRM, find duplicates, fill in missing fields, or asks why the data is messy or which records are stale',
+        label: i18nLabel(
+          msg({ message: `CRM Hygiene`, context: 'skill.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: `Use when the user asks to clean up the CRM, find duplicates, fill in missing fields, or asks why the data is messy or which records are stale`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconListCheck',
         content: `# CRM Hygiene Skill
 
@@ -1807,17 +1882,17 @@ Lead with counts, so the user sees the shape of the problem before the detail. T
 
 Always confirm before writing. Show what you will change and wait.
 
-- You cannot merge records. There is no merge tool; merging happens in the UI, where the user selects the records and uses the Merge action. Report each duplicate pair with both records referenced and leave the merge to them.
+- Merge duplicates with merge_many_* (merge_many_companies, merge_many_people, and so on), one call per group. Call it with dryRun: true first and show the user the merged record. When the records disagree, ask which one to keep and pass its position in ids as conflictPriorityIndex. The other records are permanently deleted, so merge only the groups the user approved.
+- If there is no merge_many_* tool for the object, the user's role cannot merge it. Report each group with its records referenced and leave the merge to someone who can.
 - Fill missing fields only from data already in the workspace, never from a guess.
 - Apply approved changes in one call rather than one record at a time. These tools carry the object's plural name: update_many_people, upsert_many_companies, and so on. Use update_many_* when every matched record gets the same value, upsert_many_* when each record needs its own.
 - Report what changed afterwards, and say what you deliberately left alone.
 
 ## Rules
 
-- Never delete a record in this skill, and never fake a merge by copying fields across and deleting the loser.
+- Never delete a record in this skill except through merge_many_*, and never fake a merge by copying fields across and deleting the loser: that loses every record linked to it.
 - Never confirm on the user's behalf, and never read a general yes as approval for a second batch.
 - If there is nothing wrong, say so. A clean workspace is a valid result.`,
-        isCustom: false,
         isSystem: false,
       },
     }),
@@ -1828,9 +1903,13 @@ Always confirm before writing. Show what you will change and wait.
       context: {
         skillName: 'enrich',
         name: 'enrich',
-        label: 'Enrich',
-        description:
-          'Use when the user asks to research or enrich a company or a person, fill in what the CRM does not know about them, or find out what a company actually does',
+        label: i18nLabel(msg({ message: `Enrich`, context: 'skill.label' })),
+        description: i18nLabel(
+          msg({
+            message: `Use when the user asks to research or enrich a company or a person, fill in what the CRM does not know about them, or find out what a company actually does`,
+            context: 'skill.description',
+          }),
+        ),
         icon: 'IconSearch',
         content: `# Enrich Skill
 
@@ -1865,7 +1944,6 @@ Anything you found that has no field to live in belongs in a note on the record,
 - Never invent a value to fill a gap. An empty field beats a wrong one.
 - Confidence matters: if the search returned a different person who shares the name, say so and stop.
 - Do not enrich a large set of records unless the user asked for exactly that, and confirm the scope before you start.`,
-        isCustom: false,
         isSystem: false,
       },
     }),

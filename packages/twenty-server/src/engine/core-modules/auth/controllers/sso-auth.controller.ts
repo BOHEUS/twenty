@@ -12,6 +12,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 
 import { generateServiceProviderMetadata } from '@node-saml/node-saml';
+import { isNonEmptyString } from '@sniptt/guards';
 import { Response } from 'express';
 import {
   ApiPath,
@@ -111,7 +112,10 @@ export class SsoAuthController {
     PublicEndpointGuard,
     NoPermissionGuard,
   )
-  async oidcAuthCallback(@Req() req: OidcRequest, @Res() res: Response) {
+  async oidcAuthCallback(
+    @Req() req: OidcRequest,
+    @Res() res: Pick<Response, 'redirect'>,
+  ) {
     return await this.authCallback(req, res);
   }
 
@@ -122,7 +126,10 @@ export class SsoAuthController {
     PublicEndpointGuard,
     NoPermissionGuard,
   )
-  async samlAuthCallback(@Req() req: SamlRequest, @Res() res: Response) {
+  async samlAuthCallback(
+    @Req() req: SamlRequest,
+    @Res() res: Pick<Response, 'redirect'>,
+  ) {
     try {
       return await this.authCallback(req, res);
     } catch (err) {
@@ -133,7 +140,10 @@ export class SsoAuthController {
     }
   }
 
-  private async authCallback(req: OidcRequest | SamlRequest, res: Response) {
+  private async authCallback(
+    req: OidcRequest | SamlRequest,
+    res: Pick<Response, 'redirect'>,
+  ) {
     const workspaceIdentityProvider =
       await this.workspaceSsoIdentityProviderRepository.findOne({
         where: { id: req.user.identityProviderId },
@@ -232,7 +242,7 @@ export class SsoAuthController {
     const existingUser = await this.userService.findUserByEmail(payload.email);
 
     const { userData } = this.authService.formatUserDataPayload(
-      payload,
+      { ...payload, isEmailAlreadyVerified: true },
       existingUser,
     );
 
@@ -251,6 +261,10 @@ export class SsoAuthController {
         provider: AuthProviderEnum.SSO,
       },
     });
+
+    if (!user.isEmailVerified && !isNonEmptyString(user.passwordHash)) {
+      await this.userService.markEmailAsVerified(user.id);
+    }
 
     if (ssoContext) {
       await this.authService.createSsoConnectedAccountIfFeatureFlagIsOn({

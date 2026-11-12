@@ -21,15 +21,15 @@ Twenty marketplace metadata comes from `defineApplication()`:
 - `description`
 - `author`
 - `category`
-- `logoUrl`
-- `screenshots`
+- `logo`
+- `galleryImages`
 - `aboutDescription`
 - `websiteUrl`
 - `termsUrl`
 - `emailSupport`
 - `issueReportUrl`
 
-`logoUrl` and `screenshots` must reference files from the app `public/` folder, for example `public/logo.png` and `public/screenshot-1.png`. If `aboutDescription` is omitted, the marketplace uses the package `README.md` from npm as the About tab content.
+`logo` and `galleryImages` must reference files from the app `public/` folder, for example `public/logo.png` and `public/screenshot-1.png`. `logoUrl` and `screenshots` are deprecated aliases, and external `http(s)` URLs are dropped at build time. The default role is declared with `defineApplicationRole()` in its own file, not in `defineApplication()`. If `aboutDescription` is omitted, the marketplace uses the package `README.md` from npm as the About tab content.
 
 Files in `public/` are public, synced in dev mode, included in builds, and served without authentication. Never put secrets, private data, customer records, real tokens, or unreleased confidential material in public assets.
 
@@ -155,7 +155,7 @@ Logo guidance:
 
 Screenshot guidance:
 
-- Capture real app surfaces after `yarn twenty apply` or watch-mode sync.
+- Capture real app surfaces after `twenty app apply` or watch-mode sync.
 - Prefer the most useful user paths: app listing/about page, object index view, record page layout, front component surface, connection settings, or AI skill/agent behavior.
 - Use seeded or synthetic data only.
 - Hide browser chrome unless it helps explain setup.
@@ -172,15 +172,11 @@ export default defineApplication({
   universalIdentifier: APPLICATION_UNIVERSAL_IDENTIFIER,
   displayName: APP_DISPLAY_NAME,
   description: APP_DESCRIPTION,
-  defaultRoleUniversalIdentifier: DEFAULT_ROLE_UNIVERSAL_IDENTIFIER,
   requestedCapabilities: ['microphone'],
   author: 'Your Company',
   category: 'Productivity',
-  logoUrl: 'public/logo.png',
-  screenshots: [
-    'public/screenshot-1.png',
-    'public/screenshot-2.png',
-  ],
+  logo: 'public/logo.png',
+  galleryImages: ['public/screenshot-1.png', 'public/screenshot-2.png'],
   websiteUrl: 'https://example.com',
   termsUrl: 'https://example.com/terms',
   emailSupport: 'support@example.com',
@@ -189,6 +185,8 @@ export default defineApplication({
 ```
 
 Set `requestedCapabilities` only when the app uses microphone or camera capture. Supported values are `'microphone'` and `'camera'`; request only the devices the app needs and explain their use in the README. The installation screen shows these requests for workspace-wide approval by a member who can manage apps. Omitting a capability does not silently grant access: first use pauses capture for approval, including for older apps without declarations. Browser and operating system permissions remain separate, and package updates do not automatically add grants.
+
+Set `requestedIframeMediaPermissions` only when a front component or an `IFRAME` page layout widget embeds a website that needs the microphone or camera. List up to 20 unique exact HTTPS origins, with `microphone` and `camera` set separately and at least one set to `true`; the installation screen shows each website for the same approval.
 
 Only set `aboutDescription` when the marketplace About tab should differ from the npm README. Otherwise keep one source of truth in `README.md`. The About tab renders markdown text only: images and raw HTML (badges, `<div>` blocks) are not rendered, so keep the marketplace-facing content in plain markdown.
 
@@ -199,13 +197,13 @@ If the app requires a specific Twenty server version, set `engines.twenty` in `p
 Before considering README and visuals done:
 
 ```bash
-yarn twenty apply
-yarn twenty dev:build
+twenty app apply
+twenty app build
 ```
 
 Then check:
 
-- Every `logoUrl` and `screenshots` path exists in `public/`.
+- Every `logo` and `galleryImages` path exists in `public/`.
 - `README.md` setup steps match actual variables, connections, and commands.
 - `package.json` has `keywords: ["twenty-app"]` when the app is intended for npm marketplace publishing.
 - `defineApplication()` metadata does not reference placeholder URLs, support addresses, screenshots, or terms.

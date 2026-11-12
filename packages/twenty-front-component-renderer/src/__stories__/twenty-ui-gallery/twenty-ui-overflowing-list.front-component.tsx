@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { defineFrontComponent } from 'twenty-sdk/define';
-import { OverflowingList } from 'twenty-ui/components';
+import { OverflowingList } from 'twenty-ui/components/layout';
 import { Button } from 'twenty-ui/primitives/input';
 import { ThemeProvider } from 'twenty-ui/theme';
 import 'twenty-ui/style.css';
@@ -55,6 +55,8 @@ const OverflowingListExample = () => {
         <OverflowingList
           showOverflowCount
           overflowLabel="Show all measured items"
+          role="group"
+          aria-label="Measured list"
           style={{ width: listWidth }}
         >
           {INITIAL_TARGETS.map((target) => (
@@ -65,6 +67,8 @@ const OverflowingListExample = () => {
         </OverflowingList>
       )}
       <Button onClick={() => setListWidth(500)}>Widen measured list</Button>
+      <Button onClick={() => setListWidth(220)}>Narrow measured list</Button>
+      <Button onClick={() => setListWidth(208)}>Fit one measured item</Button>
       <Button onClick={() => setIsMeasuredListMounted(false)}>
         Remove measured list
       </Button>

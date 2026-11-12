@@ -1,15 +1,11 @@
-import { currentAiChatThreadTitleComponentFamilyState } from '@/ai/states/currentAiChatThreadTitleComponentFamilyState';
-import { threadIdCreatedFromDraftState } from '@/ai/states/threadIdCreatedFromDraftState';
 import { useSelectAiChatThread } from '@/ai/hooks/useSelectAiChatThread';
 import { useNavigateToAiChatPage } from '@/ai/hooks/useNavigateToAiChatPage';
 import { useOpenAskAiPageInSidePanel } from '@/side-panel/hooks/useOpenAskAiPageInSidePanel';
-import { useAtomComponentFamilyStateCallbackState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentFamilyStateCallbackState';
-import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
-import { useStore } from 'jotai';
 import { type AgentChatThreadRecord } from '@/ai/types/AgentChatThreadRecord';
+import { isAiChatInboxPath } from '~/utils/isAiChatInboxPath';
 import { isCurrentPathAiChatPage } from '~/utils/isCurrentPathAiChatPage';
 
-export type UseAiChatThreadClickOptions = {
+type UseAiChatThreadClickOptions = {
   resetNavigationStack?: boolean;
   shouldOpenInFullPage?: boolean;
 };
@@ -19,32 +15,17 @@ export const useAiChatThreadClick = (
 ) => {
   const { resetNavigationStack = false, shouldOpenInFullPage = false } =
     options;
-  const setThreadIdCreatedFromDraft = useSetAtomState(
-    threadIdCreatedFromDraftState,
-  );
   const { selectAiChatThread } = useSelectAiChatThread();
-  const threadTitleFamilyCallback = useAtomComponentFamilyStateCallbackState(
-    currentAiChatThreadTitleComponentFamilyState,
-  );
-  const store = useStore();
   const { openAskAiPage } = useOpenAskAiPageInSidePanel();
   const { navigateToAiChatPage } = useNavigateToAiChatPage();
 
-  const handleThreadClick = (
-    thread: Pick<AgentChatThreadRecord, 'id' | 'title'>,
-  ) => {
-    setThreadIdCreatedFromDraft(null);
-
+  const handleThreadClick = (thread: Pick<AgentChatThreadRecord, 'id'>) => {
     selectAiChatThread(thread.id);
 
-    const clickedFamilyKey = { threadId: thread.id };
+    const isOnChatPage =
+      isCurrentPathAiChatPage() || isAiChatInboxPath(window.location.pathname);
 
-    store.set(
-      threadTitleFamilyCallback(clickedFamilyKey),
-      thread.title ?? null,
-    );
-
-    if (isCurrentPathAiChatPage()) {
+    if (isOnChatPage) {
       return;
     }
 

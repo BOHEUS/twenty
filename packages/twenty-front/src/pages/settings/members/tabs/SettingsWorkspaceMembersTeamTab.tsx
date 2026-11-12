@@ -16,11 +16,13 @@ import { useMemo, useState } from 'react';
 import { useInView } from 'react-intersection-observer';
 import {
   AppPath,
-  CoreObjectNameSingular,
+  StandardObjectNameSingular,
   SettingsPath,
 } from 'twenty-shared/types';
 import { generateILikeFiltersForCompositeFields } from 'twenty-shared/utils';
-import { Dropdown, SearchInput, Section } from 'twenty-ui/components';
+import { SearchInput } from 'twenty-ui/components/input';
+import { Section } from 'twenty-ui/components/layout';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import {
   IconArrowUpRight,
   IconChevronRight,
@@ -35,7 +37,7 @@ import { useDebounce } from 'use-debounce';
 import { useNavigateApp } from '~/hooks/useNavigateApp';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
-import { normalizeSearchText } from '~/utils/normalizeSearchText';
+import { normalizeSearchText } from 'twenty-ui/utilities';
 
 const StyledTableContainer = styled.div<{ hasMoreRows?: boolean }>`
   > div {
@@ -90,7 +92,9 @@ export const SettingsWorkspaceMembersTeamTab = () => {
   const [debouncedSearchFilter] = useDebounce(searchFilter, 300);
 
   const searchServerFilter = useMemo(() => {
-    if (!debouncedSearchFilter?.trim()) return undefined;
+    if (!debouncedSearchFilter?.trim()) {
+      return undefined;
+    }
 
     const normalizedSearchTerm = normalizeSearchText(debouncedSearchFilter);
     const nameFilters = generateILikeFiltersForCompositeFields(
@@ -113,7 +117,7 @@ export const SettingsWorkspaceMembersTeamTab = () => {
     hasNextPage,
     loading,
   } = useFindManyRecords<WorkspaceMember>({
-    objectNameSingular: CoreObjectNameSingular.WorkspaceMember,
+    objectNameSingular: StandardObjectNameSingular.WorkspaceMember,
     filter: searchServerFilter,
   });
 

@@ -1,5 +1,5 @@
 import { computeWorkflowManifestOutputSchema } from 'src/engine/core-modules/application/application-manifest/utils/compute-workflow-manifest-output-schema.util';
-import { computeWorkflowManifestOrderBy } from 'src/engine/core-modules/application/application-manifest/utils/compute-workflow-manifest-order-by.util';
+import { buildWorkflowManifestReferenceResolvers } from 'src/engine/core-modules/application/application-manifest/utils/build-workflow-manifest-reference-resolvers.util';
 import { msg } from '@lingui/core/macro';
 import { type WorkflowStepManifest } from 'twenty-shared/application';
 import { isDefined } from 'twenty-shared/utils';
@@ -14,72 +14,21 @@ import { type WorkflowAction } from 'src/modules/workflow/workflow-executor/work
 
 export const fromWorkflowStepManifestToActionOrThrow = ({
   step,
-  index,
   references,
 }: {
   step: WorkflowStepManifest;
-  index: number;
   references: WorkflowManifestReferences;
 }): WorkflowAction => {
-  const resolve = <T>(
-    map: ReadonlyMap<string, T> | undefined,
-    identifier: string,
-    kind: string,
-  ): T => {
-    const value = map?.get(identifier);
-    if (!isDefined(value)) {
-      throw new ApplicationException(
-        `Workflow step ${step.name}: missing ${kind} ${identifier}`,
-        ApplicationExceptionCode.INVALID_INPUT,
-        {
-          userFriendlyMessage: msg`The workflow references metadata that is not available to this application.`,
-        },
-      );
-    }
-    return value;
-  };
-  const objectName = (identifier: string) =>
-    resolve(references.objectByUniversalIdentifier, identifier, 'object')
-      .nameSingular;
-  const field = (identifier: string, objectUniversalIdentifier?: string) => {
-    const resolved = resolve(
-      references.fieldByUniversalIdentifier,
-      identifier,
-      'field',
-    );
-    if (
-      isDefined(objectUniversalIdentifier) &&
-      resolved.objectUniversalIdentifier !== objectUniversalIdentifier
-    ) {
-      throw new ApplicationException(
-        'Workflow field does not belong to the referenced object',
-        ApplicationExceptionCode.INVALID_INPUT,
-        {
-          userFriendlyMessage: msg`The workflow field does not belong to the referenced object.`,
-        },
-      );
-    }
-    return resolved;
-  };
-  const fieldReference = <
-    T extends { fieldMetadataUniversalIdentifier?: string },
-  >(
-    reference: T,
-    objectUniversalIdentifier?: string,
-  ) => {
-    const { fieldMetadataUniversalIdentifier, ...rest } = reference;
-    return {
-      ...rest,
-      ...(isDefined(fieldMetadataUniversalIdentifier)
-        ? {
-            fieldMetadataId: field(
-              fieldMetadataUniversalIdentifier,
-              objectUniversalIdentifier,
-            ).id,
-          }
-        : {}),
-    };
-  };
+  const {
+    resolve,
+    objectName,
+    field,
+    fieldReference,
+    connectedAccountIdOrThrow,
+  } = buildWorkflowManifestReferenceResolvers({
+    references,
+    subject: `Workflow step ${step.name}`,
+  });
   let input: unknown;
   switch (step.type) {
     case 'LOGIC_FUNCTION':
@@ -94,18 +43,27 @@ export const fromWorkflowStepManifestToActionOrThrow = ({
       break;
     case 'AI_AGENT': {
       const { agentUniversalIdentifier, ...rest } = step.input;
-      input = {
-        ...rest,
-        ...(isDefined(agentUniversalIdentifier)
-          ? {
-              agentId: resolve(
-                references.agentIdByUniversalIdentifier,
-                agentUniversalIdentifier,
-                'application agent',
-              ),
-            }
-          : {}),
-      };
+
+      // the scope names objects and fields by universal identifier, so it is checked rather than rewritten
+      for (const { objectUniversalIdentifier } of rest.scope
+        ?.objectPermissions ?? []) {
+        objectName(objectUniversalIdentifier);
+      }
+      for (const { objectUniversalIdentifier, fieldUniversalIdentifier } of rest
+        .scope?.fieldPermissions ?? []) {
+        field(fieldUniversalIdentifier, objectUniversalIdentifier);
+      }
+
+      input = isDefined(agentUniversalIdentifier)
+        ? {
+            ...rest,
+            agentId: resolve(
+              references.agentIdByUniversalIdentifier,
+              agentUniversalIdentifier,
+              'application agent',
+            ),
+          }
+        : rest;
       break;
     }
     case 'CREATE_RECORD':
@@ -142,18 +100,6 @@ export const fromWorkflowStepManifestToActionOrThrow = ({
                 ...orderBy,
                 ...(isDefined(orderBy.recordSorts)
                   ? {
-                      gqlOperationOrderBy: orderBy.recordSorts.flatMap(
-                        (reference) =>
-                          computeWorkflowManifestOrderBy({
-                            field: field(
-                              reference.fieldMetadataUniversalIdentifier,
-                              objectUniversalIdentifier,
-                            ),
-                            direction: reference.direction,
-                            subFieldName: reference.subFieldName,
-                            references,
-                          }),
-                      ),
                       recordSorts: orderBy.recordSorts.map((reference) =>
                         fieldReference(reference, objectUniversalIdentifier),
                       ),
@@ -188,6 +134,37 @@ export const fromWorkflowStepManifestToActionOrThrow = ({
     }
     case 'FORM':
       input = step.input.map((formField) => {
+        if (formField.type === 'SELECT' || formField.type === 'MULTI_SELECT') {
+          const { selectedFieldUniversalIdentifier, ...settings } =
+            formField.settings ?? {};
+          if (typeof selectedFieldUniversalIdentifier !== 'string') {
+            throw new ApplicationException(
+              'Select fields require the universal identifier of the field whose options they offer',
+              ApplicationExceptionCode.INVALID_INPUT,
+              {
+                userFriendlyMessage: msg`The workflow select field must reference an existing field.`,
+              },
+            );
+          }
+          const selectedField = field(selectedFieldUniversalIdentifier);
+          if (selectedField.type !== formField.type) {
+            throw new ApplicationException(
+              `Select field ${formField.name} must reference a ${formField.type} field`,
+              ApplicationExceptionCode.INVALID_INPUT,
+              {
+                userFriendlyMessage: msg`The workflow select field must reference a field of the same type.`,
+              },
+            );
+          }
+          return {
+            ...formField,
+            settings: {
+              selectType: 'EXISTING_FIELD',
+              ...settings,
+              selectedFieldId: selectedField.id,
+            },
+          };
+        }
         if (formField.type !== 'RECORD') {
           return formField;
         }
@@ -220,6 +197,21 @@ export const fromWorkflowStepManifestToActionOrThrow = ({
         ),
       };
       break;
+    case 'SEND_EMAIL':
+    case 'DRAFT_EMAIL':
+    case 'CREATE_CALENDAR_EVENT': {
+      const { connectedAccountHandle, ...rest } = step.input;
+      input = isDefined(connectedAccountHandle)
+        ? {
+            ...rest,
+            connectedAccountId: connectedAccountIdOrThrow({
+              stepType: step.type,
+              handle: connectedAccountHandle,
+            }),
+          }
+        : rest;
+      break;
+    }
     default:
       input = step.input;
   }
@@ -229,7 +221,7 @@ export const fromWorkflowStepManifestToActionOrThrow = ({
     type: step.type,
     valid: true,
     nextStepIds: step.nextStepIds,
-    position: step.position ?? { x: 0, y: (index + 1) * 180 },
+    ...(isDefined(step.position) ? { position: step.position } : {}),
     settings: {
       input: structuredClone(input),
       outputSchema: structuredClone(

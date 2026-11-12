@@ -4,86 +4,88 @@ import { msg } from '@lingui/core/macro';
 import { FeatureFlagKey } from '~/generated-admin/graphql';
 
 // Public flags use server-provided client config metadata to stay consistent with the lab.
-export const SETTINGS_ADMIN_FEATURE_FLAG_METADATA: Partial<
-  Record<
-    FeatureFlagKey,
-    { label: MessageDescriptor; description: MessageDescriptor }
-  >
+export const SETTINGS_ADMIN_FEATURE_FLAG_METADATA: Record<
+  FeatureFlagKey,
+  { label: MessageDescriptor; description: MessageDescriptor }
 > = {
-  [FeatureFlagKey.IS_ASYNC_CSV_EXPORT_ENABLED]: {
-    label: msg`Async CSV export`,
-    description: msg`Generate CSV exports in the background with progress and automatic downloads.`,
-  },
   [FeatureFlagKey.IS_CONFIGURABLE_SEARCH_FIELDS_ENABLED]: {
     label: msg`Configurable search fields`,
     description: msg`Choose which fields are used when searching for records.`,
-  },
-  [FeatureFlagKey.IS_JSON_FILTER_ENABLED]: {
-    label: msg`JSON filters`,
-    description: msg`Allow filtering records by values inside JSON fields.`,
-  },
-  [FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED]: {
-    label: msg`Email campaigns`,
-    description: msg`Enable email campaigns, lists, and unsubscribe management.`,
   },
   [FeatureFlagKey.IS_REST_METADATA_API_NEW_FORMAT_DIRECT]: {
     label: msg`Direct REST metadata responses`,
     description: msg`Return metadata directly instead of wrapping it in the legacy response envelope.`,
   },
-  [FeatureFlagKey.IS_LOGIC_FUNCTION_PREBUILT_MODE_ENABLED]: {
-    label: msg`Prebuilt logic functions`,
-    description: msg`Run logic functions from prebuilt application bundles.`,
-  },
-  [FeatureFlagKey.IS_APPLICATION_WORKFLOWS_ENABLED]: {
-    label: msg`Application workflows`,
-    description: msg`Allow applications to install workflows and start new workflow runs.`,
-  },
-  [FeatureFlagKey.IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED]: {
-    label: msg`Workflow index page`,
-    description: msg`Use the dedicated workflow index page to browse workflows and their versions.`,
-  },
-  [FeatureFlagKey.IS_AI_CHAT_SHARING_DROPDOWN_ENABLED]: {
-    label: msg`AI chat sharing dropdown`,
-    description: msg`Show the sharing dropdown on AI conversations when record sharing is enabled.`,
-  },
   [FeatureFlagKey.IS_RECORD_LEVEL_SHARING_ENABLED]: {
     label: msg`Record sharing`,
     description: msg`Let people restrict and share individual records.`,
   },
-  [FeatureFlagKey.IS_WEBHOOK_RATE_LIMIT_ENABLED]: {
-    label: msg`Webhook rate limits`,
-    description: msg`Limit the rate of outgoing webhook deliveries.`,
+  [FeatureFlagKey.IS_CALENDAR_EVENT_SHARED_ACROSS_CHANNELS_ENABLED]: {
+    label: msg`Share calendar events across channels`,
+    description: msg`Store a meeting synced by several calendars of the same provider once, instead of once per calendar.`,
   },
-  [FeatureFlagKey.IS_DEFERRED_WORKSPACE_MIGRATION_ACTIONS_ENABLED]: {
-    label: msg`Deferred workspace migration actions`,
-    description: msg`Run the slow parts of data model changes in the background after they are saved.`,
+  [FeatureFlagKey.IS_AI_CHAT_COMPONENT_BUILDER_ENABLED]: {
+    label: msg`AI chat component builder`,
+    description: msg`Create and preview frontend components in AI chat before adding them to the Workspace app.`,
   },
-  [FeatureFlagKey.IS_EXECUTION_QUOTA_ENABLED]: {
-    label: msg`Execution quotas`,
-    description: msg`Enforce usage quotas on workflow node runs and logic function executions.`,
+  [FeatureFlagKey.IS_AI_CHAT_INBOX_ENABLED]: {
+    label: msg`AI chat inbox`,
+    description: msg`Turn the AI tab into an inbox to triage, assign, snooze and follow chats, let workflows send messages and agent questions to a member's inbox, and show a Conversations tab on record pages.`,
   },
-  [FeatureFlagKey.IS_RECORD_CREATION_FORM_ENABLED]: {
-    label: msg`Record creation form`,
-    description: msg`Use a dedicated form when creating records.`,
+  [FeatureFlagKey.IS_AGENT_CHAT_DIRECT_MESSAGE_IDENTITY_ENABLED]: {
+    label: msg`Direct message pair identity`,
+    description: msg`Reuse the same conversation when the same two workspace members start a direct message. Enabled after the workspace upgrade completes.`,
   },
-  [FeatureFlagKey.IS_LOGS_SETTINGS_SECTION_ENABLED]: {
-    label: msg`Logs console`,
-    description: msg`Show a logs console at the bottom of the app in Advanced mode.`,
+  [FeatureFlagKey.IS_APP_PREFERENCES_ENABLED]: {
+    label: msg`App preferences`,
+    description: msg`Replace the Accounts settings with App preferences, built around accounts and the apps that use them.`,
   },
-  [FeatureFlagKey.IS_CONVERSATIONS_TAB_ENABLED]: {
-    label: msg`Conversations tab`,
-    description: msg`Show a Conversations tab listing the AI conversations attached to the record, on record pages of new workspaces.`,
+  [FeatureFlagKey.IS_MCP_SERVERS_ENABLED]: {
+    label: msg`MCP servers`,
+    description: msg`Register external MCP servers in Developers settings and expose their tools to AI chat.`,
   },
-  [FeatureFlagKey.IS_VALIDATION_RULES_ENABLED]: {
-    label: msg`Validation rules`,
-    description: msg`Let admins add conditions a record must meet to be saved, checked on every write.`,
+  [FeatureFlagKey.IS_CREATE_RECORDS_PERMISSION_ENABLED]: {
+    label: msg`Create records permission`,
+    description: msg`Check the create permission on its own when creating records, rather than the update permission.`,
   },
-  [FeatureFlagKey.IS_WORKFLOW_SEND_CHAT_MESSAGE_ENABLED]: {
-    label: msg`Workflow chat messages`,
-    description: msg`Add a workflow step that posts a message in a member's AI chat.`,
+  [FeatureFlagKey.IS_RELATED_RECORD_PATHS_ENABLED]: {
+    label: msg`Related record paths`,
+    description: msg`Define the relations along which a record's permissions extend to related records.`,
   },
-  [FeatureFlagKey.IS_CALENDAR_SYNC_SKIP_UNCHANGED_RECORDS_ENABLED]: {
-    label: msg`Skip unchanged calendar records`,
-    description: msg`Only write calendar events and participants that changed since the last sync.`,
+  [FeatureFlagKey.IS_ROW_LEVEL_PERMISSION_RELATION_HOP_ENABLED]: {
+    label: msg`Record rules through relations`,
+    description: msg`Let record-level permission rules compare a field of a related record.`,
+  },
+  [FeatureFlagKey.IS_GETTING_STARTED_ENABLED]: {
+    label: msg`Getting started`,
+    description: msg`Show the Getting started page and sidebar card, and open it on landing during the trial.`,
+  },
+  [FeatureFlagKey.IS_MESSAGE_ATTACHMENT_ENABLED]: {
+    label: msg`Message attachments`,
+    description: msg`Store and show files attached to messages. Enabled after the workspace upgrade completes.`,
+  },
+  [FeatureFlagKey.IS_PRIVATE_RECORDS_ENABLED]: {
+    label: msg`Private records`,
+    description: msg`Apply private records on objects that aren't private by default. Always on for workspaces that have set record sharing. Turning this off makes records set as private on those objects visible again.`,
+  },
+  [FeatureFlagKey.IS_PERMISSION_TABLES_ENABLED]: {
+    label: msg`Permission tables`,
+    description: msg`Create record share and access group storage as tables owned by the permission engine instead of objects. Only applies when a workspace is created.`,
+  },
+  [FeatureFlagKey.IS_ACCESS_GROUPS_ENABLED]: {
+    label: msg`Access groups`,
+    description: msg`Compute the access groups that record listings will use for row-level permissions. Enable after the workspace upgrade completes.`,
+  },
+  [FeatureFlagKey.IS_AI_DATA_POLICY_ENABLED]: {
+    label: msg`AI data policy and Privacy tab`,
+    description: msg`Show the Privacy tab and enforce its AI data policy and data sharing settings. Turning this off lifts any stored policy. Enable after the instance upgrade completes.`,
+  },
+  [FeatureFlagKey.IS_RECORD_GROUP_TABS_ENABLED]: {
+    label: msg`Group tabs`,
+    description: msg`Let grouped table and list views show their groups as tabs, one group at a time. Enable after the instance upgrade completes.`,
+  },
+  [FeatureFlagKey.IS_HTTP_EGRESS_LAMBDA_ENABLED]: {
+    label: msg`HTTP requests in the logic function runtime`,
+    description: msg`Send workflow HTTP requests, test requests and the AI agent HTTP tool through the logic function driver, which runs them in an isolated Lambda when logic functions run in Lambda.`,
   },
 };

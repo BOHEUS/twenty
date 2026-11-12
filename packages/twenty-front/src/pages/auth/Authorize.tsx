@@ -1,5 +1,6 @@
 import { StyledAuthContent } from '@/auth/components/StyledAuthContent';
 import { styled } from '@linaria/react';
+import { isNonEmptyString } from '@sniptt/guards';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Key } from 'ts-key-enum';
@@ -7,11 +8,14 @@ import { AppPath } from 'twenty-shared/types';
 
 import { AppConnectionHeader } from '@/applications/components/AppConnectionHeader';
 import { AuthorizeActionButtons } from '@/applications/components/AuthorizeActionButtons';
+import { getKnownOAuthClientLogoUrl } from '@/applications/utils/getKnownOAuthClientLogoUrl';
+import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { useRedirect } from '@/domain-manager/hooks/useRedirect';
 import { useGlobalHotkeys } from '@/ui/utilities/hotkey/hooks/useGlobalHotkeys';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { isDefined } from 'twenty-shared/utils';
+import { getUrlSafely, isDefined } from 'twenty-shared/utils';
 import {
   type IconComponent,
   IconDatabase,
@@ -28,6 +32,7 @@ import {
   FindApplicationRegistrationByClientIdDocument,
 } from '~/generated-metadata/graphql';
 import { useNavigateApp } from '~/hooks/useNavigateApp';
+import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 
 const StyledCardWrapper = styled.div`
   --oauth-modal-content-max-width: calc(
@@ -62,7 +67,6 @@ const StyledHeader = styled.div`
 `;
 
 const StyledOAuthTitle = styled(Heading)`
-  margin: 0;
   max-width: min(100%, var(--oauth-modal-content-max-width));
   padding-bottom: ${themeCssVariables.spacing[1]};
   text-wrap: balance;
@@ -124,6 +128,21 @@ const StyledScopeIcon = styled.div`
   justify-content: center;
 `;
 
+const StyledRedirectNotice = styled.p`
+  color: ${themeCssVariables.font.color.tertiary};
+  font-family: ${themeCssVariables.font.family};
+  font-size: ${themeCssVariables.font.size.sm};
+  line-height: ${themeCssVariables.text.lineHeight.lg};
+  margin: ${themeCssVariables.spacing[6]} 0 0;
+  overflow-wrap: anywhere;
+  padding-left: ${themeCssVariables.spacing[1]};
+`;
+
+const StyledRedirectHost = styled.span`
+  color: ${themeCssVariables.font.color.primary};
+  font-weight: ${themeCssVariables.font.weight.medium};
+`;
+
 const StyledErrorText = styled.div`
   color: ${themeCssVariables.color.red};
   font-size: ${themeCssVariables.font.size.sm};
@@ -144,6 +163,7 @@ export const Authorize = () => {
   const navigate = useNavigateApp();
   const [searchParam] = useSearchParams();
   const { redirect } = useRedirect();
+  const currentWorkspace = useAtomStateValue(currentWorkspaceState);
 
   const oauthScopeLabels: { [scope: string]: string | undefined } = {
     api: t`Access your workspace data`,
@@ -174,7 +194,9 @@ export const Authorize = () => {
   const [isAuthorizing, setIsAuthorizing] = useState(false);
 
   const shouldRedirectToNotFound =
-    !isDefined(clientId) || (!loading && !isDefined(applicationRegistration));
+    !isDefined(clientId) ||
+    !isDefined(redirectUrl) ||
+    (!loading && !isDefined(applicationRegistration));
 
   useEffect(() => {
     if (shouldRedirectToNotFound) {
@@ -266,25 +288,39 @@ export const Authorize = () => {
     );
   }
 
-  if (loading || !applicationRegistration) {
+  if (loading || !applicationRegistration || !isDefined(redirectUrl)) {
     return null;
   }
 
   const appName = applicationRegistration.name;
-  const appLogoUrl = applicationRegistration.logoUrl;
   const requestedScopes: string[] = applicationRegistration.oAuthScopes ?? [];
+  const redirectHost = getUrlSafely(redirectUrl)?.host;
+  const appLogoUrl =
+    applicationRegistration.logoUrl ?? getKnownOAuthClientLogoUrl(redirectHost);
+  const workspaceName = currentWorkspace?.displayName;
 
   return (
     <StyledAuthContent>
       <StyledCardWrapper>
         <StyledHeader>
-          <AppConnectionHeader appLogoUrl={appLogoUrl} appName={appName} />
+          <AppConnectionHeader
+            appLogoUrl={appLogoUrl}
+            appName={appName}
+            workspaceLogoUrl={getAbsoluteImageUrl(currentWorkspace?.logo)}
+            workspaceName={workspaceName}
+          />
         </StyledHeader>
         <StyledAuthContent
           style={{ alignItems: 'stretch', justifyContent: 'flex-start' }}
         >
           <StyledOAuthTitle level={2} size="lg">
-            <Trans>Connect {appName} to your account</Trans>
+            {isNonEmptyString(workspaceName) ? (
+              <Trans>
+                Connect {appName} to {workspaceName}
+              </Trans>
+            ) : (
+              <Trans>Connect {appName} to your account</Trans>
+            )}
           </StyledOAuthTitle>
           {requestedScopes.length > 0 && (
             <StyledPermissionSection>
@@ -309,6 +345,14 @@ export const Authorize = () => {
                 })}
               </StyledScopeList>
             </StyledPermissionSection>
+          )}
+          {isNonEmptyString(redirectHost) && (
+            <StyledRedirectNotice>
+              <Trans>
+                After you connect, you will be redirected to{' '}
+                <StyledRedirectHost>{redirectHost}</StyledRedirectHost>
+              </Trans>
+            </StyledRedirectNotice>
           )}
           {authorizeError && (
             <StyledErrorText>{authorizeError}</StyledErrorText>

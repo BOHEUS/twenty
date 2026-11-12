@@ -435,19 +435,15 @@ export const buildWorkflowRunStandardFlatFieldMetadatas = ({
       fieldName: 'coreWorkflowId',
       type: FieldMetadataType.UUID,
       label: i18nLabel(
-        msg({
-          message: `Core workflow id`,
-          context: 'fieldMetadata.label',
-        }),
+        msg({ message: `Workflow`, context: 'fieldMetadata.label' }),
       ),
       description: i18nLabel(
         msg({
-          message: `Reference to the core workflow row`,
+          message: `Workflow linked to the run.`,
           context: 'fieldMetadata.description',
         }),
       ),
       icon: 'IconSettingsAutomation',
-      isSystem: true,
       isNullable: true,
       isUIEditable: false,
     },
@@ -560,68 +556,6 @@ export const buildWorkflowRunStandardFlatFieldMetadatas = ({
         relationType: RelationType.MANY_TO_ONE,
         onDelete: RelationOnDeleteAction.SET_NULL,
         joinColumnName: 'workflowVersionId',
-      },
-    },
-    standardObjectMetadataRelatedEntityIds,
-    dependencyFlatEntityMaps,
-    twentyStandardApplicationId,
-    now,
-  }),
-  workflow: createStandardRelationFieldFlatMetadata({
-    objectName,
-    workspaceId,
-    context: {
-      type: FieldMetadataType.RELATION,
-      morphId: null,
-      fieldName: 'workflow',
-      label: i18nLabel(
-        msg({ message: `Workflow`, context: 'fieldMetadata.label' }),
-      ),
-      description: i18nLabel(
-        msg({
-          message: `Workflow linked to the run.`,
-          context: 'fieldMetadata.description',
-        }),
-      ),
-      icon: 'IconSettingsAutomation',
-      isNullable: true,
-      isUIEditable: false,
-      targetObjectName: 'workflow',
-      targetFieldName: 'runs',
-      settings: {
-        relationType: RelationType.MANY_TO_ONE,
-        onDelete: RelationOnDeleteAction.CASCADE,
-        joinColumnName: 'workflowId',
-      },
-    },
-    standardObjectMetadataRelatedEntityIds,
-    dependencyFlatEntityMaps,
-    twentyStandardApplicationId,
-    now,
-  }),
-  agentChatThreads: createStandardRelationFieldFlatMetadata({
-    objectName,
-    workspaceId,
-    context: {
-      type: FieldMetadataType.RELATION,
-      morphId: null,
-      fieldName: 'agentChatThreads',
-      label: i18nLabel(
-        msg({ message: `Conversations`, context: 'fieldMetadata.label' }),
-      ),
-      description: i18nLabel(
-        msg({
-          message: `Conversations held by the run's agent steps`,
-          context: 'fieldMetadata.description',
-        }),
-      ),
-      icon: 'IconMessage',
-      isNullable: true,
-      isUIEditable: false,
-      targetObjectName: 'agentChatThread',
-      targetFieldName: 'workflowRun',
-      settings: {
-        relationType: RelationType.ONE_TO_MANY,
       },
     },
     standardObjectMetadataRelatedEntityIds,

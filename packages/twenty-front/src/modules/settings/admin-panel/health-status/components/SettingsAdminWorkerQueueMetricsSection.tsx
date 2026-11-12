@@ -4,17 +4,17 @@ import { WidgetSkeletonLoader } from '@/page-layout/widgets/components/WidgetSke
 import { WORKER_QUEUE_METRICS_SELECT_OPTIONS } from '@/settings/admin-panel/health-status/constants/WorkerQueueMetricsSelectOptions';
 import { Select } from '@/ui/input/components/Select';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { lazy, Suspense, useState } from 'react';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { IconList } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme';
 import {
   type AdminPanelWorkerQueueHealth,
   QueueMetricsTimeRange,
 } from '~/generated-admin/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 const SettingsAdminWorkerMetricsGraph = lazy(() =>
   import('./SettingsAdminWorkerMetricsGraph').then((module) => ({
@@ -47,6 +47,7 @@ const StyledContainer = styled.div`
 export const SettingsAdminWorkerQueueMetricsSection = ({
   queue,
 }: SettingsAdminWorkerQueueMetricsSectionProps) => {
+  const { t } = useLingui();
   const [timeRange, setTimeRange] = useState(QueueMetricsTimeRange.OneHour);
 
   return (

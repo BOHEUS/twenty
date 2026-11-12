@@ -195,7 +195,7 @@ const renderWithReferences = (
       store.set(currentUserWorkspaceState.atom, {
         permissionFlags,
         twoFactorAuthenticationMethodSummary: [],
-        objectsPermissions: [],
+        objectRecordsPermissions: [],
       });
       store.set(
         shouldOpenAiChatAfterOnboardingState.atom,
@@ -275,13 +275,16 @@ describe('ChatReferenceChip', () => {
     },
   );
 
-  it('should open a record in the record side panel from the chat page', () => {
+  it('should open a record only when its reference is clicked', async () => {
     renderWithReferences(
       <ChatReferenceChip reference={findCase('record').reference} />,
       { initialPath: '/chat' },
     );
 
-    clickChip('Acme');
+    expect(openRecordInSidePanelMock).not.toHaveBeenCalled();
+    expect(openRoutedPageInSidePanelMock).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('link', { name: 'Acme' }));
 
     expect(openRecordInSidePanelMock).toHaveBeenCalledWith({
       recordId: RECORD_ID,
@@ -460,5 +463,14 @@ describe('TextWithChatReferences', () => {
     expect(screen.getByText(/Sort by/)).toHaveTextContent(
       'Sort by Stage first',
     );
+  });
+
+  it('should keep the written assistant name when navigation is disabled', () => {
+    renderWithReferences(
+      <TextWithChatReferences text="Ask [[record:agentChatAssistant:agentChatAssistant:Scout]] today" />,
+      { isNavigationEnabled: false },
+    );
+
+    expect(screen.getByText(/Ask/)).toHaveTextContent('Ask @Scout today');
   });
 });

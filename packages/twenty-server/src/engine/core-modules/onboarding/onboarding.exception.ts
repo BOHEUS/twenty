@@ -7,7 +7,7 @@ import { CustomException } from 'src/utils/custom-exception';
 export enum OnboardingExceptionCode {
   NO_PREVIOUS_ONBOARDING_STEP = 'NO_PREVIOUS_ONBOARDING_STEP',
   MISSING_TRANSACTION_QUERY_RUNNER = 'MISSING_TRANSACTION_QUERY_RUNNER',
-  INSTALL_APPS_JOB_ENQUEUE_FAILED = 'INSTALL_APPS_JOB_ENQUEUE_FAILED',
+  EXTERNAL_PROVIDER_TIMEOUT = 'EXTERNAL_PROVIDER_TIMEOUT',
 }
 
 const getOnboardingExceptionUserFriendlyMessage = (
@@ -18,8 +18,8 @@ const getOnboardingExceptionUserFriendlyMessage = (
       return msg`There is no previous onboarding step to go back to.`;
     case OnboardingExceptionCode.MISSING_TRANSACTION_QUERY_RUNNER:
       return msg`Something went wrong while saving your onboarding progress.`;
-    case OnboardingExceptionCode.INSTALL_APPS_JOB_ENQUEUE_FAILED:
-      return msg`Something went wrong while starting the app installation. Please try again.`;
+    case OnboardingExceptionCode.EXTERNAL_PROVIDER_TIMEOUT:
+      return msg`An external service took too long to respond.`;
     default:
       assertUnreachable(code);
   }

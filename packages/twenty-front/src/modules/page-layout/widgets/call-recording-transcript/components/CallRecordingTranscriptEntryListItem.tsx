@@ -1,13 +1,14 @@
+import { getChipLabel } from '@/ui/field/display/utils/getChipLabel';
 import { CallRecordingTranscriptEntryWords } from '@/page-layout/widgets/call-recording-transcript/components/CallRecordingTranscriptEntryWords';
 import { type CallRecordingTranscriptEntryPlaybackPhase } from '@/page-layout/widgets/call-recording-transcript/types/CallRecordingTranscriptEntryPlaybackPhase';
 import { formatCallRecordingTranscriptTimestamp } from '@/page-layout/widgets/call-recording-transcript/utils/formatCallRecordingTranscriptTimestamp';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { type Ref } from 'react';
 import { type CallRecordingParsedTranscriptEntry } from 'twenty-shared/types';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 import { Avatar, Chip } from 'twenty-ui/primitives/data-display';
 import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledEntry = styled.li<{
   hasPlaybackControls: boolean;
@@ -89,6 +90,7 @@ export const CallRecordingTranscriptEntryListItem = ({
   entryElementRef,
   onSelect,
 }: CallRecordingTranscriptEntryListItemProps) => {
+  const { t } = useLingui();
   const speakerName = entry.speakerName ?? t`Unknown speaker`;
   const entryStartSeconds = entry.startSeconds;
   const isSelectable = isDefined(entryStartSeconds) && isDefined(onSelect);
@@ -125,7 +127,7 @@ export const CallRecordingTranscriptEntryListItem = ({
     >
       <StyledEntryHeader>
         <Chip
-          variant="ghost"
+          variant="plain"
           startElement={
             <Avatar
               name={speakerName}
@@ -134,9 +136,8 @@ export const CallRecordingTranscriptEntryListItem = ({
               shape="circle"
             />
           }
-          style={{ paddingInlineStart: 0 }}
         >
-          {speakerName}
+          {getChipLabel(speakerName).content}
         </Chip>
         {isDefined(formattedStartTimestamp) && (
           <StyledTimestamp

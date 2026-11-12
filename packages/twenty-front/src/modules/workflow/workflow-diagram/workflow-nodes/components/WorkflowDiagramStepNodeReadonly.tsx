@@ -25,7 +25,8 @@ import { isNodeTitleHighlighted } from '@/workflow/workflow-diagram/workflow-nod
 import { Position } from '@xyflow/react';
 import { useContext } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { useIcons } from 'twenty-ui/icon';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { useIcons } from 'twenty-ui/icon/provider';
 
 export const WorkflowDiagramStepNodeReadonly = ({
   id,
@@ -63,7 +64,9 @@ export const WorkflowDiagramStepNodeReadonly = ({
       !isDefined(workflowVisualizerWorkflowId) ||
       !isDefined(workflowVisualizerWorkflowVersionId)
     ) {
-      throw new Error('Workflow ID and Version ID must be defined');
+      throw new Error(
+        doNotTranslate('Workflow ID and Version ID must be defined'),
+      );
     }
 
     if (!isInSidePanel) {

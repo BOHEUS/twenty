@@ -42,6 +42,7 @@ const deriveAllMetadataEventsFromDeleteAction = ({
     case 'viewFieldGroup':
     case 'rowLevelPermissionPredicate':
     case 'rowLevelPermissionPredicateGroup':
+    case 'rowLevelPermissionRule':
     case 'viewFilterGroup':
     case 'index':
     case 'logicFunction':
@@ -62,11 +63,17 @@ const deriveAllMetadataEventsFromDeleteAction = ({
     case 'fieldPermission':
     case 'viewSort':
     case 'webhook':
+    case 'mcpServer':
     case 'workflow':
     case 'workflowVersion':
     case 'connectionProvider':
+    case 'messagingProvider':
     case 'timelineActivityType':
+    case 'agentChatChannel':
+    case 'agentChatChannelRole':
     case 'settingsMenuItem':
+    case 'fieldMetadataOption':
+    case 'relatedRecordPath':
     case 'validationRule':
     case 'searchFieldMetadata': {
       const flatEntityToDelete = findFlatEntityByIdInFlatEntityMapsOrThrow<

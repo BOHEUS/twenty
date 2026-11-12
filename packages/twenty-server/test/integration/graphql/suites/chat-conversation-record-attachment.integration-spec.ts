@@ -1,23 +1,28 @@
 import { randomUUID } from 'node:crypto';
 
+import { createOneOperationFactory } from 'test/integration/graphql/utils/create-one-operation-factory.util';
+import { destroyOneOperationFactory } from 'test/integration/graphql/utils/destroy-one-operation-factory.util';
 import { findManyOperationFactory } from 'test/integration/graphql/utils/find-many-operation-factory.util';
 import { makeGraphqlApiRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
 import { destroyAgentChatThread } from 'test/integration/utils/destroy-agent-chat-thread.util';
 import { getAppProviderByClassName } from 'test/integration/utils/get-app-provider-by-class-name.util';
-import { AgentMessageRole } from 'src/engine/metadata-modules/ai/ai-agent-execution/entities/agent-message.entity';
+import { AgentMessageRole } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-message-role.enum';
 import { type AgentChatActorService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-actor.service';
 import { type AgentChatThreadTargetService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread-target.service';
 import { type AgentChatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat.service';
-import { createAttachConversationToRecordTool } from 'src/engine/metadata-modules/ai/ai-chat/tools/attach-conversation-to-record.tool';
+import { type AgentChatThreadService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread.service';
+import { createAttachConversationToRecordsTool } from 'src/engine/metadata-modules/ai/ai-chat/tools/attach-conversation-to-records.tool';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 import { USER_WORKSPACE_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/core/utils/seed-user-workspaces.util';
-import { COMPANY_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/company-data-seeds.constant';
 import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
+
+const getAgentChatThreadService = () =>
+  getAppProviderByClassName<AgentChatThreadService>('AgentChatThreadService');
 
 const workspaceId = SEED_APPLE_WORKSPACE_ID;
 const workspaceMemberId = WORKSPACE_MEMBER_DATA_SEED_IDS.JANE;
 const userWorkspaceId = USER_WORKSPACE_DATA_SEED_IDS.JANE;
-const companyId = COMPANY_DATA_SEED_IDS.ID_1;
+const companyId = randomUUID();
 
 describe('Attaching a conversation to a record from a chat turn', () => {
   let chat: AgentChatService;
@@ -34,7 +39,14 @@ describe('Attaching a conversation to a record from a chat turn', () => {
     targets = getAppProviderByClassName<AgentChatThreadTargetService>(
       'AgentChatThreadTargetService',
     );
-    await chat.createThread({
+    await makeGraphqlApiRequest(
+      createOneOperationFactory({
+        objectMetadataSingularName: 'company',
+        gqlFields: 'id',
+        data: { id: companyId, name: 'Renewal account' },
+      }),
+    );
+    await getAgentChatThreadService().createThread({
       workspaceId,
       workspaceMemberId,
       id: threadId,
@@ -53,10 +65,19 @@ describe('Attaching a conversation to a record from a chat turn', () => {
 
   afterAll(async () => {
     await destroyAgentChatThread({ threadId });
+    await makeGraphqlApiRequest(
+      destroyOneOperationFactory({
+        objectMetadataSingularName: 'company',
+        gqlFields: 'id',
+        recordId: companyId,
+      }),
+    );
   });
 
   const buildTool = async () => {
-    const { authorization } = await actors.authorizeJob({
+    const {
+      authorizedConversation: { authContext },
+    } = await actors.authorizeJob({
       workspaceId,
       threadId,
       messageId: message.id,
@@ -64,13 +85,13 @@ describe('Attaching a conversation to a record from a chat turn', () => {
       userWorkspaceId,
     });
 
-    return createAttachConversationToRecordTool({
+    return createAttachConversationToRecordsTool({
       agentChatThreadTargetService: targets,
       toolContext: {
         workspaceId,
         threadId,
         userWorkspaceId,
-        ...authorization,
+        authContext,
       },
     });
   };
@@ -96,10 +117,20 @@ describe('Attaching a conversation to a record from a chat turn', () => {
     const tool = await buildTool();
 
     await expect(
-      tool.execute({ objectNameSingular: 'company', recordId: companyId }),
+      tool.execute({
+        records: [
+          { objectNameSingular: 'company', recordId: companyId },
+          { objectNameSingular: 'company', recordId: companyId },
+        ],
+      }),
     ).resolves.toMatchObject({ success: true });
     await expect(
-      tool.execute({ objectNameSingular: 'company', recordId: companyId }),
+      tool.execute({
+        records: [
+          { objectNameSingular: 'company', recordId: companyId },
+          { objectNameSingular: 'company', recordId: companyId },
+        ],
+      }),
     ).resolves.toMatchObject({ success: true });
 
     const attachedConversationIds =
@@ -118,12 +149,11 @@ describe('Attaching a conversation to a record from a chat turn', () => {
 
     await expect(
       tool.execute({
-        objectNameSingular: 'company',
-        recordId: missingRecordId,
+        records: [{ objectNameSingular: 'company', recordId: missingRecordId }],
       }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       success: false,
-      message: 'Failed to attach this conversation to the company record',
+      message: 'Failed to attach this conversation to records',
       error: expect.stringContaining('Record not found'),
     });
   });
@@ -133,8 +163,7 @@ describe('Attaching a conversation to a record from a chat turn', () => {
 
     await expect(
       tool.execute({
-        objectNameSingular: 'unknownObject',
-        recordId: companyId,
+        records: [{ objectNameSingular: 'unknownObject', recordId: companyId }],
       }),
     ).resolves.toMatchObject({
       success: false,

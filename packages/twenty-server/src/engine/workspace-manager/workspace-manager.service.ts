@@ -1,7 +1,7 @@
-import { AgentHistoryWorkspaceStorageService } from 'src/engine/metadata-modules/ai/ai-history/services/agent-history-workspace-storage.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
+import { MEMBER_ROLE_UNIVERSAL_IDENTIFIER } from 'twenty-shared/constants';
 import { Repository } from 'typeorm';
 
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
@@ -10,8 +10,7 @@ import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { RoleEntity } from 'src/engine/metadata-modules/role/role.entity';
 import { RoleService } from 'src/engine/metadata-modules/role/role.service';
-import { UserRoleService } from 'src/engine/metadata-modules/user-role/user-role.service';
-import { MEMBER_ROLE_LABEL } from 'src/engine/metadata-modules/permissions/constants/member-role-label.constants';
+import { RoleAssignmentWriteService } from 'src/engine/permissions/role-assignment/role-assignment-write.service';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 import { WorkspaceSchemaService } from 'src/engine/workspace-datasource/workspace-schema.service';
@@ -23,12 +22,11 @@ export class WorkspaceManagerService {
   private readonly logger = new Logger(WorkspaceManagerService.name);
 
   constructor(
-    private readonly agentHistoryStorageService: AgentHistoryWorkspaceStorageService,
     private readonly workspaceSchemaService: WorkspaceSchemaService,
     @InjectRepository(UserWorkspaceEntity)
     private readonly userWorkspaceRepository: Repository<UserWorkspaceEntity>,
     private readonly roleService: RoleService,
-    private readonly userRoleService: UserRoleService,
+    private readonly roleAssignmentWriteService: RoleAssignmentWriteService,
     private readonly twentyStandardApplicationService: TwentyStandardApplicationService,
     @InjectRepository(WorkspaceEntity)
     private readonly workspaceRepository: Repository<WorkspaceEntity>,
@@ -71,8 +69,6 @@ export class WorkspaceManagerService {
       },
     );
 
-    await this.agentHistoryStorageService.initializeWorkspace(workspaceId);
-
     const dataSourceMetadataCreationEnd = performance.now();
 
     this.logger.log(
@@ -85,6 +81,11 @@ export class WorkspaceManagerService {
           workspaceId,
         },
       );
+
+    await this.roleService.createWorkspaceCustomApplicationRole({
+      workspaceId,
+      workspaceCustomFlatApplication,
+    });
 
     await this.setupDefaultRoles({
       workspaceId,
@@ -113,7 +114,7 @@ export class WorkspaceManagerService {
         where: { workspaceId, userId },
       });
 
-      await this.userRoleService.assignRoleToManyUserWorkspace({
+      await this.roleAssignmentWriteService.assignRoleToUserWorkspaces({
         workspaceId,
         userWorkspaceIds: [userWorkspace.id],
         roleId: adminRole.id,
@@ -121,7 +122,7 @@ export class WorkspaceManagerService {
     }
 
     const existingMemberRole = await this.roleRepository.findOne(workspaceId, {
-      where: { label: MEMBER_ROLE_LABEL },
+      where: { universalIdentifier: MEMBER_ROLE_UNIVERSAL_IDENTIFIER },
     });
 
     const memberRole =

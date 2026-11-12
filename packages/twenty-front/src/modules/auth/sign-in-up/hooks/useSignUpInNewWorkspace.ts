@@ -1,15 +1,19 @@
 import { useAuth } from '@/auth/hooks/useAuth';
+import { affiliatePartnerNameState } from '@/auth/states/affiliatePartnerNameState';
 import { useUploadNewWorkspaceLogo } from '@/auth/sign-in-up/hooks/useUploadNewWorkspaceLogo';
+import { useReadCaptchaToken } from '@/captcha/hooks/useReadCaptchaToken';
+import { useCaptcha } from '@/client-config/hooks/useCaptcha';
 import { isMultiWorkspaceEnabledState } from '@/client-config/states/isMultiWorkspaceEnabledState';
 import { useRedirectToWorkspaceDomain } from '@/domain-manager/hooks/useRedirectToWorkspaceDomain';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation } from '@apollo/client/react';
 import { useLingui } from '@lingui/react/macro';
 import { AppPath } from 'twenty-shared/types';
 import { assertIsDefinedOrThrow, isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import { SignUpInNewWorkspaceDocument } from '~/generated-metadata/graphql';
 import { getWorkspaceUrl } from '~/utils/getWorkspaceUrl';
 
@@ -26,6 +30,12 @@ export const useSignUpInNewWorkspace = () => {
     SignUpInNewWorkspaceDocument,
   );
   const { uploadNewWorkspaceLogo } = useUploadNewWorkspaceLogo();
+  const affiliatePartnerName = useAtomStateValue(
+    affiliatePartnerNameState,
+  )?.partner;
+  const setAffiliatePartnerName = useSetAtomState(affiliatePartnerNameState);
+  const { isCaptchaReady } = useCaptcha();
+  const { readCaptchaToken } = useReadCaptchaToken();
 
   const createWorkspace = async ({
     displayName,
@@ -36,11 +46,31 @@ export const useSignUpInNewWorkspace = () => {
     subdomain?: string;
     logo?: File;
   } = {}): Promise<boolean> => {
+    if (!isCaptchaReady) {
+      enqueueToast({
+        status: 'error',
+        children: t`Captcha (anti-bot check) is still loading, try again`,
+      });
+
+      return false;
+    }
+
     try {
+      const captchaToken = readCaptchaToken();
+
       const { data } = await signUpInNewWorkspaceMutation({
-        variables: { input: { displayName, subdomain } },
+        variables: {
+          input: {
+            displayName,
+            subdomain,
+            affiliatePartnerName,
+            captchaToken,
+          },
+        },
       });
       assertIsDefinedOrThrow(data?.signUpInNewWorkspace);
+
+      setAffiliatePartnerName(null);
 
       const workspaceId = data.signUpInNewWorkspace.workspace.id;
 
@@ -52,7 +82,7 @@ export const useSignUpInNewWorkspace = () => {
             enqueueToast(getToastOptionsFromError({ error: logoUploadError }));
           } else {
             enqueueToast({
-              variant: 'error',
+              status: 'error',
               children:
                 logoUploadError instanceof Error
                   ? logoUploadError.message
@@ -69,12 +99,14 @@ export const useSignUpInNewWorkspace = () => {
         return true;
       }
 
-      await redirectToWorkspaceDomain(
-        getWorkspaceUrl(data.signUpInNewWorkspace.workspace.workspaceUrls),
-        AppPath.Verify,
-        { loginToken },
-        '_self',
-      );
+      await redirectToWorkspaceDomain({
+        baseUrl: getWorkspaceUrl(
+          data.signUpInNewWorkspace.workspace.workspaceUrls,
+        ),
+        pathname: AppPath.Verify,
+        searchParams: { loginToken },
+        target: '_self',
+      });
 
       return true;
     } catch (error) {
@@ -82,7 +114,7 @@ export const useSignUpInNewWorkspace = () => {
         enqueueToast(getToastOptionsFromError({ error }));
       } else {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children:
             error instanceof Error
               ? error.message

@@ -56,7 +56,6 @@ export const fromViewManifestToUniversalFlatView = ({
     icon: viewManifest.icon ?? 'IconList',
     position: viewManifest.position ?? 0,
     isCompact: viewManifest.isCompact ?? false,
-    isCustom: true,
     visibility: viewManifest.visibility ?? ViewVisibility.WORKSPACE,
     openRecordIn: viewManifest.openRecordIn ?? ViewOpenRecordIn.SIDE_PANEL,
     key: null,
@@ -72,6 +71,7 @@ export const fromViewManifestToUniversalFlatView = ({
     mainGroupByFieldMetadataUniversalIdentifier:
       viewManifest.mainGroupByFieldMetadataUniversalIdentifier ?? null,
     shouldHideEmptyGroups: viewManifest.shouldHideEmptyGroups ?? false,
+    shouldDisplayGroupsAsTabs: viewManifest.shouldDisplayGroupsAsTabs ?? false,
     kanbanColumnWidth: viewManifest.kanbanColumnWidth ?? null,
     groupLoadLimit: getViewManifestGroupLoadLimitOrThrow(viewManifest),
     anyFieldFilterValue: viewManifest.anyFieldFilterValue ?? null,

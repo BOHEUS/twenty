@@ -14,8 +14,6 @@ describe('buildRequiredToolAuthContext', () => {
     overrides?: Partial<ToolProviderContext>,
   ): ToolProviderContext => ({
     workspaceId,
-    roleId: 'role-1',
-    rolePermissionConfig: { unionOf: ['role-1'] },
     ...overrides,
   });
 
@@ -88,6 +86,15 @@ describe('buildRequiredToolAuthContext', () => {
     });
 
     expect(authContext).toMatchObject({ type: 'user', application });
+  });
+
+  it('should keep the agent the run is limited to', async () => {
+    const authContext = await buildRequiredToolAuthContext({
+      context: buildContext({ userId, userWorkspaceId, agentId: 'agent-id' }),
+      ...buildDependencies(),
+    });
+
+    expect(authContext).toMatchObject({ type: 'user', agentId: 'agent-id' });
   });
 
   it('should throw without a resolvable identity', async () => {

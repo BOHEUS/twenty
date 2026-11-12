@@ -1,5 +1,17 @@
+import { formatRecordReference } from 'twenty-shared/ai';
+import { FeatureFlagKey } from 'twenty-shared/types';
+import { updateFeatureFlag } from 'test/integration/metadata/suites/utils/update-feature-flag.util';
 import { parse } from 'graphql';
+import {
+  findMyParticipant,
+  findParticipantEvents,
+  runInboxAction,
+  spyOnParticipantEvents,
+} from 'test/integration/graphql/suites/chat-thread-participant/utils/chat-thread-participant-test.util';
 import { answerToolCall } from 'test/integration/graphql/suites/workflow/utils/answer-tool-call.util';
+import { createOneOperationFactory } from 'test/integration/graphql/utils/create-one-operation-factory.util';
+import { destroyOneOperationFactory } from 'test/integration/graphql/utils/destroy-one-operation-factory.util';
+import { makeGraphqlApiRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
 import { cleanupApplicationAndAppRegistration } from 'test/integration/metadata/suites/application/utils/cleanup-application-and-app-registration.util';
 import {
   type ApplicationWithResources,
@@ -16,12 +28,14 @@ import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queu
 import { type MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
 import { getQueueToken } from 'src/engine/core-modules/message-queue/utils/get-queue-token.util';
 import { buildInboxMessageIds } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-inbox-message-ids.util';
+import { buildInboxThreadId } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-inbox-thread-id.util';
 import { type AiModelRegistryService } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-registry.service';
 import { type WorkspaceRepository } from 'src/engine/twenty-orm/repository/workspace-repository';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { type WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
 import { getWorkspaceSchemaName } from 'src/engine/workspace-datasource/utils/get-workspace-schema-name.util';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
+import { OPPORTUNITY_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/opportunity-data-seeds.constant';
 import { USER_WORKSPACE_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/core/utils/seed-user-workspaces.util';
 import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
 
@@ -35,24 +49,33 @@ const SEND_INBOX_MESSAGE = parse(`
   }
 `);
 
-const QUESTIONS = [
-  {
-    header: 'Share',
-    question: 'Do you want to share it with the other attendees?',
-    options: [{ label: 'Draft a recap email' }, { label: 'Not now' }],
-  },
-];
+const QUESTION = {
+  header: 'Share',
+  question: 'Do you want to share it with the other attendees?',
+  options: [{ label: 'Draft a recap email' }, { label: 'Not now' }],
+};
 
 // The model is not called here: the resumed stream is only checked for being
 // queued.
+const setRecordSharingEnabled = (value: boolean) =>
+  updateFeatureFlag({
+    featureFlag: FeatureFlagKey.IS_RECORD_LEVEL_SHARING_ENABLED,
+    value,
+    expectToFail: false,
+  });
+
+beforeAll(() => setRecordSharingEnabled(true));
+
+afterAll(() => setRecordSharingEnabled(false));
+
 describe('Sending an inbox message as an application', () => {
   const input = {
-    workspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.JANE,
+    workspaceMemberIds: [WORKSPACE_MEMBER_DATA_SEED_IDS.JANE],
     threadKey: `inbox-thread-${uuidv4()}`,
     idempotencyKey: 'first-recording',
     title: 'Your first call recording is ready',
     text: 'Your first call was recorded: **Weekly sync**.',
-    toolCall: { toolName: 'ask_questions', input: { questions: QUESTIONS } },
+    toolCall: { toolName: 'ask_question', input: QUESTION },
   };
   let application: ApplicationWithResources;
   let applicationToken: string;
@@ -82,9 +105,9 @@ describe('Sending an inbox message as an application', () => {
 
   const readMessages = (id: string) =>
     global.testDataSource.query(
-      `SELECT id, role, "isHidden", "senderUserWorkspaceId", "senderApplicationId"
+      `SELECT id, role, "senderWorkspaceMemberId", "senderApplicationId"
        FROM "${schema}"."agentMessage" WHERE "threadId" = $1
-       ORDER BY "processedAt" ASC`,
+       ORDER BY "processedAt" ASC, "createdAt" ASC`,
       [id],
     );
 
@@ -112,7 +135,7 @@ describe('Sending an inbox message as an application', () => {
         .spyOn(aiModelRegistryService, 'getAvailableModels')
         .mockReturnValue([{ modelId: 'test-model' }] as never),
       jest
-        .spyOn(aiModelRegistryService, 'validateModelAvailability')
+        .spyOn(aiModelRegistryService, 'validateModelAvailabilityOrThrow')
         .mockReturnValue(undefined as never),
     );
     enqueueStream = jest
@@ -154,6 +177,22 @@ describe('Sending an inbox message as an application', () => {
     });
   });
 
+  it('refuses to propose a record call the application could not run itself', async () => {
+    const response = await sendInboxMessage(applicationToken, {
+      threadKey: `inbox-thread-${uuidv4()}`,
+      toolCall: {
+        toolName: 'propose_tool_call',
+        input: {
+          toolName: 'update_one_opportunity',
+          arguments: { id: OPPORTUNITY_DATA_SEED_IDS.ID_1, stage: 'WON' },
+          summary: 'Mark the deal as won',
+        },
+      },
+    });
+
+    expect(JSON.stringify(response.body.errors)).toContain('not available');
+  });
+
   it('rejects a member session', async () => {
     const response = await sendInboxMessage(APPLE_JANE_ADMIN_ACCESS_TOKEN);
 
@@ -174,14 +213,12 @@ describe('Sending an inbox message as an application', () => {
     });
     expect(messages).toEqual([
       expect.objectContaining({
-        role: 'user',
-        isHidden: true,
-        senderUserWorkspaceId: USER_WORKSPACE_DATA_SEED_IDS.JANE,
+        role: 'system',
+        senderWorkspaceMemberId: null,
         senderApplicationId: null,
       }),
       expect.objectContaining({
         role: 'assistant',
-        isHidden: false,
         senderApplicationId: application.id,
       }),
     ]);
@@ -220,6 +257,38 @@ describe('Sending an inbox message as an application', () => {
     expect(response.body.data.sendInboxMessage.threadId).toBe(threadId);
     expect(await readMessages(threadId)).toHaveLength(3);
     expect(await readPendingQuestionMessageId()).toBe(pendingQuestionMessageId);
+  });
+
+  it('adds the members a later send lists to the same conversation', async () => {
+    const response = await sendInboxMessage(applicationToken, {
+      workspaceMemberIds: [
+        WORKSPACE_MEMBER_DATA_SEED_IDS.JANE,
+        WORKSPACE_MEMBER_DATA_SEED_IDS.TIM,
+      ],
+      idempotencyKey: 'shared-with-tim',
+      text: 'Tim joins the conversation.',
+      toolCall: null,
+    });
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.sendInboxMessage.threadId).toBe(threadId);
+    expect(
+      await global.testDataSource.query(
+        `SELECT "isSubscribed" FROM "${schema}"."agentChatThreadParticipant"
+         WHERE "threadId" = $1 AND "workspaceMemberId" = $2`,
+        [threadId, WORKSPACE_MEMBER_DATA_SEED_IDS.TIM],
+      ),
+    ).toEqual([{ isSubscribed: true }]);
+  });
+
+  it('refuses a member who cannot have the conversation', async () => {
+    const response = await sendInboxMessage(applicationToken, {
+      workspaceMemberIds: [WORKSPACE_MEMBER_DATA_SEED_IDS.JANE, uuidv4()],
+      idempotencyKey: 'shared-with-a-stranger',
+      toolCall: null,
+    });
+
+    expect(JSON.stringify(response.body.errors)).toContain('THREAD_NOT_FOUND');
   });
 
   it('keeps a single waiting question when two are sent at once', async () => {
@@ -262,9 +331,9 @@ describe('Sending an inbox message as an application', () => {
       await workspaceOrmManager.executeInWorkspaceContext(
         () =>
           Object.getPrototypeOf(
-            workspaceOrmManager.getRepository('agentMessagePart', {
-              shouldBypassPermissionChecks: true,
-            }),
+            workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+              'agentMessagePart',
+            ),
           ),
         buildSystemAuthContext(SEED_APPLE_WORKSPACE_ID),
         { lite: true },
@@ -304,7 +373,6 @@ describe('Sending an inbox message as an application', () => {
 
     const { threadId: failedThreadId } = buildInboxMessageIds({
       senderKey: `application:${application.id}`,
-      workspaceMemberId: input.workspaceMemberId,
       threadKey,
       idempotencyKey: input.idempotencyKey,
     });
@@ -348,9 +416,7 @@ describe('Sending an inbox message as an application', () => {
         threadId,
         toolCallId: `call_${pendingQuestionMessageId!.replace(/-/g, '')}`,
       },
-      response: {
-        answers: [{ questionIndex: 0, selectedOptionIndices: [0] }],
-      },
+      response: { selectedOptionIndices: [0] },
     });
 
     expect(response.body.errors).toBeUndefined();
@@ -360,6 +426,242 @@ describe('Sending an inbox message as an application', () => {
         threadId,
         userWorkspaceId: USER_WORKSPACE_DATA_SEED_IDS.JANE,
       }),
+      expect.anything(),
     );
+  });
+
+  describe('with members mentioned in its text', () => {
+    const { JANE, JONY } = WORKSPACE_MEMBER_DATA_SEED_IDS;
+
+    const mention = (workspaceMemberId: string) =>
+      formatRecordReference({
+        objectNameSingular: 'workspaceMember',
+        recordId: workspaceMemberId,
+        displayName: 'Teammate',
+      });
+
+    const buildThreadId = (threadKey: string) =>
+      buildInboxThreadId({
+        senderKey: `application:${application.id}`,
+        threadKey,
+      });
+
+    it('mentions every member it names, the owner too, once for a message sent twice at once', async () => {
+      const threadKey = `inbox-thread-${uuidv4()}`;
+      const mentionThreadId = buildThreadId(threadKey);
+      const eventSpy = spyOnParticipantEvents();
+
+      try {
+        const responses = await Promise.all(
+          [1, 2].map(() =>
+            sendInboxMessage(applicationToken, {
+              toolCall: null,
+              threadKey,
+              idempotencyKey: 'review-request',
+              text: `${mention(JONY)}, ${mention(JANE)} and ${mention(JONY)} again: the deck is ready.`,
+            }),
+          ),
+        );
+
+        expect(responses.map(({ body }) => body.errors)).toEqual([
+          undefined,
+          undefined,
+        ]);
+        expect(await readMessages(mentionThreadId)).toHaveLength(2);
+        expect(
+          await findMyParticipant(
+            mentionThreadId,
+            APPLE_JONY_MEMBER_ACCESS_TOKEN,
+          ),
+        ).toMatchObject({
+          isSubscribed: true,
+          lastReadAt: null,
+          lastMentionedAt: expect.any(String),
+          mentionsResolvedAt: null,
+        });
+        expect(await findMyParticipant(mentionThreadId)).toMatchObject({
+          lastReadAt: null,
+          lastMentionedAt: expect.any(String),
+          mentionsResolvedAt: null,
+        });
+        expect(
+          findParticipantEvents(eventSpy, mentionThreadId)
+            .map(({ action }) => action)
+            .sort(),
+        ).toEqual(['created', 'created', 'updated']);
+      } finally {
+        eventSpy.mockRestore();
+        await destroyAgentChatThread({ threadId: mentionThreadId });
+      }
+    });
+
+    it('mentions a member again for a new message, never for a message sent again', async () => {
+      const threadKey = `inbox-thread-${uuidv4()}`;
+      const mentionThreadId = buildThreadId(threadKey);
+      const sendComment = (
+        idempotencyKey: string,
+        mentionedWorkspaceMemberId = JONY,
+      ) =>
+        sendInboxMessage(applicationToken, {
+          toolCall: null,
+          threadKey,
+          idempotencyKey,
+          text: `${mention(mentionedWorkspaceMemberId)}, can you check the figures?`,
+        });
+      const findJonyParticipant = () =>
+        findMyParticipant(mentionThreadId, APPLE_JONY_MEMBER_ACCESS_TOKEN);
+
+      try {
+        await sendComment('comment:1');
+        await runInboxAction('READ', mentionThreadId, {
+          token: APPLE_JONY_MEMBER_ACCESS_TOKEN,
+        });
+
+        const resolvedParticipant = await findJonyParticipant();
+
+        expect((await sendComment('comment:1')).body.errors).toBeUndefined();
+        expect(await findJonyParticipant()).toMatchObject({
+          lastMentionedAt: resolvedParticipant?.lastMentionedAt,
+          mentionsResolvedAt: resolvedParticipant?.mentionsResolvedAt,
+        });
+
+        expect(
+          (await sendComment('comment:1', JANE)).body.errors,
+        ).toBeUndefined();
+        expect(await findMyParticipant(mentionThreadId)).toMatchObject({
+          lastMentionedAt: null,
+        });
+
+        await sendComment('comment:2');
+
+        expect(
+          new Date((await findJonyParticipant())!.lastMentionedAt!).getTime(),
+        ).toBeGreaterThan(
+          new Date(resolvedParticipant!.mentionsResolvedAt!).getTime(),
+        );
+      } finally {
+        await destroyAgentChatThread({ threadId: mentionThreadId });
+      }
+    });
+
+    it('sends the message and skips a mentioned member who cannot have the conversation', async () => {
+      const threadKey = `inbox-thread-${uuidv4()}`;
+      const mentionThreadId = buildThreadId(threadKey);
+
+      try {
+        const response = await sendInboxMessage(applicationToken, {
+          toolCall: null,
+          threadKey,
+          idempotencyKey: 'stranger',
+          text: `${mention(uuidv4())}, can you check the figures?`,
+        });
+
+        expect(response.body.errors).toBeUndefined();
+        expect(await readMessages(mentionThreadId)).toHaveLength(2);
+      } finally {
+        await destroyAgentChatThread({ threadId: mentionThreadId });
+      }
+    });
+  });
+});
+
+describe('Proposing a record call as an application', () => {
+  let application: ApplicationWithResources;
+  let applicationToken: string;
+  let threadId: string | undefined;
+  const opportunityId = uuidv4();
+
+  beforeAll(async () => {
+    await makeGraphqlApiRequest(
+      createOneOperationFactory({
+        objectMetadataSingularName: 'opportunity',
+        gqlFields: 'id',
+        data: { id: opportunityId, name: 'Inbox proposal deal' },
+      }),
+    );
+
+    application = await setupApplicationWithResources({
+      name: 'Inbox Record Application',
+      permissionFlagUniversalIdentifiers: [SystemPermissionFlag.AI],
+      canReadAndUpdateAllObjectRecords: true,
+    });
+    jest.useRealTimers();
+
+    applicationToken = (
+      await generateApplicationTokenPair({
+        workspaceId: SEED_APPLE_WORKSPACE_ID,
+        applicationId: application.id,
+      })
+    ).applicationAccessToken.token;
+  });
+
+  afterAll(async () => {
+    await makeGraphqlApiRequest(
+      destroyOneOperationFactory({
+        objectMetadataSingularName: 'opportunity',
+        gqlFields: 'id',
+        recordId: opportunityId,
+      }),
+    );
+
+    if (threadId !== undefined) {
+      await destroyAgentChatThread({ threadId });
+    }
+
+    await cleanupApplicationAndAppRegistration({
+      applicationUniversalIdentifier: application.universalIdentifier,
+    });
+  });
+
+  it('proposes an update the application could run, with the values it changes', async () => {
+    const response = await makeMetadataApiRequest(
+      {
+        query: SEND_INBOX_MESSAGE,
+        variables: {
+          input: {
+            workspaceMemberIds: [WORKSPACE_MEMBER_DATA_SEED_IDS.JANE],
+            threadKey: `inbox-thread-${uuidv4()}`,
+            idempotencyKey: 'record-proposal',
+            title: 'A deal looks won',
+            text: 'The signed quote came in.',
+            toolCall: {
+              toolName: 'propose_tool_call',
+              input: {
+                toolName: 'update_one_opportunity',
+                arguments: { id: opportunityId, stage: 'WON' },
+                summary: 'Mark the deal as won',
+              },
+            },
+          },
+        },
+      },
+      applicationToken,
+    );
+
+    expect(response.body.errors).toBeUndefined();
+    threadId = response.body.data.sendInboxMessage.threadId;
+
+    const [part] = await global.testDataSource.query(
+      `SELECT part."toolOutput" FROM "${schema}"."agentMessagePart" part
+       JOIN "${schema}"."agentMessage" message ON message.id = part."messageId"
+       WHERE message."threadId" = $1 AND part."toolName" = 'propose_tool_call'`,
+      [threadId],
+    );
+
+    const [opportunity] = await global.testDataSource.query(
+      `SELECT stage FROM "${schema}"."opportunity" WHERE id = $1`,
+      [opportunityId],
+    );
+
+    expect(part.toolOutput.result).toMatchObject({
+      status: 'pending',
+      proposal: {
+        toolName: 'update_one_opportunity',
+        template: 'recordUpdate',
+        objectNameSingular: 'opportunity',
+        recordId: opportunityId,
+        currentValues: { stage: opportunity.stage },
+      },
+    });
   });
 });

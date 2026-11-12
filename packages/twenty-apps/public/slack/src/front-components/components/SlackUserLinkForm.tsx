@@ -2,10 +2,10 @@ import styled from '@emotion/styled';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useState } from 'react';
 import { isDefined } from 'twenty-sdk/utils';
-import { Button } from 'twenty-ui/input';
-import { Section } from 'twenty-ui/layout';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
-import { H2Title } from 'twenty-ui/typography';
+import { enqueueSnackbar } from 'twenty-sdk/front-component';
+import { Button } from 'twenty-ui/primitives/input';
+import { Section } from 'twenty-ui/components/layout';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 import { ResolvedSlackUserField } from 'src/front-components/components/ResolvedSlackUserField';
 import { SlackConnectUserIdFields } from 'src/front-components/components/SlackConnectUserIdFields';
@@ -19,7 +19,6 @@ import { useSetSlackUserLink } from 'src/front-components/hooks/use-set-slack-us
 import { type SlackUserLinkRecord } from 'src/front-components/types/slack-user-link-record.type';
 import { type WorkspaceMemberOption } from 'src/front-components/types/workspace-member-option.type';
 import { buildSlackUserLinkSaveNote } from 'src/front-components/utils/build-slack-user-link-save-note.util';
-import { enqueueSlackToolResultSnackbar } from 'src/front-components/utils/enqueue-slack-tool-result-snackbar.util';
 
 const StyledForm = styled.form`
   display: flex;
@@ -109,7 +108,10 @@ export const SlackUserLinkForm = ({
         : resolvedUser.displayName,
     });
 
-    enqueueSlackToolResultSnackbar(result);
+    enqueueSnackbar({
+      message: isNonEmptyString(result.error) ? result.error : result.message,
+      variant: result.success ? 'success' : 'error',
+    });
 
     if (result.success) {
       resetForm();
@@ -129,8 +131,8 @@ export const SlackUserLinkForm = ({
   };
 
   return (
-    <Section>
-      <H2Title
+    <Section.Root>
+      <Section.Header
         title="Link a Slack user"
         description="Pick a workspace member and the Slack account whose messages should act with that member's permissions. A link whose Slack email matches the member activates immediately; other in-workspace links ask the Slack user to approve first."
       />
@@ -193,11 +195,12 @@ export const SlackUserLinkForm = ({
               <StyledDisclosure>
                 <Button
                   type="button"
-                  title="Guest or Slack Connect user? Link by Slack ID instead"
-                  size="small"
-                  variant="tertiary"
+                  size="sm"
+                  variant="ghost"
                   onClick={() => setIsConnectUser(true)}
-                />
+                >
+                  Guest or Slack Connect user? Link by Slack ID instead
+                </Button>
               </StyledDisclosure>
             )}
             {isResolving ? (
@@ -233,14 +236,15 @@ export const SlackUserLinkForm = ({
         <StyledActions>
           <Button
             type="button"
-            title={isSubmitting ? 'Saving…' : 'Save link'}
-            variant="primary"
-            accent="blue"
+            variant="solid"
+            color="accent"
             disabled={!canSubmit}
             onClick={handleSubmit}
-          />
+          >
+            {isSubmitting ? 'Saving…' : 'Save link'}
+          </Button>
         </StyledActions>
       </StyledForm>
-    </Section>
+    </Section.Root>
   );
 };

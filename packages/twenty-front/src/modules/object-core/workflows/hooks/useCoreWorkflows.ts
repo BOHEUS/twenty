@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useQuery } from '@apollo/client/react';
 import { isDefined } from 'twenty-shared/utils';
@@ -12,7 +12,7 @@ import { sortedFieldByTableFamilyState } from '@/ui/layout/table/states/sortedFi
 import { type TableSortValue } from '@/ui/layout/table/types/TableSortValue';
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   CoreWorkflowOrderByDirection,
   CoreWorkflowOrderByField,
@@ -54,6 +54,12 @@ const mergeFetchedCoreWorkflowPage = (
         ...previousResult.coreWorkflows.edges,
         ...fetchMoreResult.coreWorkflows.edges.filter(
           (edge) => !alreadyLoadedIds.has(edge.node.id),
+        ),
+      ],
+      runSummaries: [
+        ...previousResult.coreWorkflows.runSummaries,
+        ...fetchMoreResult.coreWorkflows.runSummaries.filter(
+          (runSummary) => !alreadyLoadedIds.has(runSummary.coreWorkflowId),
         ),
       ],
     },
@@ -110,6 +116,22 @@ export const useCoreWorkflows = ({
   );
   const connection = (data ?? previousData)?.coreWorkflows;
 
+  const coreWorkflows = useMemo(
+    () => connection?.edges.map((edge) => edge.node) ?? [],
+    [connection],
+  );
+
+  const runSummaryByCoreWorkflowId = useMemo(
+    () =>
+      new Map(
+        (connection?.runSummaries ?? []).map((runSummary) => [
+          runSummary.coreWorkflowId,
+          runSummary,
+        ]),
+      ),
+    [connection],
+  );
+
   const { enqueueToast } = useToast();
 
   const fetchNextPage = async () => {
@@ -162,7 +184,8 @@ export const useCoreWorkflows = ({
   }, [fetchMore, loadedCount, refetch]);
 
   return {
-    coreWorkflows: connection?.edges.map((edge) => edge.node) ?? [],
+    coreWorkflows,
+    runSummaryByCoreWorkflowId,
     totalCount: connection?.totalCount ?? 0,
     hasNextPage: connection?.pageInfo.hasNextPage ?? false,
     fetchNextPage,

@@ -2,8 +2,27 @@ import { isNonEmptyString } from '@sniptt/guards';
 import { type Request, type Response } from 'express';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 
-import { computeRequestActor } from 'src/engine/utils/compute-request-actor.util';
+import {
+  computeRequestActor,
+  type RequestActorCandidates,
+} from 'src/engine/utils/compute-request-actor.util';
 import { type RequestTraceContext } from 'src/engine/utils/compute-request-trace-context.util';
+import { toLogfmt } from 'src/engine/utils/to-logfmt.util';
+
+type ApiAccessLogRequest = RequestActorCandidates &
+  Pick<
+    Request,
+    | 'method'
+    | 'originalUrl'
+    | 'headers'
+    | 'executedRootResolvers'
+    | 'mcpMethod'
+    | 'mcpToolName'
+    | 'impersonationContext'
+    | 'workspaceId'
+    | 'authProvider'
+    | 'tokenType'
+  >;
 
 const MAX_LOGGED_RESOLVERS_LENGTH = 512;
 const MAX_LOGGED_REQUEST_ID_LENGTH = 128;
@@ -15,8 +34,8 @@ export const buildApiAccessLogLine = ({
   durationMs,
   traceContext,
 }: {
-  request: Request;
-  response: Response;
+  request: ApiAccessLogRequest;
+  response: Pick<Response, 'statusCode' | 'writableEnded'>;
   durationMs: number;
   traceContext: RequestTraceContext | undefined;
 }): string => {
@@ -45,7 +64,9 @@ export const buildApiAccessLogLine = ({
   });
 };
 
-const formatActor = (request: Request): Record<string, string | undefined> => {
+const formatActor = (
+  request: RequestActorCandidates,
+): Record<string, string | undefined> => {
   const actor = computeRequestActor(request);
 
   return isDefined(actor)
@@ -88,16 +109,3 @@ const formatResolvers = (resolvers: string[] | undefined) => {
 
   return `${kept.join(',')},+${resolvers.length - kept.length}`;
 };
-
-const toLogfmt = (
-  fields: Record<string, string | number | boolean | undefined>,
-): string =>
-  Object.entries(fields)
-    .filter(([, value]) => isDefined(value))
-    .map(([key, value]) => `${key}=${quote(String(value))}`)
-    .join(' ');
-
-const quote = (value: string): string =>
-  isNonEmptyString(value) && !/[\s"=\\]/.test(value)
-    ? value
-    : `"${value.replace(/[\\"]/g, (character) => `\\${character}`)}"`;

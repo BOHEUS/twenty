@@ -1,15 +1,16 @@
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { CrudOperationType } from 'twenty-shared/types';
 
 import { useMetadataErrorHandler } from '@/metadata-error-handler/hooks/useMetadataErrorHandler';
 import { useUpdateMetadataStoreDraft } from '@/metadata-store/hooks/useUpdateMetadataStoreDraft';
 import { type MetadataRequestResult } from '@/object-metadata/types/MetadataRequestResult';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import { DeleteOneIndexMetadataItemDocument } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 export const useDeleteOneIndexMetadataItem = () => {
+  const { t } = useLingui();
   const [deleteOneIndexMetadataItemMutation] = useMutation(
     DeleteOneIndexMetadataItemDocument,
   );
@@ -48,7 +49,7 @@ export const useDeleteOneIndexMetadataItem = () => {
           operationType: CrudOperationType.DELETE,
         });
       } else {
-        enqueueToast({ variant: 'error', children: t`An error occurred.` });
+        enqueueToast({ status: 'error', children: t`An error occurred.` });
       }
 
       return {

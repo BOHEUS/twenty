@@ -1,14 +1,19 @@
-import { type ComponentProps } from 'react';
-import { InlineBanner } from 'twenty-ui/components';
+import {
+  type InlineBannerProps,
+  InlineBanner,
+} from 'twenty-ui/components/feedback';
 
 type AiChatInlineBannerProps = Pick<
-  ComponentProps<typeof InlineBanner>,
-  'message' | 'button'
+  InlineBannerProps,
+  'children' | 'action' | 'status'
 >;
 
 export const AiChatInlineBanner = ({
-  message,
-  button,
+  children,
+  action,
+  status = 'error',
 }: AiChatInlineBannerProps) => (
-  <InlineBanner embedded color="danger" message={message} button={button} />
+  <InlineBanner embedded status={status} action={action}>
+    {children}
+  </InlineBanner>
 );

@@ -3,11 +3,12 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { AiChatInitialLoadingIndicator } from '@/ai/components/AiChatInitialLoadingIndicator';
 import { agentChatDisplayedThreadState } from '@/ai/states/agentChatDisplayedThreadState';
-import { agentChatErrorComponentFamilyState } from '@/ai/states/agentChatErrorComponentFamilyState';
-import { agentChatIsAwaitingFirstChunkComponentFamilyState } from '@/ai/states/agentChatIsAwaitingFirstChunkComponentFamilyState';
-import { agentChatIsStreamingComponentFamilyState } from '@/ai/states/agentChatIsStreamingComponentFamilyState';
-import { useAtomComponentFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentFamilyStateValue';
+import { agentChatErrorFamilyState } from '@/ai/states/agentChatErrorFamilyState';
+import { agentChatIsStreamingFamilyState } from '@/ai/states/agentChatIsStreamingFamilyState';
+import { agentChatIsAssistantReplyPendingFamilySelector } from '@/ai/states/selectors/agentChatIsAssistantReplyPendingFamilySelector';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
+import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
 
 const StyledPendingResponseWrapper = styled.div`
   align-items: flex-start;
@@ -19,21 +20,20 @@ export const AiChatPendingResponseIndicator = () => {
   const agentChatDisplayedThread = useAtomStateValue(
     agentChatDisplayedThreadState,
   );
-  const agentChatIsAwaitingFirstChunk = useAtomComponentFamilyStateValue(
-    agentChatIsAwaitingFirstChunkComponentFamilyState,
+  const agentChatIsAssistantReplyPending = useAtomFamilySelectorValue(
+    agentChatIsAssistantReplyPendingFamilySelector,
+    agentChatDisplayedThread,
+  );
+  const agentChatIsStreaming = useAtomFamilyStateValue(
+    agentChatIsStreamingFamilyState,
     { threadId: agentChatDisplayedThread },
   );
-  const agentChatIsStreaming = useAtomComponentFamilyStateValue(
-    agentChatIsStreamingComponentFamilyState,
-    { threadId: agentChatDisplayedThread },
-  );
-  const agentChatError = useAtomComponentFamilyStateValue(
-    agentChatErrorComponentFamilyState,
-    { threadId: agentChatDisplayedThread },
-  );
+  const agentChatError = useAtomFamilyStateValue(agentChatErrorFamilyState, {
+    threadId: agentChatDisplayedThread,
+  });
 
   const shouldRender =
-    agentChatIsAwaitingFirstChunk &&
+    agentChatIsAssistantReplyPending &&
     !agentChatIsStreaming &&
     !isDefined(agentChatError);
 

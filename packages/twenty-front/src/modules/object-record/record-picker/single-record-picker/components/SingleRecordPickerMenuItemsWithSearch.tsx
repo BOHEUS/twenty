@@ -1,4 +1,4 @@
-import { ListItem } from 'twenty-ui/primitives/navigation';
+import { ListItemButton } from 'twenty-ui/components/navigation';
 import { type SingleRecordPickerMenuItemsWithSearchProps } from '@/object-record/record-picker/single-record-picker/types/SingleRecordPickerMenuItemsWithSearchProps';
 import { ToastOnQueryErrorEffect } from '@/apollo/components/ToastOnQueryErrorEffect';
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
@@ -16,8 +16,8 @@ import { DropdownMenuSeparator } from '@/ui/layout/dropdown/components/DropdownM
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { isDefined } from 'twenty-shared/utils';
-import { t } from '@lingui/core/macro';
 import { IconPlus } from 'twenty-ui/icon';
+import { useLingui } from '@lingui/react/macro';
 
 export const SingleRecordPickerMenuItemsWithSearch = ({
   EmptyIcon,
@@ -30,6 +30,7 @@ export const SingleRecordPickerMenuItemsWithSearch = ({
   layoutDirection = 'search-bar-on-top',
   focusId,
 }: SingleRecordPickerMenuItemsWithSearchProps) => {
+  const { t } = useLingui();
   const { handleSearchFilterChange } = useSingleRecordPickerSearch();
 
   const recordPickerInstanceId = useAvailableComponentInstanceIdOrThrow(
@@ -90,10 +91,10 @@ export const SingleRecordPickerMenuItemsWithSearch = ({
           {isDefined(onCreate) && canCreateRecords && (
             <>
               <DropdownMenuItemsContainer scrollable={false}>
-                <ListItem
+                <ListItemButton
                   onClick={handleCreateNew}
                   startIcon={<IconPlus />}
-                >{t`Add New`}</ListItem>
+                >{t`Add New`}</ListItemButton>
               </DropdownMenuItemsContainer>
               <DropdownMenuSeparator />
             </>
@@ -138,10 +139,10 @@ export const SingleRecordPickerMenuItemsWithSearch = ({
             <>
               <DropdownMenuSeparator />
               <DropdownMenuItemsContainer scrollable={false}>
-                <ListItem
+                <ListItemButton
                   onClick={handleCreateNew}
                   startIcon={<IconPlus />}
-                >{t`Add New`}</ListItem>
+                >{t`Add New`}</ListItemButton>
               </DropdownMenuItemsContainer>
             </>
           )}

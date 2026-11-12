@@ -1,40 +1,31 @@
 import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'twenty-ui/theme';
-import { type ExtendedUIMessagePart } from 'twenty-shared/ai';
+import {
+  type ExtendedUIMessagePart,
+  PREVIEW_FRONT_COMPONENT_TOOL_NAME,
+} from 'twenty-shared/ai';
 
 import { AiChatAssistantMessageRenderer } from '@/ai/components/AiChatAssistantMessageRenderer';
 
 jest.mock('@/ai/components/ThinkingStepsDisplay', () => ({
   ThinkingStepsDisplay: ({
-    hasAssistantTextResponseStarted,
     parts,
     isTrailingWhileStreaming,
+    workDurationMs,
   }: {
     parts: unknown[];
-    hasAssistantTextResponseStarted: boolean;
     isTrailingWhileStreaming?: boolean;
+    workDurationMs?: number | null;
   }) => (
     <div data-testid="thinking-steps-display">
-      {`thinking-${parts.length}-${hasAssistantTextResponseStarted ? 'answer-started' : 'answer-pending'}${isTrailingWhileStreaming ? '-trailing-while-streaming' : ''}`}
+      {`thinking-${parts.length}${isTrailingWhileStreaming ? '-trailing-while-streaming' : ''}${workDurationMs ? `-worked-${workDurationMs}` : ''}`}
     </div>
-  ),
-}));
-
-jest.mock('@/ai/components/ToolStepRenderer', () => ({
-  ToolStepRenderer: ({ toolPart }: { toolPart: { type: string } }) => (
-    <div data-testid="tool-step-renderer">{toolPart.type}</div>
   ),
 }));
 
 jest.mock('@/ai/components/LazyMarkdownRenderer', () => ({
   LazyMarkdownContent: ({ text }: { text: string }) => (
     <div data-testid="markdown-renderer">{text}</div>
-  ),
-}));
-
-jest.mock('@/ai/components/RoutingStatusDisplay', () => ({
-  RoutingStatusDisplay: ({ data }: { data: { text: string } }) => (
-    <div data-testid="routing-status-display">{data.text}</div>
   ),
 }));
 
@@ -48,34 +39,100 @@ jest.mock('@/ai/components/AiChatToolWidget', () => ({
   ),
 }));
 
-const APP_WIDGET = {
-  kind: 'front-component',
-  frontComponentId: '20202020-0000-4000-8000-000000000001',
-};
+jest.mock('@/ai/components/AiChatFrontComponentToolPreview', () => ({
+  AiChatFrontComponentToolPreview: () => <div>Component preview</div>,
+}));
 
-const mockUseToolWidgetByName = jest.fn(() => new Map());
+let mockIsFrontComponentPreviewEnabled = true;
+jest.mock('@/workspace/hooks/useIsFeatureEnabled', () => ({
+  useIsFeatureEnabled: () => mockIsFrontComponentPreviewEnabled,
+}));
 
-jest.mock('@/ai/hooks/useToolWidgetByName', () => ({
-  useToolWidgetByName: () => mockUseToolWidgetByName(),
+const APP_FRONT_COMPONENT_ID = '20202020-0000-4000-8000-000000000001';
+
+const mockUseFrontComponentIdByToolName = jest.fn(
+  () => new Map<string, string>(),
+);
+
+jest.mock('@/ai/hooks/useFrontComponentIdByToolName', () => ({
+  useFrontComponentIdByToolName: () => mockUseFrontComponentIdByToolName(),
 }));
 
 const renderAssistantRenderer = (
   messageParts: ExtendedUIMessagePart[],
-  { isLastMessageStreaming = false }: { isLastMessageStreaming?: boolean } = {},
+  {
+    isLastMessageStreaming = false,
+    shouldHideThinkingSteps = false,
+    workDurationMs,
+  }: {
+    isLastMessageStreaming?: boolean;
+    shouldHideThinkingSteps?: boolean;
+    workDurationMs?: number | null;
+  } = {},
 ) => {
   return render(
     <ThemeProvider colorScheme="light">
       <AiChatAssistantMessageRenderer
         messageParts={messageParts}
         isLastMessageStreaming={isLastMessageStreaming}
+        shouldHideThinkingSteps={shouldHideThinkingSteps}
+        workDurationMs={workDurationMs}
       />
     </ThemeProvider>,
   );
 };
 
 describe('AiChatAssistantMessageRenderer', () => {
+  it.each([PREVIEW_FRONT_COMPONENT_TOOL_NAME, 'execute_tool'])(
+    'renders %s previews outside the thinking steps',
+    (toolName) => {
+      const messageParts: ExtendedUIMessagePart[] = [
+        {
+          type: `tool-${toolName}`,
+          toolCallId: 'preview-call',
+          state: 'output-available',
+          input:
+            toolName === 'execute_tool'
+              ? { toolName: PREVIEW_FRONT_COMPONENT_TOOL_NAME, arguments: {} }
+              : {},
+          output: { success: true, result: { draftId: 'draft' } },
+        },
+      ];
+      renderAssistantRenderer(messageParts);
+      expect(screen.getByText('Component preview')).toBeInTheDocument();
+      expect(
+        screen.queryByTestId('thinking-steps-display'),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([PREVIEW_FRONT_COMPONENT_TOOL_NAME, 'execute_tool'])(
+    'keeps completed %s calls visible when previews are disabled',
+    (toolName) => {
+      mockIsFrontComponentPreviewEnabled = false;
+      const messageParts: ExtendedUIMessagePart[] = [
+        {
+          type: `tool-${toolName}`,
+          toolCallId: 'preview-call',
+          state: 'output-available',
+          input:
+            toolName === 'execute_tool'
+              ? { toolName: PREVIEW_FRONT_COMPONENT_TOOL_NAME, arguments: {} }
+              : {},
+          output: { success: true, result: { draftId: 'draft' } },
+        },
+      ];
+      renderAssistantRenderer(messageParts);
+      expect(screen.queryByText('Component preview')).not.toBeInTheDocument();
+      expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
+        'thinking-1',
+      );
+    },
+  );
+
   beforeEach(() => {
-    mockUseToolWidgetByName.mockReturnValue(new Map());
+    mockIsFrontComponentPreviewEnabled = true;
+    mockUseFrontComponentIdByToolName.mockReturnValue(new Map());
   });
 
   it('should group reasoning and tool steps into ThinkingStepsDisplay', () => {
@@ -101,23 +158,23 @@ describe('AiChatAssistantMessageRenderer', () => {
     renderAssistantRenderer(messageParts);
 
     expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
-      'thinking-2-answer-started',
+      'thinking-2',
     );
     expect(screen.getByTestId('markdown-renderer')).toHaveTextContent(
       'Final answer',
     );
   });
 
-  it('should keep answer-started false for thinking blocks with no following text', () => {
+  it('should give the work duration to the last group of thinking steps only', () => {
     const messageParts = [
       {
-        type: 'text',
-        text: 'Preamble',
+        type: 'reasoning',
+        text: 'First reasoning',
+        state: 'done',
       },
       {
-        type: 'reasoning',
-        text: 'Reasoning content',
-        state: 'done',
+        type: 'text',
+        text: 'Intermediate answer',
       },
       {
         type: 'tool-web_search',
@@ -126,12 +183,21 @@ describe('AiChatAssistantMessageRenderer', () => {
         output: { result: { ok: true } },
         state: 'output-available',
       },
+      {
+        type: 'text',
+        text: 'Final answer',
+      },
     ] as ExtendedUIMessagePart[];
 
-    renderAssistantRenderer(messageParts);
+    renderAssistantRenderer(messageParts, { workDurationMs: 83_000 });
 
-    expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
-      'thinking-2-answer-pending',
+    const thinkingStepsDisplays = screen.getAllByTestId(
+      'thinking-steps-display',
+    );
+
+    expect(thinkingStepsDisplays[0]).toHaveTextContent(/^thinking-1$/);
+    expect(thinkingStepsDisplays[1]).toHaveTextContent(
+      'thinking-1-worked-83000',
     );
   });
 
@@ -161,7 +227,6 @@ describe('AiChatAssistantMessageRenderer', () => {
     renderAssistantRenderer(messageParts);
 
     expect(screen.queryByTestId('thinking-steps-display')).toBeNull();
-    expect(screen.queryByTestId('tool-step-renderer')).toBeNull();
     expect(screen.getByTestId('code-execution-display')).toBeInTheDocument();
   });
 
@@ -184,9 +249,8 @@ describe('AiChatAssistantMessageRenderer', () => {
     renderAssistantRenderer(messageParts);
 
     expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
-      'thinking-1-answer-pending',
+      'thinking-1',
     );
-    expect(screen.queryByTestId('tool-step-renderer')).toBeNull();
   });
 
   it('should hide execute_tool wrapping code_interpreter when data-code-execution parts exist', () => {
@@ -217,7 +281,7 @@ describe('AiChatAssistantMessageRenderer', () => {
 
     renderAssistantRenderer(messageParts);
 
-    expect(screen.queryByTestId('tool-step-renderer')).toBeNull();
+    expect(screen.queryByTestId('thinking-steps-display')).toBeNull();
     expect(screen.getByTestId('code-execution-display')).toBeInTheDocument();
   });
 
@@ -226,13 +290,6 @@ describe('AiChatAssistantMessageRenderer', () => {
       {
         type: 'text',
         text: 'Simple answer',
-      },
-      {
-        type: 'data-routing-status',
-        data: {
-          text: 'Routing complete',
-          state: 'routed',
-        },
       },
       {
         type: 'data-code-execution',
@@ -253,9 +310,6 @@ describe('AiChatAssistantMessageRenderer', () => {
     expect(screen.queryByTestId('thinking-steps-display')).toBeNull();
     expect(screen.getByTestId('markdown-renderer')).toHaveTextContent(
       'Simple answer',
-    );
-    expect(screen.getByTestId('routing-status-display')).toHaveTextContent(
-      'Routing complete',
     );
     expect(screen.getByTestId('code-execution-display')).toBeInTheDocument();
   });
@@ -291,9 +345,8 @@ describe('AiChatAssistantMessageRenderer', () => {
 
     renderAssistantRenderer(messageParts);
 
-    expect(screen.queryByTestId('tool-step-renderer')).toBeNull();
     expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
-      'thinking-2-answer-started',
+      'thinking-2',
     );
   });
 
@@ -336,7 +389,6 @@ describe('AiChatAssistantMessageRenderer', () => {
     const { container } = renderAssistantRenderer(messageParts);
 
     expect(container).not.toBeEmptyDOMElement();
-    expect(screen.queryByTestId('tool-step-renderer')).toBeNull();
   });
 
   it('should show a failed workspace setup completion instead of hiding it', () => {
@@ -378,6 +430,44 @@ describe('AiChatAssistantMessageRenderer', () => {
 
     expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
       'trailing-while-streaming',
+    );
+  });
+
+  it('should show the thinking row before the first step of a streaming message arrives', () => {
+    const messageParts: ExtendedUIMessagePart[] = [{ type: 'step-start' }];
+
+    renderAssistantRenderer(messageParts, { isLastMessageStreaming: true });
+
+    expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
+      'thinking-0-trailing-while-streaming',
+    );
+  });
+
+  it('should keep the same thinking row when the first reasoning arrives', () => {
+    const partsBeforeFirstStep: ExtendedUIMessagePart[] = [
+      { type: 'step-start' },
+    ];
+    const partsWithFirstReasoning: ExtendedUIMessagePart[] = [
+      { type: 'step-start' },
+      { type: 'reasoning', text: 'Weighing options', state: 'streaming' },
+    ];
+    const { rerender } = renderAssistantRenderer(partsBeforeFirstStep, {
+      isLastMessageStreaming: true,
+    });
+    const thinkingRow = screen.getByTestId('thinking-steps-display');
+
+    rerender(
+      <ThemeProvider colorScheme="light">
+        <AiChatAssistantMessageRenderer
+          messageParts={partsWithFirstReasoning}
+          isLastMessageStreaming
+        />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByTestId('thinking-steps-display')).toBe(thinkingRow);
+    expect(thinkingRow).toHaveTextContent(
+      'thinking-1-trailing-while-streaming',
     );
   });
 
@@ -442,46 +532,13 @@ describe('AiChatAssistantMessageRenderer', () => {
     renderAssistantRenderer(messageParts);
 
     expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
-      'thinking-1-answer-started',
+      'thinking-1',
     );
-  });
-  it('should keep a records widget call in the step group so it does not split the steps', () => {
-    mockUseToolWidgetByName.mockReturnValue(
-      new Map([['find_many_companies', { kind: 'builtin', name: 'records' }]]),
-    );
-
-    renderAssistantRenderer([
-      {
-        type: 'reasoning',
-        text: 'Reasoning content',
-        state: 'done',
-      },
-      {
-        type: 'tool-find_many_companies',
-        toolCallId: 'call_1',
-        state: 'output-available',
-        input: {},
-        output: { recordReferences: [] },
-      },
-      {
-        type: 'tool-web_search',
-        toolCallId: 'call_2',
-        input: { query: 'crm software' },
-        output: { result: { ok: true } },
-        state: 'output-available',
-      },
-    ] as unknown as ExtendedUIMessagePart[]);
-
-    expect(screen.getAllByTestId('thinking-steps-display')).toHaveLength(1);
-    expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
-      'thinking-3',
-    );
-    expect(screen.queryByTestId('tool-widget')).toBeNull();
   });
 
   it('should render a call that has an app widget on its own, not folded into the step group', () => {
-    mockUseToolWidgetByName.mockReturnValue(
-      new Map([['app_show_chart', APP_WIDGET]]),
+    mockUseFrontComponentIdByToolName.mockReturnValue(
+      new Map([['app_show_chart', APP_FRONT_COMPONENT_ID]]),
     );
 
     renderAssistantRenderer([
@@ -492,7 +549,7 @@ describe('AiChatAssistantMessageRenderer', () => {
         input: {},
         output: {},
       },
-    ] as unknown as ExtendedUIMessagePart[]);
+    ]);
 
     expect(screen.getByTestId('tool-widget')).toHaveTextContent(
       'tool-app_show_chart',
@@ -501,8 +558,8 @@ describe('AiChatAssistantMessageRenderer', () => {
   });
 
   it('should resolve the widget of a call dispatched through execute_tool', () => {
-    mockUseToolWidgetByName.mockReturnValue(
-      new Map([['app_show_chart', APP_WIDGET]]),
+    mockUseFrontComponentIdByToolName.mockReturnValue(
+      new Map([['app_show_chart', APP_FRONT_COMPONENT_ID]]),
     );
 
     renderAssistantRenderer([
@@ -513,14 +570,14 @@ describe('AiChatAssistantMessageRenderer', () => {
         input: { toolName: 'app_show_chart', arguments: {} },
         output: {},
       },
-    ] as unknown as ExtendedUIMessagePart[]);
+    ]);
 
     expect(screen.getByTestId('tool-widget')).toBeInTheDocument();
   });
 
   it('should keep a call that has an app widget but is still streaming its input in the step group', () => {
-    mockUseToolWidgetByName.mockReturnValue(
-      new Map([['app_show_chart', APP_WIDGET]]),
+    mockUseFrontComponentIdByToolName.mockReturnValue(
+      new Map([['app_show_chart', APP_FRONT_COMPONENT_ID]]),
     );
 
     renderAssistantRenderer([
@@ -530,7 +587,7 @@ describe('AiChatAssistantMessageRenderer', () => {
         state: 'input-streaming',
         input: {},
       },
-    ] as unknown as ExtendedUIMessagePart[]);
+    ]);
 
     expect(screen.getByTestId('thinking-steps-display')).toBeInTheDocument();
     expect(screen.queryByTestId('tool-widget')).toBeNull();
@@ -562,7 +619,7 @@ describe('AiChatAssistantMessageRenderer', () => {
     ] as ExtendedUIMessagePart[]);
 
     expect(screen.getByTestId('thinking-steps-display')).toHaveTextContent(
-      'thinking-1-answer-started',
+      'thinking-1',
     );
   });
 
@@ -611,5 +668,62 @@ describe('AiChatAssistantMessageRenderer', () => {
     );
 
     expect(container).not.toBeEmptyDOMElement();
+  });
+
+  it('should hide thinking steps but keep the answer when asked to', () => {
+    renderAssistantRenderer(
+      [
+        {
+          type: 'reasoning',
+          text: 'Reasoning content',
+          state: 'done',
+        },
+        {
+          type: 'text',
+          text: 'Welcome',
+        },
+      ] as ExtendedUIMessagePart[],
+      { shouldHideThinkingSteps: true },
+    );
+
+    expect(
+      screen.queryByTestId('thinking-steps-display'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('markdown-renderer')).toHaveTextContent(
+      'Welcome',
+    );
+  });
+
+  it('should show the loading indicator instead of hidden thinking steps while streaming', () => {
+    const { container } = renderAssistantRenderer(
+      [
+        {
+          type: 'reasoning',
+          text: 'Reasoning content',
+          state: 'streaming',
+        },
+      ] as ExtendedUIMessagePart[],
+      { isLastMessageStreaming: true, shouldHideThinkingSteps: true },
+    );
+
+    expect(
+      screen.queryByTestId('thinking-steps-display'),
+    ).not.toBeInTheDocument();
+    expect(container).not.toBeEmptyDOMElement();
+  });
+
+  it('should still show thinking steps on a finished message that has nothing else to render', () => {
+    renderAssistantRenderer(
+      [
+        {
+          type: 'reasoning',
+          text: 'Reasoning content',
+          state: 'done',
+        },
+      ] as ExtendedUIMessagePart[],
+      { shouldHideThinkingSteps: true },
+    );
+
+    expect(screen.getByTestId('thinking-steps-display')).toBeInTheDocument();
   });
 });

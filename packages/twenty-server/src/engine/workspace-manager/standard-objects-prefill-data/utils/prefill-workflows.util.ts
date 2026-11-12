@@ -1,6 +1,4 @@
-import { FieldActorSource } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { IF_ELSE_BRANCH_POSITION_OFFSETS } from 'twenty-shared/workflow';
 import { type EntityManager } from 'typeorm';
 import { v5 } from 'uuid';
 
@@ -14,31 +12,15 @@ import { buildObjectIdByNameMaps } from 'src/engine/metadata-modules/flat-object
 import { buildPersonSyncSourceFilter } from 'src/engine/workspace-manager/standard-objects-prefill-data/utils/build-person-sync-source-filter.util';
 import { generateFakeObjectRecordEvent } from 'src/modules/workflow/workflow-builder/workflow-schema/utils/generate-fake-object-record-event';
 import { generateObjectRecordFields } from 'src/modules/workflow/workflow-builder/workflow-schema/utils/generate-object-record-fields';
-import { getCreateCompanyWhenAddingNewPersonCodeStepLogicFunctionIds } from 'src/engine/workspace-manager/standard-objects-prefill-data/utils/prefill-workflow-code-step-logic-functions.util';
+import {
+  EXTRACT_DOMAIN_CODE_STEP_SOURCE,
+  FIND_MATCHING_COMPANY_BY_DOMAIN_CODE_STEP_SOURCE,
+  IS_PERSONAL_EMAIL_CODE_STEP_SOURCE,
+} from 'src/engine/workspace-manager/standard-objects-prefill-data/constants/prefill-workflow-code-step-sources.constant';
 
 const WORKFLOW_PREFILL_ID_NAMESPACE = '8b213cac-a68b-4ffe-817a-3ec994e9932d';
 
 export const getWorkflowPrefillIds = (workspaceId: string) => ({
-  quickLeadWorkflowId: v5(
-    `quickLeadWorkflow:${workspaceId}`,
-    WORKFLOW_PREFILL_ID_NAMESPACE,
-  ),
-  quickLeadWorkflowVersionId: v5(
-    `quickLeadWorkflowVersion:${workspaceId}`,
-    WORKFLOW_PREFILL_ID_NAMESPACE,
-  ),
-  createCompanyWorkflowId: v5(
-    `createCompanyWorkflow:${workspaceId}`,
-    WORKFLOW_PREFILL_ID_NAMESPACE,
-  ),
-  createCompanyWorkflowVersionId: v5(
-    `createCompanyWorkflowVersion:${workspaceId}`,
-    WORKFLOW_PREFILL_ID_NAMESPACE,
-  ),
-  createCompanyAutomatedTriggerId: v5(
-    `createCompanyAutomatedTrigger:${workspaceId}`,
-    WORKFLOW_PREFILL_ID_NAMESPACE,
-  ),
   coreQuickLeadWorkflowId: v5(
     `coreQuickLeadWorkflow:${workspaceId}`,
     WORKFLOW_PREFILL_ID_NAMESPACE,
@@ -76,17 +58,11 @@ export const getWorkflowPrefillIds = (workspaceId: string) => ({
 export const prefillWorkflows = async (
   entityManager: EntityManager,
   workspaceId: string,
-  schemaName: string,
   flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>,
   flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>,
   applicationIdParam?: string,
 ) => {
   const {
-    quickLeadWorkflowId,
-    quickLeadWorkflowVersionId,
-    createCompanyWorkflowId,
-    createCompanyWorkflowVersionId,
-    createCompanyAutomatedTriggerId,
     coreQuickLeadWorkflowId,
     coreCreateCompanyWorkflowId,
     coreQuickLeadWorkflowVersionId,
@@ -113,12 +89,6 @@ export const prefillWorkflows = async (
       `Workspace custom application not found for workspace ${workspaceId}`,
     );
   }
-
-  const {
-    extractDomainLogicFunctionId,
-    findMatchingCompanyByDomainLogicFunctionId,
-    isPersonalEmailLogicFunctionId,
-  } = getCreateCompanyWhenAddingNewPersonCodeStepLogicFunctionIds(workspaceId);
 
   const { idByNameSingular: objectIdByNameSingular } = buildObjectIdByNameMaps(
     flatObjectMetadataMaps,
@@ -179,60 +149,6 @@ export const prefillWorkflows = async (
   await entityManager
     .createQueryBuilder()
     .insert()
-    .into(`${schemaName}.workflow`, [
-      'id',
-      'name',
-      'lastPublishedVersionId',
-      'statuses',
-      'position',
-      'createdBySource',
-      'createdByWorkspaceMemberId',
-      'createdByName',
-      'createdByContext',
-      'updatedBySource',
-      'updatedByWorkspaceMemberId',
-      'updatedByName',
-      'coreWorkflowId',
-    ])
-    .orIgnore()
-    .values([
-      {
-        id: quickLeadWorkflowId,
-        name: 'Quick Lead',
-        lastPublishedVersionId: quickLeadWorkflowVersionId,
-        statuses: ['ACTIVE'],
-        position: 1,
-        createdBySource: FieldActorSource.SYSTEM,
-        createdByWorkspaceMemberId: null,
-        createdByName: 'System',
-        createdByContext: {},
-        updatedBySource: FieldActorSource.SYSTEM,
-        updatedByWorkspaceMemberId: null,
-        updatedByName: 'System',
-        coreWorkflowId: coreQuickLeadWorkflowId,
-      },
-      {
-        id: createCompanyWorkflowId,
-        name: 'Create company when adding a new person',
-        lastPublishedVersionId: createCompanyWorkflowVersionId,
-        statuses: ['ACTIVE'],
-        position: 2,
-        createdBySource: FieldActorSource.SYSTEM,
-        createdByWorkspaceMemberId: null,
-        createdByName: 'System',
-        createdByContext: {},
-        updatedBySource: FieldActorSource.SYSTEM,
-        updatedByWorkspaceMemberId: null,
-        updatedByName: 'System',
-        coreWorkflowId: coreCreateCompanyWorkflowId,
-      },
-    ])
-    .returning('*')
-    .execute();
-
-  await entityManager
-    .createQueryBuilder()
-    .insert()
     .into(WorkflowEntity)
     .orIgnore()
     .values([
@@ -242,8 +158,6 @@ export const prefillWorkflows = async (
         universalIdentifier: quickLeadWorkflowUniversalIdentifier,
         applicationId,
         name: 'Quick Lead',
-        lastPublishedVersionId: quickLeadWorkflowVersionId,
-        workspaceWorkflowId: quickLeadWorkflowId,
         lastPublishedCoreWorkflowVersionId: coreQuickLeadWorkflowVersionId,
       },
       {
@@ -252,8 +166,6 @@ export const prefillWorkflows = async (
         universalIdentifier: createCompanyWorkflowUniversalIdentifier,
         applicationId,
         name: 'Create company when adding a new person',
-        lastPublishedVersionId: createCompanyWorkflowVersionId,
-        workspaceWorkflowId: createCompanyWorkflowId,
         lastPublishedCoreWorkflowVersionId: coreCreateCompanyWorkflowVersionId,
       },
     ])
@@ -446,6 +358,7 @@ export const prefillWorkflows = async (
               primaryEmail: '{{6e089bc9-aabd-435f-865f-f31c01c8f4a7.email}}',
               additionalEmails: [],
             },
+            jobTitle: '{{6e089bc9-aabd-435f-865f-f31c01c8f4a7.jobTitle}}',
             companyId: '{{0715b6cd-7cc1-4b98-971b-00f54dfe643b.id}}',
           },
         },
@@ -474,13 +387,9 @@ export const prefillWorkflows = async (
       name: 'Is this a personal email?',
       type: 'CODE',
       valid: false,
-      position: {
-        x: 0,
-        y: 130,
-      },
       settings: {
         input: {
-          logicFunctionId: isPersonalEmailLogicFunctionId,
+          code: IS_PERSONAL_EMAIL_CODE_STEP_SOURCE,
           logicFunctionInput: {
             primaryEmail: '{{trigger.properties.after.emails.primaryEmail}}',
           },
@@ -510,10 +419,6 @@ export const prefillWorkflows = async (
       name: 'If business email',
       type: 'FILTER',
       valid: false,
-      position: {
-        x: 0,
-        y: 260,
-      },
       settings: {
         input: {
           stepFilters: [
@@ -554,13 +459,9 @@ export const prefillWorkflows = async (
       name: 'Extract domain from email',
       type: 'CODE',
       valid: false,
-      position: {
-        x: 0,
-        y: 390,
-      },
       settings: {
         input: {
-          logicFunctionId: extractDomainLogicFunctionId,
+          code: EXTRACT_DOMAIN_CODE_STEP_SOURCE,
           logicFunctionInput: {
             email: '{{trigger.properties.after.emails.primaryEmail}}',
           },
@@ -598,10 +499,6 @@ export const prefillWorkflows = async (
       name: 'Search Company',
       type: 'FIND_RECORDS',
       valid: false,
-      position: {
-        x: 0,
-        y: 520,
-      },
       settings: {
         input: {
           limit: 25,
@@ -609,11 +506,8 @@ export const prefillWorkflows = async (
             recordFilters: [
               {
                 id: 'a9b917a0-5c4c-4e8f-bf91-160d0b888693',
-                type: 'LINKS',
-                label: 'Domain Name',
                 value: '{{1b01193b-8300-4d79-940b-44464bf45505.domain}}',
                 operand: 'CONTAINS',
-                displayValue: '{{1b01193b-8300-4d79-940b-44464bf45505.domain}}',
                 subFieldName: 'primaryLinkUrl',
                 fieldMetadataId: companyDomainNameFieldMetadata.id,
                 recordFilterGroupId: '194e151c-cf46-4e8f-a48b-649c36082dfa',
@@ -646,13 +540,9 @@ export const prefillWorkflows = async (
       name: 'Find exact company match',
       type: 'CODE',
       valid: false,
-      position: {
-        x: 0,
-        y: 650,
-      },
       settings: {
         input: {
-          logicFunctionId: findMatchingCompanyByDomainLogicFunctionId,
+          code: FIND_MATCHING_COMPANY_BY_DOMAIN_CODE_STEP_SOURCE,
           logicFunctionInput: {
             companies: '{{becb3acf-79bb-4672-8a42-3696e94957b5.all}}',
             domain: '{{1b01193b-8300-4d79-940b-44464bf45505.domain}}',
@@ -689,10 +579,6 @@ export const prefillWorkflows = async (
       name: 'If a company already exists',
       type: 'IF_ELSE',
       valid: false,
-      position: {
-        x: 0,
-        y: 780,
-      },
       settings: {
         input: {
           branches: [
@@ -743,10 +629,6 @@ export const prefillWorkflows = async (
       name: 'Attach person to existing company',
       type: 'UPDATE_RECORD',
       valid: false,
-      position: {
-        x: IF_ELSE_BRANCH_POSITION_OFFSETS.IF.x,
-        y: 910,
-      },
       settings: {
         input: {
           objectName: 'person',
@@ -773,10 +655,6 @@ export const prefillWorkflows = async (
       name: 'Create a new company',
       type: 'CREATE_RECORD',
       valid: false,
-      position: {
-        x: IF_ELSE_BRANCH_POSITION_OFFSETS.ELSE.x,
-        y: 910,
-      },
       settings: {
         input: {
           objectName: 'company',
@@ -807,10 +685,6 @@ export const prefillWorkflows = async (
       name: 'Attach person to this company',
       type: 'UPDATE_RECORD',
       valid: false,
-      position: {
-        x: IF_ELSE_BRANCH_POSITION_OFFSETS.ELSE.x,
-        y: 1040,
-      },
       settings: {
         input: {
           objectName: 'person',
@@ -837,45 +711,6 @@ export const prefillWorkflows = async (
   await entityManager
     .createQueryBuilder()
     .insert()
-    .into(`${schemaName}.workflowVersion`, [
-      'id',
-      'name',
-      'trigger',
-      'steps',
-      'status',
-      'position',
-      'workflowId',
-      'coreWorkflowVersionId',
-    ])
-    .orIgnore()
-    .values([
-      {
-        id: quickLeadWorkflowVersionId,
-        name: 'v1',
-        trigger: JSON.stringify(quickLeadTrigger),
-        steps: quickLeadSteps,
-        status: 'ACTIVE',
-        position: 1,
-        workflowId: quickLeadWorkflowId,
-        coreWorkflowVersionId: coreQuickLeadWorkflowVersionId,
-      },
-      {
-        id: createCompanyWorkflowVersionId,
-        name: 'v1',
-        trigger: JSON.stringify(createCompanyTrigger),
-        steps: createCompanySteps,
-        status: 'ACTIVE',
-        position: 2,
-        workflowId: createCompanyWorkflowId,
-        coreWorkflowVersionId: coreCreateCompanyWorkflowVersionId,
-      },
-    ])
-    .returning('*')
-    .execute();
-
-  await entityManager
-    .createQueryBuilder()
-    .insert()
     .into('core.workflowVersion', [
       'id',
       'workspaceId',
@@ -884,9 +719,7 @@ export const prefillWorkflows = async (
       'triggers',
       'steps',
       'status',
-      'workflowId',
       'coreWorkflowId',
-      'workspaceWorkflowVersionId',
     ])
     .orIgnore()
     .values([
@@ -898,9 +731,7 @@ export const prefillWorkflows = async (
         triggers: [quickLeadTrigger],
         steps: JSON.parse(quickLeadSteps),
         status: 'ACTIVE',
-        workflowId: quickLeadWorkflowId,
         coreWorkflowId: coreQuickLeadWorkflowId,
-        workspaceWorkflowVersionId: quickLeadWorkflowVersionId,
       },
       {
         id: coreCreateCompanyWorkflowVersionId,
@@ -910,33 +741,7 @@ export const prefillWorkflows = async (
         triggers: [createCompanyTrigger],
         steps: JSON.parse(createCompanySteps),
         status: 'ACTIVE',
-        workflowId: createCompanyWorkflowId,
         coreWorkflowId: coreCreateCompanyWorkflowId,
-        workspaceWorkflowVersionId: createCompanyWorkflowVersionId,
-      },
-    ])
-    .execute();
-
-  await entityManager
-    .createQueryBuilder()
-    .insert()
-    .into(`${schemaName}.workflowAutomatedTrigger`, [
-      'id',
-      'workflowId',
-      'type',
-      'settings',
-    ])
-    .orIgnore()
-    .values([
-      {
-        id: createCompanyAutomatedTriggerId,
-        workflowId: createCompanyWorkflowId,
-        type: 'DATABASE_EVENT',
-        settings: {
-          eventName: 'person.upserted',
-          fields: ['emails'],
-          filter: personSyncSourceFilter,
-        },
       },
     ])
     .execute();

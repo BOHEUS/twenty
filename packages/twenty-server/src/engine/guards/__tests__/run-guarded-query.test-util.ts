@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Module,
+  type Provider,
   type Type,
   UseGuards,
 } from '@nestjs/common';
@@ -22,15 +23,23 @@ import { type NextFunction, type Request, type Response } from 'express';
 import { type GraphQLSchema, graphql } from 'graphql';
 import supertest from 'supertest';
 
+import { ExceptionHandlerService } from 'src/engine/core-modules/exception-handler/exception-handler.service';
 import { UnhandledExceptionFilter } from 'src/filters/unhandled-exception.filter';
+
+const EXCEPTION_HANDLER_SERVICE_PROVIDER = {
+  provide: ExceptionHandlerService,
+  useValue: { captureExceptions: () => [] },
+};
 
 // real Nest + Yoga app so a guard refusal reaches the catch-all filter as in production
 export const runGuardedQuery = async ({
   guard,
   request,
+  providers = [],
 }: {
   guard: Type<CanActivate>;
   request: Record<string, unknown>;
+  providers?: Provider[];
 }) => {
   @Resolver()
   class TestResolver {
@@ -41,7 +50,7 @@ export const runGuardedQuery = async ({
     }
   }
 
-  @Module({ providers: [TestResolver] })
+  @Module({ providers: [TestResolver, ...providers] })
   class FeatureModule {}
 
   @Module({
@@ -52,7 +61,10 @@ export const runGuardedQuery = async ({
       }),
       FeatureModule,
     ],
-    providers: [{ provide: APP_FILTER, useClass: UnhandledExceptionFilter }],
+    providers: [
+      { provide: APP_FILTER, useClass: UnhandledExceptionFilter },
+      EXCEPTION_HANDLER_SERVICE_PROVIDER,
+    ],
   })
   class RootModule {}
 
@@ -81,9 +93,11 @@ export const runGuardedQuery = async ({
 export const runGuardedRestRequest = async ({
   guard,
   request,
+  providers = [],
 }: {
   guard: Type<CanActivate>;
   request: Record<string, unknown>;
+  providers?: Provider[];
 }) => {
   @Controller('guarded')
   class TestController {
@@ -96,7 +110,11 @@ export const runGuardedRestRequest = async ({
 
   @Module({
     controllers: [TestController],
-    providers: [{ provide: APP_FILTER, useClass: UnhandledExceptionFilter }],
+    providers: [
+      { provide: APP_FILTER, useClass: UnhandledExceptionFilter },
+      EXCEPTION_HANDLER_SERVICE_PROVIDER,
+      ...providers,
+    ],
   })
   class RootModule {}
 

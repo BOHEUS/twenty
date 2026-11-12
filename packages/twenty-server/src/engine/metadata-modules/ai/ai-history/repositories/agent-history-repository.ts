@@ -1,4 +1,3 @@
-import { addAgentMessageSenderWorkspaceMember } from 'src/engine/metadata-modules/ai/ai-history/utils/add-agent-message-sender-workspace-member.util';
 import { hydrateAgentHistoryFiles } from 'src/engine/metadata-modules/ai/ai-history/utils/hydrate-agent-history-files.util';
 import { removeAgentHistoryFileRelations } from 'src/engine/metadata-modules/ai/ai-history/utils/remove-agent-history-file-relations.util';
 import {
@@ -7,9 +6,10 @@ import {
 } from 'src/engine/metadata-modules/ai/ai.exception';
 import { AgentHistoryStorageException } from 'src/engine/metadata-modules/ai/ai-history/exceptions/agent-history-storage.exception';
 import { type AgentHistoryObjectName } from 'src/engine/metadata-modules/ai/ai-history/types/agent-history-object-name.type';
-import { type FindOptionsWhere, type ObjectLiteral } from 'typeorm';
+import { type FindOptionsWhere } from 'typeorm';
 import { type QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
-import { isDefined, isNonEmptyString } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { isDefined } from 'twenty-shared/utils';
 
 import {
   type AgentHistoryWorkspaceStorageService,
@@ -28,35 +28,36 @@ export class AgentHistoryRepository<TRecord extends { id: string }> {
     private readonly name: AgentHistoryObjectName,
     private readonly storageService: Pick<
       AgentHistoryWorkspaceStorageService,
-      'run'
+      'run' | 'getContext'
     >,
     private readonly workspaceOrmManager: Pick<
       WorkspaceOrmManager,
-      'executeInWorkspaceContext' | 'getRepository'
+      'executeInWorkspaceContext' | 'getRepositoryWithoutPermissionChecks'
     >,
   ) {}
 
-  private run<TResult>(
+  private async run<TResult>(
     workspaceId: string,
     work: (
       repository: WorkspaceRepository<TRecord>,
       context: AgentHistoryStorageContext,
     ) => Promise<TResult>,
   ): Promise<TResult> {
-    return this.storageService.run(workspaceId, (context) =>
-      this.workspaceOrmManager.executeInWorkspaceContext(
-        () =>
-          work(
-            this.workspaceOrmManager.getRepository<TRecord>(
-              this.name,
-              { shouldBypassPermissionChecks: true },
-              { shouldSkipEventEmission: true },
-            ),
-            context,
+    const context = this.storageService.getContext(workspaceId);
+
+    return this.workspaceOrmManager.executeInWorkspaceContext(
+      () =>
+        work(
+          this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<TRecord>(
+            this.name,
+            {
+              shouldSkipEventEmission: true,
+            },
           ),
-        buildSystemAuthContext(workspaceId),
-        { lite: true },
-      ),
+          context,
+        ),
+      buildSystemAuthContext(workspaceId),
+      { lite: true },
     );
   }
 
@@ -107,10 +108,10 @@ export class AgentHistoryRepository<TRecord extends { id: string }> {
           AiExceptionCode.MESSAGE_NOT_FOUND,
         );
       }
-      throw new AgentHistoryStorageException(
-        'RECORD_NOT_FOUND',
-        `${this.name} not found`,
-      );
+      throw new AgentHistoryStorageException({
+        code: 'RECORD_NOT_FOUND',
+        message: doNotTranslate(`${this.name} not found`),
+      });
     }
     return record;
   }
@@ -140,35 +141,17 @@ export class AgentHistoryRepository<TRecord extends { id: string }> {
     workspaceId: string,
     values: QueryDeepPartialEntity<TRecord> | QueryDeepPartialEntity<TRecord>[],
   ) {
-    return this.run(workspaceId, async (repository, context) => {
-      return repository.insert(
-        await this.addSenderRelation(values, workspaceId, context),
-      );
-    });
+    return this.run(workspaceId, (repository) => repository.insert(values));
   }
 
   insertAndReturnOne(
     workspaceId: string,
     values: QueryDeepPartialEntity<TRecord>,
   ): Promise<TRecord> {
-    return this.run(workspaceId, async (repository, context) => {
-      const result = await repository.insert(
-        await this.addSenderRelation(values, workspaceId, context),
-      );
+    return this.run(workspaceId, async (repository) => {
+      const result = await repository.insert(values);
       return result.raw[0] as TRecord;
     });
-  }
-
-  private async addSenderRelation(
-    values: QueryDeepPartialEntity<TRecord> | QueryDeepPartialEntity<TRecord>[],
-    workspaceId: string,
-    context: AgentHistoryStorageContext,
-  ) {
-    const records: ObjectLiteral[] = Array.isArray(values) ? values : [values];
-    return this.name === 'agentMessage' &&
-      records.some((record) => isNonEmptyString(record.senderUserWorkspaceId))
-      ? await addAgentMessageSenderWorkspaceMember(values, workspaceId, context)
-      : values;
   }
 
   update(
@@ -200,32 +183,8 @@ export class AgentHistoryRepository<TRecord extends { id: string }> {
     });
   }
 
-  upsert(
-    workspaceId: string,
-    values: QueryDeepPartialEntity<TRecord>,
-    conflictPaths: string[],
-  ) {
-    return this.run(workspaceId, async (repository, context) => {
-      // workspace upsert selects before inserting, so serialize concurrent checkpoints per identity
-      const valuesByField: ObjectLiteral = values;
-      const identity = [...conflictPaths]
-        .sort()
-        .map((field) => [field, valuesByField[field]]);
-      await context.manager.query(
-        'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
-        [
-          `agent-history-upsert:${workspaceId}:${this.name}:${JSON.stringify(identity)}`,
-        ],
-      );
-      return repository.upsert(
-        (await this.addSenderRelation(
-          values,
-          workspaceId,
-          context,
-        )) as QueryDeepPartialEntity<TRecord>,
-        conflictPaths,
-      );
-    });
+  restore(workspaceId: string, where: FindOptionsWhere<TRecord>) {
+    return this.run(workspaceId, (repository) => repository.restore(where));
   }
 
   query<TResult>(

@@ -1,3 +1,5 @@
+import { DraggableListRow } from '@/ui/layout/draggable-list/components/DraggableListRow';
+import { ApplicationStackIcon } from '@/applications/components/ApplicationStackIcon';
 import { useGetFieldMetadataItemByIdOrThrow } from '@/object-metadata/hooks/useGetFieldMetadataItemById';
 import { getLabelIdentifierFieldMetadataItem } from '@/object-metadata/utils/getLabelIdentifierFieldMetadataItem';
 import { useObjectOptionsForBoard } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsForBoard';
@@ -11,14 +13,16 @@ import { type DraggableListDropResult } from '@/ui/layout/draggable-list/types/D
 import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { ViewType } from '@/views/types/ViewType';
-import { t } from '@lingui/core/macro';
 import { useContext } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { LightIconButton, MenuItemDraggable } from 'twenty-ui/components';
-import { IconEyeOff, useIcons } from 'twenty-ui/icon';
+import { LightIconButton } from 'twenty-ui/components/input';
+import { IconEyeOff } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { sortByProperty } from '~/utils/array/sortByProperty';
+import { useLingui } from '@lingui/react/macro';
 
 export const ViewFieldsVisibleDropdownSection = () => {
+  const { t } = useLingui();
   const { viewType, objectMetadataItem, recordIndexId } = useContext(
     ObjectOptionsDropdownContext,
   );
@@ -87,13 +91,19 @@ export const ViewFieldsVisibleDropdownSection = () => {
     <>
       <DropdownMenuItemsContainer>
         {fieldMetadataItemLabelIdentifier && (
-          <MenuItemDraggable
-            LeftIcon={getIcon(fieldMetadataItemLabelIdentifier.icon)}
-            text={fieldMetadataItemLabelIdentifier.label}
-            accent="placeholder"
-            gripMode="always"
+          <DraggableListRow
+            startIcon={
+              <ApplicationStackIcon
+                Icon={getIcon(fieldMetadataItemLabelIdentifier.icon)}
+                applicationId={fieldMetadataItemLabelIdentifier.applicationId}
+              />
+            }
+            isMuted
+            dragHandleVisibility="always"
             isDragDisabled
-          />
+          >
+            {fieldMetadataItemLabelIdentifier.label}
+          </DraggableListRow>
         )}
         {draggableRecordFields.length > 0 && (
           <DraggableList
@@ -111,10 +121,15 @@ export const ViewFieldsVisibleDropdownSection = () => {
                       draggableId={recordField.fieldMetadataItemId}
                       index={index}
                       itemComponent={
-                        <MenuItemDraggable
+                        <DraggableListRow
                           key={recordField.fieldMetadataItemId}
-                          LeftIcon={getIcon(fieldMetadataItem.icon)}
-                          iconButtons={
+                          startIcon={
+                            <ApplicationStackIcon
+                              Icon={getIcon(fieldMetadataItem.icon)}
+                              applicationId={fieldMetadataItem.applicationId}
+                            />
+                          }
+                          actions={
                             <LightIconButton
                               aria-label={t`Hide field`}
                               onClick={() => {
@@ -128,9 +143,10 @@ export const ViewFieldsVisibleDropdownSection = () => {
                               <IconEyeOff />
                             </LightIconButton>
                           }
-                          text={fieldMetadataItem.label}
-                          gripMode="always"
-                        />
+                          dragHandleVisibility="always"
+                        >
+                          {fieldMetadataItem.label}
+                        </DraggableListRow>
                       }
                     />
                   );

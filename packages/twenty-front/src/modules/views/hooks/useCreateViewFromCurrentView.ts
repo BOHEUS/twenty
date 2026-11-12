@@ -21,9 +21,9 @@ import { mapRecordSortToViewSort } from '@/views/utils/mapRecordSortToViewSort';
 import { useStore } from 'jotai';
 import { useCallback } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { v4 } from 'uuid';
 import { ViewCalendarLayout } from '~/generated-metadata/graphql';
-import { isUndefinedOrNull } from '~/utils/isUndefinedOrNull';
 
 export const useCreateViewFromCurrentView = (viewBarComponentId?: string) => {
   const { performViewApiCreate } = usePerformViewApiPersist();
@@ -131,6 +131,9 @@ export const useCreateViewFromCurrentView = (viewBarComponentId?: string) => {
             groupLoadLimit: shouldCopyFiltersAndSortsAndAggregate
               ? sourceView.groupLoadLimit
               : undefined,
+            shouldDisplayGroupsAsTabs: shouldCopyFiltersAndSortsAndAggregate
+              ? (sourceView.shouldDisplayGroupsAsTabs ?? undefined)
+              : undefined,
             mainGroupByFieldMetadataId: shouldCopyFiltersAndSortsAndAggregate
               ? sourceView.mainGroupByFieldMetadataId
               : mainGroupByFieldMetadataId,
@@ -161,8 +164,8 @@ export const useCreateViewFromCurrentView = (viewBarComponentId?: string) => {
 
       const newViewId = result.response.data?.createView.id;
 
-      if (isUndefinedOrNull(newViewId)) {
-        throw new Error('Failed to create view');
+      if (!isDefined(newViewId)) {
+        throw new Error(doNotTranslate('Failed to create view'));
       }
 
       const fieldResult = await performViewFieldApiCreate({

@@ -1,3 +1,4 @@
+import { ListItemButton } from 'twenty-ui/components/navigation';
 import { fieldMetadataItemByIdSelector } from '@/object-metadata/states/fieldMetadataItemByIdSelector';
 import { type FieldMetadataItemOption } from '@/object-metadata/types/FieldMetadataItem';
 import { useApplyObjectFilterDropdownFilterValue } from '@/object-record/object-filter-dropdown/hooks/useApplyObjectFilterDropdownFilterValue';
@@ -16,7 +17,6 @@ import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/com
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useEffect, useMemo, useState } from 'react';
 import { Key } from 'ts-key-enum';
@@ -26,6 +26,7 @@ import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
 import { Tag } from 'twenty-ui/primitives/data-display';
 import { ListItem } from 'twenty-ui/primitives/navigation';
 import { z } from 'zod';
+import { useLingui } from '@lingui/react/macro';
 
 export const EMPTY_FILTER_VALUE = '';
 
@@ -38,6 +39,7 @@ export const ObjectFilterDropdownOptionSelect = ({
 }: {
   focusId: string;
 }) => {
+  const { t } = useLingui();
   const fieldMetadataItemUsedInDropdown = useAtomComponentSelectorValue(
     fieldMetadataItemUsedInDropdownComponentSelector,
   );
@@ -176,10 +178,8 @@ export const ObjectFilterDropdownOptionSelect = ({
           <ListItem disabled>{t`No results`}</ListItem>
         ) : (
           optionsInDropdown?.map((option) => (
-            <ListItem
-              render={<button type="button" />}
+            <ListItemButton
               key={option.id}
-              className=""
               focused={option.id === selectedItemId}
               role="option"
               aria-selected={option.isSelected}
@@ -194,7 +194,7 @@ export const ObjectFilterDropdownOptionSelect = ({
               ) : (
                 <OverflowingTextWithTooltip text={option.label} />
               )}
-            </ListItem>
+            </ListItemButton>
           ))
         )}
       </DropdownMenuItemsContainer>

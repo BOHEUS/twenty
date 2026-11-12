@@ -9,8 +9,10 @@ import {
 } from 'twenty-shared/utils';
 import { saveAs } from 'file-saver';
 import { FieldMetadataType } from 'twenty-shared/types';
+import { useLingui } from '@lingui/react/macro';
 
 export const useDownloadFakeRecords = () => {
+  const { t } = useLingui();
   const { objectMetadataItem } = useContextStoreObjectMetadataItemOrThrow();
 
   const availableFieldMetadataItems =
@@ -63,7 +65,7 @@ export const useDownloadFakeRecords = () => {
 
           headerRow.push(
             ...subFields.map(({ subFieldLabel }) =>
-              getCompositeSubFieldLabelWithFieldLabel(field, subFieldLabel),
+              getCompositeSubFieldLabelWithFieldLabel(field, t(subFieldLabel)),
             ),
           );
 

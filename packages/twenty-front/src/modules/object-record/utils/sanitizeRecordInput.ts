@@ -10,6 +10,7 @@ import {
   computeRelationGqlFieldJoinColumnName,
   isDefined,
 } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { FieldMetadataType, RelationType } from '~/generated-metadata/graphql';
 
 export const sanitizeRecordInput = ({
@@ -38,7 +39,9 @@ export const sanitizeRecordInput = ({
           );
         const potentialMorphRelationJoinColumnNameFieldMetadataItem =
           objectMetadataItem.fields.find((field) => {
-            if (!isFieldMorphRelation(field)) return false;
+            if (!isFieldMorphRelation(field)) {
+              return false;
+            }
             return field.morphRelations?.some((morphRelation) => {
               const computedFieldName = computeMorphRelationGqlFieldName({
                 fieldName: field.name,
@@ -48,7 +51,10 @@ export const sanitizeRecordInput = ({
                 targetObjectMetadataNamePlural:
                   morphRelation.targetObjectMetadata.namePlural,
               });
-              return computedFieldName === fieldName.replace('Id', '');
+              return (
+                computedFieldName ===
+                fieldName.replace(doNotTranslate('Id'), '')
+              );
             });
           });
 

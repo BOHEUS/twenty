@@ -1,7 +1,11 @@
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
+import { type AgentChatThreadConversationType } from 'twenty-shared/ai';
 
 export type AgentChatThreadRecord = ObjectRecord & {
   title: string | null;
+  conversationType?: AgentChatThreadConversationType;
+  directMessageFirstWorkspaceMemberId?: string | null;
+  directMessageSecondWorkspaceMemberId?: string | null;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -10,6 +14,11 @@ export type AgentChatThreadRecord = ObjectRecord & {
   lastMessageSenderWorkspaceMemberId?: string | null;
   writerWorkspaceMemberIds?: string[] | null;
   workspaceMemberId?: string | null;
+  assigneeId?: string | null;
+  channelId?: string | null;
+  channelArchivedAt?: string | null;
+  channelSnoozedUntil?: string | null;
+  pendingQuestionMessageId?: string | null;
   totalInputTokens?: number;
   totalOutputTokens?: number;
   totalCacheReadTokens?: number;

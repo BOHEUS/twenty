@@ -1,26 +1,25 @@
 import { renderHook } from '@testing-library/react';
 import { Provider } from 'jotai';
 import { type ReactNode } from 'react';
-import { type ExtendedUIMessage } from 'twenty-shared/ai';
+import { type ExtendedUIMessagePart } from 'twenty-shared/ai';
 
-import { AgentChatComponentInstanceContext } from '@/ai/contexts/AgentChatComponentInstanceContext';
 import { useAgentChatPendingToolCalls } from '@/ai/hooks/useAgentChatPendingToolCalls';
 import { agentChatDisplayedThreadState } from '@/ai/states/agentChatDisplayedThreadState';
-import { agentChatIsStreamingComponentFamilyState } from '@/ai/states/agentChatIsStreamingComponentFamilyState';
-import { agentChatMessagesComponentFamilyState } from '@/ai/states/agentChatMessagesComponentFamilyState';
+import { agentChatIsStreamingFamilyState } from '@/ai/states/agentChatIsStreamingFamilyState';
+import { agentChatMessagesFamilyState } from '@/ai/states/agentChatMessagesFamilyState';
 import {
   jotaiStore,
   resetJotaiStore,
 } from '@/ui/utilities/state/jotai/jotaiStore';
 
-const key = {
-  instanceId: 'pending-test',
-  familyKey: { threadId: 'thread-id' },
-};
+const key = { threadId: 'thread-id' };
 
 const QUESTIONS = [{ header: 'Plan', question: 'Which plan?', options: [] }];
 
-const questionsCall = (toolCallId: string, status: string) => ({
+const questionsCall = (
+  toolCallId: string,
+  status: string,
+): ExtendedUIMessagePart => ({
   type: 'tool-ask_questions',
   toolCallId,
   state: 'output-available',
@@ -29,20 +28,14 @@ const questionsCall = (toolCallId: string, status: string) => ({
 });
 
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <Provider store={jotaiStore}>
-    <AgentChatComponentInstanceContext.Provider
-      value={{ instanceId: 'pending-test' }}
-    >
-      {children}
-    </AgentChatComponentInstanceContext.Provider>
-  </Provider>
+  <Provider store={jotaiStore}>{children}</Provider>
 );
 
 describe('useAgentChatPendingToolCalls', () => {
   beforeEach(() => {
     resetJotaiStore();
     jotaiStore.set(agentChatDisplayedThreadState.atom, 'thread-id');
-    jotaiStore.set(agentChatMessagesComponentFamilyState.atomFamily(key), [
+    jotaiStore.set(agentChatMessagesFamilyState.atomFamily(key), [
       {
         id: 'assistant-1',
         role: 'assistant',
@@ -53,7 +46,7 @@ describe('useAgentChatPendingToolCalls', () => {
           questionsCall('call-2', 'pending'),
         ],
       },
-    ] as unknown as ExtendedUIMessage[]);
+    ]);
   });
 
   it('waits on every call still pending, in the order they were made', () => {
@@ -67,10 +60,7 @@ describe('useAgentChatPendingToolCalls', () => {
   });
 
   it('waits on nothing while the turn is still streaming', () => {
-    jotaiStore.set(
-      agentChatIsStreamingComponentFamilyState.atomFamily(key),
-      true,
-    );
+    jotaiStore.set(agentChatIsStreamingFamilyState.atomFamily(key), true);
 
     const { result } = renderHook(() => useAgentChatPendingToolCalls(), {
       wrapper,

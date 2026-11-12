@@ -1,7 +1,9 @@
 import { Field, InputType } from '@nestjs/graphql';
+import { isUndefined } from '@sniptt/guards';
 
 import GraphQLJSON from 'graphql-type-json';
 import { type AiModelTier } from 'twenty-shared/ai';
+import { EVENT_LOG_RETENTION } from 'twenty-shared/constants';
 
 import {
   IsArray,
@@ -15,9 +17,15 @@ import {
   Matches,
   Max,
   Min,
+  ValidateIf,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
+import { AiDataPolicyInput } from 'src/engine/core-modules/workspace/dtos/ai-data-policy.input';
+import { AiChatAssistantMode } from 'src/engine/core-modules/workspace/enums/ai-chat-assistant-mode.enum';
+import { AiChatAssistantProfileInput } from 'src/engine/core-modules/workspace/dtos/ai-chat-assistant-profile.input';
 import { WorkspaceDiscoverability } from 'src/engine/core-modules/workspace/types/workspace-discoverability.type';
 import { AiModelTier as AiModelTierEnum } from 'src/engine/metadata-modules/ai/ai-models/types/ai-model-tier.enum';
 
@@ -60,6 +68,11 @@ export class UpdateWorkspaceInput {
   @IsBoolean()
   @IsOptional()
   isCampaignClickTrackingEnabled?: boolean;
+
+  @Field({ nullable: true })
+  @IsBoolean()
+  @IsOptional()
+  isCampaignOpenTrackingEnabled?: boolean;
 
   @Field(() => WorkspaceDiscoverability, { nullable: true })
   @IsEnum(WorkspaceDiscoverability)
@@ -119,8 +132,8 @@ export class UpdateWorkspaceInput {
 
   @Field({ nullable: true })
   @IsInt()
-  @Min(30) // Minimum 30 days retention for audit compliance
-  @Max(1095) // Maximum 3 years (matches ClickHouse table-level TTL)
+  @Min(EVENT_LOG_RETENTION.minInDays)
+  @Max(EVENT_LOG_RETENTION.maxInDays)
   @IsOptional()
   eventLogRetentionDays?: number;
 
@@ -149,10 +162,43 @@ export class UpdateWorkspaceInput {
   @IsOptional()
   aiEvaluationModelId?: string;
 
+  @Field(() => AiChatAssistantMode, { nullable: true })
+  @IsEnum(AiChatAssistantMode)
+  @ValidateIf(
+    ({ aiChatDirectMessageAssistantMode }: UpdateWorkspaceInput) =>
+      !isUndefined(aiChatDirectMessageAssistantMode),
+  )
+  aiChatDirectMessageAssistantMode?: AiChatAssistantMode;
+
+  @Field(() => AiChatAssistantMode, { nullable: true })
+  @IsEnum(AiChatAssistantMode)
+  @ValidateIf(
+    ({ aiChatInboxAssistantMode }: UpdateWorkspaceInput) =>
+      !isUndefined(aiChatInboxAssistantMode),
+  )
+  aiChatInboxAssistantMode?: AiChatAssistantMode;
+
+  @Field(() => AiChatAssistantProfileInput, { nullable: true })
+  @IsObject()
+  @ValidateIf(
+    ({ aiChatAssistantProfile }: UpdateWorkspaceInput) =>
+      !isUndefined(aiChatAssistantProfile),
+  )
+  aiChatAssistantProfile?: AiChatAssistantProfileInput;
+
   @Field({ nullable: true })
   @IsString()
   @IsOptional()
   aiAdditionalInstructions?: string;
+
+  @Field(() => AiDataPolicyInput, { nullable: true })
+  @IsObject()
+  @ValidateNested()
+  @Type(() => AiDataPolicyInput)
+  @ValidateIf(
+    ({ aiDataPolicy }: UpdateWorkspaceInput) => !isUndefined(aiDataPolicy),
+  )
+  aiDataPolicy?: AiDataPolicyInput;
 
   @Field(() => [String], { nullable: true })
   @IsArray()

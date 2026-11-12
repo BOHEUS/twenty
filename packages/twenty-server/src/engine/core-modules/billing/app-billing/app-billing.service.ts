@@ -4,6 +4,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
 import {
+  DEFAULT_APP_USAGE_OPERATION_TYPE,
   isUsageOperationTypeValue,
   type UsageOperationTypeValue,
 } from 'twenty-shared/application';
@@ -17,7 +18,6 @@ import { UsageLimitQuotaService } from 'src/engine/core-modules/usage-limit/serv
 import { UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
 import { UsageResourceType } from 'src/engine/core-modules/usage/enums/usage-resource-type.enum';
 import { UsageUnit } from 'src/engine/core-modules/usage/enums/usage-unit.enum';
-import { UsageRecorderService } from 'src/engine/core-modules/usage/services/usage-recorder.service';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 
 type AppChargeableOperationType =
@@ -36,6 +36,7 @@ const USAGE_UNIT_BY_OPERATION_TYPE: Record<
   [UsageOperationType.WEB_SEARCH]: UsageUnit.INVOCATION,
   [UsageOperationType.CALL_RECORDING]: UsageUnit.MINUTE,
   [UsageOperationType.EMAIL_SEND]: UsageUnit.INVOCATION,
+  [UsageOperationType.APP_OPERATION]: UsageUnit.INVOCATION,
 };
 
 // workspaceId and applicationId come from the token, never the body, so an app can't charge another workspace or pose as another app
@@ -44,7 +45,6 @@ export class AppBillingService {
   private readonly logger = new Logger(AppBillingService.name);
 
   constructor(
-    private readonly usageRecorderService: UsageRecorderService,
     private readonly usageLimitQuotaService: UsageLimitQuotaService,
     private readonly workspaceCacheService: WorkspaceCacheService,
     @InjectRepository(UserWorkspaceEntity)
@@ -75,34 +75,24 @@ export class AppBillingService {
         `${charge.creditsUsedMicro} micro-credits (${charge.quantity} ${unit}, ${operationType})`,
     );
 
-    const spenders = {
-      userWorkspaceId: attributedUserWorkspaceId,
-      applicationId,
-    };
-
-    await this.usageLimitQuotaService.consumeQuota({
+    await this.usageLimitQuotaService.charge({
       workspaceId,
-      resourceType: UsageResourceType.APP,
-      operationType,
-      spenders,
-      cost: {
-        creditsUsedMicro: charge.creditsUsedMicro,
-        quantity: charge.quantity,
-      },
+      events: [
+        {
+          resourceType: UsageResourceType.APP,
+          operationType,
+          creditsUsedMicro: charge.creditsUsedMicro,
+          quantity: charge.quantity,
+          unit,
+          resourceId: applicationId,
+          resourceContext: charge.operation ?? charge.resourceContext ?? null,
+          spenders: {
+            userWorkspaceId: attributedUserWorkspaceId,
+            applicationId,
+          },
+        },
+      ],
     });
-
-    await this.usageRecorderService.record(workspaceId, [
-      {
-        resourceType: UsageResourceType.APP,
-        operationType,
-        creditsUsedMicro: charge.creditsUsedMicro,
-        quantity: charge.quantity,
-        unit,
-        resourceId: applicationId,
-        resourceContext: charge.operation ?? charge.resourceContext ?? null,
-        spenders,
-      },
-    ]);
   }
 
   private async resolveOperationType({
@@ -115,13 +105,9 @@ export class AppBillingService {
     charge: ChargeDto;
   }): Promise<AppChargeableOperationType> {
     if (!isDefined(charge.operation)) {
-      if (!isDefined(charge.operationType)) {
-        throw new BadRequestException(
-          'A charge must name either an operation or an operationType.',
-        );
-      }
-
-      return UsageOperationType[charge.operationType];
+      return UsageOperationType[
+        charge.operationType ?? DEFAULT_APP_USAGE_OPERATION_TYPE
+      ];
     }
 
     const { flatApplicationMaps } =
@@ -149,16 +135,19 @@ export class AppBillingService {
       );
     }
 
+    const declaredOperationType =
+      billableOperation.operationType ?? DEFAULT_APP_USAGE_OPERATION_TYPE;
+
     // jsonb is untrusted: an unknown value would record a row with no category or unit,
     // and a platform-only value like SUBSCRIPTION would bypass ChargeDto's @IsIn
-    if (!isUsageOperationTypeValue(billableOperation.operationType)) {
+    if (!isUsageOperationTypeValue(declaredOperationType)) {
       throw new BadRequestException(
         `Billable operation "${charge.operation}" declares an unknown operationType.`,
       );
     }
 
     // Indexing by the manifest literal makes a drifted USAGE_OPERATION_TYPES value fail to compile
-    return UsageOperationType[billableOperation.operationType];
+    return UsageOperationType[declaredOperationType];
   }
 
   // Scoped to the token's workspace so an app cannot attribute spend outside it

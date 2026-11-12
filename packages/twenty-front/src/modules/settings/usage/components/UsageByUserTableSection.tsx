@@ -7,14 +7,15 @@ import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
-import { SearchInput, Section } from 'twenty-ui/components';
+import { SearchInput } from 'twenty-ui/components/input';
+import { Section } from 'twenty-ui/components/layout';
 import { IconChevronRight } from 'twenty-ui/icon';
 import { Avatar } from 'twenty-ui/primitives/data-display';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { type UsageOperationType } from '~/generated-metadata/graphql';
-import { normalizeSearchText } from '~/utils/normalizeSearchText';
+import { normalizeSearchText } from 'twenty-ui/utilities';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledSearchInputContainer = styled.div`
   padding-bottom: ${themeCssVariables.spacing[2]};
@@ -43,6 +44,7 @@ export const UsageByUserTableSection = ({
   getDetailPath,
   showAvatar = false,
 }: UsageByUserTableSectionProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
   const { formatUsageValue } = useUsageValueFormatter();
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,7 +81,7 @@ export const UsageByUserTableSection = ({
       <Section.Header
         title={title}
         description={description}
-        adornment={
+        actions={
           <Select
             dropdownId={`${title.replace(/\s+/g, '-').toLowerCase()}-period`}
             value={period}
@@ -124,7 +126,7 @@ export const UsageByUserTableSection = ({
               {item.label ?? item.key}
             </TableCell>
             <TableCell align="right">
-              {formatUsageValue(item.creditsUsed)}
+              {formatUsageValue(item.workspaceCreditsUsed)}
             </TableCell>
             <TableCell align="center">
               <StyledIconChevronRightContainer>

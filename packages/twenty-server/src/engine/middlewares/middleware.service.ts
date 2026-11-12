@@ -10,7 +10,6 @@ import {
 } from 'src/engine/core-modules/auth/auth.exception';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
 import { AccessTokenService } from 'src/engine/core-modules/auth/token/services/access-token.service';
-import { getAuthExceptionRestStatus } from 'src/engine/core-modules/auth/utils/get-auth-exception-rest-status.util';
 import { ExceptionHandlerService } from 'src/engine/core-modules/exception-handler/exception-handler.service';
 import { ErrorCode } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
 import { JwtWrapperService } from 'src/engine/core-modules/jwt/services/jwt-wrapper.service';
@@ -171,6 +170,14 @@ export class MiddlewareService {
       throw error;
     }
 
+    // GraphQL record resolvers run no AccessPolicyGuard, so agent tokens are refused here
+    if (isDefined(data.agentId)) {
+      throw new AuthException(
+        'This token is only accepted by MCP',
+        AuthExceptionCode.FORBIDDEN_EXCEPTION,
+      );
+    }
+
     const metadataVersion = data.workspace
       ? await this.getOrSeedMetadataVersion(data.workspace)
       : undefined;
@@ -209,7 +216,7 @@ export class MiddlewareService {
     }
 
     if (error instanceof AuthException) {
-      return getAuthExceptionRestStatus(error);
+      return error.statusCode ?? 500;
     }
 
     return 500;

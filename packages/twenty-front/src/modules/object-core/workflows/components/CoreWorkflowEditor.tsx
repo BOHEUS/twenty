@@ -1,7 +1,9 @@
-import { t } from '@lingui/core/macro';
+import { useCallback } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 
-import { WorkspaceRouteUnavailable } from '@/app/routing/components/WorkspaceRouteUnavailable';
+import { WorkspaceRouteUnavailable } from '@/ui/layout/page/components/WorkspaceRouteUnavailable';
+import { useSetAtomFamilyState } from '@/ui/utilities/state/jotai/hooks/useSetAtomFamilyState';
+import { shouldWorkflowRefetchRequestFamilyState } from '@/workflow/states/shouldWorkflowRefetchRequestFamilyState';
 import { useListenToCoreWorkflowEvents } from '@/object-core/workflows/hooks/useListenToCoreWorkflowEvents';
 import { useCoreWorkflowVersion } from '@/object-core/workflows/versions/hooks/useCoreWorkflowVersion';
 import { CoreWorkflowVersionCard } from '@/object-core/workflows/versions/components/CoreWorkflowVersionCard';
@@ -10,6 +12,7 @@ import { WorkflowDiagramCanvasEditable } from '@/workflow/workflow-diagram/compo
 import { WorkflowDiagramEffect } from '@/workflow/workflow-diagram/components/WorkflowDiagramEffect';
 import { WorkflowVisualizerEffect } from '@/workflow/workflow-diagram/components/WorkflowVisualizerEffect';
 import { WorkflowVisualizerComponentInstanceContext } from '@/workflow/workflow-diagram/states/contexts/WorkflowVisualizerComponentInstanceContext';
+import { useLingui } from '@lingui/react/macro';
 
 export const CoreWorkflowEditor = ({
   coreWorkflowId,
@@ -20,15 +23,29 @@ export const CoreWorkflowEditor = ({
   coreWorkflowVersionId: string;
   readonly: boolean;
 }) => {
+  const { t } = useLingui();
   const { coreWorkflowVersion, loading, error, refetchCoreWorkflowVersion } =
     useCoreWorkflowVersion(coreWorkflowVersionId);
 
+  const setShouldWorkflowRefetchRequest = useSetAtomFamilyState(
+    shouldWorkflowRefetchRequestFamilyState,
+    coreWorkflowId,
+  );
+
+  const refetchCoreWorkflow = useCallback(() => {
+    void refetchCoreWorkflowVersion();
+    setShouldWorkflowRefetchRequest(true);
+  }, [refetchCoreWorkflowVersion, setShouldWorkflowRefetchRequest]);
+
   useListenToCoreWorkflowEvents({
     coreWorkflowId,
-    refetch: refetchCoreWorkflowVersion,
+    refetch: refetchCoreWorkflow,
   });
 
-  if (loading && !isDefined(coreWorkflowVersion)) {
+  const isVersionLoading = loading && !isDefined(coreWorkflowVersion);
+
+  // The editable editor stays mounted while a new current version loads, so creating a draft does not blank the canvas
+  if (isVersionLoading && readonly) {
     return null;
   }
   if (isDefined(error)) {
@@ -37,8 +54,9 @@ export const CoreWorkflowEditor = ({
     );
   }
   if (
-    !isDefined(coreWorkflowVersion) ||
-    coreWorkflowVersion.coreWorkflowId !== coreWorkflowId
+    !isVersionLoading &&
+    (!isDefined(coreWorkflowVersion) ||
+      coreWorkflowVersion.coreWorkflowId !== coreWorkflowId)
   ) {
     return (
       <WorkspaceRouteUnavailable>{t`Workflow version not found.`}</WorkspaceRouteUnavailable>

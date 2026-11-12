@@ -1,13 +1,10 @@
+import { HTTPMethod } from 'twenty-shared/types';
 import { expectOneNotInternalServerErrorSnapshot } from 'test/integration/graphql/utils/expect-one-not-internal-server-error-snapshot.util';
 import { buildBaseManifest } from 'test/integration/metadata/suites/application/utils/build-base-manifest.util';
 import { cleanupApplicationAndAppRegistration } from 'test/integration/metadata/suites/application/utils/cleanup-application-and-app-registration.util';
 import { setupApplicationForSync } from 'test/integration/metadata/suites/application/utils/setup-application-for-sync.util';
 import { syncApplication } from 'test/integration/metadata/suites/application/utils/sync-application.util';
 import { uploadApplicationFile } from 'test/integration/metadata/suites/application/utils/upload-application-file.util';
-import {
-  type LogicFunctionManifest,
-  type Manifest,
-} from 'twenty-shared/application';
 import {
   type EachTestingContext,
   eachTestingContextFilter,
@@ -20,9 +17,9 @@ const EXISTING_LOGIC_FUNCTION_ID = uuidv4();
 
 const VALID_BUILT_PATH = 'src/logic-functions/handler.mjs';
 
-const buildLogicFunction = (
-  overrides: Partial<LogicFunctionManifest> = {},
-): LogicFunctionManifest => ({
+const buildLogicFunction = <TOverrides extends object>(
+  overrides: TOverrides,
+) => ({
   universalIdentifier: uuidv4(),
   name: 'TestLogicFunction',
   description: 'A test logic function',
@@ -33,9 +30,9 @@ const buildLogicFunction = (
   ...overrides,
 });
 
-const buildHttpRouteTriggerSettings = (forwardedRequestHeaders: string[]) => ({
+const buildHttpRouteTriggerSettings = (forwardedRequestHeaders: unknown) => ({
   path: '/forwarded-headers',
-  httpMethod: 'POST' as const,
+  httpMethod: HTTPMethod.POST,
   isAuthRequired: false,
   forwardedRequestHeaders,
 });
@@ -48,15 +45,16 @@ const buildExistingLogicFunction = (forwardedRequestHeaders: string[]) =>
     ),
   });
 
-const buildManifest = (logicFunctions: LogicFunctionManifest[]): Manifest =>
-  buildBaseManifest({
+const buildManifest = (logicFunctions: object[]) => ({
+  ...buildBaseManifest({
     appId: TEST_APP_ID,
     roleId: TEST_ROLE_ID,
-    overrides: { logicFunctions },
-  });
+  }),
+  logicFunctions,
+});
 
 type TestContext = {
-  manifest: Manifest;
+  manifest: ReturnType<typeof buildManifest>;
 };
 
 const FAILING_FORWARDED_CREDENTIAL_HEADERS_TEST_CASES: EachTestingContext<TestContext>[] =
@@ -118,9 +116,8 @@ const FAILING_FORWARDED_CREDENTIAL_HEADERS_TEST_CASES: EachTestingContext<TestCo
         manifest: buildManifest([
           buildExistingLogicFunction(['x-custom-header']),
           buildLogicFunction({
-            httpRouteTriggerSettings: buildHttpRouteTriggerSettings(
-              'authorization' as unknown as string[],
-            ),
+            httpRouteTriggerSettings:
+              buildHttpRouteTriggerSettings('authorization'),
           }),
         ]),
       },
@@ -133,7 +130,7 @@ const FAILING_FORWARDED_CREDENTIAL_HEADERS_TEST_CASES: EachTestingContext<TestCo
           buildLogicFunction({
             httpRouteTriggerSettings: buildHttpRouteTriggerSettings({
               0: 'authorization',
-            } as unknown as string[]),
+            }),
           }),
         ]),
       },
@@ -148,7 +145,7 @@ const FAILING_FORWARDED_CREDENTIAL_HEADERS_TEST_CASES: EachTestingContext<TestCo
               'x-custom-header',
             ]),
             serverRouteTriggerSettings: {
-              forwardedRequestHeaders: [null] as unknown as string[],
+              forwardedRequestHeaders: [null],
             },
           }),
         ]),

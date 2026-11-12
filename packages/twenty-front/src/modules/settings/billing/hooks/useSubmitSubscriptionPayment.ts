@@ -1,17 +1,17 @@
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { useElements, useStripe } from '@stripe/react-stripe-js';
 import { useState } from 'react';
 import { AppPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   type BillingPlanKey,
   type SubscriptionInterval,
   CreateSubscriptionPaymentIntentDocument,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type UseSubmitSubscriptionPaymentParams = {
   plan: BillingPlanKey;
@@ -22,6 +22,7 @@ export const useSubmitSubscriptionPayment = ({
   plan,
   recurringInterval,
 }: UseSubmitSubscriptionPaymentParams) => {
+  const { t } = useLingui();
   const stripe = useStripe();
   const elements = useElements();
   const { enqueueToast } = useToast();
@@ -44,7 +45,7 @@ export const useSubmitSubscriptionPayment = ({
       const { error: submitError } = await elements.submit();
       if (isDefined(submitError)) {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children:
             submitError.message ??
             t`Your payment details are incomplete. Please review and retry.`,
@@ -61,7 +62,7 @@ export const useSubmitSubscriptionPayment = ({
       const paymentIntent = data?.createSubscriptionPaymentIntent;
       if (!isDefined(paymentIntent?.clientSecret)) {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Subscription error. Please retry or contact Twenty team`,
         });
         setIsSubmitting(false);
@@ -88,7 +89,7 @@ export const useSubmitSubscriptionPayment = ({
 
       if (isDefined(error)) {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children:
             error.message ??
             t`We couldn't confirm your payment method. Please retry.`,
@@ -100,7 +101,7 @@ export const useSubmitSubscriptionPayment = ({
         enqueueToast(getToastOptionsFromError({ error }));
       } else {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Subscription error. Please retry or contact Twenty team`,
         });
       }

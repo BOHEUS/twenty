@@ -11,6 +11,7 @@ import { type Preview } from '@storybook/react-vite';
 import { http, HttpResponse } from 'msw';
 import { initialize, mswLoader } from 'msw-storybook-addon';
 import { SOURCE_LOCALE } from 'twenty-shared/translations';
+import { MOCKED_DATE } from '~/testing/constants/MockedDate';
 
 // oxlint-disable-next-line no-restricted-imports
 import { DateFormat } from '../src/modules/localization/constants/DateFormat';
@@ -28,11 +29,11 @@ import { UserContext } from '../src/modules/users/contexts/UserContext';
 // oxlint-disable-next-line no-restricted-imports
 import '../src/modules/app/utils/setupMonacoEnvironment';
 
-import 'react-loading-skeleton/dist/skeleton.css';
 import 'twenty-ui/style.css';
 import 'twenty-ui/theme-light.css';
 import 'twenty-ui/theme-dark.css';
-import { ThemeProvider } from 'twenty-ui/theme';
+import { GRAY_SCALE_LIGHT, ThemeProvider } from 'twenty-ui/theme';
+import { waitForStorybookFontsLoaded } from 'twenty-ui/testing';
 // oxlint-disable-next-line no-restricted-imports
 import { messages as enMessages } from '../src/locales/generated/en';
 
@@ -41,8 +42,7 @@ i18n.activate(SOURCE_LOCALE);
 // oxlint-disable-next-line no-restricted-imports
 import { ClickOutsideListenerContext } from '../src/modules/ui/utilities/pointer-event/contexts/ClickOutsideListenerContext';
 
-const MOCK_IMAGE_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" fill="#d9d9d9"/></svg>';
+const MOCK_IMAGE_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192"><rect width="192" height="192" fill="${GRAY_SCALE_LIGHT.gray6}"/></svg>`;
 
 const respondWithMockImage = () =>
   new HttpResponse(MOCK_IMAGE_SVG, {
@@ -64,7 +64,7 @@ initialize(
   {
     onUnhandledRequest: async (request: Request) => {
       const fileExtensionsToIgnore =
-        /\.(ts|tsx|js|jsx|svg|css|png|woff2)(\?v=[a-zA-Z0-9]+)?/;
+        /\.(ts|tsx|js|jsx|svg|css|png|jpe?g|gif|webp|avif|woff2)(\?v=[a-zA-Z0-9]+)?/;
 
       if (fileExtensionsToIgnore.test(request.url)) {
         return;
@@ -103,17 +103,6 @@ const STORYBOOK_DEFAULT_USER_CONTEXT = {
   timeZone: 'UTC',
 };
 
-const INTER_FONT_WEIGHTS = ['400', '500', '600'];
-
-const waitForInterFontLoadedBeforeScreenshot = async () => {
-  await Promise.all(
-    INTER_FONT_WEIGHTS.map((weight) =>
-      document.fonts.load(`${weight} 1em Inter`),
-    ),
-  );
-  await document.fonts.ready;
-};
-
 const preview: Preview = {
   decorators: [
     (Story) => {
@@ -140,7 +129,7 @@ const preview: Preview = {
     resetJotaiStore();
   },
 
-  loaders: [mswLoader, waitForInterFontLoadedBeforeScreenshot],
+  loaders: [mswLoader, waitForStorybookFontsLoaded],
 
   parameters: {
     argos: {
@@ -153,7 +142,7 @@ const preview: Preview = {
         date: /Date$/,
       },
     },
-    mockingDate: new Date('2024-03-12T09:30:00.000Z'),
+    mockingDate: new Date(MOCKED_DATE),
     options: {
       storySort: {
         order: ['UI', 'Modules', 'Pages'],

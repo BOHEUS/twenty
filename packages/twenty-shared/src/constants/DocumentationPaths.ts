@@ -36,8 +36,12 @@ export const DOCUMENTATION_PATHS = {
     '/developers/extend/apps/data/system-fields',
   DEVELOPERS_EXTEND_APPS_DATA_TIMELINE_ACTIVITY_TYPES:
     '/developers/extend/apps/data/timeline-activity-types',
+  DEVELOPERS_EXTEND_APPS_DATA_VALIDATION_RULES:
+    '/developers/extend/apps/data/validation-rules',
   DEVELOPERS_EXTEND_APPS_GETTING_STARTED_CONCEPTS:
     '/developers/extend/apps/getting-started/concepts',
+  DEVELOPERS_EXTEND_APPS_GETTING_STARTED_GOOD_PRACTICES:
+    '/developers/extend/apps/getting-started/good-practices',
   DEVELOPERS_EXTEND_APPS_GETTING_STARTED_LOCAL_SERVER:
     '/developers/extend/apps/getting-started/local-server',
   DEVELOPERS_EXTEND_APPS_GETTING_STARTED_PROJECT_STRUCTURE:
@@ -64,6 +68,7 @@ export const DOCUMENTATION_PATHS = {
   DEVELOPERS_EXTEND_APPS_LOGIC_CONNECTIONS:
     '/developers/extend/apps/logic/connections',
   DEVELOPERS_EXTEND_APPS_LOGIC_CREDITS: '/developers/extend/apps/logic/credits',
+  DEVELOPERS_EXTEND_APPS_LOGIC_INBOX: '/developers/extend/apps/logic/inbox',
   DEVELOPERS_EXTEND_APPS_LOGIC_KEY_VALUE_STORE:
     '/developers/extend/apps/logic/key-value-store',
   DEVELOPERS_EXTEND_APPS_LOGIC_LOGIC_FUNCTIONS:
@@ -74,8 +79,14 @@ export const DOCUMENTATION_PATHS = {
     '/developers/extend/apps/logic/overview',
   DEVELOPERS_EXTEND_APPS_LOGIC_SKILLS_AND_AGENTS:
     '/developers/extend/apps/logic/skills-and-agents',
+  DEVELOPERS_EXTEND_APPS_LOGIC_WORKFLOWS:
+    '/developers/extend/apps/logic/workflows',
   DEVELOPERS_EXTEND_APPS_OPERATIONS_CLI:
     '/developers/extend/apps/operations/cli',
+  DEVELOPERS_EXTEND_APPS_OPERATIONS_MARKETPLACE_REVIEW:
+    '/developers/extend/apps/operations/marketplace-review',
+  DEVELOPERS_EXTEND_APPS_OPERATIONS_MONITORING:
+    '/developers/extend/apps/operations/monitoring',
   DEVELOPERS_EXTEND_APPS_OPERATIONS_OVERVIEW:
     '/developers/extend/apps/operations/overview',
   DEVELOPERS_EXTEND_APPS_OPERATIONS_PUBLISHING:
@@ -105,6 +116,8 @@ export const DOCUMENTATION_PATHS = {
   DEVELOPERS_INTRODUCTION: '/developers/introduction',
   DEVELOPERS_SELF_HOST_CAPABILITIES_DOCKER_COMPOSE:
     '/developers/self-host/capabilities/docker-compose',
+  DEVELOPERS_SELF_HOST_CAPABILITIES_SECURITY:
+    '/developers/self-host/capabilities/security',
   DEVELOPERS_SELF_HOST_CAPABILITIES_SETUP:
     '/developers/self-host/capabilities/setup',
   DEVELOPERS_SELF_HOST_CAPABILITIES_TROUBLESHOOTING:
@@ -128,72 +141,89 @@ export const DOCUMENTATION_PATHS = {
   GETTING_STARTED_KEY_FEATURES: '/getting-started/key-features',
   GETTING_STARTED_QUICKSTART: '/getting-started/quickstart',
   UI_ACCESSIBILITY: '/ui/accessibility',
-  UI_COMPONENTS_ANIMATED_ICON_CROSSFADE:
-    '/ui/components/animated-icon-crossfade',
-  UI_COMPONENTS_AVATAR_GROUP: '/ui/components/avatar-group',
-  UI_COMPONENTS_CALLOUT: '/ui/components/callout',
-  UI_COMPONENTS_CODE_EDITOR: '/ui/components/code-editor',
-  UI_COMPONENTS_COMMAND_BLOCK: '/ui/components/command-block',
-  UI_COMPONENTS_CURRENCY_PICKER: '/ui/components/currency-picker',
-  UI_COMPONENTS_DROPDOWN: '/ui/components/dropdown',
-  UI_COMPONENTS_IMAGE_INPUT: '/ui/components/image-input',
-  UI_COMPONENTS_INLINE_BANNER: '/ui/components/inline-banner',
+  UI_COMPONENTS_CODE_EDITOR_CODE_EDITOR:
+    '/ui/components/code-editor/code-editor',
+  UI_COMPONENTS_DATA_DISPLAY_ASSISTANT_AVATAR:
+    '/ui/components/data-display/assistant-avatar',
+  UI_COMPONENTS_DATA_DISPLAY_AVATAR_GROUP:
+    '/ui/components/data-display/avatar-group',
+  UI_COMPONENTS_DATA_DISPLAY_COMMAND_BLOCK:
+    '/ui/components/data-display/command-block',
+  UI_COMPONENTS_DATA_DISPLAY_DETAILS_ROW:
+    '/ui/components/data-display/details-row',
+  UI_COMPONENTS_DATA_DISPLAY_JSON_TREE: '/ui/components/data-display/json-tree',
+  UI_COMPONENTS_DATA_DISPLAY_METRIC_ROW:
+    '/ui/components/data-display/metric-row',
+  UI_COMPONENTS_DATA_DISPLAY_STACK_ICON:
+    '/ui/components/data-display/stack-icon',
+  UI_COMPONENTS_DATA_DISPLAY_TINTED_ICON_TILE:
+    '/ui/components/data-display/tinted-icon-tile',
+  UI_COMPONENTS_FEEDBACK_CALLOUT: '/ui/components/feedback/callout',
+  UI_COMPONENTS_FEEDBACK_INLINE_BANNER: '/ui/components/feedback/inline-banner',
+  UI_COMPONENTS_FEEDBACK_TOAST: '/ui/components/feedback/toast',
+  UI_COMPONENTS_INPUT_COUNTRY_SELECT: '/ui/components/input/country-select',
+  UI_COMPONENTS_INPUT_CURRENCY_PICKER: '/ui/components/input/currency-picker',
+  UI_COMPONENTS_INPUT_FORM_FIELD_ROW: '/ui/components/input/form-field-row',
   UI_COMPONENTS_INPUT_ICON_BUTTON: '/ui/components/input/icon-button',
+  UI_COMPONENTS_INPUT_IMAGE_INPUT: '/ui/components/input/image-input',
   UI_COMPONENTS_INPUT_LIGHT_BUTTON: '/ui/components/input/light-button',
   UI_COMPONENTS_INPUT_LIGHT_ICON_BUTTON:
     '/ui/components/input/light-icon-button',
   UI_COMPONENTS_INPUT_MAIN_BUTTON: '/ui/components/input/main-button',
-  UI_COMPONENTS_JSON_TREE: '/ui/components/json-tree',
-  UI_COMPONENTS_MENU_ITEMS: '/ui/components/menu-items',
-  UI_COMPONENTS_MENU_PICKER: '/ui/components/menu-picker',
-  UI_COMPONENTS_METRIC_ROW: '/ui/components/metric-row',
-  UI_COMPONENTS_NOTIFICATION_COUNTER: '/ui/components/notification-counter',
-  UI_COMPONENTS_OVERFLOWING_LIST: '/ui/components/overflowing-list',
+  UI_COMPONENTS_INPUT_NUMBER_STEPPER: '/ui/components/input/number-stepper',
+  UI_COMPONENTS_INPUT_PHONE_COUNTRY_PICKER:
+    '/ui/components/input/phone-country-picker',
+  UI_COMPONENTS_INPUT_REACTION_BUTTON: '/ui/components/input/reaction-button',
+  UI_COMPONENTS_INPUT_SEARCH_INPUT: '/ui/components/input/search-input',
+  UI_COMPONENTS_INPUT_SEGMENTED_CONTROL:
+    '/ui/components/input/segmented-control',
+  UI_COMPONENTS_LAYOUT_ANIMATED_ICON_CROSSFADE:
+    '/ui/components/layout/animated-icon-crossfade',
+  UI_COMPONENTS_LAYOUT_OVERFLOWING_LIST:
+    '/ui/components/layout/overflowing-list',
+  UI_COMPONENTS_LAYOUT_SECTION: '/ui/components/layout/section',
+  UI_COMPONENTS_NAVIGATION_DROPDOWN: '/ui/components/navigation/dropdown',
+  UI_COMPONENTS_NAVIGATION_LIST_ITEM_BUTTON:
+    '/ui/components/navigation/list-item-button',
+  UI_COMPONENTS_NAVIGATION_TAB_BUTTON: '/ui/components/navigation/tab-button',
   UI_COMPONENTS_OVERVIEW: '/ui/components/overview',
-  UI_COMPONENTS_PHONE_COUNTRY_PICKER: '/ui/components/phone-country-picker',
-  UI_COMPONENTS_SEARCH_INPUT: '/ui/components/search-input',
-  UI_COMPONENTS_SECTION: '/ui/components/section',
-  UI_COMPONENTS_SETTINGS_ROW: '/ui/components/settings-row',
-  UI_COMPONENTS_TAB_BUTTON: '/ui/components/tab-button',
-  UI_COMPONENTS_TINTED_ICON_TILE: '/ui/components/tinted-icon-tile',
-  UI_COMPONENTS_TOAST: '/ui/components/toast',
+  UI_COMPONENTS_SETTINGS_SETTINGS_ROW: '/ui/components/settings/settings-row',
   UI_DARK_MODE: '/ui/dark-mode',
   UI_GETTING_STARTED: '/ui/getting-started',
   UI_ICONS: '/ui/icons',
-  UI_PRIMITIVES_ACCESSIBILITY_VISIBILITY_HIDDEN:
-    '/ui/primitives/accessibility/visibility-hidden',
+  UI_PRIMITIVES_ACCESSIBILITY_VISUALLY_HIDDEN:
+    '/ui/primitives/accessibility/visually-hidden',
   UI_PRIMITIVES_DATA_DISPLAY_AVATAR: '/ui/primitives/data-display/avatar',
+  UI_PRIMITIVES_DATA_DISPLAY_BADGE: '/ui/primitives/data-display/badge',
   UI_PRIMITIVES_DATA_DISPLAY_CHIP: '/ui/primitives/data-display/chip',
   UI_PRIMITIVES_DATA_DISPLAY_COLOR_SAMPLE:
     '/ui/primitives/data-display/color-sample',
-  UI_PRIMITIVES_DATA_DISPLAY_PILL: '/ui/primitives/data-display/pill',
   UI_PRIMITIVES_DATA_DISPLAY_STATUS: '/ui/primitives/data-display/status',
   UI_PRIMITIVES_DATA_DISPLAY_TAG: '/ui/primitives/data-display/tag',
   UI_PRIMITIVES_FEEDBACK_BANNER: '/ui/primitives/feedback/banner',
   UI_PRIMITIVES_FEEDBACK_LOADER: '/ui/primitives/feedback/loader',
+  UI_PRIMITIVES_FEEDBACK_PROGRESS: '/ui/primitives/feedback/progress',
   UI_PRIMITIVES_FEEDBACK_PROGRESS_BAR: '/ui/primitives/feedback/progress-bar',
   UI_PRIMITIVES_FEEDBACK_PROGRESS_RING: '/ui/primitives/feedback/progress-ring',
+  UI_PRIMITIVES_FEEDBACK_SKELETON: '/ui/primitives/feedback/skeleton',
   UI_PRIMITIVES_INPUT_BUTTON: '/ui/primitives/input/button',
   UI_PRIMITIVES_INPUT_BUTTON_GROUP: '/ui/primitives/input/button-group',
   UI_PRIMITIVES_INPUT_CHECKBOX: '/ui/primitives/input/checkbox',
   UI_PRIMITIVES_INPUT_FIELD: '/ui/primitives/input/field',
   UI_PRIMITIVES_INPUT_INPUT: '/ui/primitives/input/input',
   UI_PRIMITIVES_INPUT_INPUT_GROUP: '/ui/primitives/input/input-group',
-  UI_PRIMITIVES_INPUT_NUMBER_STEPPER: '/ui/primitives/input/number-stepper',
+  UI_PRIMITIVES_INPUT_NUMBER_FIELD: '/ui/primitives/input/number-field',
   UI_PRIMITIVES_INPUT_RADIO: '/ui/primitives/input/radio',
   UI_PRIMITIVES_INPUT_RADIO_GROUP: '/ui/primitives/input/radio-group',
-  UI_PRIMITIVES_INPUT_SEGMENTED_CONTROL:
-    '/ui/primitives/input/segmented-control',
   UI_PRIMITIVES_INPUT_SELECT: '/ui/primitives/input/select',
   UI_PRIMITIVES_INPUT_SLIDER: '/ui/primitives/input/slider',
   UI_PRIMITIVES_INPUT_SWITCH: '/ui/primitives/input/switch',
   UI_PRIMITIVES_INPUT_TEXTAREA: '/ui/primitives/input/textarea',
   UI_PRIMITIVES_LAYOUT_COLLAPSIBLE: '/ui/primitives/layout/collapsible',
-  UI_PRIMITIVES_LAYOUT_HORIZONTAL_SEPARATOR:
-    '/ui/primitives/layout/horizontal-separator',
+  UI_PRIMITIVES_LAYOUT_DIRECTION_PROVIDER:
+    '/ui/primitives/layout/direction-provider',
   UI_PRIMITIVES_LAYOUT_RESIZE_HANDLE: '/ui/primitives/layout/resize-handle',
-  UI_PRIMITIVES_LAYOUT_TEXT_DIRECTION_PROVIDER:
-    '/ui/primitives/layout/text-direction-provider',
+  UI_PRIMITIVES_LAYOUT_SEPARATOR: '/ui/primitives/layout/separator',
   UI_PRIMITIVES_NAVIGATION_BREADCRUMB: '/ui/primitives/navigation/breadcrumb',
   UI_PRIMITIVES_NAVIGATION_LIST_ITEM: '/ui/primitives/navigation/list-item',
   UI_PRIMITIVES_NAVIGATION_TABS: '/ui/primitives/navigation/tabs',
@@ -201,7 +231,6 @@ export const DOCUMENTATION_PATHS = {
   UI_PRIMITIVES_SURFACES_ALERT_DIALOG: '/ui/primitives/surfaces/alert-dialog',
   UI_PRIMITIVES_SURFACES_CARD: '/ui/primitives/surfaces/card',
   UI_PRIMITIVES_SURFACES_DIALOG: '/ui/primitives/surfaces/dialog',
-  UI_PRIMITIVES_SURFACES_MENU: '/ui/primitives/surfaces/menu',
   UI_PRIMITIVES_SURFACES_POPOVER: '/ui/primitives/surfaces/popover',
   UI_PRIMITIVES_SURFACES_TOOLTIP: '/ui/primitives/surfaces/tooltip',
   UI_PRIMITIVES_TYPOGRAPHY_HEADING: '/ui/primitives/typography/heading',
@@ -231,6 +260,8 @@ export const DOCUMENTATION_PATHS = {
   USER_GUIDE_BILLING_OVERVIEW: '/user-guide/billing/overview',
   USER_GUIDE_CALENDAR_EMAILS_CAPABILITIES_CALENDAR:
     '/user-guide/calendar-emails/capabilities/calendar',
+  USER_GUIDE_CALENDAR_EMAILS_CAPABILITIES_EMAIL_CHANNELS:
+    '/user-guide/calendar-emails/capabilities/email-channels',
   USER_GUIDE_CALENDAR_EMAILS_CAPABILITIES_MAILBOX:
     '/user-guide/calendar-emails/capabilities/mailbox',
   USER_GUIDE_CALENDAR_EMAILS_HOW_TOS_CAN_I_BOOK_MEETINGS_FROM_TWENTY:
@@ -300,6 +331,8 @@ export const DOCUMENTATION_PATHS = {
     '/user-guide/data-model/capabilities/objects',
   USER_GUIDE_DATA_MODEL_CAPABILITIES_RELATION_FIELDS:
     '/user-guide/data-model/capabilities/relation-fields',
+  USER_GUIDE_DATA_MODEL_CAPABILITIES_VALIDATION_RULES:
+    '/user-guide/data-model/capabilities/validation-rules',
   USER_GUIDE_DATA_MODEL_HOW_TOS_CREATE_CUSTOM_FIELDS:
     '/user-guide/data-model/how-tos/create-custom-fields',
   USER_GUIDE_DATA_MODEL_HOW_TOS_CREATE_CUSTOM_OBJECTS:

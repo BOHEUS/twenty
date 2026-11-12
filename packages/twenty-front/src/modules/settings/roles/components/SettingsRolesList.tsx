@@ -1,17 +1,27 @@
+import { useInstalledApplications } from '@/applications/hooks/useInstalledApplications';
+import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
+import { OrganizationAdornment } from '@/settings/enterprise/components/OrganizationAdornment';
 import { SettingsRolesTableHeader } from '@/settings/roles/components/SettingsRolesTableHeader';
 import { SettingsRolesTableRow } from '@/settings/roles/components/SettingsRolesTableRow';
 import { useSettingsAllRoles } from '@/settings/roles/hooks/useSettingsAllRoles';
+import { type RoleWithPartialMembers } from '@/settings/roles/types/RoleWithPartialMembers';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
+import { TableFooter } from '@/ui/layout/table/components/TableFooter';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { checkIfBillingEntitlementIsEnabledOnWorkspace } from '@/workspace/utils/checkIfBillingEntitlementIsEnabledOnWorkspace';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
 import { SettingsPath } from 'twenty-shared/types';
-import { Dropdown, Section, SettingsRow } from 'twenty-ui/components';
+import { isDefined } from 'twenty-shared/utils';
+import { Section } from 'twenty-ui/components/layout';
+import { Dropdown } from 'twenty-ui/components/navigation';
+import { SettingsRow } from 'twenty-ui/components/settings';
 import {
+  IconApps,
   IconFilter,
   IconKey,
   IconLego,
@@ -20,18 +30,10 @@ import {
 } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
+import { BillingEntitlementKey } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
 import { sortByAscString } from '~/utils/array/sortByAscString';
-
-const StyledCreateRoleSectionContainer = styled.div`
-  > * {
-    border-top: 1px solid ${themeCssVariables.border.color.light};
-    display: flex;
-    justify-content: flex-end;
-    padding-bottom: ${themeCssVariables.spacing[2]};
-    padding-top: ${themeCssVariables.spacing[2]};
-  }
-`;
+import { useLingui } from '@lingui/react/macro';
 
 const StyledTableRows = styled.div`
   padding-bottom: ${themeCssVariables.spacing[2]};
@@ -49,23 +51,74 @@ const StyledSearchInputContainer = styled.div`
   flex: 1;
 `;
 
+const StyledCreateRoleContainer = styled.div`
+  align-items: center;
+  display: flex;
+  gap: ${themeCssVariables.spacing[2]};
+`;
+
 export const SettingsRolesList = () => {
+  const { t } = useLingui();
   const navigateSettings = useNavigateSettings();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAgentRoles, setShowAgentRoles] = useState(false);
   const [showApiKeyRoles, setShowApiKeyRoles] = useState(false);
+  const [showApplicationRoles, setShowApplicationRoles] = useState(false);
 
   const settingsAllRoles = useSettingsAllRoles();
+  const installedApplications = useInstalledApplications();
+  const currentWorkspace = useAtomStateValue(currentWorkspaceState);
 
-  const sortedSettingsAllRoles = [...settingsAllRoles].sort((a, b) =>
-    sortByAscString(a.label, b.label),
+  const hasCustomRolesEntitlement =
+    checkIfBillingEntitlementIsEnabledOnWorkspace(
+      BillingEntitlementKey.CUSTOM_ROLES,
+      currentWorkspace,
+    );
+
+  const installedApplicationByGrantRoleId = new Map(
+    installedApplications
+      .filter((application) => isDefined(application.grantRoleId))
+      .map((application) => [application.grantRoleId, application]),
+  );
+
+  const requestedOnlyRoleIds = new Set(
+    installedApplications
+      .filter(
+        (application) =>
+          isDefined(application.defaultRoleId) &&
+          application.defaultRoleId !== application.grantRoleId,
+      )
+      .map((application) => application.defaultRoleId),
+  );
+
+  const isApplicationRole = (role: RoleWithPartialMembers) =>
+    !role.canBeAssignedToUsers &&
+    installedApplicationByGrantRoleId.has(role.id);
+
+  const isRequestedOnlyRole = (role: RoleWithPartialMembers) =>
+    !role.canBeAssignedToUsers && requestedOnlyRoleIds.has(role.id);
+
+  const getApplicationName = (role: RoleWithPartialMembers) =>
+    isApplicationRole(role)
+      ? (installedApplicationByGrantRoleId.get(role.id)?.name ?? '')
+      : '';
+
+  const sortedSettingsAllRoles = [...settingsAllRoles].sort(
+    (a, b) =>
+      sortByAscString(getApplicationName(a), getApplicationName(b)) ||
+      sortByAscString(a.label, b.label),
   );
 
   const filteredRoles = sortedSettingsAllRoles.filter((role) => {
-    const matchesType =
-      role.canBeAssignedToUsers ||
-      (showAgentRoles && role.canBeAssignedToAgents) ||
-      (showApiKeyRoles && role.canBeAssignedToApiKeys);
+    if (isRequestedOnlyRole(role)) {
+      return false;
+    }
+
+    const matchesType = isApplicationRole(role)
+      ? showApplicationRoles
+      : role.canBeAssignedToUsers ||
+        (showAgentRoles && role.canBeAssignedToAgents) ||
+        (showApiKeyRoles && role.canBeAssignedToApiKeys);
 
     const matchesSearch = role.label
       ?.toLowerCase()
@@ -105,15 +158,22 @@ export const SettingsRolesList = () => {
           <DropdownContent align="end" sideOffset={8}>
             <Dropdown.Section>
               <SettingsRow
-                startIcon={<IconLego />}
+                startElement={<IconLego />}
                 onCheckedChange={() => setShowAgentRoles(!showAgentRoles)}
                 checked={showAgentRoles}
               >{t`Agent roles`}</SettingsRow>
               <SettingsRow
-                startIcon={<IconKey />}
+                startElement={<IconKey />}
                 onCheckedChange={() => setShowApiKeyRoles(!showApiKeyRoles)}
                 checked={showApiKeyRoles}
               >{t`API key roles`}</SettingsRow>
+              <SettingsRow
+                startElement={<IconApps />}
+                onCheckedChange={() =>
+                  setShowApplicationRoles(!showApplicationRoles)
+                }
+                checked={showApplicationRoles}
+              >{t`Application roles`}</SettingsRow>
             </Dropdown.Section>
           </DropdownContent>
         </DropdownRoot>
@@ -133,16 +193,22 @@ export const SettingsRolesList = () => {
           )}
         </StyledTableRows>
       </Table>
-      <StyledCreateRoleSectionContainer>
-        <Section.Root>
+      <TableFooter>
+        <StyledCreateRoleContainer>
+          {!hasCustomRolesEntitlement && (
+            <OrganizationAdornment
+              tooltipContent={t`Upgrade to Organization to create custom roles`}
+            />
+          )}
           <Button
             startIcon={<IconPlus />}
             size="sm"
             onClick={() => navigateSettings(SettingsPath.RoleCreate)}
             variant="outline"
+            disabled={!hasCustomRolesEntitlement}
           >{t`Create Role`}</Button>
-        </Section.Root>
-      </StyledCreateRoleSectionContainer>
+        </StyledCreateRoleContainer>
+      </TableFooter>
     </Section.Root>
   );
 };

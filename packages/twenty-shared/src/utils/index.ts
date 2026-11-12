@@ -25,13 +25,22 @@ export { assertUnreachable } from './assertUnreachable';
 export { base64UrlEncode } from './base64UrlEncode';
 export { isCallRecordingTranscriptStatusMarker } from './callRecording/isCallRecordingTranscriptStatusMarker';
 export { parseCallRecordingTranscriptEntries } from './callRecording/parseCallRecordingTranscriptEntries';
+export { canReachAllRecords } from './canReachAllRecords';
+export { canReachSomeRecords } from './canReachSomeRecords';
 export { conditionalAvailabilityParser } from './command-menu-items/conditionalAvailabilityParser';
 export { evaluateConditionalAvailabilityExpression } from './command-menu-items/evaluateConditionalAvailabilityExpression';
+export { isCommandMenuCoreObjectName } from './command-menu-items/isCommandMenuCoreObjectName';
 export { resolveObjectMetadataLabel } from './command-menu-items/resolveObjectMetadataLabel';
 export { safeGetNestedProperty } from './command-menu-items/safeGetNestedProperty';
 export { computeDiffBetweenObjects } from './compute-diff-between-objects';
+export { buildRecordExportColumns } from './csv/buildRecordExportColumns';
+export { expandRecordExportMorphFields } from './csv/expandRecordExportMorphFields';
+export { formatRecordExportHeader } from './csv/formatRecordExportHeader';
+export { formatRecordExportRow } from './csv/formatRecordExportRow';
 export { formatValueForCSV } from './csv/formatValueForCSV';
 export { sanitizeValueForCSVExport } from './csv/sanitizeValueForCSVExport';
+export { convertCurrencyAmountToCurrencyMicros } from './currency/convertCurrencyAmountToCurrencyMicros';
+export { convertCurrencyMicrosToCurrencyAmount } from './currency/convertCurrencyMicrosToCurrencyAmount';
 export {
   NON_ISO_DATE_FORMATS,
   ACCEPTED_DATE_FORMATS,
@@ -60,12 +69,14 @@ export type { ParsedEmailAddress } from './email/parseEmailAddressList';
 export { parseEmailAddressList } from './email/parseEmailAddressList';
 export { CustomError } from './errors/CustomError';
 export { evalFromContext } from './evalFromContext';
+export { getEventLogRetentionInHours } from './event-logs/getEventLogRetentionInHours';
 export { extractAndSanitizeObjectStringFields } from './extractAndSanitizeObjectStringFields';
 export { computeMorphRelationGqlFieldName } from './fieldMetadata/compute-morph-relation-gql-field-name';
 export {
   computeRelationGqlFieldJoinColumnName,
   computeMorphRelationGqlFieldJoinColumnName,
 } from './fieldMetadata/compute-relation-gql-field-join-column-name';
+export { isCompositePropertySupportedInGroupBy } from './fieldMetadata/isCompositePropertySupportedInGroupBy';
 export { isFieldMetadataArrayKind } from './fieldMetadata/isFieldMetadataArrayKind';
 export { isFieldMetadataDateKind } from './fieldMetadata/isFieldMetadataDateKind';
 export { isFieldMetadataEligibleForFieldsWidget } from './fieldMetadata/isFieldMetadataEligibleForFieldsWidget';
@@ -75,6 +86,7 @@ export { isFieldMetadataNumericKind } from './fieldMetadata/isFieldMetadataNumer
 export { isFieldMetadataSelectKind } from './fieldMetadata/isFieldMetadataSelectKind';
 export { isFieldMetadataSupportedInGroupBy } from './fieldMetadata/isFieldMetadataSupportedInGroupBy';
 export { isFieldMetadataTextKind } from './fieldMetadata/isFieldMetadataTextKind';
+export { isMorphRelationHead } from './fieldMetadata/isMorphRelationHead';
 export { pickMorphGroupSurvivorOrThrow } from './fieldMetadata/pick-morph-group-survivor-or-throw';
 export { shouldExcludeFieldFromAgentToolSchema } from './fieldMetadata/shouldExcludeFieldFromAgentToolSchema';
 export { extractFolderPathFilenameAndTypeOrThrow } from './files/extractFolderPathFilenameAndTypeOrThrow.util';
@@ -83,6 +95,8 @@ export { computeGqlOperationFilterForEmails } from './filter/compute-record-gql-
 export { computeGqlOperationFilterForLinks } from './filter/compute-record-gql-operation-filter/for-composite-field/computeGqlOperationFilterForLinks';
 export { computeEmptyGqlOperationFilterForEmails } from './filter/computeEmptyGqlOperationFilterForEmails';
 export { computeEmptyGqlOperationFilterForLinks } from './filter/computeEmptyGqlOperationFilterForLinks';
+export { computeEmptyGqlOperationFilterForMorphRelation } from './filter/computeEmptyGqlOperationFilterForMorphRelation';
+export { computeMorphRelationJoinColumnNames } from './filter/computeMorphRelationJoinColumnNames';
 export { computeRecordGqlOperationFilter } from './filter/computeRecordGqlOperationFilter';
 export type { DateTimePeriod } from './filter/dates/types/DateTimePeriod';
 export { addUnitToDateTime } from './filter/dates/utils/addUnitToDateTime';
@@ -121,6 +135,7 @@ export { filterOutInvalidRecordFilters } from './filter/filterOutInvalidRecordFi
 export { isEmptinessOperand } from './filter/isEmptinessOperand';
 export { isRecordFilterOperandExpectingValue } from './filter/isRecordFilterOperandExpectingValue';
 export { isRecordFilterValueValid } from './filter/isRecordFilterValueValid';
+export { mapRLSOperandToRecordFilterOperand } from './filter/mapRLSOperandToRecordFilterOperand';
 export { turnAnyFieldFilterIntoRecordGqlFilter } from './filter/turnAnyFieldFilterIntoRecordGqlFilter';
 export type {
   RecordFilter,
@@ -132,6 +147,7 @@ export { turnRecordFilterIntoRecordGqlOperationFilter } from './filter/turnRecor
 export { combineFilters } from './filter/utils/combineFilters';
 export { compareSelectOptionValues } from './filter/utils/compareSelectOptionValues';
 export { COMPOSITE_FIELD_FILTER_OPERANDS_MAP } from './filter/utils/compositeFieldFilterOperandsMap';
+export { COMPOSITE_FIELD_SUB_FIELD_MATCHERS_MAP } from './filter/utils/compositeFieldSubFieldMatchersMap';
 export { convertViewFilterOperandToCoreOperand } from './filter/utils/convert-view-filter-operand-to-core-operand.util';
 export { convertLikePatternToRegexOrThrow } from './filter/utils/convertLikePatternToRegexOrThrow';
 export { convertViewFilterValueToString } from './filter/utils/convertViewFilterValueToString';
@@ -148,8 +164,11 @@ export { getEmptyRecordGqlOperationFilter } from './filter/utils/getEmptyRecordG
 export { getFilterOperandsForFilterableFieldType } from './filter/utils/getFilterOperandsForFilterableFieldType';
 export { getFilterTypeFromFieldType } from './filter/utils/getFilterTypeFromFieldType';
 export { isExpectedSubFieldName } from './filter/utils/isExpectedSubFieldName';
+export { isFieldReferenceFilterOperator } from './filter/utils/isFieldReferenceFilterOperator';
 export { isMatchingArrayFilter } from './filter/utils/isMatchingArrayFilter';
 export { isMatchingBooleanFilter } from './filter/utils/isMatchingBooleanFilter';
+export type { CompositeSubFieldMatcher } from './filter/utils/isMatchingCompositeFilter';
+export { isMatchingCompositeFilter } from './filter/utils/isMatchingCompositeFilter';
 export { isMatchingCurrencyFilter } from './filter/utils/isMatchingCurrencyFilter';
 export { isMatchingDateFilter } from './filter/utils/isMatchingDateFilter';
 export { isMatchingFilesFilter } from './filter/utils/isMatchingFilesFilter';
@@ -162,6 +181,7 @@ export { isMatchingSelectFilter } from './filter/utils/isMatchingSelectFilter';
 export { isMatchingStringFilter } from './filter/utils/isMatchingStringFilter';
 export { isMatchingTSVectorFilter } from './filter/utils/isMatchingTSVectorFilter';
 export { isMatchingUUIDFilter } from './filter/utils/isMatchingUUIDFilter';
+export { parseFieldReferenceFilterValue } from './filter/utils/parseFieldReferenceFilterValue';
 export { arrayOfStringsOrVariablesSchema } from './filter/utils/validation-schemas/arrayOfStringsOrVariablesSchema';
 export {
   strictArrayOfUuidOrVariableSchema,
@@ -208,14 +228,15 @@ export {
 export { getUniqueConstraintsFields } from './indexMetadata/getUniqueConstraintsFields';
 export { isAutoSelectModelId } from './isAutoSelectModelId';
 export { isFieldValueRestricted } from './isFieldValueRestricted';
+export { isRowLevelRecordsPermissionsRuleGrantingOperation } from './isRowLevelRecordsPermissionsRuleGrantingOperation';
 export { fastDeepEqual } from './json/fast-deep-equal';
 export { getAppPath } from './navigation/getAppPath';
 export { getSettingsPath } from './navigation/getSettingsPath';
+export { isNativePageKey } from './navigation/isNativePageKey';
 export { getPageLayoutWidgetHeightBehavior } from './pageLayout/getPageLayoutWidgetHeightBehavior';
 export { parseJson } from './parseJson';
 export { removePropertiesFromRecord } from './removePropertiesFromRecord';
 export { removeUndefinedFields } from './removeUndefinedFields';
-export { resolveRichTextVariables } from './rich-text-variable-resolver';
 export { safeParseRelativeDateFilterJsonStringified } from './safeParseRelativeDateFilterJsonStringified';
 export { getGenericOperationName } from './sentry/getGenericOperationName';
 export { getHumanReadableNameFromCode } from './sentry/getHumanReadableNameFromCode';
@@ -225,6 +246,7 @@ export { getOrderByForFieldMetadataType } from './sort/getOrderByForFieldMetadat
 export { getOrderByForRelationField } from './sort/getOrderByForRelationField';
 export { resolveAddressSortSubField } from './sort/resolveAddressSortSubField';
 export { resolvePrimaryFullNameSortSubField } from './sort/resolvePrimaryFullNameSortSubField';
+export { sortKeysDeeply } from './sortKeysDeeply';
 export { appendCopySuffix } from './strings/appendCopySuffix';
 export { camelToKebab } from './strings/camelToKebab';
 export { camelToSnakeCase } from './strings/camelToSnakeCase';
@@ -235,8 +257,19 @@ export { pascalToKebab } from './strings/pascalToKebab';
 export { stringifySafely } from './strings/stringifySafely';
 export { uncapitalize } from './strings/uncapitalize';
 export { getSubdomainSlugFromDisplayName } from './subdomain/getSubdomainSlugFromDisplayName';
+export { findMalformedTemplateVariable } from './template-variable/find-malformed-template-variable';
+export { formatTemplateVariableWithFallback } from './template-variable/format-template-variable-with-fallback';
+export { parseTemplateVariableWithFallback } from './template-variable/parse-template-variable-with-fallback';
+export { replaceTemplateVariables } from './template-variable/replace-template-variables';
+export { TEMPLATE_VARIABLE_PATTERN } from './template-variable/template-variable-pattern';
+export type { TemplateVariableWithFallback } from './template-variable/template-variable-with-fallback';
 export type { CanvasTheme } from './tiptap/canvas-theme';
 export { CANVAS_THEME_DEFAULTS } from './tiptap/canvas-theme';
+export { convertBlockNoteToRichTextDocument } from './tiptap/convert-blocknote-to-rich-text-document';
+export { convertEmailBodyToEmailDocument } from './tiptap/convert-email-body-to-email-document';
+export { convertStringBodyToEmailDocument } from './tiptap/convert-string-body-to-email-document';
+export { convertTextToTipTapNodes } from './tiptap/convert-text-to-tiptap-nodes';
+export { convertTipTapBlocksToDocument } from './tiptap/convert-tiptap-blocks-to-document';
 export { convertTipTapBlocksToMarkdown } from './tiptap/convert-tiptap-blocks-to-markdown';
 export type { EmailDocumentMarkType } from './tiptap/email-document-mark-catalog';
 export {
@@ -257,10 +290,16 @@ export { EMAIL_DOCUMENT_SCHEMA_VERSION } from './tiptap/email-document-schema-ve
 export type { EmailDocument } from './tiptap/email-document-schema';
 export { emailDocumentSchema } from './tiptap/email-document-schema';
 export type { EmailDocumentStringContext } from './tiptap/email-document-string-context';
+export { EMAIL_TYPOGRAPHY } from './tiptap/email-typography';
+export { getFullHtmlEmailIfWholeBody } from './tiptap/get-full-html-email-if-whole-body';
+export { getTipTapFileUrlAttributeName } from './tiptap/get-tiptap-file-url-attribute-name';
+export { HTML_ELEMENT_NAMES } from './tiptap/html-element-names';
 export { isCanvasTheme } from './tiptap/is-canvas-theme';
 export { isEmailDocumentShape } from './tiptap/is-email-document-shape';
+export { isStorableRichTextUrl } from './tiptap/is-storable-rich-text-url';
 export type { CampaignVariableDefinition } from './tiptap/list-campaign-variables-for-fields';
 export { listCampaignVariablesForFields } from './tiptap/list-campaign-variables-for-fields';
+export { looksLikeHtml } from './tiptap/looks-like-html';
 export {
   parseEmailDocument,
   parseCanonicalEmailDocument,
@@ -271,6 +310,15 @@ export {
   parseCanonicalTipTapJsonDocument,
 } from './tiptap/parse-tiptap-json-document';
 export { resolveCanvasTheme } from './tiptap/resolve-canvas-theme';
+export type { RichTextColor } from './tiptap/rich-text-color.type';
+export { RICH_TEXT_COLORS } from './tiptap/rich-text-colors.constant';
+export { richTextDocumentSchema } from './tiptap/rich-text-document-schema';
+export type { RichTextDocument } from './tiptap/rich-text-document.type';
+export { RICH_TEXT_INDENTABLE_NODE_TYPES } from './tiptap/rich-text-indentable-node-types.constant';
+export { RICH_TEXT_MAX_HEADING_LEVEL } from './tiptap/rich-text-max-heading-level.constant';
+export { RICH_TEXT_MAX_INDENT_LEVEL } from './tiptap/rich-text-max-indent-level.constant';
+export { RICH_TEXT_TEXT_ALIGNMENTS } from './tiptap/rich-text-text-alignments.constant';
+export { RICH_TEXT_URL_MAX_LENGTH } from './tiptap/rich-text-url-max-length.constant';
 export { TIPTAP_DOCUMENT_SCHEMA_VERSION } from './tiptap/tiptap-document-schema-version';
 export { tipTapDocumentToMarkdown } from './tiptap/tiptap-document-to-markdown';
 export type { TipTapDocument } from './tiptap/tiptap-document';
@@ -299,25 +347,35 @@ export { absoluteUrlSchema } from './url/absoluteUrlSchema';
 export { buildSignedPath } from './url/buildSignedPath';
 export { ensureAbsoluteUrl } from './url/ensureAbsoluteUrl';
 export { getAbsoluteUrlOrThrow } from './url/getAbsoluteUrlOrThrow';
+export { getIframeMediaAllow } from './url/getIframeMediaAllow';
 export { getLinkUrlNormalizer } from './url/getLinkUrlNormalizer';
 export { getSafeUrl } from './url/getSafeUrl';
 export { getUrlHostnameOrThrow } from './url/getUrlHostnameOrThrow';
+export { intersectIframeMediaPermissions } from './url/intersectIframeMediaPermissions';
 export { isAbsoluteUrl } from './url/isAbsoluteUrl';
+export { isHttpUrl } from './url/isHttpUrl';
+export { isSafeInternalPath } from './url/isSafeInternalPath';
 export { isSafeUrl } from './url/isSafeUrl';
 export { isValidDomain } from './url/isValidDomain';
 export { isValidHostname } from './url/isValidHostname';
 export { isValidUrl } from './url/isValidUrl';
-export { normalizeAllowedIframeOrigin } from './url/normalizeAllowedIframeOrigin';
 export { normalizeDomain } from './url/normalizeDomain';
+export { normalizeIframeOrigin } from './url/normalizeIframeOrigin';
 export { normalizeUrl } from './url/normalizeUrl';
 export { normalizeUrlOrigin } from './url/normalizeUrlOrigin';
 export { safeDecodeURIComponent } from './url/safeDecodeURIComponent';
 export { uuidToBase36 } from './uuidToBase36';
 export { buildValidationRuleEvaluationContext } from './validation-rule/buildValidationRuleEvaluationContext';
 export { compileValidationRuleExpression } from './validation-rule/compileValidationRuleExpression';
+export { computeValidationRuleDaysSince } from './validation-rule/computeValidationRuleDaysSince';
 export { createValidationRuleEvaluator } from './validation-rule/createValidationRuleEvaluator';
 export { evaluateValidationRuleExpression } from './validation-rule/evaluateValidationRuleExpression';
+export { getValidationRulePreviousValueFieldPath } from './validation-rule/getValidationRulePreviousValueFieldPath';
+export { getValidationRuleRecordsFromDatabaseEvent } from './validation-rule/getValidationRuleRecordsFromDatabaseEvent';
+export { getValidationRuleSyntaxError } from './validation-rule/getValidationRuleSyntaxError';
 export { hasValidationRuleBracketAccess } from './validation-rule/hasValidationRuleBracketAccess';
+export { isValidationRuleDateInRelativeRange } from './validation-rule/isValidationRuleDateInRelativeRange';
+export { isValidationRulePreviousValuePath } from './validation-rule/isValidationRulePreviousValuePath';
 export { isValidationRuleReservedName } from './validation-rule/isValidationRuleReservedName';
 export { isValidationRuleValueDefined } from './validation-rule/isValidationRuleValueDefined';
 export { isValidationRuleValueEmpty } from './validation-rule/isValidationRuleValueEmpty';
@@ -345,6 +403,7 @@ export { isValidTwentySubdomain } from './validation/isValidTwentySubdomain';
 export { isValidUuid } from './validation/isValidUuid';
 export { isValidVariable } from './validation/isValidVariable';
 export { normalizeLocale } from './validation/normalizeLocale';
+export { normalizePartner } from './validation/normalizePartner';
 export { getCountryCodesForCallingCode } from './validation/phones-value/getCountryCodesForCallingCode';
 export { isValidCountryCode } from './validation/phones-value/isValidCountryCode';
 export {

@@ -3,11 +3,7 @@ import { isMorphOrRelationFlatFieldMetadata } from 'src/engine/metadata-modules/
 import { isDefined } from 'twenty-shared/utils';
 import { validateMorphOrRelationFlatFieldOnDelete } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-morph-or-relation-flat-field-on-delete.util';
 import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
-import {
-  FieldMetadataType,
-  MetadataReadability,
-  MetadataWritability,
-} from 'twenty-shared/types';
+import { FieldMetadataType } from 'twenty-shared/types';
 
 import { computeTwentyStandardApplicationAllFlatEntityMaps } from 'src/engine/workspace-manager/twenty-standard-application/utils/twenty-standard-application-all-flat-entity-maps.constant';
 
@@ -17,8 +13,8 @@ const OBJECT_NAMES = [
   'agentChatThreadParticipant',
   'agentMessage',
   'agentMessagePart',
+  'agentMessageReaction',
   'agentTurn',
-  'agentTurnEvaluation',
 ] as const;
 
 const { allFlatEntityMaps } = computeTwentyStandardApplicationAllFlatEntityMaps(
@@ -67,8 +63,9 @@ describe('agent history workspace metadata', () => {
       if (
         !isMorphOrRelationFlatFieldMetadata(field) ||
         !historyObjectIds.includes(field.objectMetadataUniversalIdentifier)
-      )
+      ) {
         continue;
+      }
       expect(
         validateMorphOrRelationFlatFieldOnDelete({
           universalFlatFieldMetadata: {
@@ -90,22 +87,6 @@ describe('agent history workspace metadata', () => {
       ).toMatchObject({ isUnique: false });
     },
   );
-  const SHARED_ACCESS_POLICY_BY_OBJECT_NAME: Partial<
-    Record<
-      (typeof OBJECT_NAMES)[number],
-      { readability: MetadataReadability; writability: MetadataWritability }
-    >
-  > = {
-    agentChatThread: {
-      readability: MetadataReadability.INHERITED,
-      writability: MetadataWritability.OPEN,
-    },
-    agentChatThreadTarget: {
-      readability: MetadataReadability.INHERITED,
-      writability: MetadataWritability.OPEN,
-    },
-  };
-
   it.each(OBJECT_NAMES)('keeps %s protected by metadata policy', (name) => {
     expect(
       allFlatEntityMaps.flatObjectMetadataMaps.byUniversalIdentifier[
@@ -119,10 +100,6 @@ describe('agent history workspace metadata', () => {
       isUICreatable: false,
       // Chats can be renamed from their record page
       isUIEditable: name === 'agentChatThread',
-      ...(SHARED_ACCESS_POLICY_BY_OBJECT_NAME[name] ?? {
-        readability: MetadataReadability.SYSTEM,
-        writability: MetadataWritability.SYSTEM,
-      }),
     });
   });
 
@@ -145,12 +122,62 @@ describe('agent history workspace metadata', () => {
     expect(titleField).toMatchObject({ isUIEditable: true });
   });
 
-  it('keeps the legacy archive column out of reach now that archive is soft delete', () => {
+  it('keeps conversation identity system-managed and existing chats regular', () => {
     expect(
       allFlatEntityMaps.flatFieldMetadataMaps.byUniversalIdentifier[
-        STANDARD_OBJECTS.agentChatThread.fields.archivedAt.universalIdentifier
+        STANDARD_OBJECTS.agentChatThread.fields.conversationType
+          .universalIdentifier
       ],
-    ).toMatchObject({ writability: MetadataWritability.SYSTEM });
+    ).toMatchObject({
+      type: FieldMetadataType.SELECT,
+      isSystem: true,
+      isUIEditable: false,
+      isNullable: false,
+      defaultValue: "'STANDARD'",
+      disabledFieldPermissionActions: ['canUpdateFieldValue'],
+      options: [{ value: 'STANDARD' }, { value: 'DIRECT_MESSAGE' }],
+    });
+  });
+
+  it.each([
+    'directMessageFirstWorkspaceMemberId',
+    'directMessageSecondWorkspaceMemberId',
+  ] as const)('keeps the fixed DM member field %s system managed', (name) => {
+    expect(
+      allFlatEntityMaps.flatFieldMetadataMaps.byUniversalIdentifier[
+        STANDARD_OBJECTS.agentChatThread.fields[name].universalIdentifier
+      ],
+    ).toMatchObject({
+      name,
+      type: FieldMetadataType.UUID,
+      isSystem: true,
+      isUIEditable: false,
+      isNullable: true,
+      disabledFieldPermissionActions: ['canUpdateFieldValue'],
+    });
+  });
+
+  it('reserves one DM identity per pair including soft-deleted threads', () => {
+    const { fields, indexes } = STANDARD_OBJECTS.agentChatThread;
+
+    expect(
+      allFlatEntityMaps.flatIndexMaps.byUniversalIdentifier[
+        indexes.directMessagePairUniqueIndex.universalIdentifier
+      ],
+    ).toMatchObject({
+      isUnique: true,
+      indexWhereClause: null,
+      universalFlatIndexFieldMetadatas: [
+        {
+          fieldMetadataUniversalIdentifier:
+            fields.directMessageFirstWorkspaceMemberId.universalIdentifier,
+        },
+        {
+          fieldMetadataUniversalIdentifier:
+            fields.directMessageSecondWorkspaceMemberId.universalIdentifier,
+        },
+      ],
+    });
   });
 
   it('retains messages when a sender member is deleted', () => {
@@ -168,6 +195,55 @@ describe('agent history workspace metadata', () => {
     });
   });
 
+  it('removes reactions with their message or their member, one per member and emoji', () => {
+    const { fields, indexes } = STANDARD_OBJECTS.agentMessageReaction;
+
+    for (const [field, joinColumnName, isNullable] of [
+      [fields.message, 'messageId', false],
+      [fields.workspaceMember, 'workspaceMemberId', true],
+    ] as const) {
+      expect(
+        allFlatEntityMaps.flatFieldMetadataMaps.byUniversalIdentifier[
+          field.universalIdentifier
+        ],
+      ).toMatchObject({
+        isNullable,
+        settings: { onDelete: 'CASCADE', joinColumnName },
+      });
+    }
+    expect(
+      allFlatEntityMaps.flatIndexMaps.byUniversalIdentifier[
+        indexes.messageWorkspaceMemberEmojiUniqueIndex.universalIdentifier
+      ],
+    ).toMatchObject({
+      isUnique: true,
+      indexWhereClause: '"deletedAt" IS NULL',
+      universalFlatIndexFieldMetadatas: [
+        {
+          fieldMetadataUniversalIdentifier: fields.message.universalIdentifier,
+        },
+        {
+          fieldMetadataUniversalIdentifier:
+            fields.workspaceMember.universalIdentifier,
+        },
+        { fieldMetadataUniversalIdentifier: fields.emoji.universalIdentifier },
+      ],
+    });
+  });
+
+  it('lets an agent react without a workspace member', () => {
+    expect(
+      allFlatEntityMaps.flatFieldMetadataMaps.byUniversalIdentifier[
+        STANDARD_OBJECTS.agentMessageReaction.fields.agentId.universalIdentifier
+      ],
+    ).toMatchObject({
+      name: 'agentId',
+      type: FieldMetadataType.UUID,
+      isSystem: true,
+      isNullable: true,
+    });
+  });
+
   it('retains exact precision for credits and cache token counts', () => {
     for (const name of [
       'totalInputCredits',
@@ -181,17 +257,5 @@ describe('agent history workspace metadata', () => {
         ],
       ).toMatchObject({ type: FieldMetadataType.NUMERIC, defaultValue: "'0'" });
     }
-  });
-
-  it('retains one hidden kickoff message per thread', () => {
-    expect(
-      allFlatEntityMaps.flatIndexMaps.byUniversalIdentifier[
-        STANDARD_OBJECTS.agentMessage.indexes.hiddenKickoffIndex
-          .universalIdentifier
-      ],
-    ).toMatchObject({
-      isUnique: true,
-      indexWhereClause: '"isHidden" = true AND "deletedAt" IS NULL',
-    });
   });
 });

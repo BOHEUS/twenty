@@ -2,8 +2,8 @@ import { type Meta, type StoryObj } from '@storybook/react-vite';
 import { useStore } from 'jotai';
 import { HttpResponse, graphql } from 'msw';
 import { useEffect, useState } from 'react';
-import { expect, userEvent, within } from 'storybook/test';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
 import { ComponentDecorator } from 'twenty-ui/testing';
 
 import { SidePanelComposeCalendarEventPage } from '@/side-panel/pages/compose-calendar-event/components/SidePanelComposeCalendarEventPage';
@@ -40,8 +40,9 @@ const storyConnectedAccounts = [
     lastSignedInAt: '2026-08-24T08:00:00.000Z',
     userWorkspaceId: '20202020-0687-4c41-b707-ed1bfca972a7',
     connectionProviderId: null,
+    applicationId: null,
     name: 'Tim Apple',
-    visibility: 'SHARE_EVERYTHING',
+    scope: 'USER',
     lastCredentialsRefreshedAt: '2026-08-24T08:00:00.000Z',
     connectionParameters: null,
     createdAt: '2026-02-27T01:17:25.392Z',
@@ -59,8 +60,9 @@ const storyConnectedAccounts = [
     lastSignedInAt: '2026-08-23T08:00:00.000Z',
     userWorkspaceId: '20202020-0687-4c41-b707-ed1bfca972a7',
     connectionProviderId: null,
+    applicationId: null,
     name: 'Tim Apple',
-    visibility: 'SHARE_EVERYTHING',
+    scope: 'USER',
     lastCredentialsRefreshedAt: '2026-08-23T08:00:00.000Z',
     connectionParameters: null,
     createdAt: '2026-03-12T01:17:25.392Z',
@@ -75,6 +77,7 @@ const storyCalendarChannels = storyConnectedAccounts.map((account, index) => ({
   visibility: 'SHARE_EVERYTHING',
   isContactAutoCreationEnabled: false,
   contactAutoCreationPolicy: 'AS_PARTICIPANT_AND_ORGANIZER',
+  excludePrivateEvents: false,
   isSyncEnabled: true,
   syncStatus: 'ACTIVE',
   syncStage: 'CALENDAR_EVENTS_IMPORT_ONGOING',
@@ -105,7 +108,7 @@ const useInitializeSidePanelComposerStory = ({
         {
           connectedAccountId: GOOGLE_ACCOUNT_ID,
           contextRecord: {
-            objectNameSingular: CoreObjectNameSingular.Person,
+            objectNameSingular: StandardObjectNameSingular.Person,
             recordId: KIMBERLY_PERSON_ID,
           },
           defaultAttendees: 'Kimberly Gordon <kimberly.gordon@apple.dev>',
@@ -164,6 +167,7 @@ const meta = {
     await mockedApolloClient.clearStore();
   },
   parameters: {
+    mockingDate: null,
     container: { width: 480, height: 720 },
     msw: {
       handlers: [
@@ -227,8 +231,25 @@ type Story = StoryObj<typeof meta>;
 
 export const CalendarEvent: Story = {
   args: { composer: 'calendar-event' },
+  parameters: {
+    msw: {
+      handlers: [
+        graphql.query('GetAutoCompleteAddress', () =>
+          HttpResponse.json({
+            data: {
+              getAutoCompleteAddress: [
+                { text: 'Apple Park, Cupertino', placeId: 'apple-park' },
+              ],
+            },
+          }),
+        ),
+        ...meta.parameters.msw.handlers,
+      ],
+    },
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const screen = within(canvasElement.ownerDocument.body);
 
     expect(await canvas.findByText('Kimberly Gordon')).toBeVisible();
     expect(canvas.getByText('tim@apple.dev')).toBeVisible();
@@ -242,6 +263,21 @@ export const CalendarEvent: Story = {
       'Apple Park',
     );
 
+    const locationSuggestion = await screen.findByRole(
+      'option',
+      { name: 'Apple Park, Cupertino' },
+      { timeout: 5000 },
+    );
+
+    await waitFor(() => expect(locationSuggestion).toBeVisible());
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument(),
+    );
+
+    expect(canvas.getByPlaceholderText('Add a location')).toHaveValue(
+      'Apple Park',
+    );
     expect(canvas.getByRole('button', { name: /^Create event/ })).toBeEnabled();
   },
 };
@@ -289,7 +325,7 @@ export const CalendarEventWithoutAccountPermission: Story = {
 
     expect(
       await canvas.findByText(
-        'Ask a workspace admin for the Sync Account permission to connect a calendar account.',
+        'Ask a workspace admin for the User Apps permission to connect a calendar account.',
       ),
     ).toBeVisible();
     expect(
@@ -308,5 +344,32 @@ export const Email: Story = {
       canvas.getByDisplayValue('Follow-up from our meeting'),
     ).toBeVisible();
     expect(canvas.getByRole('button', { name: /^Send/ })).toBeEnabled();
+
+    const screen = within(canvasElement.ownerDocument.body);
+    const input = canvas.getByRole('combobox', { name: 'To' });
+
+    await userEvent.type(input, 'new.recipient@example.net');
+
+    const suggestion = await screen.findByRole(
+      'option',
+      { name: /new.recipient@example.net/ },
+      { timeout: 5000 },
+    );
+
+    expect(input).toHaveFocus();
+    await userEvent.click(suggestion);
+
+    expect(canvas.getByText('new.recipient@example.net')).toBeVisible();
+    expect(input).toHaveFocus();
+    await userEvent.click(canvas.getByText('new.recipient@example.net'));
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Remove' }),
+    );
+
+    expect(
+      canvas.queryByText('new.recipient@example.net'),
+    ).not.toBeInTheDocument();
+    await waitFor(() => expect(input).toHaveFocus());
+    expect(canvas.getByText('Kimberly Gordon')).toBeVisible();
   },
 };

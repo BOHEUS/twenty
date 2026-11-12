@@ -22,6 +22,7 @@ import { scheduleRecallBotForCallRecording } from 'src/logic-functions/flows/sch
 import { fetchCalendarEventsByIds } from 'src/logic-functions/data/fetch-calendar-events-by-ids.util';
 import { fetchCalendarEventsByStartsAtValues } from 'src/logic-functions/data/fetch-calendar-events-by-starts-at-values.util';
 import { clearCalendarEventsRecordingOn } from 'src/logic-functions/data/clear-calendar-events-recording-on.util';
+import { enqueueCallRecordingRequestFollowUps } from 'src/logic-functions/data/enqueue-call-recording-request-follow-ups.util';
 import { markCalendarEventsRecordingOn } from 'src/logic-functions/data/mark-calendar-events-recording-on.util';
 import { findCallRecordingsByCalendarEventIds } from 'src/logic-functions/data/find-call-recordings-by-calendar-event-ids.util';
 import { findCallRecordingsByIds } from 'src/logic-functions/data/find-call-recordings-by-ids.util';
@@ -52,7 +53,7 @@ export const reconcileCallRecorderForCalendarEventIds = async ({
   removedOccurrences = [],
   now = new Date(),
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   calendarEventIds: string[];
   removedOccurrences?: RemovedCallRecorderOccurrence[];
   now?: Date;
@@ -79,7 +80,7 @@ const resolveCallRecorderPolicyResultsForMeetings = async ({
   removedOccurrences = [],
   now = new Date(),
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   calendarEventIds: string[];
   removedOccurrences?: RemovedCallRecorderOccurrence[];
   now?: Date;
@@ -189,7 +190,7 @@ const reconcileCallRecorderForMeetingOccurrences = async ({
   calendarEventsById,
   removedOccurrences = [],
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   meetingPolicyResults: CallRecorderPolicyResultForMeeting[];
   calendarEventsById: Map<string, CalendarEventRecord>;
   removedOccurrences?: RemovedCallRecorderOccurrence[];
@@ -226,16 +227,18 @@ const reconcileCallRecorderForMeetingOccurrences = async ({
       )
     ).map((callRecording) => [callRecording.id, callRecording]),
   );
-  const canceledMeetingReconciliations = await reconcileCanceledMeetings({
-    client,
-    meetingPolicyResults: meetingPolicyResults.filter(
-      (meetingPolicyResult) => !meetingPolicyResult.shouldRequestBot,
-    ),
-    removedCalendarEventIdsByMeetingKey,
-    callRecordingsByCalendarEventId,
-    policyManagedCallRecordingsById,
-    activeMeetingCallRecordingIds: new Set(activeMeetingCallRecordingIds),
-  });
+
+  const { canceledMeetingReconciliations, callRecordingIdsToFollowUp } =
+    await reconcileCanceledMeetings({
+      client,
+      meetingPolicyResults: meetingPolicyResults.filter(
+        (meetingPolicyResult) => !meetingPolicyResult.shouldRequestBot,
+      ),
+      removedCalendarEventIdsByMeetingKey,
+      callRecordingsByCalendarEventId,
+      policyManagedCallRecordingsById,
+      activeMeetingCallRecordingIds: new Set(activeMeetingCallRecordingIds),
+    });
 
   await clearCanceledMeetingsRecordingOn(
     client,
@@ -244,6 +247,19 @@ const reconcileCallRecorderForMeetingOccurrences = async ({
         canceledMeetingReconciliation.calendarEventIdsToClearRecordingOn,
     ),
   );
+
+  // Armed before creating or re-enabling requests, so a run that dies mid-batch still leaves every
+  // new or re-enabled request its follow-up.
+  await enqueueCallRecordingRequestFollowUps({
+    callRecordingIds: [
+      ...callRecordingIdsToFollowUp,
+      ...activeMeetingCallRecordingIds.filter((callRecordingId) =>
+        isUndefined(
+          policyManagedCallRecordingsById.get(callRecordingId)?.externalBotId,
+        ),
+      ),
+    ],
+  });
 
   const activeMeetingReconciliations = await reconcileActiveMeetings({
     client,
@@ -276,13 +292,17 @@ const reconcileCanceledMeetings = async ({
   policyManagedCallRecordingsById,
   activeMeetingCallRecordingIds,
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   meetingPolicyResults: CallRecorderPolicyResultForMeeting[];
   removedCalendarEventIdsByMeetingKey: Map<string, string[]>;
   callRecordingsByCalendarEventId: Map<string, CallRecordingRecord[]>;
   policyManagedCallRecordingsById: Map<string, CallRecordingRecord>;
   activeMeetingCallRecordingIds: Set<string>;
-}): Promise<CanceledMeetingReconciliation[]> => {
+}): Promise<{
+  canceledMeetingReconciliations: CanceledMeetingReconciliation[];
+  callRecordingIdsToFollowUp: string[];
+}> => {
+  const callRecordingIdsToFollowUp: string[] = [];
   const callRecordingIdsCanceledInBatch = new Set<string>();
   const canceledMeetingReconciliations: CanceledMeetingReconciliation[] = [];
 
@@ -302,6 +322,20 @@ const reconcileCanceledMeetings = async ({
     });
     const cancellableCallRecordings = meetingCallRecordings.filter(
       isCancellableCallRecording,
+    );
+
+    // A redelivery must also arm requests whose cancellation was already persisted.
+    callRecordingIdsToFollowUp.push(
+      ...meetingCallRecordings
+        .filter(
+          (callRecording) =>
+            isCancellableCallRecording(callRecording) ||
+            (callRecording.recordingRequestStatus ===
+              CallRecordingRequestStatus.CANCELED &&
+              (!isUndefined(callRecording.externalBotId) ||
+                !isUndefined(callRecording.botScheduleAttemptedAt))),
+        )
+        .map((callRecording) => callRecording.id),
     );
 
     try {
@@ -325,7 +359,7 @@ const reconcileCanceledMeetings = async ({
     }
   }
 
-  return canceledMeetingReconciliations;
+  return { canceledMeetingReconciliations, callRecordingIdsToFollowUp };
 };
 
 const reconcileActiveMeetings = async ({
@@ -336,7 +370,7 @@ const reconcileActiveMeetings = async ({
   callRecordingsByCalendarEventId,
   policyManagedCallRecordingsById,
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   meetingPolicyResults: CallRecorderPolicyResultForMeeting[];
   calendarEventsById: Map<string, CalendarEventRecord>;
   removedCalendarEventIdsByMeetingKey: Map<string, string[]>;
@@ -386,7 +420,7 @@ const reconcileActiveMeeting = async ({
   policyManagedCallRecordingsById,
   meetingCallRecordings,
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   meetingPolicyResult: CallRecorderPolicyResultForMeeting;
   calendarEventsById: Map<string, CalendarEventRecord>;
   policyManagedCallRecordingsById: Map<string, CallRecordingRecord>;
@@ -489,7 +523,7 @@ const getCalendarEventIdsToMarkRecordingOn = ({
       );
 
 const markActiveMeetingsRecordingOn = async (
-  client: CoreApiClient,
+  client: Pick<CoreApiClient, 'query' | 'mutation'>,
   calendarEventIds: string[],
 ): Promise<void> => {
   try {
@@ -509,7 +543,7 @@ const updatePolicyManagedCallRecording = async ({
   representativeCalendarEvent,
   realMeetingKey,
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   existingCallRecording: CallRecordingRecord;
   representativeCalendarEvent: CalendarEventRecord;
   realMeetingKey: string;
@@ -549,7 +583,7 @@ const writeCurrentPolicyManagedCallRecordingChanges = async ({
   callRecordingId,
   calendarEvent,
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   callRecordingId: string;
   calendarEvent: CalendarEventRecord;
 }): Promise<CallRecordingRecord | undefined> => {
@@ -587,7 +621,7 @@ const createPolicyManagedCallRecording = async ({
   representativeCalendarEvent,
   realMeetingKey,
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   callRecordingId: string;
   representativeCalendarEvent: CalendarEventRecord;
   realMeetingKey: string;
@@ -665,7 +699,7 @@ const reconcileCanceledMeeting = async ({
   cancellableCallRecordings,
   callRecordingIdsCanceledInBatch,
 }: {
-  client: CoreApiClient;
+  client: Pick<CoreApiClient, 'query' | 'mutation'>;
   meetingPolicyResult: CallRecorderPolicyResultForMeeting;
   meetingCallRecordings: CallRecordingRecord[];
   cancellableCallRecordings: CallRecordingRecord[];
@@ -728,7 +762,7 @@ const getCalendarEventIdsToClearRecordingOn = ({
 };
 
 const clearCanceledMeetingsRecordingOn = async (
-  client: CoreApiClient,
+  client: Pick<CoreApiClient, 'query' | 'mutation'>,
   calendarEventIds: string[],
 ): Promise<void> => {
   try {

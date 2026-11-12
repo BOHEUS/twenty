@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 
 import { ConnectedAccountProvider } from 'twenty-shared/types';
+import { EMAIL_DOCUMENT_SCHEMA_VERSION } from 'twenty-shared/utils';
 import { WorkflowActionType } from 'twenty-shared/workflow';
 import { SendEmailTool } from 'src/engine/core-modules/tool/tools/email-tool/send-email-tool';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
@@ -81,7 +82,9 @@ describe('SendEmailWorkflowAction', () => {
           provide: WorkspaceOrmManager,
           useValue: {
             executeInWorkspaceContext: jest.fn((callback) => callback()),
-            getRepository: jest.fn().mockReturnValue(workspaceMemberRepository),
+            getRepositoryWithoutPermissionChecks: jest
+              .fn()
+              .mockReturnValue(workspaceMemberRepository),
           },
         },
         {
@@ -133,7 +136,10 @@ describe('SendEmailWorkflowAction', () => {
 
       await executeWithBody(tipTapBody);
 
-      expect(executedBodyDocument()).toEqual(JSON.parse(tipTapBody));
+      expect(executedBodyDocument()).toEqual({
+        ...JSON.parse(tipTapBody),
+        attrs: { schemaVersion: EMAIL_DOCUMENT_SCHEMA_VERSION },
+      });
     });
 
     it('should resolve variableTag nodes inside TipTap JSON before compilation', async () => {
@@ -156,6 +162,7 @@ describe('SendEmailWorkflowAction', () => {
 
       expect(executedBodyDocument()).toEqual({
         type: 'doc',
+        attrs: { schemaVersion: EMAIL_DOCUMENT_SCHEMA_VERSION },
         content: [
           {
             type: 'paragraph',
@@ -192,6 +199,7 @@ describe('SendEmailWorkflowAction', () => {
 
       expect(executedBodyDocument()).toEqual({
         type: 'doc',
+        attrs: { schemaVersion: EMAIL_DOCUMENT_SCHEMA_VERSION },
         content: [
           {
             type: 'button',
@@ -233,6 +241,7 @@ describe('SendEmailWorkflowAction', () => {
 
       expect(executedBodyDocument()).toEqual({
         type: 'doc',
+        attrs: { schemaVersion: EMAIL_DOCUMENT_SCHEMA_VERSION },
         content: [
           {
             type: 'html',
@@ -273,6 +282,7 @@ describe('SendEmailWorkflowAction', () => {
 
       expect(executedBodyDocument()).toEqual({
         type: 'doc',
+        attrs: { schemaVersion: EMAIL_DOCUMENT_SCHEMA_VERSION },
         content: [
           {
             type: 'paragraph',
@@ -295,22 +305,34 @@ describe('SendEmailWorkflowAction', () => {
       expect(mockSendEmailTool.execute).not.toHaveBeenCalled();
     });
 
-    it('should pass plain text body through without rendering', async () => {
+    it('should resolve a plain text body as HTML with its line breaks', async () => {
       await executeWithBody('{{trigger.name}}\n{{trigger.email}}');
 
-      expect(mockSendEmailTool.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ body: 'John\njohn@example.com' }),
-        expect.any(Object),
-      );
+      expect(executedBodyDocument()).toEqual({
+        type: 'doc',
+        attrs: { schemaVersion: EMAIL_DOCUMENT_SCHEMA_VERSION },
+        content: [
+          {
+            type: 'htmlDocument',
+            attrs: { html: 'John<br>john@example.com' },
+          },
+        ],
+      });
     });
 
     it('should treat non-TipTap JSON as plain text', async () => {
       await executeWithBody('{"key":"value"}');
 
-      expect(mockSendEmailTool.execute).toHaveBeenCalledWith(
-        expect.objectContaining({ body: '{"key":"value"}' }),
-        expect.any(Object),
-      );
+      expect(executedBodyDocument()).toEqual({
+        type: 'doc',
+        attrs: { schemaVersion: EMAIL_DOCUMENT_SCHEMA_VERSION },
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: '{"key":"value"}' }],
+          },
+        ],
+      });
     });
 
     it('should handle empty string body without crashing', async () => {

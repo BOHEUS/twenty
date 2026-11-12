@@ -16,6 +16,9 @@ const FLAT_NAVIGATION_MENU_ITEM_ROWS_REQUIREMENT = {
   objectMetadata: ['id', 'universalIdentifier'],
   view: ['id', 'universalIdentifier'],
   pageLayout: ['id', 'universalIdentifier'],
+  agentChatChannel: ['id', 'universalIdentifier'],
+  workflow: ['id', 'universalIdentifier'],
+  agent: ['id', 'universalIdentifier'],
 } as const;
 
 @Injectable()
@@ -35,6 +38,9 @@ export class WorkspaceFlatNavigationMenuItemMapCacheService extends MetadataFlat
       objectMetadata: objectMetadatas,
       view: views,
       pageLayout: pageLayouts,
+      agentChatChannel: agentChatChannels,
+      workflow: workflows,
+      agent: agents,
     } = rows;
 
     const applicationIdToUniversalIdentifierMap =
@@ -47,6 +53,12 @@ export class WorkspaceFlatNavigationMenuItemMapCacheService extends MetadataFlat
       createIdToUniversalIdentifierMap(views);
     const pageLayoutIdToUniversalIdentifierMap =
       createIdToUniversalIdentifierMap(pageLayouts);
+    const agentChatChannelIdToUniversalIdentifierMap =
+      createIdToUniversalIdentifierMap(agentChatChannels);
+    const workflowIdToUniversalIdentifierMap =
+      createIdToUniversalIdentifierMap(workflows);
+    const agentIdToUniversalIdentifierMap =
+      createIdToUniversalIdentifierMap(agents);
 
     const flatNavigationMenuItemMaps = {
       ...createEmptyFlatEntityMaps(),
@@ -62,6 +74,9 @@ export class WorkspaceFlatNavigationMenuItemMapCacheService extends MetadataFlat
           navigationMenuItemIdToUniversalIdentifierMap,
           viewIdToUniversalIdentifierMap,
           pageLayoutIdToUniversalIdentifierMap,
+          agentChatChannelIdToUniversalIdentifierMap,
+          workflowIdToUniversalIdentifierMap,
+          agentIdToUniversalIdentifierMap,
         });
 
       addFlatNavigationMenuItemToMapsAndUpdateIndex({

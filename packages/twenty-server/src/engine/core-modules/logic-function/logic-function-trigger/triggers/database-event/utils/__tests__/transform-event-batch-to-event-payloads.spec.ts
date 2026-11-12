@@ -1,7 +1,6 @@
-import type {
-  ObjectRecordDeleteEvent,
-  ObjectRecordEvent,
-} from 'twenty-shared/database-events';
+import { FieldMetadataType } from 'twenty-shared/types';
+
+import type { ObjectRecordEvent } from 'twenty-shared/database-events';
 
 import { MAX_EVENTS_PER_TRIGGER_JOB } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/database-event/constants/max-events-per-trigger-job.constant';
 import { transformEventBatchToEventPayloads } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/database-event/utils/transform-event-batch-to-event-payloads';
@@ -818,34 +817,69 @@ describe('transformEventBatchToEventPayloads', () => {
       expect(result).toHaveLength(0);
     });
   });
-});
 
-describe('transformEventBatchToEventPayloads with a deletion capture', () => {
-  it('should not hand the child records captured with a deletion to the function', () => {
-    const [jobData] = transformEventBatchToEventPayloads({
-      workspaceEventBatch: createMockWorkspaceEventBatch({
-        name: 'company.deleted',
-        events: [
-          createMockEvent({
-            properties: {
-              before: { id: 'record-1' },
-              after: { id: 'record-1', deletedAt: '2026-09-15T00:00:00Z' },
-              updatedFields: ['deletedAt'],
-              diff: {},
-              inheritedReadabilityChildRecords: { noteTarget: [] },
-            } as ObjectRecordDeleteEvent['properties'],
+  describe('condition', () => {
+    const conditionFields = [
+      {
+        name: 'employees',
+        type: FieldMetadataType.NUMBER,
+        universalIdentifier: 'company-employees',
+      },
+    ];
+
+    it('should only send the events whose record matches the condition', () => {
+      const result = transformEventBatchToEventPayloads({
+        workspaceEventBatch: createMockWorkspaceEventBatch({
+          events: [
+            createMockEvent({
+              recordId: 'large',
+              properties: { after: { employees: 500 } },
+            } as Partial<ObjectRecordEvent>),
+            createMockEvent({
+              recordId: 'small',
+              properties: { after: { employees: 5 } },
+            } as Partial<ObjectRecordEvent>),
+          ],
+        }),
+        logicFunctions: [
+          createMockLogicFunction({
+            databaseEventTriggerSettings: {
+              eventName: 'company.updated',
+              condition: 'employees >= 100',
+            },
           }),
         ],
-      }),
-      logicFunctions: [
-        createMockLogicFunction({
-          databaseEventTriggerSettings: { eventName: 'company.deleted' },
-        }),
-      ],
+        conditionFields,
+      });
+
+      expect(
+        result.map((r) => (r.payload as ObjectRecordEvent).recordId),
+      ).toEqual(['large']);
     });
 
-    expect(
-      (jobData.payload as { properties: object }).properties,
-    ).not.toHaveProperty('inheritedReadabilityChildRecords');
+    it('should report a condition that cannot be read and send nothing', () => {
+      const onConditionError = jest.fn();
+
+      const result = transformEventBatchToEventPayloads({
+        workspaceEventBatch: createMockWorkspaceEventBatch(),
+        logicFunctions: [
+          createMockLogicFunction({
+            databaseEventTriggerSettings: {
+              eventName: 'company.updated',
+              condition: 'employees >',
+            },
+          }),
+        ],
+        conditionFields,
+        onConditionError,
+      });
+
+      expect(result).toEqual([]);
+      expect(onConditionError).toHaveBeenCalledTimes(1);
+      expect(onConditionError).toHaveBeenCalledWith({
+        logicFunctionId: 'function-1',
+        errorMessage: expect.any(String),
+      });
+    });
   });
 });

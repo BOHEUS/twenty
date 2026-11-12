@@ -10,7 +10,7 @@ import { useAiModelTiers } from '@/ai/hooks/useAiModelTiers';
 import { useIsWorkspaceSetupChat } from '@/ai/hooks/useIsWorkspaceSetupChat';
 import { useWorkspaceAiModelTiers } from '@/ai/hooks/useWorkspaceAiModelTiers';
 import { agentChatUserSelectedModelTierState } from '@/ai/states/agentChatUserSelectedModelTierState';
-import { Dropdown } from 'twenty-ui/components';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
@@ -18,6 +18,9 @@ import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
 const SLIDER_DROPDOWN_WIDTH_PX = 240;
 
 const StyledSliderContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${themeCssVariables.spacing[3]};
   padding: ${themeCssVariables.spacing[3]};
 `;
 
@@ -43,6 +46,10 @@ export const AiModelTierDropdown = ({
   const selectedTier = agentChatUserSelectedModelTier ?? workspaceTier;
   const selectedResolvedTier = tiers[AI_MODEL_TIERS.indexOf(selectedTier)];
 
+  const tierLabel = isDefined(selectedResolvedTier.model)
+    ? t`${selectedResolvedTier.label}: ${selectedResolvedTier.model.label}`
+    : selectedResolvedTier.label;
+
   const handleTierChange = (tier: AiModelTier) => {
     setAgentChatUserSelectedModelTier(tier === workspaceTier ? null : tier);
   };
@@ -54,11 +61,7 @@ export const AiModelTierDropdown = ({
         render={
           <AiModelTierBars
             selectedTier={selectedTier}
-            label={
-              isDefined(selectedResolvedTier.model)
-                ? t`${selectedResolvedTier.label}: ${selectedResolvedTier.model.label}`
-                : selectedResolvedTier.label
-            }
+            label={tierLabel}
             disabled={disabled}
           />
         }

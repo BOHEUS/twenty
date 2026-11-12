@@ -48,9 +48,11 @@ const StyledItemsContainer = styled.div<{ shouldReverse: boolean }>`
 
 export const PinnedCommandMenuItemButtons = ({
   containerWidth,
+  hiddenEngineComponentKey,
 }: {
   // When set, the row shrinks to fit instead of stretching to measure free space, keeping sibling actions adjacent.
   containerWidth?: number;
+  hiddenEngineComponentKey?: EngineComponentKey;
 }) => {
   const theme = useTheme();
   const { commandMenuItems, containerType } = useContext(CommandMenuContext);
@@ -63,8 +65,13 @@ export const PinnedCommandMenuItemButtons = ({
   const shouldLabelSingleCommandMenuItem = isSidePanelFooter;
 
   const pinnedCommandMenuItems = useMemo(
-    () => commandMenuItems.filter((item) => item.isPinned === true),
-    [commandMenuItems],
+    () =>
+      commandMenuItems.filter(
+        (item) =>
+          item.isPinned === true &&
+          item.engineComponentKey !== hiddenEngineComponentKey,
+      ),
+    [commandMenuItems, hiddenEngineComponentKey],
   );
 
   const labelledCommandMenuItemId = shouldLabelSingleCommandMenuItem
@@ -79,6 +86,7 @@ export const PinnedCommandMenuItemButtons = ({
   const {
     pinnedInlineCommandMenuItems,
     pinnedOverflowCommandMenuItems,
+    shouldShowHotKeys,
     onContainerDimensionChange,
     onCommandMenuItemDimensionChange,
   } = usePinnedCommandMenuItemsInlineLayout({
@@ -117,6 +125,7 @@ export const PinnedCommandMenuItemButtons = ({
           <CommandMenuItemRenderer
             item={item}
             shouldHideLabel={shouldHideCommandMenuItemLabel(item.id)}
+            shouldShowHotKey={shouldShowHotKeys}
             isPrimaryAction={
               item.engineComponentKey ===
                 EngineComponentKey.CREATE_NEW_RECORD ||

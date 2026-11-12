@@ -2,20 +2,26 @@ import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/st
 import { NavigationMenuItemIconWithOverlay } from '@/navigation-menu-item/display/components/NavigationMenuItemIconWithOverlay';
 import { ColoredIcon } from '@/ui/icon/components/ColoredIcon';
 import { NavigationMenuItemType } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
-import { getIconTileColorShades } from 'twenty-ui/components';
-import { IconLink, IconPerspective, IconWorld, useIcons } from 'twenty-ui/icon';
+import { isDefined, isSafeInternalPath } from 'twenty-shared/utils';
+import { getIconTileColorShades } from 'twenty-ui/components/data-display';
+import {
+  IconCompass,
+  IconLink,
+  IconPerspective,
+  IconWorld,
+} from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { Avatar } from 'twenty-ui/primitives/data-display';
 import { themeCssVariables } from 'twenty-ui/theme';
-import {
-  FeatureFlagKey,
-  type NavigationMenuItem,
-} from '~/generated-metadata/graphql';
+import { type NavigationMenuItem } from '~/generated-metadata/graphql';
 
 import { getNavigationMenuItemColor } from '@/navigation-menu-item/common/utils/getNavigationMenuItemColor';
 import { recordIdentifierToObjectRecordIdentifier } from '@/navigation-menu-item/common/utils/recordIdentifierToObjectRecordIdentifier';
+import { NavigationMenuItemAgentIcon } from '@/navigation-menu-item/display/automation/components/NavigationMenuItemAgentIcon';
+import { NavigationMenuItemWorkflowIcon } from '@/navigation-menu-item/display/automation/components/NavigationMenuItemWorkflowIcon';
 import { LinkIconWithLinkOverlay } from '@/navigation-menu-item/display/link/components/LinkIconWithLinkOverlay';
 import { getNavigationMenuItemObjectNameSingular } from '@/navigation-menu-item/display/object/utils/getNavigationMenuItemObjectNameSingular';
+import { getNativePageNavigationMenuItemConfig } from '@/navigation-menu-item/display/native-page/utils/getNativePageNavigationMenuItemConfig';
 import { getNavigationMenuItemComputedLink } from '@/navigation-menu-item/display/utils/getNavigationMenuItemComputedLink';
 import { getNavigationMenuItemLabel } from '@/navigation-menu-item/display/utils/getNavigationMenuItemLabel';
 import { ObjectIconWithViewOverlay } from '@/navigation-menu-item/display/view/components/ObjectIconWithViewOverlay';
@@ -24,7 +30,6 @@ import { useGetStandardObjectIcon } from '@/object-metadata/hooks/useGetStandard
 import { objectMetadataItemsSelector } from '@/object-metadata/states/objectMetadataItemsSelector';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { viewsSelector } from '@/views/states/selectors/viewsSelector';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 
 export const NavigationMenuItemIcon = ({
@@ -38,9 +43,6 @@ export const NavigationMenuItemIcon = ({
   );
   const objectMetadataItems = useAtomStateValue(objectMetadataItemsSelector);
   const views = useAtomStateValue(viewsSelector);
-  const isInitialObjectViewEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_INITIAL_OBJECT_VIEW_ENABLED,
-  );
 
   const objectNameSingular =
     getNavigationMenuItemObjectNameSingular(
@@ -112,13 +114,54 @@ export const NavigationMenuItemIcon = ({
     );
   }
 
+  if (navigationMenuItem.type === NavigationMenuItemType.WORKFLOW) {
+    return (
+      <NavigationMenuItemWorkflowIcon navigationMenuItem={navigationMenuItem} />
+    );
+  }
+
+  if (navigationMenuItem.type === NavigationMenuItemType.AGENT) {
+    return (
+      <NavigationMenuItemAgentIcon navigationMenuItem={navigationMenuItem} />
+    );
+  }
+
+  if (navigationMenuItem.type === NavigationMenuItemType.NATIVE_PAGE) {
+    const nativePageConfig =
+      getNativePageNavigationMenuItemConfig(navigationMenuItem);
+
+    return (
+      <ColoredIcon
+        Icon={
+          isDefined(navigationMenuItem.icon)
+            ? getIcon(navigationMenuItem.icon)
+            : (nativePageConfig?.Icon ?? IconCompass)
+        }
+        color={getNavigationMenuItemColor(navigationMenuItem)}
+      />
+    );
+  }
+
   if (navigationMenuItem.type === NavigationMenuItemType.LINK) {
     const computedLink = getNavigationMenuItemComputedLink({
       item: navigationMenuItem,
       objectMetadataItems,
       views,
-      isInitialObjectViewEnabled,
     });
+
+    if (isSafeInternalPath(computedLink)) {
+      return (
+        <ColoredIcon
+          Icon={
+            isDefined(navigationMenuItem.icon)
+              ? getIcon(navigationMenuItem.icon)
+              : IconLink
+          }
+          color={getNavigationMenuItemColor(navigationMenuItem)}
+        />
+      );
+    }
+
     return (
       <LinkIconWithLinkOverlay
         link={computedLink}

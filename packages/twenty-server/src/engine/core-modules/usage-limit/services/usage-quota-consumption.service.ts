@@ -15,14 +15,16 @@ import { type UsageQuotaScopeConsumption } from 'src/engine/core-modules/usage-l
 import { type UsageQuotaWithConsumption } from 'src/engine/core-modules/usage-limit/types/usage-quota-with-consumption.type';
 import { type UsageLimitEntity } from 'src/engine/core-modules/usage-limit/usage-limit.entity';
 import { buildCustomQuota } from 'src/engine/core-modules/usage-limit/utils/build-custom-quota.util';
+import { computeRowConsumed } from 'src/engine/core-modules/usage-limit/utils/compute-row-consumed.util';
 import { getPeriodAnchor } from 'src/engine/core-modules/usage-limit/utils/get-period-anchor.util';
 import { isAnchoredPeriodUnit } from 'src/engine/core-modules/usage-limit/utils/is-anchored-period-unit.util';
-import { isQuotaMeter } from 'src/engine/core-modules/usage-limit/utils/is-quota-meter.util';
 import { normalizeSpenderId } from 'src/engine/core-modules/usage-limit/utils/normalize-spender-id.util';
 import { groupSpenderIdsByType } from 'src/engine/core-modules/usage-limit/utils/group-spender-ids-by-type.util';
+import { UsageUnit } from 'src/engine/core-modules/usage/enums/usage-unit.enum';
 import { UsageAnalyticsService } from 'src/engine/core-modules/usage/services/usage-analytics.service';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
+import { resolveEffectiveAgent } from 'src/engine/metadata-modules/flat-agent/utils/resolve-effective-agent.util';
 import { LogicFunctionEntity } from 'src/engine/metadata-modules/logic-function/logic-function.entity';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
@@ -64,11 +66,9 @@ export class UsageQuotaConsumptionService {
   }): Promise<UsageQuotaScopeConsumption | null> {
     const periodUnit = scope.periodUnit;
 
-    if (!isAnchoredPeriodUnit(periodUnit) || !isQuotaMeter(scope.meter)) {
+    if (!isAnchoredPeriodUnit(periodUnit)) {
       return null;
     }
-
-    const meter = scope.meter;
 
     const period = await this.usagePeriodService.findCurrentPeriod({
       workspaceId,
@@ -79,13 +79,15 @@ export class UsageQuotaConsumptionService {
       return null;
     }
 
+    const isCreditLimit = scope.unit === UsageUnit.CREDIT;
+
     try {
       const totals =
         await this.usageAnalyticsService.getConsumptionTotalsForScope({
           workspaceId,
           resourceType: scope.resourceType,
           operationType: scope.operationType,
-          unit: null,
+          unit: isCreditLimit ? null : scope.unit,
           spenderType: scope.spenderType,
           spenderId: normalizeSpenderId(scope.spenderId ?? ''),
           periodStart: period.periodStart,
@@ -94,7 +96,10 @@ export class UsageQuotaConsumptionService {
         });
 
       return {
-        consumedValue: Number(totals[meter]),
+        consumedValue: computeRowConsumed({
+          row: { ...totals, unit: scope.unit },
+          scope,
+        }),
         periodStart: period.periodStart,
         periodEnd: period.periodEnd,
       };
@@ -199,9 +204,9 @@ export class UsageQuotaConsumptionService {
           await this.applicationRepository.find(workspaceId, { where })
         ).map((application) => [application.id, application.name]);
       case 'agent':
-        return (await this.agentRepository.find(workspaceId, { where })).map(
-          (agent) => [agent.id, agent.label],
-        );
+        return (await this.agentRepository.find(workspaceId, { where }))
+          .map((agentRow) => resolveEffectiveAgent(agentRow))
+          .map((agent) => [agent.id, agent.label]);
       case 'logicFunction':
         return (
           await this.logicFunctionRepository.find(workspaceId, { where })

@@ -1,17 +1,19 @@
 import { type AllStandardObjectFieldName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-field-name.type';
 import { msg } from '@lingui/core/macro';
 import {
+  FieldActorSource,
   FieldMetadataType,
-  MetadataWritability,
   RelationType,
   RelationOnDeleteAction,
 } from 'twenty-shared/types';
+import { AgentTurnStatus } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-turn-status.enum';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import {
   type CreateStandardFieldArgs,
   createStandardFieldFlatMetadata,
 } from 'src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/create-standard-field-flat-metadata.util';
 import { createStandardRelationFieldFlatMetadata } from 'src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/create-standard-relation-field-flat-metadata.util';
+import { PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS } from 'src/engine/workspace-manager/twenty-standard-application/constants/standard-disabled-field-permission-actions.constant';
 import { i18nLabel } from 'src/engine/workspace-manager/twenty-standard-application/utils/i18n-label.util';
 
 export const buildAgentTurnStandardFlatFieldMetadatas = (
@@ -39,7 +41,8 @@ export const buildAgentTurnStandardFlatFieldMetadatas = (
         defaultValue: 'uuid',
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   agentId: {
@@ -60,7 +63,299 @@ export const buildAgentTurnStandardFlatFieldMetadatas = (
         isNullable: true,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  status: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'status',
+        type: FieldMetadataType.TEXT,
+        label: i18nLabel(
+          msg({ message: 'Status', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({ message: 'Status', context: 'fieldMetadata.description' }),
+        ),
+        icon: 'IconProgressCheck',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: false,
+        defaultValue: `'${AgentTurnStatus.COMPLETED}'`,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  error: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'error',
+        type: FieldMetadataType.RAW_JSON,
+        label: i18nLabel(
+          msg({ message: 'Error', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({ message: 'Error', context: 'fieldMetadata.description' }),
+        ),
+        icon: 'IconAlertTriangle',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  startedAt: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'startedAt',
+        type: FieldMetadataType.DATE_TIME,
+        label: i18nLabel(
+          msg({ message: 'Started At', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({ message: 'Started At', context: 'fieldMetadata.description' }),
+        ),
+        icon: 'IconCalendarClock',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  endedAt: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'endedAt',
+        type: FieldMetadataType.DATE_TIME,
+        label: i18nLabel(
+          msg({ message: 'Ended At', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({ message: 'Ended At', context: 'fieldMetadata.description' }),
+        ),
+        icon: 'IconCalendarClock',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  modelId: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'modelId',
+        type: FieldMetadataType.TEXT,
+        label: i18nLabel(
+          msg({ message: 'Model ID', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({ message: 'Model ID', context: 'fieldMetadata.description' }),
+        ),
+        icon: 'IconBrain',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  inputTokens: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'inputTokens',
+        type: FieldMetadataType.NUMBER,
+        label: i18nLabel(
+          msg({ message: 'Input Tokens', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'Input Tokens',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconNumber',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  outputTokens: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'outputTokens',
+        type: FieldMetadataType.NUMBER,
+        label: i18nLabel(
+          msg({ message: 'Output Tokens', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'Output Tokens',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconNumber',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  cacheReadTokens: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'cacheReadTokens',
+        type: FieldMetadataType.NUMERIC,
+        label: i18nLabel(
+          msg({ message: 'Cache Read Tokens', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'Cache Read Tokens',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconNumber',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  cacheCreationTokens: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'cacheCreationTokens',
+        type: FieldMetadataType.NUMERIC,
+        label: i18nLabel(
+          msg({
+            message: 'Cache Creation Tokens',
+            context: 'fieldMetadata.label',
+          }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'Cache Creation Tokens',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconNumber',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  inputCredits: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'inputCredits',
+        type: FieldMetadataType.NUMERIC,
+        label: i18nLabel(
+          msg({ message: 'Input Credits', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'Input Credits',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconCoin',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  outputCredits: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'outputCredits',
+        type: FieldMetadataType.NUMERIC,
+        label: i18nLabel(
+          msg({ message: 'Output Credits', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'Output Credits',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconCoin',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  createdBy: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'createdBy',
+        type: FieldMetadataType.ACTOR,
+        label: i18nLabel(
+          msg({ message: 'Created by', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({ message: 'Created by', context: 'fieldMetadata.description' }),
+        ),
+        icon: 'IconCreativeCommonsSa',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: false,
+        defaultValue: {
+          source: `'${FieldActorSource.SYSTEM}'`,
+          name: "'System'",
+          workspaceMemberId: null,
+        },
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   createdAt: {
@@ -82,7 +377,8 @@ export const buildAgentTurnStandardFlatFieldMetadatas = (
         defaultValue: 'now',
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   updatedAt: {
@@ -104,7 +400,8 @@ export const buildAgentTurnStandardFlatFieldMetadatas = (
         defaultValue: 'now',
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   deletedAt: {
@@ -125,7 +422,8 @@ export const buildAgentTurnStandardFlatFieldMetadatas = (
         isNullable: true,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   thread: {
@@ -142,7 +440,8 @@ export const buildAgentTurnStandardFlatFieldMetadatas = (
         ),
         icon: 'IconRelationOneToMany',
         isUIEditable: false,
-        isNullable: false,
+        // a one-shot AI call records its turn without a conversation
+        isNullable: true,
         targetObjectName: 'agentChatThread',
         targetFieldName: 'turns',
         morphId: null,
@@ -153,7 +452,8 @@ export const buildAgentTurnStandardFlatFieldMetadatas = (
         },
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   messages: {
@@ -180,34 +480,8 @@ export const buildAgentTurnStandardFlatFieldMetadatas = (
         },
       },
     }),
-    writability: MetadataWritability.SYSTEM,
-    isAuditLogged: false,
-  },
-  evaluations: {
-    ...createStandardRelationFieldFlatMetadata({
-      ...args,
-      context: {
-        fieldName: 'evaluations',
-        type: FieldMetadataType.RELATION,
-        label: i18nLabel(
-          msg({ message: 'Evaluations', context: 'fieldMetadata.label' }),
-        ),
-        description: i18nLabel(
-          msg({ message: 'Evaluations', context: 'fieldMetadata.description' }),
-        ),
-        icon: 'IconRelationOneToMany',
-        isUIEditable: false,
-        isNullable: true,
-        targetObjectName: 'agentTurnEvaluation',
-        targetFieldName: 'turn',
-        morphId: null,
-        settings: {
-          relationType: RelationType.ONE_TO_MANY,
-          joinColumnName: null,
-        },
-      },
-    }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
 });

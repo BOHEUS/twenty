@@ -1,3 +1,4 @@
+import { ListItemButton } from 'twenty-ui/components/navigation';
 import { useObjectNamePluralFromSingular } from '@/object-metadata/hooks/useObjectNamePluralFromSingular';
 import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
 import { useObjectOptionsDropdown } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsDropdown';
@@ -23,7 +24,8 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { IconChevronLeft, IconSettings, useIcons } from 'twenty-ui/icon';
+import { IconChevronLeft, IconSettings } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { ListItem } from 'twenty-ui/primitives/navigation';
 import { FieldMetadataType } from '~/generated-metadata/graphql';
 
@@ -124,16 +126,16 @@ export const ObjectOptionsDropdownRecordGroupFieldsContent = () => {
       <DropdownMenuSeparator />
       <DropdownMenuItemsContainer>
         {isRecordGroupingOptionalForViewType(viewType) && (
-          <ListItem
+          <ListItemButton
             onClick={handleResetRecordGroupField}
             role="option"
             aria-selected={!isDefined(recordIndexGroupFieldMetadataItem)}
             selected={!isDefined(recordIndexGroupFieldMetadataItem)}
             indicator="check"
-          >{t`None`}</ListItem>
+          >{t`None`}</ListItemButton>
         )}
         {filteredRecordGroupFieldMetadataItems.map((fieldMetadataItem) => (
-          <ListItem
+          <ListItemButton
             key={fieldMetadataItem.id}
             onClick={() => handleRecordGroupFieldChange(fieldMetadataItem)}
             role="option"
@@ -149,7 +151,7 @@ export const ObjectOptionsDropdownRecordGroupFieldsContent = () => {
             }
           >
             {fieldMetadataItem.label}
-          </ListItem>
+          </ListItemButton>
         ))}
       </DropdownMenuItemsContainer>
       <DropdownMenuSeparator />

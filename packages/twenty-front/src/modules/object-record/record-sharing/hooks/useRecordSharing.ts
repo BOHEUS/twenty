@@ -1,14 +1,14 @@
 import { type ApolloCache } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { useRefreshRecordPermissions } from '@/object-record/record-sharing/hooks/useRefreshRecordPermissions';
 import {
   GetRecordSharingDocument,
   RemoveRecordShareDocument,
-  SetRecordGeneralAccessDocument,
+  SetRecordPrivateDocument,
   SetRecordShareDocument,
   type RecordShareAccessLevel,
   type RecordSharePrincipalInput,
@@ -42,11 +42,13 @@ export const useRecordSharing = ({
       data: { recordSharing: sharing },
     });
   };
-  const [setGeneralAccessMutation, { loading: savingGeneralAccess }] =
-    useMutation(SetRecordGeneralAccessDocument, {
+  const [setPrivateMutation, { loading: savingPrivate }] = useMutation(
+    SetRecordPrivateDocument,
+    {
       update: (cache, { data: mutationData }) =>
-        writeSharing(cache, mutationData?.setRecordGeneralAccess),
-    });
+        writeSharing(cache, mutationData?.setRecordPrivate),
+    },
+  );
   const [setShareMutation, { loading: savingShare }] = useMutation(
     SetRecordShareDocument,
     {
@@ -70,19 +72,23 @@ export const useRecordSharing = ({
       if (isDefined(sharing)) {
         setRecordPermissions(recordTarget, sharing.permissions);
       }
+
+      return sharing;
     } catch (mutationError) {
       enqueueToast(getToastOptionsFromError({ error: mutationError }));
+
+      return undefined;
     }
   };
 
-  const setGeneralAccess = (accessLevel: RecordShareAccessLevel) =>
+  const setPrivate = (isPrivate: boolean) =>
     changeSharing(
       async () =>
         (
-          await setGeneralAccessMutation({
-            variables: { target: recordTarget, accessLevel },
+          await setPrivateMutation({
+            variables: { target: recordTarget, isPrivate },
           })
-        ).data?.setRecordGeneralAccess,
+        ).data?.setRecordPrivate,
     );
 
   const setShare = ({
@@ -119,8 +125,8 @@ export const useRecordSharing = ({
     sharing: data?.recordSharing,
     loading,
     error,
-    saving: savingGeneralAccess || savingShare || removingShare,
-    setGeneralAccess,
+    saving: savingPrivate || savingShare || removingShare,
+    setPrivate,
     setShare,
     removeShare,
     refetch,

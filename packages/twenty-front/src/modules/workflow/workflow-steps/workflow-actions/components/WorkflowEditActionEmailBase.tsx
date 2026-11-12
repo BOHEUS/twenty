@@ -18,6 +18,7 @@ import { WORKFLOW_STEP_CONNECTED_ACCOUNT_HANDLE } from '@/workflow/graphql/queri
 import { useWorkflowWithCurrentVersion } from '@/workflow/hooks/useWorkflowWithCurrentVersion';
 import { workflowVisualizerWorkflowIdComponentState } from '@/workflow/states/workflowVisualizerWorkflowIdComponentState';
 import { type WorkflowEmailAction } from '@/workflow/types/WorkflowEmailAction';
+import { getWorkflowStepDisplayName } from '@/workflow/utils/getWorkflowStepDisplayName';
 import { WorkflowStepBody } from '@/workflow/workflow-steps/components/WorkflowStepBody';
 import { WorkflowStepFooter } from '@/workflow/workflow-steps/components/WorkflowStepFooter';
 import { WorkflowSendEmailAttachments } from '@/workflow/workflow-steps/workflow-actions/components/WorkflowSendEmailAttachments';
@@ -25,7 +26,6 @@ import { WORKFLOW_EMAIL_BODY_EDITOR_PROFILE } from '@/workflow/workflow-steps/wo
 import { useEmailForm } from '@/workflow/workflow-steps/workflow-actions/hooks/useEmailForm';
 import { WorkflowVariablePicker } from '@/workflow/workflow-variables/components/WorkflowVariablePicker';
 import { useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useEffect, useState } from 'react';
 import {
@@ -39,11 +39,13 @@ import {
   isDefined,
 } from 'twenty-shared/utils';
 import { isStandaloneVariableString } from 'twenty-shared/workflow';
-import { Callout, Dropdown } from 'twenty-ui/components';
+import { Callout } from 'twenty-ui/components/feedback';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { IconPlus } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { PermissionFlagType } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import { useLingui } from '@lingui/react/macro';
 
 type WorkflowEditActionEmailBaseProps = {
   action: WorkflowEmailAction;
@@ -61,6 +63,7 @@ export const WorkflowEditActionEmailBase = ({
   action,
   actionOptions,
 }: WorkflowEditActionEmailBaseProps) => {
+  const { t } = useLingui();
   const { triggerApisOAuth } = useTriggerApisOAuth();
   const hasConnectedAccountsPermission = useHasPermissionFlag(
     PermissionFlagType.CONNECTED_ACCOUNTS,
@@ -92,9 +95,9 @@ export const WorkflowEditActionEmailBase = ({
     const inputRecipients = action.settings.input.recipients;
 
     return {
-      cc: Boolean(inputRecipients?.cc),
-      bcc: Boolean(inputRecipients?.bcc),
-      inReplyTo: Boolean(action.settings.input.inReplyTo),
+      cc: isNonEmptyString(inputRecipients?.cc),
+      bcc: isNonEmptyString(inputRecipients?.bcc),
+      inReplyTo: isNonEmptyString(action.settings.input.inReplyTo),
     };
   });
 
@@ -254,17 +257,20 @@ export const WorkflowEditActionEmailBase = ({
           {isDefined(missingScopes) && (
             <>
               <Callout
-                variant={'error'}
+                status={'error'}
                 title={t`Missing email draft permission.`}
                 description={
                   hasConnectedAccountsPermission
                     ? t`This account is connected, but we don't have permission to draft emails on your behalf yet. You'll be redirected to approve this access.`
-                    : t`Ask a workspace admin for the Sync Account permission to reconnect this account.`
+                    : t`Ask a workspace admin for the User Apps permission to reconnect this account.`
                 }
                 action={
-                  hasConnectedAccountsPermission
-                    ? { label: t`Reauthorize`, onClick: handleReauthorize }
-                    : undefined
+                  hasConnectedAccountsPermission ? (
+                    <Callout.Action
+                      type="button"
+                      onClick={handleReauthorize}
+                    >{t`Reauthorize`}</Callout.Action>
+                  ) : undefined
                 }
               />
             </>
@@ -393,7 +399,12 @@ export const WorkflowEditActionEmailBase = ({
                 href: '#',
               },
               {
-                children: isDefined(action.name) ? action.name : t`Email`,
+                children: isDefined(action.name)
+                  ? getWorkflowStepDisplayName({
+                      name: action.name,
+                      type: action.type,
+                    })
+                  : t`Email`,
                 href: '#',
               },
               {

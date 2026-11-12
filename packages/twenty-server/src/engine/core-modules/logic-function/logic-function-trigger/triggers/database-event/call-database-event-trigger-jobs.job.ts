@@ -4,33 +4,32 @@ import { isDefined } from 'twenty-shared/utils';
 
 import type { ObjectRecordEvent } from 'twenty-shared/database-events';
 
+import { buildLogicFunctionJobLimiter } from 'src/engine/core-modules/logic-function/utils/build-logic-function-job-limiter.util';
 import { findActiveFlatApplicationById } from 'src/engine/core-modules/application/utils/find-active-flat-application-by-id.util';
+import { ApplicationRepeatedEventRecorderService } from 'src/engine/core-modules/event-logs/emit/application-repeated-event-recorder.service';
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { Process } from 'src/engine/core-modules/message-queue/decorators/process.decorator';
 import { Processor } from 'src/engine/core-modules/message-queue/decorators/processor.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
+import { MessageQueueException } from 'src/engine/core-modules/message-queue/message-queue.exception';
+import { type MessageQueueJobContext } from 'src/engine/core-modules/message-queue/interfaces/message-queue-job.interface';
 import { ApplicationJobEnqueueThrottlerService } from 'src/engine/core-modules/message-queue/services/application-job-enqueue-throttler.service';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
 import { ThrottlerException } from 'src/engine/core-modules/throttler/throttler.exception';
 import { LOGIC_FUNCTION_QUEUE_RETRY_BACKOFF } from 'src/engine/core-modules/logic-function/logic-function-trigger/constants/logic-function-queue-retry-backoff.constant';
+import { buildApplicationJobMemoryLimitLogEntry } from 'src/engine/core-modules/logic-function/logic-function-trigger/utils/build-application-job-memory-limit-log-entry.util';
+import { buildApplicationJobThrottledLogEntry } from 'src/engine/core-modules/logic-function/logic-function-trigger/utils/build-application-job-throttled-log-entry.util';
+import { buildLogicFunctionTriggerJobIds } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/database-event/utils/build-logic-function-trigger-job-ids';
 import { findLogicFunctionsTriggeredByEventName } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/database-event/utils/find-logic-functions-triggered-by-event-name';
+import { buildDatabaseEventTriggerConditionFields } from 'src/engine/workspace-event-emitter/utils/build-database-event-trigger-condition-fields.util';
 import { transformEventBatchToEventPayloads } from 'src/engine/core-modules/logic-function/logic-function-trigger/triggers/database-event/utils/transform-event-batch-to-event-payloads';
 import {
   LogicFunctionTriggerJob,
   LogicFunctionTriggerJobData,
 } from 'src/engine/core-modules/logic-function/logic-function-trigger/jobs/logic-function-trigger.job';
-import { RecordAccessPolicyService } from 'src/engine/core-modules/record-share/services/record-access-policy.service';
-import { buildRoleRowAccessPolicySubject } from 'src/engine/core-modules/record-share/utils/build-role-row-access-policy-subject.util';
-import { omitRestrictedFieldsFromEvent } from 'src/engine/core-modules/record-share/utils/omit-restricted-fields-from-event.util';
+import { RecordEventPermissionsReadService } from 'src/engine/permissions/record-event-permissions-read.service';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 import { WorkspaceEventBatch } from 'src/engine/workspace-event-emitter/types/workspace-event-batch.type';
-
-// An update left with no visible field would only reveal that a hidden one changed
-const isUpdateOfHiddenFieldsOnly = (event: ObjectRecordEvent): boolean => {
-  const { updatedFields } = event.properties as { updatedFields?: string[] };
-
-  return isDefined(updatedFields) && updatedFields.length === 0;
-};
 
 @Processor(MessageQueue.triggerQueue)
 export class CallDatabaseEventTriggerJobsJob {
@@ -41,30 +40,22 @@ export class CallDatabaseEventTriggerJobsJob {
     private readonly messageQueueService: MessageQueueService,
     private readonly workspaceCacheService: WorkspaceCacheService,
     private readonly applicationJobEnqueueThrottlerService: ApplicationJobEnqueueThrottlerService,
-    private readonly recordAccessPolicyService: RecordAccessPolicyService,
+    private readonly applicationRepeatedEventRecorderService: ApplicationRepeatedEventRecorderService,
+    private readonly recordEventPermissionsReadService: RecordEventPermissionsReadService,
   ) {}
 
   @Process(CallDatabaseEventTriggerJobsJob.name)
-  async handle(workspaceEventBatch: WorkspaceEventBatch<ObjectRecordEvent>) {
+  async handle(
+    workspaceEventBatch: WorkspaceEventBatch<ObjectRecordEvent>,
+    { jobId }: MessageQueueJobContext,
+  ) {
     const {
       flatLogicFunctionMaps,
       flatApplicationMaps,
-      rolesPermissions,
-      roleIdsWithAllRecordsAccess,
-      flatRowLevelPermissionPredicateMaps,
-      flatRowLevelPermissionPredicateGroupMaps,
       flatFieldMetadataMaps,
     } = await this.workspaceCacheService.getOrRecompute(
       workspaceEventBatch.workspaceId,
-      [
-        'flatLogicFunctionMaps',
-        'flatApplicationMaps',
-        'rolesPermissions',
-        'roleIdsWithAllRecordsAccess',
-        'flatRowLevelPermissionPredicateMaps',
-        'flatRowLevelPermissionPredicateGroupMaps',
-        'flatFieldMetadataMaps',
-      ],
+      ['flatLogicFunctionMaps', 'flatApplicationMaps', 'flatFieldMetadataMaps'],
     );
 
     const logicFunctionsToTrigger = findLogicFunctionsTriggeredByEventName({
@@ -92,10 +83,10 @@ export class CallDatabaseEventTriggerJobsJob {
       return;
     }
 
-    const eventRecordAccessGate =
-      this.recordAccessPolicyService.buildEventRecordAccessGate(
-        workspaceEventBatch,
-      );
+    const conditionFields = buildDatabaseEventTriggerConditionFields({
+      flatObjectMetadata: workspaceEventBatch.objectMetadata,
+      flatFieldMetadataMaps,
+    });
 
     for (const [
       applicationId,
@@ -111,51 +102,26 @@ export class CallDatabaseEventTriggerJobsJob {
         continue;
       }
 
-      const applicationRoleId = application.defaultRoleId;
-      const applicationObjectsPermissions = isDefined(applicationRoleId)
-        ? rolesPermissions[applicationRoleId]
-        : undefined;
-
-      // An application receives what its role lets it read, as through the
-      // API: without a role it reads nothing.
-      if (
-        !isDefined(applicationRoleId) ||
-        !isDefined(applicationObjectsPermissions)
-      ) {
-        continue;
-      }
-
-      const admittedRecordIds =
-        await eventRecordAccessGate.resolveAdmittedRecordIds(
-          buildRoleRowAccessPolicySubject({
-            roleId: applicationRoleId,
-            owningApplicationId: application.id,
-            rolesPermissions,
-            roleIdsWithAllRecordsAccess,
-            flatRowLevelPermissionPredicateMaps,
-            flatRowLevelPermissionPredicateGroupMaps,
-            flatFieldMetadataMaps,
-          }),
-        );
-      const restrictedFields =
-        applicationObjectsPermissions[workspaceEventBatch.objectMetadata.id]
-          ?.restrictedFields;
-      const admittedEvents = workspaceEventBatch.events
-        .filter((event) => admittedRecordIds.has(event.recordId))
-        .map((event) =>
-          omitRestrictedFieldsFromEvent({
-            event,
-            restrictedFields,
-            flatFieldMetadataMaps,
-          }),
-        )
-        .filter((event) => !isUpdateOfHiddenFieldsOnly(event));
+      const readableEvents =
+        await this.recordEventPermissionsReadService.filterReadableEvents({
+          authContext: {
+            type: 'application',
+            workspace: { id: workspaceEventBatch.workspaceId },
+            application,
+          },
+          eventBatch: workspaceEventBatch,
+        });
       const logicFunctionPayloads = transformEventBatchToEventPayloads({
         logicFunctions,
         workspaceEventBatch: {
           ...workspaceEventBatch,
-          events: admittedEvents,
+          events: readableEvents,
         },
+        conditionFields,
+        onConditionError: ({ logicFunctionId, errorMessage }) =>
+          this.logger.warn(
+            `Condition of logic function ${logicFunctionId} in workspace ${workspaceEventBatch.workspaceId} failed to evaluate: ${errorMessage}`,
+          ),
       });
 
       if (logicFunctionPayloads.length === 0) {
@@ -174,22 +140,74 @@ export class CallDatabaseEventTriggerJobsJob {
             `Enqueue throttled for application ${applicationId} (registration ${applicationRegistrationId}) in workspace ${workspaceEventBatch.workspaceId}: skipping ${logicFunctionPayloads.length} logic function trigger(s)`,
           );
 
+          this.applicationRepeatedEventRecorderService.record({
+            entry: buildApplicationJobThrottledLogEntry({
+              workspaceId: workspaceEventBatch.workspaceId,
+              application,
+            }),
+            occurrenceCount: logicFunctionPayloads.length,
+          });
+
           continue;
         }
 
         throw error;
       }
 
-      await this.messageQueueService.bulkAdd<LogicFunctionTriggerJobData>(
-        LogicFunctionTriggerJob.name,
-        logicFunctionPayloads.map((logicFunctionPayload) => ({
-          data: logicFunctionPayload,
-        })),
-        {
-          retryLimit: 3,
-          backoff: LOGIC_FUNCTION_QUEUE_RETRY_BACKOFF,
-        },
+      const logicFunctionTriggerJobIds = buildLogicFunctionTriggerJobIds({
+        triggerJobId: jobId,
+        logicFunctionPayloads,
+      });
+
+      const logicFunctionsById = new Map(
+        logicFunctions.map((logicFunction) => [
+          logicFunction.id,
+          logicFunction,
+        ]),
       );
+
+      try {
+        await this.messageQueueService.bulkAdd<LogicFunctionTriggerJobData>(
+          LogicFunctionTriggerJob.name,
+          logicFunctionPayloads.map((logicFunctionPayload, index) => ({
+            data: {
+              ...logicFunctionPayload,
+              applicationUniversalIdentifier: application.universalIdentifier,
+            },
+            jobId: logicFunctionTriggerJobIds[index],
+            limiter: buildLogicFunctionJobLimiter({
+              logicFunctionId: logicFunctionPayload.logicFunctionId,
+              limiter: logicFunctionsById.get(
+                logicFunctionPayload.logicFunctionId,
+              )?.jobConfig?.limiter,
+            }),
+            workspaceId: workspaceEventBatch.workspaceId,
+            applicationUniversalIdentifier: application.universalIdentifier,
+          })),
+          {
+            retryLimit: 3,
+            backoff: LOGIC_FUNCTION_QUEUE_RETRY_BACKOFF,
+            doNotCheckDuplicatesBasedOnPrefix: true,
+          },
+        );
+      } catch (error) {
+        if (!(error instanceof MessageQueueException)) {
+          throw error;
+        }
+
+        this.logger.warn(
+          `Enqueue refused for application ${applicationId} in workspace ${workspaceEventBatch.workspaceId}: skipping ${logicFunctionPayloads.length} logic function trigger(s): ${error.message}`,
+        );
+
+        this.applicationRepeatedEventRecorderService.record({
+          entry: buildApplicationJobMemoryLimitLogEntry({
+            workspaceId: workspaceEventBatch.workspaceId,
+            application,
+            exception: error,
+          }),
+          occurrenceCount: logicFunctionPayloads.length,
+        });
+      }
     }
   }
 }

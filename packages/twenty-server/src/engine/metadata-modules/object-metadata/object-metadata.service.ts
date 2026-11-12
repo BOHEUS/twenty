@@ -12,6 +12,7 @@ import { findFlatEntityByUniversalIdentifierOrThrow } from 'src/engine/metadata-
 import { findFlatEntityByUniversalIdentifier } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier.util';
 import { findManyFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-many-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
 import { FlatIndexMetadata } from 'src/engine/metadata-modules/flat-index-metadata/types/flat-index-metadata.type';
+import { FlatView } from 'src/engine/metadata-modules/flat-view/types/flat-view.type';
 import { computeInitialObjectViewOperationsOnObjectCreation } from 'src/engine/metadata-modules/view/utils/compute-initial-object-view-operations-on-object-creation.util';
 import { FlatNavigationMenuItem } from 'src/engine/metadata-modules/flat-navigation-menu-item/types/flat-navigation-menu-item.type';
 import { FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
@@ -29,6 +30,7 @@ import {
   ObjectMetadataExceptionCode,
 } from 'src/engine/metadata-modules/object-metadata/object-metadata.exception';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
+import { computeFieldMetadataOptionOperationsForFieldMetadatas } from 'src/engine/metadata-modules/flat-field-metadata-option/utils/compute-field-metadata-option-operations-for-field-metadatas.util';
 import { WorkspaceMigrationBuilderException } from 'src/engine/workspace-manager/workspace-migration/exceptions/workspace-migration-builder-exception';
 import { WorkspaceMigrationValidateBuildAndRunService } from 'src/engine/workspace-manager/workspace-migration/services/workspace-migration-validate-build-and-run-service';
 import { type UniversalFlatFieldMetadata } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-field-metadata.type';
@@ -298,17 +300,20 @@ export class ObjectMetadataService {
     workspaceId,
     isSystemBuild = false,
     ownerFlatApplication,
+    shouldDeferActions,
   }: {
     deleteObjectInput: DeleteOneObjectInput;
     workspaceId: string;
     isSystemBuild?: boolean;
     ownerFlatApplication?: FlatApplication;
+    shouldDeferActions?: boolean;
   }): Promise<FlatObjectMetadata> {
     const deletedObjectMetadataDtos = await this.deleteManyObjectMetadatas({
       deleteObjectInputs: [deleteObjectInput],
       workspaceId,
       isSystemBuild,
       ownerFlatApplication,
+      shouldDeferActions,
     });
 
     if (deletedObjectMetadataDtos.length !== 1) {
@@ -328,11 +333,13 @@ export class ObjectMetadataService {
     deleteObjectInputs,
     isSystemBuild = false,
     ownerFlatApplication,
+    shouldDeferActions,
   }: {
     deleteObjectInputs: DeleteOneObjectInput[];
     workspaceId: string;
     isSystemBuild?: boolean;
     ownerFlatApplication?: FlatApplication;
+    shouldDeferActions?: boolean;
   }): Promise<FlatObjectMetadata[]> {
     if (deleteObjectInputs.length === 0) {
       return [];
@@ -346,7 +353,13 @@ export class ObjectMetadataService {
         )
       ).workspaceCustomFlatApplication;
 
-    const { flatObjectMetadataMaps, flatFieldMetadataMaps, flatIndexMaps } =
+    const {
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
+      flatIndexMaps,
+      flatViewMaps,
+      flatFieldMetadataOptionMaps,
+    } =
       await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
         {
           workspaceId,
@@ -354,6 +367,8 @@ export class ObjectMetadataService {
             'flatObjectMetadataMaps',
             'flatIndexMaps',
             'flatFieldMetadataMaps',
+            'flatViewMaps',
+            'flatFieldMetadataOptionMaps',
           ],
         },
       );
@@ -368,25 +383,30 @@ export class ObjectMetadataService {
         UniversalFlatObjectMetadata
       >;
       flatIndexToDeleteByUniversalIdentifier: Record<string, FlatIndexMetadata>;
+      flatViewToDeleteByUniversalIdentifier: Record<string, FlatView>;
     } = {
       flatFieldMetadatasToDeleteByUniversalIdentifier: {},
       flatIndexToDeleteByUniversalIdentifier: {},
       flatObjectMetadatasToDeleteByUniversalIdentifier: {},
+      flatViewToDeleteByUniversalIdentifier: {},
     };
 
     const {
       flatFieldMetadatasToDeleteByUniversalIdentifier,
       flatIndexToDeleteByUniversalIdentifier,
       flatObjectMetadatasToDeleteByUniversalIdentifier,
+      flatViewToDeleteByUniversalIdentifier,
     } = deleteObjectInputs.reduce((accumulator, deleteObjectInput) => {
       const {
         flatFieldMetadatasToDelete,
         flatObjectMetadataToDelete,
         flatIndexToDelete,
+        flatViewToDelete,
       } = fromDeleteObjectInputToFlatFieldMetadatasToDelete({
         flatObjectMetadataMaps,
         flatIndexMaps,
         flatFieldMetadataMaps,
+        flatViewMaps,
         deleteObjectInput,
       });
 
@@ -409,6 +429,13 @@ export class ObjectMetadataService {
           ...accumulator.flatObjectMetadatasToDeleteByUniversalIdentifier,
           [flatObjectMetadataToDelete.universalIdentifier]:
             flatObjectMetadataToDelete,
+        },
+        flatViewToDeleteByUniversalIdentifier: {
+          ...accumulator.flatViewToDeleteByUniversalIdentifier,
+          ...fromArrayToUniqueKeyRecord({
+            array: flatViewToDelete,
+            uniqueKey: 'universalIdentifier',
+          }),
         },
       };
     }, initialAccumulator);
@@ -438,6 +465,7 @@ export class ObjectMetadataService {
     const validateAndBuildResult =
       await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunWorkspaceMigration(
         {
+          shouldDeferActions,
           allFlatEntityOperationByMetadataName: {
             objectMetadata: {
               flatEntityToCreate: [],
@@ -452,6 +480,21 @@ export class ObjectMetadataService {
             fieldMetadata: {
               flatEntityToCreate: [],
               flatEntityToDelete: flatFieldMetadatasToDelete,
+              flatEntityToUpdate: [],
+            },
+            fieldMetadataOption:
+              computeFieldMetadataOptionOperationsForFieldMetadatas({
+                flatFieldMetadatasToDelete,
+                existingFlatFieldMetadataOptionMaps:
+                  flatFieldMetadataOptionMaps,
+                applicationUniversalIdentifier:
+                  resolvedOwnerFlatApplication.universalIdentifier,
+              }),
+            view: {
+              flatEntityToCreate: [],
+              flatEntityToDelete: Object.values(
+                flatViewToDeleteByUniversalIdentifier,
+              ),
               flatEntityToUpdate: [],
             },
           },
@@ -476,10 +519,12 @@ export class ObjectMetadataService {
     createObjectInput,
     workspaceId,
     ownerFlatApplication,
+    shouldDeferActions,
   }: {
     createObjectInput: CreateObjectInput;
     workspaceId: string;
     ownerFlatApplication?: FlatApplication;
+    shouldDeferActions?: boolean;
   }): Promise<FlatObjectMetadata> {
     const { workspaceCustomFlatApplication } =
       await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
@@ -520,6 +565,7 @@ export class ObjectMetadataService {
     const validateAndBuildResult =
       await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunWorkspaceMigration(
         {
+          shouldDeferActions,
           allFlatEntityOperationByMetadataName: {
             objectMetadata: {
               flatEntityToCreate: [flatObjectMetadataToCreate],
@@ -645,8 +691,15 @@ export class ObjectMetadataService {
       folderUniversalIdentifier: null,
       pageLayoutId: null,
       pageLayoutUniversalIdentifier: null,
+      agentChatChannelId: null,
+      agentChatChannelUniversalIdentifier: null,
+      workflowId: null,
+      workflowUniversalIdentifier: null,
+      agentId: null,
+      agentUniversalIdentifier: null,
       name: null,
       link: null,
+      nativePageKey: null,
       icon: null,
       color: null,
       position: nextPosition,

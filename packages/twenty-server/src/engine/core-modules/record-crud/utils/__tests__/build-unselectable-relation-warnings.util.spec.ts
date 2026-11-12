@@ -39,6 +39,7 @@ const createRelationField = ({
   type: FieldMetadataType.RELATION,
   name,
   relationTargetObjectMetadataId,
+  morphId: null,
 });
 
 const createObject = ({
@@ -97,9 +98,7 @@ const buildArgs = (): BuildUnselectableRelationWarningsArgs => ({
     }),
   ]),
   selectableRelationFields: {},
-  objectsPermissions: {
-    [OPPORTUNITY_OBJECT_ID]: { restrictedFields: {} },
-  },
+  unreadableFieldMetadataIds: new Set<string>(),
 });
 
 describe('buildUnselectableRelationWarningsByFieldName', () => {

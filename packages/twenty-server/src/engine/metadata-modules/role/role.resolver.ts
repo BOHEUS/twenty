@@ -13,24 +13,20 @@ import {
   ResolveField,
 } from '@nestjs/graphql';
 
-import { PermissionFlagType } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
-import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
 import { PreventNestToAutoLogGraphqlErrorsFilter } from 'src/engine/core-modules/graphql/filters/prevent-nest-to-auto-log-graphql-errors.filter';
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
 import { WorkspaceMemberDTO } from 'src/engine/core-modules/user/dtos/workspace-member.dto';
 import { type FlatWorkspaceMember } from 'src/engine/core-modules/user/types/flat-workspace-member.type';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { type IDataloaders } from 'src/engine/dataloaders/dataloader.interface';
-import { AuthApplication } from 'src/engine/decorators/auth/auth-application.decorator';
 import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
-import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 import { AiAgentRoleService } from 'src/engine/metadata-modules/ai/ai-agent-role/ai-agent-role.service';
 import { AgentDTO } from 'src/engine/metadata-modules/ai/ai-agent/dtos/agent.dto';
 import { FieldPermissionDTO } from 'src/engine/metadata-modules/object-permission/dtos/field-permission.dto';
@@ -50,8 +46,11 @@ import {
   PermissionsException,
   PermissionsExceptionCode,
   PermissionsExceptionMessage,
-} from 'src/engine/metadata-modules/permissions/permissions.exception';
-import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/metadata-modules/permissions/utils/permissions-graphql-api-exception.filter';
+} from 'src/engine/permissions/permissions.exception';
+import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/permissions/utils/permissions-graphql-api-exception.filter';
+import { ROLE_ASSIGNMENT_ACCESS_POLICY } from 'src/engine/metadata-modules/role/constants/role-assignment-access-policy.constant';
+import { ROLE_READ_ACCESS_POLICY } from 'src/engine/metadata-modules/role/constants/role-read-access-policy.constant';
+import { ROLE_WRITE_ACCESS_POLICY } from 'src/engine/metadata-modules/role/constants/role-write-access-policy.constant';
 import { CreateRoleInput } from 'src/engine/metadata-modules/role/dtos/create-role.input';
 import {
   ApiKeyForRoleDTO,
@@ -61,31 +60,18 @@ import { UpdateRoleInput } from 'src/engine/metadata-modules/role/dtos/update-ro
 import { RoleService } from 'src/engine/metadata-modules/role/role.service';
 import { UpsertRowLevelPermissionPredicatesInput } from 'src/engine/metadata-modules/row-level-permission-predicate/dtos/inputs/upsert-row-level-permission-predicates.input';
 import { RowLevelPermissionPredicateGroupDTO } from 'src/engine/metadata-modules/row-level-permission-predicate/dtos/row-level-permission-predicate-group.dto';
+import { RowLevelPermissionRuleDTO } from 'src/engine/metadata-modules/row-level-permission-predicate/dtos/row-level-permission-rule.dto';
 import { RowLevelPermissionPredicateDTO } from 'src/engine/metadata-modules/row-level-permission-predicate/dtos/row-level-permission-predicate.dto';
 import { UpsertRowLevelPermissionPredicatesResultDTO } from 'src/engine/metadata-modules/row-level-permission-predicate/dtos/upsert-row-level-permission-predicates-result.dto';
 import { RowLevelPermissionPredicateGraphqlApiExceptionFilter } from 'src/engine/metadata-modules/row-level-permission-predicate/filters/row-level-permission-predicate-graphql-api-exception.filter';
 import { RowLevelPermissionPredicateService } from 'src/engine/metadata-modules/row-level-permission-predicate/services/row-level-permission-predicate.service';
-import { UserRoleService } from 'src/engine/metadata-modules/user-role/user-role.service';
-import { resolveRoleIdsForUser } from 'src/engine/twenty-orm/utils/resolve-role-ids-for-user.util';
+import { RolePermissionsService } from 'src/engine/permissions/role-permissions.service';
+import { RoleAssignmentWriteService } from 'src/engine/permissions/role-assignment/role-assignment-write.service';
 import { WorkspaceMigrationGraphqlApiExceptionInterceptor } from 'src/engine/workspace-manager/workspace-migration/interceptors/workspace-migration-graphql-api-exception.interceptor';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
 
 @MetadataResolver(() => RoleDTO)
 @UsePipes(ResolverValidationPipe)
-@UseGuards(
-  AuthPrincipalGuard({
-    userSession: {
-      standard: true,
-      impersonated: true,
-      playground: true,
-      workspaceAgnostic: false,
-    },
-    apiKey: true,
-    oauthClient: true,
-    application: true,
-  }),
-  SettingsPermissionGuard(PermissionFlagType.ROLES),
-)
 @UseFilters(
   RowLevelPermissionPredicateGraphqlApiExceptionFilter,
   PermissionsGraphqlApiExceptionFilter,
@@ -95,7 +81,8 @@ import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filt
 @UseInterceptors(WorkspaceMigrationGraphqlApiExceptionInterceptor)
 export class RoleResolver {
   constructor(
-    private readonly userRoleService: UserRoleService,
+    private readonly roleAssignmentWriteService: RoleAssignmentWriteService,
+    private readonly rolePermissionsService: RolePermissionsService,
     private readonly roleService: RoleService,
     private readonly objectPermissionService: ObjectPermissionService,
     private readonly rolePermissionFlagService: RolePermissionFlagService,
@@ -107,6 +94,7 @@ export class RoleResolver {
   ) {}
 
   @Query(() => [RoleDTO])
+  @UseGuards(AccessPolicyGuard(ROLE_READ_ACCESS_POLICY))
   async getRoles(
     @AuthWorkspace() workspace: WorkspaceEntity,
   ): Promise<RoleDTO[]> {
@@ -114,6 +102,7 @@ export class RoleResolver {
   }
 
   @Query(() => RoleDTO)
+  @UseGuards(AccessPolicyGuard(ROLE_READ_ACCESS_POLICY))
   async getRole(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('id', { type: () => UUIDScalarType }) id: string,
@@ -131,19 +120,7 @@ export class RoleResolver {
   }
 
   @Mutation(() => WorkspaceMemberDTO)
-  @UseGuards(
-    AuthPrincipalGuard({
-      userSession: {
-        standard: true,
-        impersonated: true,
-        playground: true,
-        workspaceAgnostic: false,
-      },
-      apiKey: false,
-      oauthClient: { withUser: true, withoutUser: false },
-      application: { withUser: true, withoutUser: false },
-    }),
-  )
+  @UseGuards(AccessPolicyGuard(ROLE_ASSIGNMENT_ACCESS_POLICY))
   async updateWorkspaceMemberRole(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('workspaceMemberId', { type: () => UUIDScalarType })
@@ -153,15 +130,15 @@ export class RoleResolver {
     actingUserWorkspaceId: string,
   ): Promise<WorkspaceMemberDTO> {
     const { workspaceMember, userWorkspaceId } =
-      await this.userRoleService.assignRoleToWorkspaceMember({
+      await this.roleAssignmentWriteService.assignRoleToWorkspaceMember({
         workspaceId: workspace.id,
         workspaceMemberId,
         roleId,
         actingUserWorkspaceId,
       });
 
-    const roles = await this.userRoleService
-      .getRolesByUserWorkspaces({
+    const roles = await this.rolePermissionsService
+      .findRolesByUserWorkspaceIds({
         userWorkspaceIds: [userWorkspaceId],
         workspaceId: workspace.id,
       })
@@ -178,6 +155,7 @@ export class RoleResolver {
   }
 
   @Mutation(() => RoleDTO)
+  @UseGuards(AccessPolicyGuard(ROLE_WRITE_ACCESS_POLICY))
   async createOneRole(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('createRoleInput') createRoleInput: CreateRoleInput,
@@ -198,13 +176,12 @@ export class RoleResolver {
   }
 
   @Mutation(() => RoleDTO)
+  @UseGuards(AccessPolicyGuard(ROLE_WRITE_ACCESS_POLICY))
   async updateOneRole(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('updateRoleInput') updateRoleInput: UpdateRoleInput,
     @AuthUserWorkspaceId({ allowUndefined: true })
     actingUserWorkspaceId?: string,
-    @AuthApplication({ allowUndefined: true })
-    application?: FlatApplication,
   ): Promise<RoleDTO> {
     const role = await this.roleService.updateRole({
       input: updateRoleInput,
@@ -212,7 +189,6 @@ export class RoleResolver {
       actingRoleIds: await this.getActingRoleIds({
         workspaceId: workspace.id,
         actingUserWorkspaceId,
-        application,
       }),
     });
 
@@ -220,13 +196,12 @@ export class RoleResolver {
   }
 
   @Mutation(() => String)
+  @UseGuards(AccessPolicyGuard(ROLE_WRITE_ACCESS_POLICY))
   async deleteOneRole(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('roleId', { type: () => UUIDScalarType }) roleId: string,
     @AuthUserWorkspaceId({ allowUndefined: true })
     actingUserWorkspaceId?: string,
-    @AuthApplication({ allowUndefined: true })
-    application?: FlatApplication,
   ): Promise<string> {
     const deletedRole = await this.roleService.deleteRole({
       roleId,
@@ -234,7 +209,6 @@ export class RoleResolver {
       actingRoleIds: await this.getActingRoleIds({
         workspaceId: workspace.id,
         actingUserWorkspaceId,
-        application,
       }),
     });
 
@@ -245,26 +219,24 @@ export class RoleResolver {
   private async getActingRoleIds({
     workspaceId,
     actingUserWorkspaceId,
-    application,
   }: {
     workspaceId: string;
     actingUserWorkspaceId?: string;
-    application?: FlatApplication;
   }): Promise<string[] | undefined> {
     if (!isDefined(actingUserWorkspaceId)) {
       return undefined;
     }
 
-    return resolveRoleIdsForUser({
-      userRoleId: await this.userRoleService.getRoleIdForUserWorkspace({
+    return [
+      await this.rolePermissionsService.findUserWorkspaceRoleIdOrThrow({
         workspaceId,
         userWorkspaceId: actingUserWorkspaceId,
       }),
-      applicationRoleId: application?.defaultRoleId,
-    });
+    ];
   }
 
   @Mutation(() => [ObjectPermissionDTO])
+  @UseGuards(AccessPolicyGuard(ROLE_WRITE_ACCESS_POLICY))
   async upsertObjectPermissions(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('upsertObjectPermissionsInput')
@@ -281,6 +253,7 @@ export class RoleResolver {
   }
 
   @Mutation(() => [RolePermissionFlagDTO])
+  @UseGuards(AccessPolicyGuard(ROLE_WRITE_ACCESS_POLICY))
   async upsertPermissionFlags(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('upsertPermissionFlagsInput')
@@ -308,6 +281,7 @@ export class RoleResolver {
   }
 
   @Mutation(() => [FieldPermissionDTO])
+  @UseGuards(AccessPolicyGuard(ROLE_WRITE_ACCESS_POLICY))
   async upsertFieldPermissions(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('upsertFieldPermissionsInput')
@@ -324,6 +298,7 @@ export class RoleResolver {
   }
 
   @Mutation(() => UpsertRowLevelPermissionPredicatesResultDTO)
+  @UseGuards(AccessPolicyGuard(ROLE_WRITE_ACCESS_POLICY))
   async upsertRowLevelPermissionPredicates(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('input')
@@ -338,6 +313,7 @@ export class RoleResolver {
   }
 
   @Mutation(() => Boolean)
+  @UseGuards(AccessPolicyGuard(ROLE_WRITE_ACCESS_POLICY))
   async assignRoleToAgent(
     @Args('agentId', { type: () => UUIDScalarType }) agentId: string,
     @Args('roleId', { type: () => UUIDScalarType }) roleId: string,
@@ -353,6 +329,7 @@ export class RoleResolver {
   }
 
   @Mutation(() => Boolean)
+  @UseGuards(AccessPolicyGuard(ROLE_WRITE_ACCESS_POLICY))
   async removeRoleFromAgent(
     @Args('agentId', { type: () => UUIDScalarType }) agentId: string,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
@@ -437,5 +414,22 @@ export class RoleResolver {
       });
 
     return rowLevelPermissionPredicateGroups;
+  }
+
+  @ResolveField('rowLevelPermissionRules', () => [RowLevelPermissionRuleDTO], {
+    nullable: true,
+  })
+  async getRowLevelPermissionRulesForRole(
+    @Parent() role: RoleDTO,
+    @AuthWorkspace() workspace: WorkspaceEntity,
+    @Context() context: { loaders: IDataloaders },
+  ): Promise<RowLevelPermissionRuleDTO[]> {
+    const { rowLevelPermissionRules } =
+      await context.loaders.rowLevelPermissionsByRoleIdLoader.load({
+        workspaceId: workspace.id,
+        roleId: role.id,
+      });
+
+    return rowLevelPermissionRules;
   }
 }

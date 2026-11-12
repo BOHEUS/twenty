@@ -10,14 +10,15 @@ import { SidePanelFooter } from '@/ui/layout/side-panel/components/SidePanelFoot
 import { useHotkeysOnFocusedElement } from '@/ui/utilities/hotkey/hooks/useHotkeysOnFocusedElement';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { ConnectedAccountProvider, SettingsPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { IconButton, useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
+import { IconButton } from 'twenty-ui/components/input';
 import { IconCalendarEvent, IconTrash } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { PermissionFlagType } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledContainer = styled.div`
   display: flex;
@@ -26,6 +27,7 @@ const StyledContainer = styled.div`
 `;
 
 export const SidePanelComposeCalendarEventPage = () => {
+  const { t } = useLingui();
   const composeCalendarEventInitialValues = useAtomComponentStateValue(
     composeCalendarEventInitialValuesComponentState,
   );
@@ -74,7 +76,7 @@ export const SidePanelComposeCalendarEventPage = () => {
       });
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to reconnect calendar account`,
       });
     }

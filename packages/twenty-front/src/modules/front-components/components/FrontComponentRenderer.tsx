@@ -10,14 +10,15 @@ import { FrontComponentMediaPermissionModal } from '@/front-components/media-ses
 import { useFrontComponentMediaSession } from '@/front-components/media-session/hooks/useFrontComponentMediaSession';
 import { getFingerprintedRestUrl } from '@/front-components/utils/getFingerprintedRestUrl';
 import { getSdkClientUrls } from '@/front-components/utils/getSdkClientUrls';
-import { useGetLogicFunctionHttpUrl } from '@/settings/logic-functions/hooks/useGetLogicFunctionHttpUrl';
+import { useGetLogicFunctionHttpUrl } from '@/logic-functions/hooks/useGetLogicFunctionHttpUrl';
 import { useQuery } from '@apollo/client/react';
 import { t } from '@lingui/core/macro';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { FrontComponentRenderer as SharedFrontComponentRenderer } from 'twenty-front-component-renderer';
 import { type FrontComponentToolCall } from 'twenty-sdk/front-component';
+import { type RecordGqlOperationFilter } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import { useThemeColorScheme } from 'twenty-ui/theme';
 import { REACT_APP_SERVER_BASE_URL } from '~/config';
 import {
@@ -30,11 +31,13 @@ type FrontComponentRendererProps = {
   frontComponentId: string;
   commandMenuItemId?: string;
   selectedRecordIds?: string[];
+  selectedRecordsFilter?: RecordGqlOperationFilter | null;
   objectNameSingular?: string;
   timelineActivityId?: string;
   toolCall?: FrontComponentToolCall;
   loadingFallback?: ReactNode;
   unavailableFallback?: ReactNode;
+  shouldPreventPageZoom?: boolean;
 };
 
 type ResolvedFrontComponent = NonNullable<
@@ -45,22 +48,26 @@ type FrontComponentRendererContentProps = {
   frontComponent: ResolvedFrontComponent;
   commandMenuItemId?: string;
   selectedRecordIds?: string[];
+  selectedRecordsFilter?: RecordGqlOperationFilter | null;
   objectNameSingular?: string;
   timelineActivityId?: string;
   toolCall?: FrontComponentToolCall;
   loadingFallback?: ReactNode;
   unavailableFallback?: ReactNode;
+  shouldPreventPageZoom?: boolean;
 };
 
 export const FrontComponentRenderer = ({
   frontComponentId,
   commandMenuItemId,
   selectedRecordIds,
+  selectedRecordsFilter,
   objectNameSingular,
   timelineActivityId,
   toolCall,
   loadingFallback,
   unavailableFallback,
+  shouldPreventPageZoom,
 }: FrontComponentRendererProps) => {
   const { data, loading, error } = useQuery(FindOneFrontComponentDocument, {
     variables: { id: frontComponentId },
@@ -85,11 +92,13 @@ export const FrontComponentRenderer = ({
           frontComponent={frontComponent}
           commandMenuItemId={commandMenuItemId}
           selectedRecordIds={selectedRecordIds}
+          selectedRecordsFilter={selectedRecordsFilter}
           objectNameSingular={objectNameSingular}
           timelineActivityId={timelineActivityId}
           toolCall={toolCall}
           loadingFallback={loadingFallback}
           unavailableFallback={unavailableFallback}
+          shouldPreventPageZoom={shouldPreventPageZoom}
         />
       )}
     </>
@@ -100,11 +109,13 @@ const FrontComponentRendererContent = ({
   frontComponent,
   commandMenuItemId,
   selectedRecordIds,
+  selectedRecordsFilter,
   objectNameSingular,
   timelineActivityId,
   toolCall,
   loadingFallback,
   unavailableFallback,
+  shouldPreventPageZoom,
 }: FrontComponentRendererContentProps) => {
   const colorScheme = useThemeColorScheme();
   const { enqueueToast } = useToast();
@@ -127,6 +138,7 @@ const FrontComponentRendererContent = ({
     applicationId,
     commandMenuItemId,
     selectedRecordIds,
+    selectedRecordsFilter,
     objectNameSingular,
     timelineActivityId,
     toolCall,
@@ -152,7 +164,7 @@ const FrontComponentRendererContent = ({
       }
 
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to load front component: ${error.message}`,
       });
     },
@@ -242,7 +254,14 @@ const FrontComponentRendererContent = ({
         !isReadyToRender &&
         loadingFallback}
       {isReadyToRender && (
-        <FrontComponentRendererProvider frontComponentId={frontComponentId}>
+        <FrontComponentRendererProvider
+          frontComponentId={frontComponentId}
+          applicationId={applicationId}
+          applicationName={resolvedApplicationName}
+          applicationGrantedIframeMediaPermissions={
+            frontComponent.applicationGrantedIframeMediaPermissions ?? []
+          }
+        >
           <SharedFrontComponentRenderer
             colorScheme={colorScheme}
             componentUrl={componentUrl}
@@ -262,6 +281,7 @@ const FrontComponentRendererContent = ({
             storageNamespace={storageNamespace}
             onError={handleError}
             loadingFallback={loadingFallback}
+            shouldPreventPageZoom={shouldPreventPageZoom}
           />
         </FrontComponentRendererProvider>
       )}

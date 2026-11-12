@@ -13,13 +13,22 @@ export const STANDARD_OBJECT_FIELDS = {
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThread,
     ),
     archivedAt: { universalIdentifier: 'b42eaf6f-240f-41ef-af61-51d5ac9cde7d' },
-    userWorkspaceId: {
-      universalIdentifier: 'bf830886-b6dc-46e9-a229-eecbb0e66032',
-    },
     workspaceMember: {
       universalIdentifier: '6f3ed3b5-0642-4a2a-9558-98376adb60f4',
     },
     title: { universalIdentifier: '9283c05e-127c-46ec-82e9-6424a7c0a2f1' },
+    conversationType: {
+      universalIdentifier: '66f93c2f-ae10-4c1a-8510-355a521f7899',
+    },
+    directMessageFirstWorkspaceMemberId: {
+      universalIdentifier: 'dd7e093b-06af-47f3-a246-57ae2de33244',
+    },
+    directMessageSecondWorkspaceMemberId: {
+      universalIdentifier: '730c7491-35fa-4bce-90e1-29901e08eba3',
+    },
+    isAssistantParticipant: {
+      universalIdentifier: 'd901f5bc-23ba-48ac-9103-145da4b76afe',
+    },
     totalInputTokens: {
       universalIdentifier: '2705f4af-24b8-4660-a8a8-8eff689298d1',
     },
@@ -47,14 +56,8 @@ export const STANDARD_OBJECT_FIELDS = {
     activeStreamId: {
       universalIdentifier: 'bcead20f-75b3-45be-92b9-ea7ec4bddfcd',
     },
-    workflowRun: {
-      universalIdentifier: '2187f4c6-bff3-4b80-8585-c82965faf79b',
-    },
     pendingQuestionMessageId: {
       universalIdentifier: '51a9b421-7d90-4a59-9712-036ea9721e65',
-    },
-    lastStreamError: {
-      universalIdentifier: '2e389238-ba5c-4951-83d4-b14f94592c5c',
     },
     turns: { universalIdentifier: 'd5c88fbc-d318-4ee1-b70a-751a925bef5b' },
     messages: { universalIdentifier: '5c851a60-e5d9-4b1e-9926-c2eab6fc9e62' },
@@ -73,6 +76,18 @@ export const STANDARD_OBJECT_FIELDS = {
     },
     participants: {
       universalIdentifier: '2ede85e4-216b-4308-8556-b045971414e7',
+    },
+    assignee: {
+      universalIdentifier: 'e77858ef-4b01-4a32-b921-8b88b1fd3020',
+    },
+    channelId: {
+      universalIdentifier: '5a3f55ff-a486-4a69-a673-7873deb306bd',
+    },
+    channelArchivedAt: {
+      universalIdentifier: 'ec6f5b94-277e-4f06-85f9-08d724518eda',
+    },
+    channelSnoozedUntil: {
+      universalIdentifier: '6d2963a4-7266-42b9-8d76-a06c3f2b7520',
     },
     lastActivityAt: {
       universalIdentifier: 'b3847509-8e98-4038-88de-dd891767d6fc',
@@ -100,8 +115,18 @@ export const STANDARD_OBJECT_FIELDS = {
     snoozedUntil: {
       universalIdentifier: '65bc5785-877d-4363-b65c-95175ba20fd0',
     },
+    isSubscribed: {
+      universalIdentifier: '146b1d5e-6603-4493-944b-c3bd2817569b',
+    },
+    lastMentionedAt: {
+      universalIdentifier: '52a54602-633f-496a-966a-9a70437fa887',
+    },
+    mentionsResolvedAt: {
+      universalIdentifier: '12c0b0c8-86b2-48e5-8e2f-56a9eb9162c4',
+    },
   },
   agentChatThreadTarget: {
+    target: { universalIdentifier: '2c4cc537-39a2-4df9-81a1-dda26eb19658' },
     ...buildStandardObjectBaseFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThreadTarget,
     ),
@@ -144,9 +169,30 @@ export const STANDARD_OBJECT_FIELDS = {
     agentId: { universalIdentifier: '4ac55a9a-95e8-4fd9-8c03-47ee3b618ae7' },
     thread: { universalIdentifier: '4e9b4f1f-c1bb-42d0-bb38-eb2b2f830e64' },
     messages: { universalIdentifier: '737c3559-ea1a-4269-aea4-e672b17afbb1' },
-    evaluations: {
-      universalIdentifier: '282b4815-9c5e-4897-8f9a-a4587af6b0e2',
+    status: { universalIdentifier: 'c17a4d49-f4f5-40e2-b084-11c5c4bae431' },
+    error: { universalIdentifier: 'b0ed90f6-5953-4c85-aff8-407a28ec8cc7' },
+    startedAt: { universalIdentifier: '578977d7-b0d9-48d1-83f7-29ad6215a6f0' },
+    endedAt: { universalIdentifier: '2b13f528-738b-402c-a033-7bbb0cce73a4' },
+    modelId: { universalIdentifier: 'b1e1c27b-03dc-40b1-8052-4474c15b8233' },
+    inputTokens: {
+      universalIdentifier: '0e419986-4255-4858-b252-e6a161d55f58',
     },
+    outputTokens: {
+      universalIdentifier: '3e7f5fb8-f9cf-45b2-b1a7-b36c1e8ff2fd',
+    },
+    cacheReadTokens: {
+      universalIdentifier: 'c2bcbbf5-81ce-4679-8f08-f6a3cc00569c',
+    },
+    cacheCreationTokens: {
+      universalIdentifier: '4d9feae2-2a80-43b2-965d-8ad40f129503',
+    },
+    inputCredits: {
+      universalIdentifier: '740456a7-c0be-4bc9-8429-52dc3e3a3707',
+    },
+    outputCredits: {
+      universalIdentifier: '1ca5da82-b797-43a8-a2ee-d1a062a24ca5',
+    },
+    createdBy: { universalIdentifier: 'c3d5e8a2-fde8-452d-a74d-04436aaf17bc' },
   },
   agentMessage: {
     ...buildStandardObjectBaseFields(
@@ -156,21 +202,29 @@ export const STANDARD_OBJECT_FIELDS = {
     senderWorkspaceMember: {
       universalIdentifier: '69bea8e1-451d-4c3c-9d34-505b5a67e06e',
     },
-    senderUserWorkspaceId: {
-      universalIdentifier: 'f4184c3a-b85c-4cef-8181-b2fefdf98fda',
-    },
     senderApplicationId: {
       universalIdentifier: 'd204d45a-6ccc-40cb-8281-b6ed635c247b',
     },
     role: { universalIdentifier: '5dc985f3-edad-4ebf-9844-b34ca686855b' },
     status: { universalIdentifier: '3845ccfa-9394-4cb9-a75c-4ca704414b83' },
-    isHidden: { universalIdentifier: 'be06f3d5-edb4-4243-89ad-71810b79b319' },
     processedAt: {
       universalIdentifier: 'b1a72274-095e-41f6-95d3-e5b407ff3f0b',
     },
     thread: { universalIdentifier: '48ea202f-ed6d-4ad9-8c9b-71a419b96237' },
     turn: { universalIdentifier: 'b36513fc-ffaf-4e99-8686-b1aefca70b76' },
     parts: { universalIdentifier: '017e4930-118d-4624-8ce4-4e574f89f86d' },
+    reactions: { universalIdentifier: '945e1e83-af08-45c9-8d6c-fb49f1e4a21c' },
+  },
+  agentMessageReaction: {
+    ...buildStandardObjectBaseFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentMessageReaction,
+    ),
+    message: { universalIdentifier: '18fec29f-89bd-4f33-8b80-f7a83a9a2e31' },
+    workspaceMember: {
+      universalIdentifier: '77265b6b-b634-426a-8972-8601947ca6ad',
+    },
+    agentId: { universalIdentifier: '08851641-cb7e-442c-a698-145ade9dd611' },
+    emoji: { universalIdentifier: '88eeecdd-08a7-4744-bdd1-86b7f4a14394' },
   },
   agentMessagePart: {
     ...buildStandardObjectBaseFields(
@@ -228,14 +282,6 @@ export const STANDARD_OBJECT_FIELDS = {
     },
     message: { universalIdentifier: 'efd41407-a49d-4a3a-97b4-94fd180e7652' },
   },
-  agentTurnEvaluation: {
-    ...buildStandardObjectBaseFields(
-      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentTurnEvaluation,
-    ),
-    score: { universalIdentifier: 'a4313259-d43b-4d10-abf5-2426e152c10b' },
-    comment: { universalIdentifier: 'f5531d3b-c8f5-4d92-bf72-d5fd8e2697b0' },
-    turn: { universalIdentifier: 'c67ddcf0-2812-476a-87dc-cf8a683805aa' },
-  },
   campaignDelivery: {
     ...buildStandardObjectBaseFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.campaignDelivery,
@@ -287,6 +333,7 @@ export const STANDARD_OBJECT_FIELDS = {
     },
   },
   timelineActivity: {
+    target: { universalIdentifier: '20202020-9a2b-4c3d-a4e5-f6a7b8c9d0e1' },
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.timelineActivity,
     ),
@@ -355,16 +402,6 @@ export const STANDARD_OBJECT_FIELDS = {
           STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.note,
       }),
     },
-    targetWorkflow: {
-      universalIdentifier: getSystemRelationFieldUniversalIdentifier({
-        applicationUniversalIdentifier:
-          TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER,
-        objectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.timelineActivity,
-        relationTargetObjectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflow,
-      }),
-    },
     targetWorkflowVersion: {
       universalIdentifier: getSystemRelationFieldUniversalIdentifier({
         applicationUniversalIdentifier:
@@ -426,6 +463,7 @@ export const STANDARD_OBJECT_FIELDS = {
     },
   },
   attachment: {
+    target: { universalIdentifier: '20202020-f634-435d-ab8d-e1168b375c69' },
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.attachment,
     ),
@@ -497,16 +535,6 @@ export const STANDARD_OBJECT_FIELDS = {
           STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.dashboard,
       }),
     },
-    targetWorkflow: {
-      universalIdentifier: getSystemRelationFieldUniversalIdentifier({
-        applicationUniversalIdentifier:
-          TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER,
-        objectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.attachment,
-        relationTargetObjectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflow,
-      }),
-    },
     targetAgentChatThread: {
       universalIdentifier: getSystemRelationFieldUniversalIdentifier({
         applicationUniversalIdentifier:
@@ -515,6 +543,16 @@ export const STANDARD_OBJECT_FIELDS = {
           STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.attachment,
         relationTargetObjectUniversalIdentifier:
           STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThread,
+      }),
+    },
+    targetMessage: {
+      universalIdentifier: getSystemRelationFieldUniversalIdentifier({
+        applicationUniversalIdentifier:
+          TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER,
+        objectUniversalIdentifier:
+          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.attachment,
+        relationTargetObjectUniversalIdentifier:
+          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.message,
       }),
     },
   },
@@ -621,6 +659,7 @@ export const STANDARD_OBJECT_FIELDS = {
     },
   },
   calendarEventTarget: {
+    target: { universalIdentifier: '676e9f68-7b5c-41e6-b46d-2fb9527b7051' },
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.calendarEventTarget,
     ),
@@ -865,6 +904,18 @@ export const STANDARD_OBJECT_FIELDS = {
     skippedCount: {
       universalIdentifier: 'a1f4c6d2-5e8b-4a37-9c60-31b7f0d2a984',
     },
+    uniqueClickCount: {
+      universalIdentifier: 'd9a4e1c6-5b3f-4e0a-9c8d-4f7b9a3e6c12',
+    },
+    clickRate: {
+      universalIdentifier: '7999aebc-51f4-4b93-9925-717db707c703',
+    },
+    uniqueOpenCount: {
+      universalIdentifier: '865d188f-3178-4173-a986-80d01a8c7147',
+    },
+    openRate: {
+      universalIdentifier: '77529a55-d723-4c91-9df7-0190fd760e93',
+    },
     unsubscribeTopicId: {
       universalIdentifier: '0648e7ad-1769-4ff6-a4d5-72da79ef169c',
     },
@@ -999,6 +1050,7 @@ export const STANDARD_OBJECT_FIELDS = {
     },
   },
   messageThreadTarget: {
+    target: { universalIdentifier: 'e85e853d-c26e-41b3-bec0-7afc4bdbc2f7' },
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.messageThreadTarget,
     ),
@@ -1069,6 +1121,16 @@ export const STANDARD_OBJECT_FIELDS = {
     isDraft: {
       universalIdentifier: '20202020-4d3a-4b6e-9c1f-2a5e7b9d0c34',
     },
+    attachments: {
+      universalIdentifier: getSystemRelationFieldUniversalIdentifier({
+        applicationUniversalIdentifier:
+          TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER,
+        objectUniversalIdentifier:
+          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.message,
+        relationTargetObjectUniversalIdentifier:
+          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.attachment,
+      }),
+    },
   },
   note: {
     ...buildStandardObjectSystemFields(
@@ -1099,6 +1161,7 @@ export const STANDARD_OBJECT_FIELDS = {
     },
   },
   noteTarget: {
+    target: { universalIdentifier: '20202020-f635-435d-ab8d-e1168b375c70' },
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.noteTarget,
     ),
@@ -1314,6 +1377,26 @@ export const STANDARD_OBJECT_FIELDS = {
       universalIdentifier: '8b8d1be0-4c94-4413-a2c9-c7ede205a81d',
     },
   },
+  accessGroup: {
+    ...buildStandardObjectSystemFields(
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.accessGroup,
+    ),
+    objectMetadataId: {
+      universalIdentifier: 'a1e1a495-ed2e-4e8d-8814-6ef0d1e484d0',
+    },
+    roleId: {
+      universalIdentifier: '0f8c81b0-6d46-4593-97cb-97216de930ff',
+    },
+    rowLevelPermissionPredicateGroupId: {
+      universalIdentifier: '03f12114-2b40-4dc0-9963-6c2e059bc4b3',
+    },
+    memberFieldValues: {
+      universalIdentifier: 'a0d519f8-cc6b-4bb5-b107-89213d683705',
+    },
+    groupHash: {
+      universalIdentifier: '04687cce-1268-4774-b47e-04076a152630',
+    },
+  },
   recordShare: {
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.recordShare,
@@ -1386,6 +1469,7 @@ export const STANDARD_OBJECT_FIELDS = {
     },
   },
   taskTarget: {
+    target: { universalIdentifier: '20202020-f636-435d-ab8d-e1168b375c71' },
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.taskTarget,
     ),
@@ -1421,58 +1505,6 @@ export const STANDARD_OBJECT_FIELDS = {
       }),
     },
   },
-  workflow: {
-    ...buildStandardObjectSystemFields(
-      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflow,
-    ),
-    name: { universalIdentifier: '20202020-b3d3-478f-acc0-5d901e725b20' },
-    lastPublishedVersionId: {
-      universalIdentifier: '20202020-326a-4fba-8639-3456c0a169e8',
-    },
-    coreWorkflowId: {
-      universalIdentifier: '20202020-058a-42ad-8eb8-0662a5552aad',
-    },
-    statuses: { universalIdentifier: '20202020-357c-4432-8c50-8c31b4a552d9' },
-    versions: { universalIdentifier: '20202020-9432-416e-8f3c-27ee3153d099' },
-    runs: { universalIdentifier: '20202020-759b-4340-b58b-e73595c4df4f' },
-    automatedTriggers: {
-      universalIdentifier: '20202020-3319-4234-a34c-117ecad2b8a9',
-    },
-    timelineActivities: {
-      universalIdentifier: getSystemRelationFieldUniversalIdentifier({
-        applicationUniversalIdentifier:
-          TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER,
-        objectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflow,
-        relationTargetObjectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.timelineActivity,
-      }),
-    },
-    attachments: {
-      universalIdentifier: getSystemRelationFieldUniversalIdentifier({
-        applicationUniversalIdentifier:
-          TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER,
-        objectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflow,
-        relationTargetObjectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.attachment,
-      }),
-    },
-  },
-  workflowAutomatedTrigger: {
-    ...buildStandardObjectSystemFields(
-      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowAutomatedTrigger,
-    ),
-    type: {
-      universalIdentifier: '20202020-3319-4234-a34c-3f92c1ab56e7',
-    },
-    settings: {
-      universalIdentifier: '20202020-3319-4234-a34c-bac8f903de12',
-    },
-    workflow: {
-      universalIdentifier: '20202020-3319-4234-a34c-8e1a4d2f7c03',
-    },
-  },
   workflowRun: {
     ...buildStandardObjectSystemFields(
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowRun,
@@ -1480,9 +1512,6 @@ export const STANDARD_OBJECT_FIELDS = {
     name: { universalIdentifier: '20202020-b840-4253-aef9-4e5013694587' },
     workflowVersion: {
       universalIdentifier: '20202020-2f52-4ba8-8dc4-d0d6adb9578d',
-    },
-    workflow: {
-      universalIdentifier: '20202020-8c57-4e7f-84f5-f373f68e1b82',
     },
     enqueuedAt: {
       universalIdentifier: '20202020-f1e3-4de1-a461-b5c4fdbc861d',
@@ -1502,9 +1531,6 @@ export const STANDARD_OBJECT_FIELDS = {
     coreWorkflowVersionId: {
       universalIdentifier: '58e3f476-425d-4c66-b391-779d0412e107',
     },
-    agentChatThreads: {
-      universalIdentifier: 'c664a2e7-ef64-4597-9cdf-ded3eae85ae4',
-    },
     timelineActivities: {
       universalIdentifier: getSystemRelationFieldUniversalIdentifier({
         applicationUniversalIdentifier:
@@ -1521,9 +1547,6 @@ export const STANDARD_OBJECT_FIELDS = {
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowVersion,
     ),
     name: { universalIdentifier: '20202020-a12f-4cca-9937-a2e40cc65509' },
-    workflow: {
-      universalIdentifier: '20202020-afa3-46c3-91b0-0631ca6aa1c8',
-    },
     trigger: {
       universalIdentifier: '20202020-4eae-43e7-86e0-212b41a30b48',
     },
@@ -1604,6 +1627,12 @@ export const STANDARD_OBJECT_FIELDS = {
     },
     agentChatThreadParticipants: {
       universalIdentifier: 'd1de909f-a0eb-4e94-8903-abec012864c9',
+    },
+    agentMessageReactions: {
+      universalIdentifier: '9242d7b0-bb3a-4bb6-a830-5e84e722c684',
+    },
+    assignedAgentChatThreads: {
+      universalIdentifier: 'a89c46f5-cdb7-40e9-9a87-a8ecf0818c3c',
     },
     timeZone: {
       universalIdentifier: '20202020-2d33-4c21-a86e-5943b050dd54',

@@ -5,6 +5,7 @@ import { RECALL_API_NOT_FOUND_STATUS } from 'src/logic-functions/constants/recal
 import { type MeetingRecording } from 'src/logic-functions/types/meeting-recording.type';
 import { buildRecallRoutingMetadata } from 'src/logic-functions/domain/build-recall-routing-metadata.util';
 import { computeRecallBotJoinAt } from 'src/logic-functions/domain/compute-recall-bot-join-at.util';
+import { enqueueCallRecordingRequestFollowUps } from 'src/logic-functions/data/enqueue-call-recording-request-follow-ups.util';
 import { enqueuePreJoinCreditCheck } from 'src/logic-functions/data/enqueue-pre-join-credit-check.util';
 import { findCallRecordingsByIds } from 'src/logic-functions/data/find-call-recordings-by-ids.util';
 import { getCurrentWorkspaceId } from 'src/logic-functions/data/get-current-workspace-id.util';
@@ -12,7 +13,7 @@ import { rescheduleRecallBot } from 'src/logic-functions/recall-api/reschedule-r
 import { updateCallRecording } from 'src/logic-functions/data/update-call-recording.util';
 
 export const rescheduleCallRecordingBot = async (
-  client: CoreApiClient,
+  client: Pick<CoreApiClient, 'query' | 'mutation'>,
   { callRecording, calendarEvent }: MeetingRecording,
 ): Promise<void> => {
   const externalBotId = callRecording.externalBotId;
@@ -78,6 +79,9 @@ export const rescheduleCallRecordingBot = async (
       return;
     }
 
+    await enqueueCallRecordingRequestFollowUps({
+      callRecordingIds: [callRecording.id],
+    });
     await updateCallRecording(client, {
       id: callRecording.id,
       data: {

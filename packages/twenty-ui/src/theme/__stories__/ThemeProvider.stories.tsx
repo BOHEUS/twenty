@@ -143,8 +143,8 @@ export const UnresolvedTokens: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await expect(canvas.getByLabelText('Medium icon size')).toHaveTextContent(
-      JSON.stringify(themeCssVariables.icon.size.md),
+    await expect(canvas.getByLabelText('Medium icon size').textContent).toBe(
+      String(THEME_LIGHT.icon.size.md),
     );
     await expect(canvas.getByLabelText('Primary font color')).toHaveTextContent(
       JSON.stringify(themeCssVariables.font.color.primary),
@@ -155,16 +155,19 @@ export const UnresolvedTokens: Story = {
 export const NumericTokens: Story = {
   args: {
     applyToRoot: false,
-    overrides: { '--t-icon-size-md': '16', '--t-icon-size-sm': 'initial' },
+    overrides: {
+      '--t-icon-size-md': String(THEME_LIGHT.icon.size.md),
+      '--t-icon-size-sm': 'initial',
+    },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
     await expect(canvas.getByLabelText('Medium icon size').textContent).toBe(
-      '16',
+      String(THEME_LIGHT.icon.size.md),
     );
-    await expect(canvas.getByLabelText('Small icon size')).toHaveTextContent(
-      JSON.stringify(themeCssVariables.icon.size.sm),
+    await expect(canvas.getByLabelText('Small icon size').textContent).toBe(
+      String(THEME_LIGHT.icon.size.sm),
     );
   },
 };
@@ -299,18 +302,30 @@ const NestedThemes = () => {
           </Button>
           <Popover.Root>
             <Popover.Trigger render={<Button>Open scoped portal</Button>} />
-            <Popover.Popup>
-              <Popover.Title>Scoped portal</Popover.Title>
-              <ThemeReadout />
-              <Popover.Close render={<Button>Close scoped portal</Button>} />
-            </Popover.Popup>
+            <Popover.Portal>
+              <Popover.Positioner>
+                <Popover.Popup>
+                  <Popover.Title>Scoped portal</Popover.Title>
+                  <ThemeReadout />
+                  <Popover.Close
+                    render={<Button>Close scoped portal</Button>}
+                  />
+                </Popover.Popup>
+              </Popover.Positioner>
+            </Popover.Portal>
           </Popover.Root>
           <Popover.Root>
             <Popover.Trigger render={<Button>Open explicit portal</Button>} />
-            <Popover.Popup container={container}>
-              <Popover.Title>Explicit portal</Popover.Title>
-              <Popover.Close render={<Button>Close explicit portal</Button>} />
-            </Popover.Popup>
+            <Popover.Portal container={container}>
+              <Popover.Positioner>
+                <Popover.Popup>
+                  <Popover.Title>Explicit portal</Popover.Title>
+                  <Popover.Close
+                    render={<Button>Close explicit portal</Button>}
+                  />
+                </Popover.Popup>
+              </Popover.Positioner>
+            </Popover.Portal>
           </Popover.Root>
         </div>
       </ThemeProvider>

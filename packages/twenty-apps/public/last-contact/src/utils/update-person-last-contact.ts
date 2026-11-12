@@ -15,12 +15,19 @@ export type Interaction = {
   workspaceMemberId: string | null;
 } & ({ kind: 'email'; direction: InteractionDirection } | { kind: 'meeting' });
 
+export type RelatedLastContact = { id: string; lastContactAt: string | null };
+
 export type PersonLastContactState = {
   lastContactAt?: string | null;
   lastOutboundAt?: string | null;
   lastInboundAt?: string | null;
   lastEmail?: { receivedAt: string | null } | null;
   lastMeeting?: { startsAt: string | null } | null;
+  company?: RelatedLastContact | null;
+  pointOfContactForOpportunities?: {
+    totalCount?: number | null;
+    edges: { node: RelatedLastContact }[];
+  } | null;
 };
 
 const isNewer = (
@@ -52,7 +59,7 @@ export const pickLatestInteraction = (
 ): Interaction | undefined => pickLatest(interactions);
 
 export const collectPersonLastContactState = async (
-  client: CoreApiClient,
+  client: Pick<CoreApiClient, 'query'>,
   personIds: string[],
 ): Promise<Map<string, PersonLastContactState>> => {
   const stateByPersonId = new Map<string, PersonLastContactState>();
@@ -73,6 +80,11 @@ export const collectPersonLastContactState = async (
                 lastInboundAt: true,
                 lastEmail: { receivedAt: true },
                 lastMeeting: { startsAt: true },
+                company: { id: true, lastContactAt: true },
+                pointOfContactForOpportunities: {
+                  totalCount: true,
+                  edges: { node: { id: true, lastContactAt: true } },
+                },
               },
             },
             pageInfo: { hasNextPage: true, endCursor: true },

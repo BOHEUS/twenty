@@ -1,7 +1,8 @@
+import { getChipLabel } from '@/ui/field/display/utils/getChipLabel';
 import { LinkChip } from '@/ui/navigation/link/components/LinkChip/LinkChip';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { useIcons } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { useTheme } from 'twenty-ui/theme';
 
 import { DEFAULT_SKILL_ICON } from '@/skill-suggestion/constants/DefaultSkillIcon';
@@ -29,7 +30,7 @@ export const SkillReferenceChip = ({
         <Icon size={theme.icon.size.sm} stroke={theme.icon.stroke.sm} />
       }
     >
-      {label}
+      {getChipLabel(label).content}
     </LinkChip>
   );
 };

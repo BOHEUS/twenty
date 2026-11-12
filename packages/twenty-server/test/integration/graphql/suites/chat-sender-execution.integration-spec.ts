@@ -1,5 +1,8 @@
+import { writeChatMemberMessage } from 'test/integration/ai/utils/write-chat-member-message.util';
+import { AgentChatMemberMessagePlacement } from 'src/engine/metadata-modules/ai/ai-chat/enums/agent-chat-member-message-placement.enum';
 import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
 import { AddChatMessageSenderFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-43/2-43-instance-command-fast-1790171503074-add-chat-message-sender';
+import { DropCoreAgentHistoryTablesFastInstanceCommand } from 'src/database/commands/upgrade-version-command/2-47/2-47-instance-command-fast-1791094130961-drop-core-agent-history-tables';
 import { randomUUID } from 'node:crypto';
 import { parse } from 'graphql';
 import { destroyAgentChatThread } from 'test/integration/utils/destroy-agent-chat-thread.util';
@@ -7,13 +10,16 @@ import { getAppProviderByClassName } from 'test/integration/utils/get-app-provid
 import { getCoreRepository } from 'test/integration/utils/get-core-repository.util';
 import { makeMetadataApiRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
 import { type AgentChatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat.service';
+import { type AgentChatQueueService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-queue.service';
+import { type AgentChatThreadService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread.service';
 import { type AgentChatActorService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-actor.service';
-import { type AgentHistoryUpgradeStorageService } from 'src/database/commands/agent-history/agent-history-upgrade-storage.service';
-import { type AttributeChatMessageSendersCommand } from 'src/database/commands/upgrade-version-command/2-43/2-43-workspace-command-1790171503075-attribute-chat-message-senders.command';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
-import { AgentMessageRole } from 'src/engine/metadata-modules/ai/ai-agent-execution/entities/agent-message.entity';
+import { AgentMessageRole } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-message-role.enum';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 import { USER_WORKSPACE_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/core/utils/seed-user-workspaces.util';
+
+const getAgentChatThreadService = () =>
+  getAppProviderByClassName<AgentChatThreadService>('AgentChatThreadService');
 
 const workspaceId = SEED_APPLE_WORKSPACE_ID;
 const workspaceMemberId = WORKSPACE_MEMBER_DATA_SEED_IDS.JANE;
@@ -22,14 +28,18 @@ const otherUserWorkspaceId = USER_WORKSPACE_DATA_SEED_IDS.JONY;
 
 describe('Persisted chat senders', () => {
   let chat: AgentChatService;
+  let queue: AgentChatQueueService;
   let actors: AgentChatActorService;
   const threadId = randomUUID();
   beforeAll(async () => {
     chat = getAppProviderByClassName<AgentChatService>('AgentChatService');
+    queue = getAppProviderByClassName<AgentChatQueueService>(
+      'AgentChatQueueService',
+    );
     actors = getAppProviderByClassName<AgentChatActorService>(
       'AgentChatActorService',
     );
-    await chat.createThread({
+    await getAgentChatThreadService().createThread({
       workspaceId,
       workspaceMemberId,
       id: threadId,
@@ -50,12 +60,15 @@ describe('Persisted chat senders', () => {
         parts: [{ type: 'text', text: 'Hello' }],
       },
     });
-    const queued = await chat.queueMessage({
-      workspaceId,
-      threadId,
-      userWorkspaceId,
-      workspaceMemberId,
-      text: 'Next',
+    const queued = await writeChatMemberMessage({
+      actor: { workspaceId, userWorkspaceId, workspaceMemberId },
+      thread: await getAgentChatThreadService().getWritableThread({
+        workspaceId,
+        workspaceMemberId,
+        threadId,
+      }),
+      message: { text: 'Next' },
+      placement: AgentChatMemberMessagePlacement.QUEUED,
     });
     for (const messageId of [message.id, queued.id]) {
       await expect(
@@ -66,15 +79,15 @@ describe('Persisted chat senders', () => {
     }
     const response = await makeMetadataApiRequest({
       query: parse(
-        `query($threadId: UUID!) { chatMessages(threadId: $threadId) { id senderUserWorkspaceId } }`,
+        `query($threadId: UUID!) { chatMessages(threadId: $threadId) { id senderWorkspaceMemberId } }`,
       ),
       variables: { threadId },
     });
     expect(response.body.errors).toBeUndefined();
     expect(response.body.data.chatMessages).toEqual(
       expect.arrayContaining([
-        { id: message.id, senderUserWorkspaceId: userWorkspaceId },
-        { id: queued.id, senderUserWorkspaceId: userWorkspaceId },
+        { id: message.id, senderWorkspaceMemberId: workspaceMemberId },
+        { id: queued.id, senderWorkspaceMemberId: workspaceMemberId },
       ]),
     );
     await expect(
@@ -94,18 +107,21 @@ describe('Persisted chat senders', () => {
         userWorkspaceId: otherUserWorkspaceId,
       }),
     ).rejects.toBeDefined();
-    await chat.deleteQueuedMessage({ workspaceId, messageId: queued.id });
+    await queue.deleteQueuedMessage({ workspaceId, messageId: queued.id });
   });
 
   it('retains the queued sender through promotion and rejects a different executor', async () => {
-    const queued = await chat.queueMessage({
-      workspaceId,
-      threadId,
-      userWorkspaceId,
-      workspaceMemberId,
-      text: 'Next attributed message',
+    const queued = await writeChatMemberMessage({
+      actor: { workspaceId, userWorkspaceId, workspaceMemberId },
+      thread: await getAgentChatThreadService().getWritableThread({
+        workspaceId,
+        workspaceMemberId,
+        threadId,
+      }),
+      message: { text: 'Next attributed message' },
+      placement: AgentChatMemberMessagePlacement.QUEUED,
     });
-    const turnId = await chat.promoteQueuedMessage({
+    const turnId = await queue.promoteQueuedMessage({
       workspaceId,
       threadId,
       messageId: queued.id,
@@ -129,63 +145,6 @@ describe('Persisted chat senders', () => {
     ).rejects.toBeDefined();
   });
 
-  it('backfills legacy authors without replacing explicit senders on retries or rollback', async () => {
-    const legacy = await chat.addMessage({
-      workspaceId,
-      threadId,
-      uiMessage: {
-        role: AgentMessageRole.USER,
-        parts: [{ type: 'text', text: 'Legacy' }],
-      },
-    });
-    const explicit = await chat.addMessage({
-      workspaceId,
-      threadId,
-      userWorkspaceId: otherUserWorkspaceId,
-      uiMessage: {
-        role: AgentMessageRole.USER,
-        parts: [{ type: 'text', text: 'Attributed' }],
-      },
-    });
-    const command =
-      getAppProviderByClassName<AttributeChatMessageSendersCommand>(
-        'AttributeChatMessageSendersCommand',
-      );
-    const dataSource =
-      getCoreRepository<UserWorkspaceEntity>(UserWorkspaceEntity).manager
-        .connection;
-    const args = { workspaceId, dataSource, index: 0, total: 1, options: {} };
-
-    await expect(
-      actors.authorizeJob({
-        workspaceId,
-        threadId,
-        turnId: legacy.turnId!,
-        userWorkspaceId,
-      }),
-    ).resolves.toMatchObject({
-      sender: { userWorkspaceId, applicationId: null },
-    });
-    await command.up(args);
-    await command.up(args);
-    await command.down(args);
-    const storage =
-      getAppProviderByClassName<AgentHistoryUpgradeStorageService>(
-        'AgentHistoryUpgradeStorageService',
-      );
-    const records = await storage.run(workspaceId, ({ manager, table }) =>
-      manager.query(
-        `SELECT id, "senderUserWorkspaceId" FROM ${table('agentMessage')} WHERE id = ANY($1::uuid[])`,
-        [[legacy.id, explicit.id]],
-      ),
-    );
-    expect(records).toEqual(
-      expect.arrayContaining([
-        { id: legacy.id, senderUserWorkspaceId: userWorkspaceId },
-        { id: explicit.id, senderUserWorkspaceId: otherUserWorkspaceId },
-      ]),
-    );
-  });
   it('retains explicit core sender and application identities through rollback and re-upgrade', async () => {
     const dataSource =
       getCoreRepository<UserWorkspaceEntity>(UserWorkspaceEntity).manager
@@ -194,6 +153,7 @@ describe('Persisted chat senders', () => {
     await runner.connect();
     await runner.startTransaction();
     try {
+      await new DropCoreAgentHistoryTablesFastInstanceCommand().down(runner);
       const legacyThreadId = randomUUID();
       const legacyMessageId = randomUUID();
       const applicationId = randomUUID();

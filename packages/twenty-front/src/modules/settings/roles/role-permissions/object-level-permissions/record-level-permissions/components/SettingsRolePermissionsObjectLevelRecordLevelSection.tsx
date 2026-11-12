@@ -1,8 +1,7 @@
 /* @license Enterprise */
 
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { IconArrowUp, IconLock } from 'twenty-ui/icon';
 import { Card } from 'twenty-ui/primitives/surfaces';
 
@@ -15,7 +14,8 @@ import { SettingsPath } from 'twenty-shared/types';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
-import { OrganizationAdornment } from '~/pages/settings/enterprise/components/OrganizationAdornment';
+import { OrganizationAdornment } from '@/settings/enterprise/components/OrganizationAdornment';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledContent = styled.div`
   padding-bottom: ${themeCssVariables.spacing[2]};
@@ -37,6 +37,7 @@ export const SettingsRolePermissionsObjectLevelRecordLevelSection = ({
   roleId,
   hasOrganizationPlan,
 }: SettingsRolePermissionsObjectLevelRecordLevelSectionProps) => {
+  const { t } = useLingui();
   const navigateSettings = useNavigateSettings();
   const billing = useAtomStateValue(billingState);
   const isBillingEnabled = billing?.isBillingEnabled ?? false;
@@ -47,10 +48,10 @@ export const SettingsRolePermissionsObjectLevelRecordLevelSection = ({
         <Section.Header
           title={t`Record-level`}
           description={t`Ability to filter the records a user can interact with`}
-          adornment={<OrganizationAdornment />}
+          actions={<OrganizationAdornment />}
         />
         <StyledCardContainer>
-          <Card.Root rounded>
+          <Card.Root>
             <SettingsOptionCardContentButton
               Icon={IconLock}
               title={t`Upgrade to access`}

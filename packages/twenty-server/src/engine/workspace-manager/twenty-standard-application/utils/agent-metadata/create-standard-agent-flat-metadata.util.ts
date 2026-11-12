@@ -18,9 +18,8 @@ export type CreateStandardAgentContext = {
   prompt: string;
   modelId: ModelId;
   responseFormat: AgentResponseFormat;
-  isCustom: boolean;
+  isSystem: boolean;
   modelConfiguration: ModelConfiguration | null;
-  evaluationInputs: string[];
 };
 
 export type CreateStandardAgentArgs = StandardBuilderArgs<'agent'> & {
@@ -37,9 +36,8 @@ export const createStandardAgentFlatMetadata = ({
     prompt,
     modelId,
     responseFormat,
-    isCustom,
+    isSystem,
     modelConfiguration,
-    evaluationInputs,
   },
   workspaceId,
   twentyStandardApplicationId,
@@ -53,13 +51,19 @@ export const createStandardAgentFlatMetadata = ({
     name,
     label,
     icon,
+    avatarColor: null,
+    avatarShape: null,
     description,
     prompt,
     modelId,
     responseFormat,
-    isCustom,
+    isSystem,
     modelConfiguration,
-    evaluationInputs,
+    triggers: [],
+    isActive: true,
+    overrides: null,
+    navigationMenuItemIds: [],
+    navigationMenuItemUniversalIdentifiers: [],
     workspaceId,
     applicationId: twentyStandardApplicationId,
     applicationUniversalIdentifier:

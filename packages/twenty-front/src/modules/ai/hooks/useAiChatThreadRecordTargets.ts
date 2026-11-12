@@ -1,6 +1,9 @@
 import uniqBy from 'lodash.uniqby';
 import { useCallback, useMemo } from 'react';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import {
+  StandardObjectNameSingular,
+  type RecordGqlFields,
+} from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
 import { useAttachChatThreadToRecord } from '@/ai/hooks/useAttachChatThreadToRecord';
@@ -30,18 +33,18 @@ export const useAiChatThreadRecordTargets = ({
   threadId: string;
   recordPickerInstanceId: string;
 }) => {
-  const isConversationsTabEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_CONVERSATIONS_TAB_ENABLED,
+  const isAiChatInboxEnabled = useIsFeatureEnabled(
+    FeatureFlagKey.IS_AI_CHAT_INBOX_ENABLED,
   );
   const { objectMetadataItems } = useObjectMetadataItems();
   const objectMorphJunctionConfig = useObjectMorphJunctionConfig({
-    objectNameSingular: CoreObjectNameSingular.AgentChatThread,
+    objectNameSingular: StandardObjectNameSingular.AgentChatThread,
   });
   const junctionConfig = isUsableJunctionConfig(objectMorphJunctionConfig)
     ? objectMorphJunctionConfig
     : null;
 
-  const recordGqlFields = useMemo(
+  const recordGqlFields = useMemo<RecordGqlFields>(
     () => ({
       id: true,
       ...(isDefined(junctionConfig)
@@ -58,10 +61,10 @@ export const useAiChatThreadRecordTargets = ({
   );
 
   const isThreadQuerySkipped =
-    !isConversationsTabEnabled || !isDefined(junctionConfig);
+    !isAiChatInboxEnabled || !isDefined(junctionConfig);
 
   const { record: thread, refetch } = useFindOneRecord({
-    objectNameSingular: CoreObjectNameSingular.AgentChatThread,
+    objectNameSingular: StandardObjectNameSingular.AgentChatThread,
     objectRecordId: threadId,
     recordGqlFields,
     skip: isThreadQuerySkipped,
@@ -70,7 +73,7 @@ export const useAiChatThreadRecordTargets = ({
   // The chat model links conversations through its own server tool, so links are reread on any write.
   const linksOperationSignature = useMemo(
     () => ({
-      objectNameSingular: CoreObjectNameSingular.AgentChatThreadTarget,
+      objectNameSingular: StandardObjectNameSingular.AgentChatThreadTarget,
       variables: { filter: { threadId: { eq: threadId } } },
     }),
     [threadId],
@@ -122,7 +125,7 @@ export const useAiChatThreadRecordTargets = ({
     openJunctionRelationPicker({
       recordPickerInstanceId,
       junctionRecords,
-      targetFields: junctionConfig.targetFields,
+      junctionConfig,
     });
   };
 

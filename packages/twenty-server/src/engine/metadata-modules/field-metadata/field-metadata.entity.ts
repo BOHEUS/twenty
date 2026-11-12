@@ -5,6 +5,7 @@ import {
   FieldMetadataType,
   MetadataWritability,
 } from 'twenty-shared/types';
+import { type FieldPermissionAction } from 'twenty-shared/application';
 import {
   Check,
   Column,
@@ -23,6 +24,7 @@ import {
 
 import { ADD_IS_SYSTEM_SIDE_EFFECT_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-15/is-system-side-effect-upgrade-command-name.constant';
 import { ADD_METADATA_OVERRIDES_COLUMN_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-19/add-metadata-overrides-column-upgrade-command-name.constant';
+import { ADD_FIELD_METADATA_DISABLED_FIELD_PERMISSION_ACTIONS_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-53/add-field-metadata-disabled-field-permission-actions-upgrade-command-name.constant';
 import { ADD_METADATA_WRITABILITY_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-32/add-metadata-writability-upgrade-command-name.constant';
 import { ADD_FIELD_METADATA_IS_AUDIT_LOGGED_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-40/add-field-metadata-is-audit-logged-upgrade-command-name.constant';
 import { DROP_METADATA_STANDARD_OVERRIDES_COLUMN_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-20/drop-metadata-standard-overrides-column-upgrade-command-name.constant';
@@ -35,6 +37,8 @@ import { IndexFieldMetadataEntity } from 'src/engine/metadata-modules/index-meta
 import { RENAME_IS_UI_READ_ONLY_TO_IS_UI_EDITABLE_UPGRADE_COMMAND_NAME } from 'src/engine/metadata-modules/object-metadata/constants/rename-is-ui-read-only-to-is-ui-editable-upgrade-command-name.constant';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { FieldPermissionEntity } from 'src/engine/metadata-modules/object-permission/field-permission/field-permission.entity';
+import { FieldMetadataOptionEntity } from 'src/engine/metadata-modules/field-metadata-option/entities/field-metadata-option.entity';
+import { RowLevelPermissionPredicateEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-predicate.entity';
 import { SearchFieldMetadataEntity } from 'src/engine/metadata-modules/search-field-metadata/search-field-metadata.entity';
 import { ViewFieldEntity } from 'src/engine/metadata-modules/view-field/entities/view-field.entity';
 import { ViewFilterEntity } from 'src/engine/metadata-modules/view-filter/entities/view-filter.entity';
@@ -164,6 +168,13 @@ export class FieldMetadataEntity<
   })
   writability: MetadataWritability;
 
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      ADD_FIELD_METADATA_DISABLED_FIELD_PERMISSION_ACTIONS_UPGRADE_COMMAND_NAME,
+  })
+  @Column({ type: 'jsonb', nullable: true })
+  disabledFieldPermissionActions: JsonbProperty<FieldPermissionAction[]> | null;
+
   // superseded by isUIEditable; no @WasRemovedInUpgrade yet: previous-release pods still SELECT it mid rolling deploy (core-team-issues#2542)
   @Column({ type: 'boolean', default: false })
   isUIReadOnly: WasRemovedInUpgrade<boolean>;
@@ -275,4 +286,34 @@ export class FieldMetadataEntity<
     (searchFieldMetadata) => searchFieldMetadata.fieldMetadata,
   )
   searchFieldMetadatas: Relation<SearchFieldMetadataEntity[]>;
+
+  @OneToMany(
+    () => FieldMetadataOptionEntity,
+    (fieldMetadataOption) => fieldMetadataOption.fieldMetadata,
+  )
+  fieldMetadataOptions: Relation<FieldMetadataOptionEntity[]>;
+
+  @OneToMany(
+    () => RowLevelPermissionPredicateEntity,
+    (rowLevelPermissionPredicate) => rowLevelPermissionPredicate.fieldMetadata,
+  )
+  rowLevelPermissionPredicates: Relation<RowLevelPermissionPredicateEntity[]>;
+
+  @OneToMany(
+    () => RowLevelPermissionPredicateEntity,
+    (rowLevelPermissionPredicate) =>
+      rowLevelPermissionPredicate.relationFieldMetadata,
+  )
+  relationRowLevelPermissionPredicates: Relation<
+    RowLevelPermissionPredicateEntity[]
+  >;
+
+  @OneToMany(
+    () => RowLevelPermissionPredicateEntity,
+    (rowLevelPermissionPredicate) =>
+      rowLevelPermissionPredicate.workspaceMemberFieldMetadata,
+  )
+  workspaceMemberRowLevelPermissionPredicates: Relation<
+    RowLevelPermissionPredicateEntity[]
+  >;
 }

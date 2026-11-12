@@ -2,26 +2,22 @@ import { useMutation } from '@apollo/client/react';
 import { DeleteOneObjectMetadataItemDocument } from '~/generated-metadata/graphql';
 
 import { useMetadataErrorHandler } from '@/metadata-error-handler/hooks/useMetadataErrorHandler';
-import { useCleanMorphRelationsTargetingObjectMetadataId } from '@/metadata-store/hooks/useCleanMorphRelationsTargetingObjectMetadataId';
 import { useInvalidateMetadataStore } from '@/metadata-store/hooks/useInvalidateMetadataStore';
-import { useUpdateMetadataStoreDraft } from '@/metadata-store/hooks/useUpdateMetadataStoreDraft';
 import { type MetadataRequestResult } from '@/object-metadata/types/MetadataRequestResult';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { t } from '@lingui/core/macro';
 import { CrudOperationType } from 'twenty-shared/types';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
+import { useLingui } from '@lingui/react/macro';
 
 export const useDeleteOneObjectMetadataItem = () => {
+  const { t } = useLingui();
   const [deleteOneObjectMetadataItemMutation] = useMutation(
     DeleteOneObjectMetadataItemDocument,
   );
 
   const { handleMetadataError } = useMetadataErrorHandler();
   const { enqueueToast } = useToast();
-  const { removeFromDraft, applyChanges } = useUpdateMetadataStoreDraft();
   const { invalidateMetadataStore } = useInvalidateMetadataStore();
-  const { cleanMorphRelations } =
-    useCleanMorphRelationsTargetingObjectMetadataId();
 
   const deleteOneObjectMetadataItem = async (
     idToDelete: string,
@@ -37,10 +33,6 @@ export const useDeleteOneObjectMetadataItem = () => {
         },
       });
 
-      removeFromDraft({ key: 'objectMetadataItems', itemIds: [idToDelete] });
-      cleanMorphRelations(idToDelete);
-      applyChanges();
-
       invalidateMetadataStore();
 
       return {
@@ -54,7 +46,7 @@ export const useDeleteOneObjectMetadataItem = () => {
           operationType: CrudOperationType.DELETE,
         });
       } else {
-        enqueueToast({ variant: 'error', children: t`An error occurred.` });
+        enqueueToast({ status: 'error', children: t`An error occurred.` });
       }
 
       return {

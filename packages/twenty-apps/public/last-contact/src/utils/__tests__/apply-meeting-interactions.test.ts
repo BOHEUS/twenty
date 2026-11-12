@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { CoreApiClient } from 'twenty-client-sdk/core';
 
 import { applyMeetingInteractions } from 'src/utils/apply-meeting-interactions';
 
@@ -54,7 +53,7 @@ const buildClient = (participants: Record<string, unknown>[] = []) => {
     client: {
       query: queryMock,
       mutation: mutationMock,
-    } as unknown as CoreApiClient,
+    },
     queryMock,
     mutationMock,
   };
@@ -200,7 +199,7 @@ describe('applyMeetingInteractions', () => {
     });
   });
 
-  it('skips a meeting that has not started yet', async () => {
+  it('skips a meeting that has not started yet and returns its start time', async () => {
     const { client, mutationMock } = buildClient([
       buildParticipant({
         calendarEventId: CALENDAR_EVENT_ID,
@@ -208,11 +207,12 @@ describe('applyMeetingInteractions', () => {
       }),
     ]);
 
-    await applyMeetingInteractions(client, [
+    const upcomingMeetingStartsAts = await applyMeetingInteractions(client, [
       { personId: PERSON_ID, calendarEventId: CALENDAR_EVENT_ID },
     ]);
 
     expect(mutationMock).not.toHaveBeenCalled();
+    expect(upcomingMeetingStartsAts).toEqual([FUTURE_EVENT_STARTS_AT]);
   });
 
   it('skips a canceled meeting', async () => {

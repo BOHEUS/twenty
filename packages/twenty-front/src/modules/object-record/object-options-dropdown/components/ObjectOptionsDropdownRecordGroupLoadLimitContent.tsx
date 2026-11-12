@@ -1,3 +1,4 @@
+import { ListItemButton } from 'twenty-ui/components/navigation';
 import { useObjectOptionsDropdown } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsDropdown';
 import { useRecordGroupVisibility } from '@/object-record/record-group/hooks/useRecordGroupVisibility';
 import { recordIndexGroupLoadLimitComponentState } from '@/object-record/record-index/states/recordIndexGroupLoadLimitComponentState';
@@ -9,12 +10,12 @@ import { SelectableList } from '@/ui/layout/selectable-list/components/Selectabl
 import { SelectableListItem } from '@/ui/layout/selectable-list/components/SelectableListItem';
 import { selectedItemIdComponentState } from '@/ui/layout/selectable-list/states/selectedItemIdComponentState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
-import { t } from '@lingui/core/macro';
 import { VIEW_GROUP_LOAD_LIMIT_OPTIONS } from 'twenty-shared/constants';
 import { IconChevronLeft } from 'twenty-ui/icon';
-import { ListItem } from 'twenty-ui/primitives/navigation';
+import { useLingui } from '@lingui/react/macro';
 
 export const ObjectOptionsDropdownRecordGroupLoadLimitContent = () => {
+  const { t } = useLingui();
   const { onContentChange, dropdownId } = useObjectOptionsDropdown();
 
   const recordIndexGroupLoadLimit = useAtomComponentStateValue(
@@ -55,7 +56,7 @@ export const ObjectOptionsDropdownRecordGroupLoadLimitContent = () => {
               itemId={String(loadLimitOption)}
               onEnter={() => handleGroupLoadLimitChange(loadLimitOption)}
             >
-              <ListItem
+              <ListItemButton
                 onClick={() => handleGroupLoadLimitChange(loadLimitOption)}
                 focused={selectedItemId === String(loadLimitOption)}
                 role="option"
@@ -64,7 +65,7 @@ export const ObjectOptionsDropdownRecordGroupLoadLimitContent = () => {
                 indicator="check"
               >
                 {String(loadLimitOption)}
-              </ListItem>
+              </ListItemButton>
             </SelectableListItem>
           ))}
         </SelectableList>

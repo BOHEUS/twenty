@@ -1,6 +1,5 @@
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { CrudOperationType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
@@ -9,13 +8,15 @@ import { useUpdateMetadataStoreDraft } from '@/metadata-store/hooks/useUpdateMet
 import { type FlatIndexMetadataItem } from '@/metadata-store/types/FlatIndexMetadataItem';
 import { type IndexFieldMetadataItem } from '@/object-metadata/types/IndexFieldMetadataItem';
 import { type MetadataRequestResult } from '@/object-metadata/types/MetadataRequestResult';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   type CreateIndexInput,
   CreateOneIndexMetadataItemDocument,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 export const useCreateOneIndexMetadataItem = () => {
+  const { t } = useLingui();
   const [createOneIndexMetadataItemMutation] = useMutation(
     CreateOneIndexMetadataItemDocument,
   );
@@ -75,7 +76,7 @@ export const useCreateOneIndexMetadataItem = () => {
           operationType: CrudOperationType.CREATE,
         });
       } else {
-        enqueueToast({ variant: 'error', children: t`An error occurred.` });
+        enqueueToast({ status: 'error', children: t`An error occurred.` });
       }
 
       return {

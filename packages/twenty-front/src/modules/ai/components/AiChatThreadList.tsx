@@ -1,42 +1,57 @@
-import { styled } from '@linaria/react';
+import { type MouseEvent } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { themeCssVariables } from 'twenty-ui/theme';
 
+import { AiChatThreadListGroup } from '@/ai/components/AiChatThreadListGroup';
 import { AiChatThreadListItem } from '@/ai/components/AiChatThreadListItem';
 import { type AgentChatThreadRecord } from '@/ai/types/AgentChatThreadRecord';
-import { type AiChatThreadActionsSurface } from '@/ai/types/AiChatThreadActionsSurface';
+import { type AiChatThreadListVariant } from '@/ai/types/AiChatThreadListVariant';
 import { groupThreadsByDate } from '@/ai/utils/groupThreadsByDate';
-
-const StyledGroupTitle = styled.div`
-  color: ${themeCssVariables.font.color.light};
-  font-size: ${themeCssVariables.font.size.xs};
-  font-weight: ${themeCssVariables.font.weight.semiBold};
-  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[1]}
-    ${themeCssVariables.spacing[1]};
-`;
+import { useDateTimeFormat } from '@/localization/hooks/useDateTimeFormat';
 
 type AiChatThreadListProps = {
   threads: AgentChatThreadRecord[];
-  surface: AiChatThreadActionsSurface;
-  selectedThreadId?: string;
-  onThreadClick: (thread: AgentChatThreadRecord) => void;
+  variant?: AiChatThreadListVariant;
+  selectedThreadIds?: string[];
+  checkedThreadIds?: string[];
+  onThreadClick: (
+    thread: AgentChatThreadRecord,
+    event: MouseEvent<HTMLDivElement>,
+  ) => void;
+  onThreadCheckboxClick?: (
+    thread: AgentChatThreadRecord,
+    event: MouseEvent<HTMLDivElement>,
+  ) => void;
+  onThreadContextMenu?: (
+    thread: AgentChatThreadRecord,
+    event: MouseEvent<HTMLDivElement>,
+  ) => void;
   onDetachThread?: (threadId: string) => void;
 };
 
 export const AiChatThreadList = ({
   threads,
-  surface,
-  selectedThreadId,
+  variant = 'default',
+  selectedThreadIds = [],
+  checkedThreadIds = [],
   onThreadClick,
+  onThreadCheckboxClick,
+  onThreadContextMenu,
   onDetachThread,
 }: AiChatThreadListProps) => {
+  const { calendarStartDay } = useDateTimeFormat();
+  const selectedThreadIdSet = new Set(selectedThreadIds);
+  const checkedThreadIdSet = new Set(checkedThreadIds);
+
   const renderThread = (thread: AgentChatThreadRecord) => (
     <AiChatThreadListItem
       key={thread.id}
       thread={thread}
-      surface={surface}
-      isSelected={thread.id === selectedThreadId}
+      variant={variant}
+      isSelected={selectedThreadIdSet.has(thread.id)}
+      isChecked={checkedThreadIdSet.has(thread.id)}
       onClick={onThreadClick}
+      onCheckboxClick={onThreadCheckboxClick}
+      onContextMenu={onThreadContextMenu}
       onDetach={
         isDefined(onDetachThread) ? () => onDetachThread(thread.id) : undefined
       }
@@ -45,12 +60,17 @@ export const AiChatThreadList = ({
 
   return (
     <>
-      {groupThreadsByDate(threads).map((dateGroup) => (
-        <div key={dateGroup.id}>
-          <StyledGroupTitle>{dateGroup.title}</StyledGroupTitle>
-          {dateGroup.threads.map(renderThread)}
-        </div>
-      ))}
+      {groupThreadsByDate({ threads, variant, calendarStartDay }).map(
+        (dateGroup) => (
+          <AiChatThreadListGroup
+            key={dateGroup.id}
+            title={dateGroup.title}
+            variant={variant}
+          >
+            {dateGroup.threads.map(renderThread)}
+          </AiChatThreadListGroup>
+        ),
+      )}
     </>
   );
 };

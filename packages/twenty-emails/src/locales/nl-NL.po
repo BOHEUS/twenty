@@ -19,6 +19,11 @@ msgstr ""
 "X-Crowdin-File-ID: 27\n"
 
 #. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-recovery-code-issued.email.tsx
+msgid "{actorName} generated a recovery code that lets you sign in to {workspaceDisplayName} without your authenticator app."
+msgstr "{actorName} heeft een herstelcode gegenereerd waarmee je je zonder je authenticator-app kunt aanmelden bij {workspaceDisplayName}."
+
+#. js-lingui-explicit-id
 #: src/emails/server-admin-access-changed.email.tsx
 msgid "{actorName} updated server administrator access for {targetName} ({targetEmail})."
 msgstr "{actorName} heeft de toegang als serverbeheerder voor {targetName} ({targetEmail}) bijgewerkt."
@@ -34,9 +39,19 @@ msgid "{senderName} (<0>{senderEmail}</0>): Please validate this domain to allow
 msgstr "{senderName} (<0>{senderEmail}</0>): Valideer dit domein om gebruikers met e-mailadressen <1>@{domain}</1> toe te staan uw werkruimte te betreden zonder een uitnodiging nodig te hebben."
 
 #. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-backup-code-used.email.tsx
+msgid "A backup code was used to sign in to {workspaceDisplayName}. Backup codes left: {remainingBackupCodeCount}."
+msgstr "Er is een back-upcode gebruikt om in te loggen bij {workspaceDisplayName}. Resterende back-upcodes: {remainingBackupCodeCount}."
+
+#. js-lingui-explicit-id
 #: src/emails/billing-trial-converting.email.tsx
 msgid "A heads up before your trial ends"
 msgstr "Een seintje voordat uw proefperiode afloopt"
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-reset.email.tsx
+msgid "A recovery code was used to sign in to {workspaceDisplayName}. Your authenticator for this workspace was removed and your other sessions there were signed out."
+msgstr "Er is een herstelcode gebruikt om je aan te melden bij {workspaceDisplayName}. Je authenticator voor deze werkruimte is verwijderd en je andere sessies daar zijn afgemeld."
 
 #. js-lingui-explicit-id
 #: src/emails/send-invite-link.email.tsx
@@ -52,6 +67,11 @@ msgstr "Betaalmethode toevoegen"
 #: src/emails/warn-suspended-workspace.email.tsx
 msgid "After that, the workspace and all of its data will be permanently deleted — and we won't be able to bring it back."
 msgstr "Daarna worden de werkruimte en alle bijbehorende gegevens permanent verwijderd — en kunnen wij deze niet meer terughalen."
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-backup-code-used.email.tsx
+msgid "Backup code used"
+msgstr "Back-upcode gebruikt"
 
 #. js-lingui-explicit-id
 #: src/emails/send-email-verification-link.email.tsx
@@ -128,9 +148,30 @@ msgid "Hi {userName},"
 msgstr "Beste {userName},"
 
 #. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-backup-codes-regenerated.email.tsx
+msgid "If this was not you, change your password and generate new backup codes under Settings, Profile, Two-factor authentication."
+msgstr "Als u dit niet was, wijzig dan uw wachtwoord en genereer nieuwe back-upcodes via Instellingen, Profiel, Twee-factor-authenticatie."
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-backup-code-used.email.tsx
+msgid "If this was not you, change your password and generate new backup codes."
+msgstr "Als u dit niet was, wijzig dan uw wachtwoord en genereer nieuwe back-upcodes."
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-removed.email.tsx
+#: src/emails/two-factor-authentication-reset.email.tsx
+msgid "If this was not you, contact your workspace administrator and change your password."
+msgstr "Als jij dit niet was, neem dan contact op met je werkruimtebeheerder en wijzig je wachtwoord."
+
+#. js-lingui-explicit-id
 #: src/emails/billing-trial-converting.email.tsx
 msgid "If Twenty is working for you, you're all set — there's nothing to do. If it's not the right fit, you can cancel in one click before then and you won't be charged."
 msgstr "Als Twenty goed voor u werkt, bent u helemaal klaar — u hoeft niets te doen. Als het toch niet de juiste keuze is, kunt u het voor die tijd met één klik opzeggen en wordt er niets in rekening gebracht."
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-recovery-code-issued.email.tsx
+msgid "If you did not ask for this, contact your workspace administrator and change your password."
+msgstr "Als je dit niet hebt aangevraagd, neem dan contact op met je werkruimtebeheerder en wijzig je wachtwoord."
 
 #. js-lingui-explicit-id
 #: src/emails/server-admin-access-changed.email.tsx
@@ -184,6 +225,16 @@ msgid "Manage subscription"
 msgstr "Abonnement beheren"
 
 #. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-backup-codes-regenerated.email.tsx
+msgid "New backup codes generated"
+msgstr "Nieuwe back-upcodes gegenereerd"
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-backup-codes-regenerated.email.tsx
+msgid "New backup codes were generated for your account in {workspaceDisplayName}. Your previous backup codes no longer work."
+msgstr "Er zijn nieuwe back-upcodes gegenereerd voor uw account in {workspaceDisplayName}. Uw vorige back-upcodes werken niet meer."
+
+#. js-lingui-explicit-id
 #: src/emails/billing-subscription-renewing.email.tsx
 msgid "No action is needed if you'd like to continue. If you'd rather not renew, you can cancel anytime before then."
 msgstr "U hoeft niets te doen als u wilt doorgaan. Als u liever niet verlengt, kunt u tot die tijd op elk moment opzeggen."
@@ -234,6 +285,12 @@ msgid "Set"
 msgstr "Instellen"
 
 #. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-removed.email.tsx
+#: src/emails/two-factor-authentication-reset.email.tsx
+msgid "Set up two-factor authentication again under Settings, Profile."
+msgstr "Stel two-factor-authenticatie opnieuw in onder Instellingen, Profiel."
+
+#. js-lingui-explicit-id
 #: src/emails/password-reset-link.email.tsx
 msgid "Set your password 🗝"
 msgstr "Stel uw wachtwoord in 🗝"
@@ -247,6 +304,21 @@ msgstr "Nieuwe werkruimte starten"
 #: src/emails/test.email.tsx
 msgid "Test email"
 msgstr "Test e-mail"
+
+#. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "Thanks for registering for an account on Twenty! Before we get started, we just need to confirm that this is you. Click below to verify your email address."
+msgstr "Bedankt voor uw registratie voor een account op Twenty! Voordat we beginnen, moeten we gewoon bevestigen dat dit u bent. Klik hieronder om uw e-mailadres te verifiëren."
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-removed.email.tsx
+msgid "The authenticator for your account in {workspaceDisplayName} was removed from Settings. Your backup codes for this workspace no longer work."
+msgstr "De authenticator voor uw account in {workspaceDisplayName} is verwijderd via Instellingen. Uw back-upcodes voor deze werkruimte werken niet meer."
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-recovery-code-issued.email.tsx
+msgid "The code can be used once and expires on {formattedExpiresAt}. Using it removes your current authenticator for this workspace and signs you out of your other sessions there."
+msgstr "De code kan eenmaal worden gebruikt en verloopt op {formattedExpiresAt}. Door deze te gebruiken, verwijdert u uw huidige authenticator voor deze werkruimte en wordt u afgemeld bij uw andere sessies daar."
 
 #. js-lingui-explicit-id
 #: src/emails/password-update-notify.email.tsx
@@ -264,9 +336,34 @@ msgid "To keep your workspace and everything you've built, add a payment method 
 msgstr "Voeg een betaalmethode toe en kies een abonnement om uw werkruimte en alles wat u hebt opgebouwd te behouden."
 
 #. js-lingui-explicit-id
+#: src/components/BaseHead.tsx
+msgid "Twenty email"
+msgstr "E-mail van Twenty"
+
+#. js-lingui-explicit-id
+#: src/components/Logo.tsx
+msgid "Twenty logo"
+msgstr "Twenty-logo"
+
+#. js-lingui-explicit-id
 #: src/components/Footer.tsx
 msgid "Twenty.com, Public Benefit Corporation"
 msgstr "Twenty.com, Public Benefit Corporation"
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-recovery-code-issued.email.tsx
+msgid "Two-factor authentication recovery code issued"
+msgstr "Herstelcode voor two-factor-authenticatie uitgegeven"
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-removed.email.tsx
+msgid "Two-factor authentication removed"
+msgstr "Twee-factor-authenticatie verwijderd"
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-reset.email.tsx
+msgid "Two-factor authentication reset"
+msgstr "Two-factor-authenticatie opnieuw ingesteld"
 
 #. js-lingui-explicit-id
 #: src/components/Footer.tsx
@@ -305,6 +402,11 @@ msgid "We don't like surprise charges, so here's a friendly heads up."
 msgstr "We houden niet van onverwachte kosten, dus hierbij een vriendelijk seintje."
 
 #. js-lingui-explicit-id
+#: src/emails/send-email-verification-link.email.tsx
+msgid "We received a request to change the email address associated with your Twenty account. Click below to confirm this change."
+msgstr "We hebben een verzoek ontvangen om het e-mailadres dat aan uw Twenty-account is gekoppeld te wijzigen. Klik hieronder om deze wijziging te bevestigen."
+
+#. js-lingui-explicit-id
 #: src/components/Footer.tsx
 msgid "Website"
 msgstr "Website"
@@ -313,6 +415,17 @@ msgstr "Website"
 #: src/components/WhatIsTwenty.tsx
 msgid "What is Twenty?"
 msgstr "Wat is Twenty?"
+
+#. js-lingui-explicit-id
+#: src/emails/send-invite-link.email.tsx
+#: src/emails/validate-approved-access-domain.email.tsx
+msgid "Workspace logo"
+msgstr "Werkruimtelogo"
+
+#. js-lingui-explicit-id
+#: src/emails/two-factor-authentication-backup-code-used.email.tsx
+msgid "You can generate new backup codes under Settings, Profile, Two-factor authentication."
+msgstr "U kunt nieuwe back-upcodes genereren via Instellingen, Profiel, Twee-factor-authenticatie."
 
 #. js-lingui-explicit-id
 #: src/emails/billing-subscription-renewing.email.tsx

@@ -11,9 +11,10 @@ import { parsePhoneNumberWithError, type CountryCode } from 'libphonenumber-js';
 import { type FieldMetadataSettings } from 'twenty-shared/types';
 import {
   assertUnreachable,
+  convertCurrencyAmountToCurrencyMicros,
+  getLinkUrlNormalizer,
   isDefined,
   isEmptyObject,
-  getLinkUrlNormalizer,
   normalizeUrlOrigin,
   parseToPlainDateOrThrow,
   turnJSDateToPlainDate,
@@ -21,7 +22,6 @@ import {
 import { z } from 'zod';
 import { FieldMetadataType, RelationType } from '~/generated-metadata/graphql';
 import { castToString } from '~/utils/castToString';
-import { convertCurrencyAmountToCurrencyMicros } from '~/utils/convertCurrencyToCurrencyMicros';
 import { stripSimpleQuotesFromString } from '~/utils/string/stripSimpleQuotesFromString';
 
 type BuildRecordFromImportedStructuredRowArgs = {
@@ -60,8 +60,9 @@ const buildRelationConnectFieldRecord = (
     Record<FieldMetadataType, Record<string, ((value: any) => any) | undefined>>
   >,
 ) => {
-  if (fieldMetadataItem.relation?.type !== RelationType.MANY_TO_ONE)
+  if (fieldMetadataItem.relation?.type !== RelationType.MANY_TO_ONE) {
     return undefined;
+  }
 
   const relationConnectFields = spreadsheetImportFields.filter(
     (field) =>
@@ -70,12 +71,16 @@ const buildRelationConnectFieldRecord = (
       isNonEmptyString(importedStructuredRow[field.key]),
   );
 
-  if (relationConnectFields.length === 0) return undefined;
+  if (relationConnectFields.length === 0) {
+    return undefined;
+  }
 
   const relationConnectFieldValue = relationConnectFields.reduce(
     (acc, field) => {
       const uniqueFieldMetadataItem = field.uniqueFieldMetadataItem;
-      if (!isDefined(uniqueFieldMetadataItem)) return acc;
+      if (!isDefined(uniqueFieldMetadataItem)) {
+        return acc;
+      }
 
       if (
         isCompositeFieldType(uniqueFieldMetadataItem.type) &&
@@ -211,6 +216,7 @@ export const buildRecordFromImportedStructuredRow = ({
     [FieldMetadataType.RICH_TEXT]: {
       blocknote: castToString,
       markdown: castToString,
+      tiptap: castToString,
     },
 
     [FieldMetadataType.EMAILS]: {

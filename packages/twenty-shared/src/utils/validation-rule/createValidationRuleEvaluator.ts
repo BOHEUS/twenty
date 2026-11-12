@@ -4,9 +4,11 @@ import { type ValidationRuleEvaluationResult } from '@/types/ValidationRuleEvalu
 import { type ValidationRuleFieldDescriptor } from '@/types/ValidationRuleFieldDescriptor';
 import { buildValidationRuleEvaluationContext } from '@/utils/validation-rule/buildValidationRuleEvaluationContext';
 import { parseValidationRuleExpression } from '@/utils/validation-rule/parseValidationRuleExpression';
+import { runWithValidationRuleNow } from '@/utils/validation-rule/internal/runWithValidationRuleNow';
 
 type ValidationRuleEvaluator = (params: {
   record: Record<string, unknown>;
+  previousRecord?: Record<string, unknown>;
   now: string;
 }) => ValidationRuleEvaluationResult;
 
@@ -33,21 +35,27 @@ export const createValidationRuleEvaluator = ({
   const identifierPaths = parsedExpression.variables({ withMembers: true });
   const fieldByName = new Map(fields.map((field) => [field.name, field]));
 
-  return ({ record, now }) => {
+  return ({ record, previousRecord, now }) => {
     try {
-      const result: unknown = parsedExpression.evaluate(
-        buildValidationRuleEvaluationContext({
-          record,
-          fieldByName,
-          identifierPaths,
-          now,
-        }),
-      );
+      const result: unknown = runWithValidationRuleNow({
+        now,
+        run: () =>
+          parsedExpression.evaluate(
+            buildValidationRuleEvaluationContext({
+              record,
+              previousRecord,
+              fieldByName,
+              identifierPaths,
+              now,
+            }),
+          ),
+      });
 
       if (typeof result !== 'boolean') {
         return {
           status: 'errored',
           errorMessage: 'Expression did not return true or false',
+          errorCode: 'NON_BOOLEAN_RESULT',
         };
       }
 

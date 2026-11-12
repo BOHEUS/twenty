@@ -9,31 +9,29 @@ import { GetCoreWorkflowVersionDocument } from '~/generated/graphql';
 export const useCoreWorkflowVersionContent = ({
   coreWorkflowId,
   coreWorkflowVersionId,
-  skip,
 }: {
   coreWorkflowId: string | undefined;
   coreWorkflowVersionId: string | undefined;
-  skip: boolean;
 }): WorkflowVersion | undefined => {
   const apolloCoreClient = useApolloCoreClient();
 
-  const { data } = useQuery(GetCoreWorkflowVersionDocument, {
+  const { data, previousData } = useQuery(GetCoreWorkflowVersionDocument, {
     client: apolloCoreClient,
     fetchPolicy: 'cache-and-network',
     variables: {
       coreWorkflowVersionId: coreWorkflowVersionId ?? '',
     },
-    skip:
-      skip || !isDefined(coreWorkflowVersionId) || !isDefined(coreWorkflowId),
+    skip: !isDefined(coreWorkflowVersionId) || !isDefined(coreWorkflowId),
   });
 
-  const coreWorkflowVersion = data?.coreWorkflowVersion;
+  // While the requested version loads, the previous one of the same workflow stays current, so the editor is never left without a version
+  const coreWorkflowVersion =
+    data?.coreWorkflowVersion ?? previousData?.coreWorkflowVersion;
 
   if (
     !isDefined(coreWorkflowVersion) ||
     !isDefined(coreWorkflowId) ||
     !isDefined(coreWorkflowVersionId) ||
-    coreWorkflowVersion.id !== coreWorkflowVersionId ||
     coreWorkflowVersion.coreWorkflowId !== coreWorkflowId
   ) {
     return undefined;

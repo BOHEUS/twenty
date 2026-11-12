@@ -10,7 +10,7 @@ export const SEARCH_FIELDS_BY_STANDARD_OBJECT_NAME = {
   agentTurn: [],
   agentMessage: [],
   agentMessagePart: [],
-  agentTurnEvaluation: [],
+  agentMessageReaction: [],
   attachment: [{ name: 'name', type: FieldMetadataType.TEXT }],
   blocklist: [{ name: 'handle', type: FieldMetadataType.TEXT }],
   calendarChannelEventAssociation: [
@@ -53,6 +53,7 @@ export const SEARCH_FIELDS_BY_STANDARD_OBJECT_NAME = {
     { name: 'phones', type: FieldMetadataType.PHONES },
     { name: 'jobTitle', type: FieldMetadataType.TEXT },
   ],
+  accessGroup: [],
   recordShare: [],
   shortLink: [],
   task: [
@@ -63,8 +64,6 @@ export const SEARCH_FIELDS_BY_STANDARD_OBJECT_NAME = {
   timelineActivity: [
     { name: 'linkedRecordCachedName', type: FieldMetadataType.TEXT },
   ],
-  workflow: [{ name: 'name', type: FieldMetadataType.TEXT }],
-  workflowAutomatedTrigger: [{ name: 'id', type: FieldMetadataType.UUID }],
   workflowRun: [{ name: 'name', type: FieldMetadataType.TEXT }],
   workflowVersion: [{ name: 'name', type: FieldMetadataType.TEXT }],
   workspaceMember: [

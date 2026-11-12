@@ -5,8 +5,7 @@ import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
 
 import { type AddAgentChatThreadParticipantObjectCommand } from 'src/database/commands/upgrade-version-command/2-46/2-46-workspace-command-1790942019631-add-agent-chat-thread-participant-object.command';
 import { type BackfillAgentChatThreadInboxStateCommand } from 'src/database/commands/upgrade-version-command/2-46/2-46-workspace-command-1790942019632-backfill-agent-chat-thread-inbox-state.command';
-import { type AgentChatThreadParticipantService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread-participant.service';
-import { type AgentChatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat.service';
+import { type AddAgentChatThreadSubscriptionsCommand } from 'src/database/commands/upgrade-version-command/2-46/2-46-workspace-command-1791322315043-add-agent-chat-thread-subscriptions.command';
 import { type UpgradeCommandRegistryService } from 'src/engine/core-modules/upgrade/services/upgrade-command-registry.service';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { type WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
@@ -46,21 +45,16 @@ type StoredParticipant = {
 describe('2-46 workspace commands - agent chat thread inbox state (integration)', () => {
   let objectCommand: AddAgentChatThreadParticipantObjectCommand;
   let backfillCommand: BackfillAgentChatThreadInboxStateCommand;
+  let subscriptionsCommand: AddAgentChatThreadSubscriptionsCommand;
   let workspaceOrmManager: WorkspaceOrmManager;
+  let seededParticipantColumns: string[];
 
   const sharedThreadId = randomUUID();
   const emptyThreadId = randomUUID();
   const legacyArchivedThreadId = randomUUID();
   const deletedThreadId = randomUUID();
   const deletedAgainThreadId = randomUUID();
-  const createdBeforeUpgradeThreadId = randomUUID();
-  let beforeUpgrade: {
-    createdThreadLastActivityAt: string | null;
-    recordedLastActivityAt: Date | null;
-    participants: unknown[];
-  };
   const threadIds = [
-    createdBeforeUpgradeThreadId,
     sharedThreadId,
     emptyThreadId,
     legacyArchivedThreadId,
@@ -71,7 +65,8 @@ describe('2-46 workspace commands - agent chat thread inbox state (integration)'
   const runCommand = (
     command:
       | AddAgentChatThreadParticipantObjectCommand
-      | BackfillAgentChatThreadInboxStateCommand,
+      | BackfillAgentChatThreadInboxStateCommand
+      | AddAgentChatThreadSubscriptionsCommand,
     direction: 'up' | 'down',
   ) =>
     workspaceOrmManager.executeInWorkspaceContext(
@@ -152,6 +147,31 @@ describe('2-46 workspace commands - agent chat thread inbox state (integration)'
       [threadIds],
     );
 
+  const listParticipantColumns = async (): Promise<string[]> => {
+    const columns: { column_name: string }[] =
+      await global.testDataSource.query(
+        `SELECT column_name FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = 'agentChatThreadParticipant'
+         ORDER BY column_name`,
+        [SCHEMA],
+      );
+
+    return columns.map(({ column_name }) => column_name);
+  };
+
+  const readOwnerShares = async () => {
+    const rows: { principalId: string; workspaceMemberId: string }[] =
+      await global.testDataSource.query(
+        `SELECT share."principalId", participant."workspaceMemberId"
+         FROM ${SCHEMA}."recordShare" share
+         JOIN ${SCHEMA}."agentChatThreadParticipant" participant ON participant.id = share."recordId"
+         WHERE participant."threadId" = ANY($1) AND share."rowCause" = 'OWNER'`,
+        [threadIds],
+      );
+
+    return rows;
+  };
+
   beforeAll(async () => {
     objectCommand =
       getAppProviderByClassName<AddAgentChatThreadParticipantObjectCommand>(
@@ -161,41 +181,23 @@ describe('2-46 workspace commands - agent chat thread inbox state (integration)'
       getAppProviderByClassName<BackfillAgentChatThreadInboxStateCommand>(
         'BackfillAgentChatThreadInboxStateCommand',
       );
+    subscriptionsCommand =
+      getAppProviderByClassName<AddAgentChatThreadSubscriptionsCommand>(
+        'AddAgentChatThreadSubscriptionsCommand',
+      );
     workspaceOrmManager = getAppProviderByClassName<WorkspaceOrmManager>(
       'WorkspaceOrmManager',
+    );
+    seededParticipantColumns = await listParticipantColumns();
+
+    // 2.47 dropped the column the 2.46 commands still read
+    await global.testDataSource.query(
+      `ALTER TABLE ${SCHEMA}."agentMessage" ADD COLUMN IF NOT EXISTS "isHidden" boolean NOT NULL DEFAULT false`,
     );
 
     // What a workspace that has not run the 2.46 commands yet looks like
     await runCommand(backfillCommand, 'down');
     await runCommand(objectCommand, 'down');
-
-    const chatService =
-      getAppProviderByClassName<AgentChatService>('AgentChatService');
-    const participantService =
-      getAppProviderByClassName<AgentChatThreadParticipantService>(
-        'AgentChatThreadParticipantService',
-      );
-    const createdThread = await chatService.createThread({
-      workspaceId: SEED_APPLE_WORKSPACE_ID,
-      workspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.JANE,
-      id: createdBeforeUpgradeThreadId,
-      title: 'Created before the upgrade',
-    });
-    const { lastActivityAt } = await participantService.recordMemberActivity({
-      workspaceId: SEED_APPLE_WORKSPACE_ID,
-      workspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.JANE,
-      threadId: createdBeforeUpgradeThreadId,
-      text: 'Sent before the upgrade',
-    });
-
-    beforeUpgrade = {
-      createdThreadLastActivityAt: createdThread.lastActivityAt ?? null,
-      recordedLastActivityAt: lastActivityAt,
-      participants: await participantService.findForWorkspaceMember({
-        workspaceId: SEED_APPLE_WORKSPACE_ID,
-        workspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.JANE,
-      }),
-    };
 
     await insertThread(sharedThreadId);
     await insertThread(emptyThreadId);
@@ -277,6 +279,14 @@ describe('2-46 workspace commands - agent chat thread inbox state (integration)'
   afterAll(async () => {
     await runCommand(objectCommand, 'up');
     await runCommand(backfillCommand, 'up');
+    // The object's down dropped the subscription fields the suites that follow use
+    await runCommand(subscriptionsCommand, 'up');
+    await global.testDataSource.query(
+      `DELETE FROM ${SCHEMA}."recordShare" share
+       USING ${SCHEMA}."agentChatThreadParticipant" participant
+       WHERE participant.id = share."recordId" AND participant."threadId" = ANY($1)`,
+      [threadIds],
+    );
     await global.testDataSource.query(
       `DELETE FROM core."upgradeMigration" WHERE name = $1 AND attempt = 99 AND "workspaceId" = $2`,
       [MOVE_MIGRATION_NAME, SEED_APPLE_WORKSPACE_ID],
@@ -293,6 +303,10 @@ describe('2-46 workspace commands - agent chat thread inbox state (integration)'
       `DELETE FROM ${SCHEMA}."recordShare" WHERE "recordId" = ANY($1)`,
       [threadIds],
     );
+    await global.testDataSource.query(
+      `ALTER TABLE ${SCHEMA}."agentMessage" DROP COLUMN IF EXISTS "isHidden"`,
+    );
+    expect(await listParticipantColumns()).toEqual(seededParticipantColumns);
   });
 
   it('registers both commands in order for 2.46.0', () => {
@@ -390,6 +404,16 @@ describe('2-46 workspace commands - agent chat thread inbox state (integration)'
     expect(threads[deletedThreadId].deletedAt).toEqual(ARCHIVED_AT);
   });
 
+  it('grants each participant row to its member, and only them', async () => {
+    const participants = await readParticipants();
+    const ownerShares = await readOwnerShares();
+
+    expect(ownerShares).toHaveLength(participants.length);
+    ownerShares.forEach(({ principalId, workspaceMemberId }) =>
+      expect(principalId).toBe(workspaceMemberId),
+    );
+  });
+
   it('leaves a chat its owner deleted again after the 2.44 move in the trash', async () => {
     const threads = await readThreads();
 
@@ -415,15 +439,13 @@ describe('2-46 workspace commands - agent chat thread inbox state (integration)'
 
     expect(threads[legacyArchivedThreadId].deletedAt).toEqual(MOVE_RECORDED_AT);
     expect(threads[sharedThreadId].deletedAt).toBeNull();
+    expect(await readOwnerShares()).toEqual([]);
 
     await runCommand(backfillCommand, 'up');
 
     expect((await readThreads())[legacyArchivedThreadId].deletedAt).toBeNull();
-  });
-
-  it('keeps chats working on a workspace the upgrade has not reached yet', () => {
-    expect(beforeUpgrade.createdThreadLastActivityAt).toBeNull();
-    expect(beforeUpgrade.recordedLastActivityAt).toBeNull();
-    expect(beforeUpgrade.participants).toEqual([]);
+    expect(await readOwnerShares()).toHaveLength(
+      (await readParticipants()).length,
+    );
   });
 });

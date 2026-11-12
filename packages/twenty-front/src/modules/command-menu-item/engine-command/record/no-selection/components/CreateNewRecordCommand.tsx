@@ -6,13 +6,13 @@ import { getRecordCreationCommandType } from '@/command-menu-item/engine-command
 import { useCreateCoreWorkflow } from '@/object-core/workflows/hooks/useCreateCoreWorkflow';
 import { objectMetadataItemsSelector } from '@/object-metadata/states/objectMetadataItemsSelector';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
-import { FeatureFlagKey } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const CreateNewRecordCommand = () => {
   const {
     objectMetadataItem: contextObjectMetadataItem,
+    coreObjectName,
     recordIndexId,
     hasAnySoftDeleteFilterOnView,
     creationTargetObjectMetadataId,
@@ -23,27 +23,27 @@ export const CreateNewRecordCommand = () => {
         (item) => item.id === creationTargetObjectMetadataId,
       )
     : contextObjectMetadataItem;
-  const isWorkflowCoreIndexPageEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED,
-  );
   const { createCoreWorkflow } = useCreateCoreWorkflow();
 
+  if (
+    coreObjectName === 'workflow' &&
+    !isDefined(creationTargetObjectMetadataId)
+  ) {
+    return <HeadlessEngineCommandWrapperEffect execute={createCoreWorkflow} />;
+  }
+
   if (!isDefined(objectMetadataItem)) {
-    throw new Error('Object metadata item is required to create a record');
+    throw new Error(
+      doNotTranslate('Object metadata item is required to create a record'),
+    );
   }
 
   const commandType = getRecordCreationCommandType({
-    objectNameSingular: objectMetadataItem.nameSingular,
     contextObjectMetadataId: contextObjectMetadataItem?.id,
     recordIndexId,
     hasAnySoftDeleteFilterOnView,
     creationTargetObjectMetadataId,
-    isWorkflowCoreIndexPageEnabled,
   });
-
-  if (commandType === 'workflow') {
-    return <HeadlessEngineCommandWrapperEffect execute={createCoreWorkflow} />;
-  }
 
   return commandType === 'global' ? (
     <CreateGlobalRecordCommand objectMetadataItem={objectMetadataItem} />

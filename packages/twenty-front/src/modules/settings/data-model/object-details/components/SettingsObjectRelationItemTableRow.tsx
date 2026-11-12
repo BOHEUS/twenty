@@ -20,11 +20,8 @@ import { useLingui } from '@lingui/react/macro';
 import { type MouseEvent, useMemo } from 'react';
 import { FieldMetadataType, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import {
-  IconChevronRight,
-  IconRelationManyToMany,
-  useIcons,
-} from 'twenty-ui/icon';
+import { IconChevronRight, IconRelationManyToMany } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
 
@@ -122,7 +119,7 @@ export const SettingsObjectRelationItemTableRow = ({
 
   const relationTypeLabel = (() => {
     if (isDefined(displayRelationType) === true) {
-      return RELATION_TYPES[displayRelationType].label;
+      return t(RELATION_TYPES[displayRelationType].label);
     }
     return '';
   })();

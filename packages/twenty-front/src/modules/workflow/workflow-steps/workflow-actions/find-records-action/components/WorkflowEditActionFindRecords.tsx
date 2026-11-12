@@ -3,23 +3,20 @@ import { isNumber } from '@sniptt/guards';
 import { useEffect, useState } from 'react';
 import { QUERY_MAX_RECORDS } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
-import { HorizontalSeparator } from 'twenty-ui/primitives/layout';
-import { type JsonValue } from 'type-fest';
+import { Separator } from 'twenty-ui/primitives/layout';
 import { useDebouncedCallback } from 'use-debounce';
 
 import { useFilteredObjectMetadataItems } from '@/object-metadata/hooks/useFilteredObjectMetadataItems';
 import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
-import { turnSortsIntoOrderBy } from '@/object-record/object-sort-dropdown/utils/turnSortsIntoOrderBy';
 import { FormNumberFieldInput } from '@/object-record/record-field/ui/form-types/components/FormNumberFieldInput';
 import { RecordFilterGroupsComponentInstanceContext } from '@/object-record/record-filter-group/states/context/RecordFilterGroupsComponentInstanceContext';
 import { RecordFiltersComponentInstanceContext } from '@/object-record/record-filter/states/context/RecordFiltersComponentInstanceContext';
 import { RecordIndexContextProvider } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { useRecordIndexFieldMetadataDerivedStates } from '@/object-record/record-index/hooks/useRecordIndexFieldMetadataDerivedStates';
-import { type RecordSort } from '@/object-record/record-sort/types/RecordSort';
 import { Select } from '@/ui/input/components/Select';
 import { InputLabel } from '@/ui/input/components/internal/InputLabel/InputLabel';
 import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
-import { useWorkflowObjectSelectOptions } from '@/workflow/hooks/useWorkflowObjectSelectOptions';
+import { useObjectMetadataItemSelectOptions } from '@/object-metadata/hooks/useObjectMetadataItemSelectOptions';
 import { type WorkflowFindRecordsAction } from '@/workflow/types/Workflow';
 import { WorkflowStepBody } from '@/workflow/workflow-steps/components/WorkflowStepBody';
 import { WorkflowStepFooter } from '@/workflow/workflow-steps/components/WorkflowStepFooter';
@@ -45,14 +42,9 @@ type WorkflowEditActionFindRecordsProps = {
 type FindRecordsFormData = {
   objectNameSingular: string;
   filter?: FindRecordsActionFilter;
-  orderBy?: FindRecordsActionOrderBy;
+  orderBy?: WorkflowFindRecordsAction['settings']['input']['orderBy'];
   limit?: number | string;
   offset?: number | string;
-};
-
-type FindRecordsActionOrderBy = {
-  recordSorts?: RecordSort[];
-  gqlOperationOrderBy?: JsonValue;
 };
 
 export const WorkflowEditActionFindRecords = ({
@@ -79,14 +71,14 @@ export const WorkflowEditActionFindRecords = ({
         ? action.settings.input.offset
         : 0,
     filter: action.settings.input.filter as FindRecordsActionFilter,
-    orderBy: action.settings.input.orderBy as FindRecordsActionOrderBy,
+    orderBy: action.settings.input.orderBy,
   }));
 
   const [limitError, setLimitError] = useState<string | undefined>(undefined);
   const [offsetError, setOffsetError] = useState<string | undefined>(undefined);
   const isFormDisabled = actionOptions.readonly ?? false;
   const instanceId = `workflow-edit-action-record-find-records-${action.id}-${formData.objectNameSingular}`;
-  const objectOptions = useWorkflowObjectSelectOptions({
+  const objectOptions = useObjectMetadataItemSelectOptions({
     selectedObjectNameSingular: formData.objectNameSingular,
   });
 
@@ -131,7 +123,7 @@ export const WorkflowEditActionFindRecords = ({
               ? Math.max(0, Math.floor(updatedOffset))
               : (updatedOffset ?? 0),
             filter: updatedFilter,
-            orderBy: updatedOrderBy as Record<string, any[]> | undefined,
+            orderBy: updatedOrderBy,
           },
         },
       });
@@ -177,7 +169,7 @@ export const WorkflowEditActionFindRecords = ({
           dropdownWidth={GenericDropdownContentWidth.ExtraLarge}
         />
 
-        <HorizontalSeparator noMargin />
+        <Separator />
         {isDefined(selectedObjectMetadataItem) && (
           <div>
             <InputLabel>{t`Filter`}</InputLabel>
@@ -237,26 +229,14 @@ export const WorkflowEditActionFindRecords = ({
               <WorkflowFindRecordsSorts
                 recordSorts={formData.orderBy?.recordSorts ?? []}
                 objectMetadataItem={selectedObjectMetadataItem}
-                onChange={(sorts: RecordSort[]) => {
+                onChange={(sorts) => {
                   if (isFormDisabled === true) {
                     return;
                   }
 
-                  const gqlOperationOrderBy =
-                    sorts.length > 0
-                      ? turnSortsIntoOrderBy(
-                          selectedObjectMetadataItem,
-                          sorts,
-                          objectMetadataItems,
-                        )
-                      : undefined;
-
                   const newFormData: FindRecordsFormData = {
                     ...formData,
-                    orderBy: {
-                      recordSorts: sorts,
-                      gqlOperationOrderBy,
-                    },
+                    orderBy: { recordSorts: sorts },
                   };
 
                   setFormData(newFormData);

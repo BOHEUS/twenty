@@ -43,7 +43,9 @@ type HandlerEvent = Parameters<
   typeof scheduleRecallBotOnCallRecordingUpdateHandler
 >[0];
 
-const buildUpdateEvent = (overrides: Partial<HandlerEvent> = {}): HandlerEvent =>
+const buildUpdateEvent = (
+  overrides: Partial<HandlerEvent> = {},
+): HandlerEvent =>
   ({
     name: 'callRecording.updated',
     recordId: 'call-recording-1',
@@ -112,7 +114,7 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
     vi.stubGlobal('fetch', fetchMock);
     vi.stubEnv('RECALL_API_KEY', 'recall-api-key');
     vi.stubEnv('RECALL_REGION', 'us-west-2');
-    vi.stubEnv('CALL_RECORDER_USE_WORKSPACE_LOGO', 'false');
+    vi.stubEnv('CALL_RECORDER_STYLE', 'NONE');
     vi.stubEnv(
       'TWENTY_APP_ACCESS_TOKEN',
       buildAccessToken({ workspaceId: WORKSPACE_ID }),
@@ -167,9 +169,8 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
   it('schedules a bot when an update clears the bot id of a requested recording', async () => {
     stubPendingCallRecordingQueries();
 
-    const result = await scheduleRecallBotOnCallRecordingUpdateHandler(
-      buildUpdateEvent(),
-    );
+    const result =
+      await scheduleRecallBotOnCallRecordingUpdateHandler(buildUpdateEvent());
 
     expect(result).toEqual({
       callRecordingId: 'call-recording-1',
@@ -202,7 +203,7 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
             externalBotId: '',
           },
         },
-      } as unknown as HandlerEvent),
+      }),
     );
 
     expect(result).toEqual({
@@ -227,7 +228,7 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
             externalBotId: { before: 'recall-bot-vanished', after: '' },
           },
         },
-      } as unknown as HandlerEvent),
+      }),
     );
 
     expect(result).toEqual({
@@ -258,7 +259,7 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
             'botScheduleAttemptedAt',
             'botScheduleIdempotencyKey',
           ],
-          before: {},
+          before: { id: 'call-recording-1' },
           after: {
             id: 'call-recording-1',
             status: 'SCHEDULED',
@@ -266,7 +267,7 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
             externalBotId: null,
           },
         },
-      } as unknown as HandlerEvent),
+      }),
     );
 
     expect(result).toEqual({
@@ -282,7 +283,7 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
       buildUpdateEvent({
         properties: {
           updatedFields: ['externalBotId'],
-          before: {},
+          before: { id: 'call-recording-1' },
           after: {
             id: 'call-recording-1',
             status: 'SCHEDULED',
@@ -290,7 +291,7 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
             externalBotId: 'recall-bot-1',
           },
         },
-      } as unknown as HandlerEvent),
+      }),
     );
 
     expect(result).toEqual({
@@ -301,7 +302,7 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('defers rows with an ambiguous prior attempt to the recovery cron instead of listing bots', async () => {
+  it('defers rows with an ambiguous prior attempt to the follow-up instead of listing bots', async () => {
     queryMock.mockImplementationOnce(async () => ({
       callRecordings: buildConnection([
         {
@@ -328,15 +329,15 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
       ]),
     }));
 
-    const result = await scheduleRecallBotOnCallRecordingUpdateHandler(
-      buildUpdateEvent(),
-    );
+    const result =
+      await scheduleRecallBotOnCallRecordingUpdateHandler(buildUpdateEvent());
 
     expect(result).toEqual({
       callRecordingId: 'call-recording-1',
       result: {
         status: 'deferred',
-        reason: 'ambiguous prior attempt; the recovery cron will reconcile it',
+        reason:
+          'ambiguous prior attempt; the follow-up will look it up at Recall',
       },
     });
     expect(fetchMock).not.toHaveBeenCalled();
@@ -351,7 +352,7 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
             externalBotId: { before: null, after: 'recall-bot-1' },
           },
         },
-      } as unknown as HandlerEvent),
+      }),
     );
 
     expect(result).toEqual({
@@ -385,9 +386,8 @@ describe('scheduleRecallBotOnCallRecordingUpdateHandler', () => {
       ]),
     }));
 
-    const result = await scheduleRecallBotOnCallRecordingUpdateHandler(
-      buildUpdateEvent(),
-    );
+    const result =
+      await scheduleRecallBotOnCallRecordingUpdateHandler(buildUpdateEvent());
 
     expect(result).toEqual({
       callRecordingId: 'call-recording-1',

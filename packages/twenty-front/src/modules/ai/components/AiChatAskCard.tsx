@@ -1,30 +1,36 @@
 import { assertUnreachable } from 'twenty-shared/utils';
 
-import { AiChatEmailApprovalCard } from '@/ai/components/AiChatEmailApprovalCard';
 import { AiChatFormCard } from '@/ai/components/AiChatFormCard';
 import { AiChatQuestionCard } from '@/ai/components/AiChatQuestionCard';
+import { AiChatToolCallApprovalCard } from '@/ai/components/AiChatToolCallApprovalCard';
 import { type AgentChatPendingToolCall } from '@/ai/types/AgentChatPendingToolCall';
 
 type AiChatAskCardProps = {
   pendingToolCall: AgentChatPendingToolCall;
+  isActive?: boolean;
 };
 
-export const AiChatAskCard = ({ pendingToolCall }: AiChatAskCardProps) => {
+export const AiChatAskCard = ({
+  pendingToolCall,
+  isActive = true,
+}: AiChatAskCardProps) => {
   switch (pendingToolCall.kind) {
+    case 'question':
     case 'questions':
       return <AiChatQuestionCard pendingQuestion={pendingToolCall} />;
-    case 'emailApproval':
-      return (
-        <AiChatEmailApprovalCard
-          toolCallId={pendingToolCall.toolCallId}
-          email={pendingToolCall.email}
-        />
-      );
     case 'form':
       return (
         <AiChatFormCard
           toolCallId={pendingToolCall.toolCallId}
           fields={pendingToolCall.fields}
+        />
+      );
+    case 'toolCallApproval':
+      return (
+        <AiChatToolCallApprovalCard
+          toolCallId={pendingToolCall.toolCallId}
+          proposal={pendingToolCall.proposal}
+          isActive={isActive}
         />
       );
     default:

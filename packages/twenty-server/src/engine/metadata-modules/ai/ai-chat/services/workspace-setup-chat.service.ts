@@ -8,14 +8,18 @@ import {
   type WorkspacePersonEnrichment,
 } from 'twenty-shared/workspace';
 
-import { BillingUsageService } from 'src/engine/core-modules/billing/services/billing-usage.service';
 import { I18nService } from 'src/engine/core-modules/i18n/i18n.service';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+import { UsageQuotaAdmissionService } from 'src/engine/core-modules/usage-limit/services/usage-quota-admission.service';
+import { UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
+import { UsageResourceType } from 'src/engine/core-modules/usage/enums/usage-resource-type.enum';
 import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/user-workspace.service';
 import { type WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AgentChatThreadWorkspaceEntity } from 'src/engine/metadata-modules/ai/ai-history/standard-objects/agent-chat-thread.workspace-entity';
 import { WorkspaceSetupChatOutcome } from 'src/engine/metadata-modules/ai/ai-chat/enums/workspace-setup-chat-outcome.enum';
 import { AgentChatStreamingService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-streaming.service';
+import { AgentChatStreamRecoveryService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-stream-recovery.service';
+import { AgentChatThreadService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread.service';
 import { AgentChatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat.service';
 import { buildWorkspaceSetupChatThreadId } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-workspace-setup-chat-thread-id.util';
 import { isUniqueViolationError } from 'src/engine/metadata-modules/ai/ai-chat/utils/is-unique-violation-error.util';
@@ -47,12 +51,14 @@ export class WorkspaceSetupChatService {
 
   constructor(
     private readonly twentyConfigService: TwentyConfigService,
-    private readonly billingUsageService: BillingUsageService,
+    private readonly usageQuotaAdmissionService: UsageQuotaAdmissionService,
     private readonly aiModelRegistryService: AiModelRegistryService,
     private readonly userWorkspaceService: UserWorkspaceService,
     private readonly i18nService: I18nService,
     private readonly agentChatService: AgentChatService,
     private readonly agentChatStreamingService: AgentChatStreamingService,
+    private readonly streamRecoveryService: AgentChatStreamRecoveryService,
+    private readonly threadService: AgentChatThreadService,
     private readonly workspaceOrmManager: WorkspaceOrmManager,
   ) {}
 
@@ -104,7 +110,7 @@ export class WorkspaceSetupChatService {
       userWorkspaceId,
     });
 
-    let thread = await this.agentChatService.findWritableThread({
+    let thread = await this.threadService.findWritableThread({
       threadId,
       workspaceMemberId,
       workspaceId: workspace.id,
@@ -112,7 +118,7 @@ export class WorkspaceSetupChatService {
 
     if (isDefined(thread)) {
       if (isDefined(thread.deletedAt)) {
-        thread = await this.agentChatService.restoreThread({
+        thread = await this.threadService.restoreThread({
           threadId,
           workspaceMemberId,
           workspaceId: workspace.id,
@@ -121,7 +127,7 @@ export class WorkspaceSetupChatService {
 
       if (isNonEmptyString(thread.activeStreamId)) {
         const interruptedError =
-          await this.agentChatStreamingService.reapDeadStream({
+          await this.streamRecoveryService.reapDeadStream({
             thread,
             workspaceId: workspace.id,
           });
@@ -134,21 +140,26 @@ export class WorkspaceSetupChatService {
         }
       }
 
-      const hasConversationMessages =
-        await this.agentChatService.hasConversationMessages({
-          threadId,
-          workspaceId: workspace.id,
-        });
+      const hasMessages = await this.agentChatService.hasMessages({
+        threadId,
+        workspaceId: workspace.id,
+      });
 
-      if (hasConversationMessages) {
+      if (hasMessages) {
         return { outcome: WorkspaceSetupChatOutcome.ALREADY_STARTED, thread };
       }
     }
 
-    const hasAvailableCredits =
-      await this.billingUsageService.hasAvailableCredits(workspace.id);
+    const usageRefusal = await this.usageQuotaAdmissionService.findUsageRefusal(
+      {
+        workspaceId: workspace.id,
+        resourceType: UsageResourceType.AI,
+        operationType: UsageOperationType.AI_CHAT_TOKEN,
+        spenders: { userWorkspaceId },
+      },
+    );
 
-    if (!hasAvailableCredits) {
+    if (isDefined(usageRefusal)) {
       return { outcome: WorkspaceSetupChatOutcome.UNAVAILABLE, thread: null };
     }
 
@@ -161,32 +172,31 @@ export class WorkspaceSetupChatService {
       locale,
     });
 
-    const kickoffResult =
-      await this.agentChatStreamingService.startHiddenKickoffStream({
-        thread,
-        userWorkspaceId,
-        workspaceMemberId,
-        workspace,
-        text: buildWorkspaceSetupKickoffMessageText({
-          companyEnrichment: companyContext,
-          personEnrichment: personContext,
-          workspaceContext: {
-            workspaceDisplayName: workspace.displayName ?? null,
-            workspaceSubdomain: workspace.subdomain,
-            userEmail,
-          },
-          locale,
-        }),
-        modelId: AUTO_SELECT_MODEL_ID_BY_TIER.fast,
-      });
+    const openingTurn = await this.agentChatStreamingService.startOpeningTurn({
+      thread,
+      userWorkspaceId,
+      workspaceMemberId,
+      workspace,
+      context: buildWorkspaceSetupKickoffMessageText({
+        companyEnrichment: companyContext,
+        personEnrichment: personContext,
+        workspaceContext: {
+          workspaceDisplayName: workspace.displayName ?? null,
+          workspaceSubdomain: workspace.subdomain,
+          userEmail,
+        },
+        locale,
+      }),
+      modelId: AUTO_SELECT_MODEL_ID_BY_TIER.fast,
+    });
 
-    if (!isDefined(kickoffResult)) {
+    if (!isDefined(openingTurn)) {
       return { outcome: WorkspaceSetupChatOutcome.ALREADY_STARTED, thread };
     }
 
     tagAiChatStreamScope({
-      streamId: kickoffResult.streamId,
-      turnId: kickoffResult.turnId,
+      streamId: openingTurn.streamId,
+      turnId: openingTurn.turnId,
       threadId,
       workspaceId: workspace.id,
     });
@@ -211,7 +221,7 @@ export class WorkspaceSetupChatService {
       ._(WORKSPACE_SETUP_CHAT_THREAD_TITLE);
 
     try {
-      return await this.agentChatService.createThread({
+      return await this.threadService.createThread({
         workspaceMemberId,
         workspaceId,
         id: threadId,
@@ -220,7 +230,7 @@ export class WorkspaceSetupChatService {
     } catch (error) {
       if (isUniqueViolationError(error)) {
         const concurrentlyCreatedThread =
-          await this.agentChatService.findWritableThread({
+          await this.threadService.findWritableThread({
             threadId,
             workspaceMemberId,
             workspaceId,
@@ -264,9 +274,9 @@ export class WorkspaceSetupChatService {
       const workspaceMember =
         await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
           const workspaceMemberRepository =
-            this.workspaceOrmManager.getRepository('workspaceMember', {
-              shouldBypassPermissionChecks: true,
-            });
+            this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+              'workspaceMember',
+            );
 
           return workspaceMemberRepository.findOne({ where: { userId } });
         }, buildSystemAuthContext(workspaceId));

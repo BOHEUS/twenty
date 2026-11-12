@@ -1,3 +1,4 @@
+import { buildUniversalFlatFieldMetadataOptionsForField } from 'src/engine/metadata-modules/flat-field-metadata-option/utils/build-universal-flat-field-metadata-options-for-field.util';
 import { Injectable } from '@nestjs/common';
 
 import {
@@ -14,7 +15,10 @@ import { isDefined } from 'twenty-shared/utils';
 import { fromAgentManifestToUniversalFlatRoleTarget } from 'src/engine/core-modules/application/application-manifest/converters/from-agent-manifest-to-universal-flat-role-target.util';
 import { fromApplicationVariableManifestToUniversalFlatApplicationVariable } from 'src/engine/core-modules/application/application-manifest/converters/from-application-variable-manifest-to-universal-flat-application-variable.util';
 import { fromCommandMenuItemManifestToUniversalFlatCommandMenuItem } from 'src/engine/core-modules/application/application-manifest/converters/from-command-menu-item-manifest-to-universal-flat-command-menu-item.util';
+import { getConnectionProviderManifestLogicFunctionReferences } from 'src/engine/core-modules/application/application-manifest/utils/get-connection-provider-manifest-logic-function-references.util';
 import { fromConnectionProviderManifestToUniversalFlatConnectionProvider } from 'src/engine/core-modules/application/application-manifest/converters/from-connection-provider-manifest-to-universal-flat-connection-provider.util';
+import { fromMcpServerManifestToUniversalFlatMcpServer } from 'src/engine/core-modules/application/application-manifest/converters/from-mcp-server-manifest-to-universal-flat-mcp-server.util';
+import { fromMessagingProviderManifestToUniversalFlatMessagingProvider } from 'src/engine/core-modules/application/application-manifest/converters/from-messaging-provider-manifest-to-universal-flat-messaging-provider.util';
 import { fromFieldManifestToUniversalFlatFieldMetadata } from 'src/engine/core-modules/application/application-manifest/converters/from-field-manifest-to-universal-flat-field-metadata.util';
 import { fromFieldPermissionManifestToUniversalFlatFieldPermission } from 'src/engine/core-modules/application/application-manifest/converters/from-field-permission-manifest-to-universal-flat-field-permission.util';
 import { fromFrontComponentManifestToUniversalFlatFrontComponent } from 'src/engine/core-modules/application/application-manifest/converters/from-front-component-manifest-to-universal-flat-front-component.util';
@@ -31,6 +35,7 @@ import { fromPermissionFlagToUniversalFlatRolePermissionFlag } from 'src/engine/
 import { fromRoleManifestToUniversalFlatRole } from 'src/engine/core-modules/application/application-manifest/converters/from-role-manifest-to-universal-flat-role.util';
 import { fromRowLevelPermissionPredicateGroupManifestToUniversalFlatRowLevelPermissionPredicateGroup } from 'src/engine/core-modules/application/application-manifest/converters/from-row-level-permission-predicate-group-manifest-to-universal-flat-row-level-permission-predicate-group.util';
 import { fromRowLevelPermissionPredicateManifestToUniversalFlatRowLevelPermissionPredicate } from 'src/engine/core-modules/application/application-manifest/converters/from-row-level-permission-predicate-manifest-to-universal-flat-row-level-permission-predicate.util';
+import { fromRelatedRecordPathManifestToUniversalFlatRelatedRecordPath } from 'src/engine/core-modules/application/application-manifest/converters/from-related-record-path-manifest-to-universal-flat-related-record-path.util';
 import { fromSkillManifestToUniversalFlatSkill } from 'src/engine/core-modules/application/application-manifest/converters/from-skill-manifest-to-universal-flat-skill.util';
 import { fromTimelineActivityTypeManifestToUniversalFlatTimelineActivityType } from 'src/engine/core-modules/application/application-manifest/converters/from-timeline-activity-type-manifest-to-universal-flat-timeline-activity-type.util';
 import { fromSettingsMenuItemManifestToUniversalFlatSettingsMenuItem } from 'src/engine/core-modules/application/application-manifest/converters/from-settings-menu-item-manifest-to-universal-flat-settings-menu-item.util';
@@ -48,33 +53,32 @@ import {
 } from 'src/engine/core-modules/application/application.exception';
 import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
 import { fromAgentManifestToUniversalFlatAgent } from 'src/engine/core-modules/application/utils/from-agent-manifest-to-universal-flat-agent.util';
-import { type PlaintextString } from 'src/engine/core-modules/secret-encryption/branded-strings/plaintext-string.type';
-import { SecretEncryptionService } from 'src/engine/core-modules/secret-encryption/secret-encryption.service';
 import { createEmptyAllFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-all-flat-entity-maps.constant';
 import { type AllFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/all-flat-entity-maps.type';
+import { type UniversalFlatRowLevelPermissionPredicateGroup } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-row-level-permission-predicate-group.type';
+import { type UniversalFlatRowLevelPermissionPredicate } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-row-level-permission-predicate.type';
 import { type UniversalFlatFieldMetadata } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-field-metadata.type';
+import { buildRowLevelPermissionRules } from 'src/engine/metadata-modules/row-level-permission-predicate/utils/build-row-level-permission-rules.util';
 import { addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/utils/add-universal-flat-entity-to-universal-flat-entity-maps-through-mutation-or-throw.util';
+
+const CONNECTION_FLOW_HOOKS = new Set([
+  'identifyAccount',
+  'authorize',
+  'callback',
+]);
 
 @Injectable()
 export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
-  constructor(
-    private readonly secretEncryptionService: SecretEncryptionService,
-  ) {}
-
   compute({
     manifest,
     ownerFlatApplication,
     fromAllFlatEntityMaps,
-    isLogicFunctionPrebuiltModeEnabled,
     now,
-    workspaceId,
   }: {
     manifest: Manifest;
     ownerFlatApplication: FlatApplication;
     fromAllFlatEntityMaps: AllFlatEntityMaps;
-    isLogicFunctionPrebuiltModeEnabled: boolean;
     now: string;
-    workspaceId: string;
   }): AllFlatEntityMaps {
     const allUniversalFlatEntityMaps = createEmptyAllFlatEntityMaps();
 
@@ -114,10 +118,11 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
           },
         );
 
-        addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
-          universalFlatEntity: flatFieldMetadata,
-          universalFlatEntityMapsToMutate:
-            allUniversalFlatEntityMaps.flatFieldMetadataMaps,
+        this.addFieldMetadataAndOptions({
+          universalFlatFieldMetadata: flatFieldMetadata,
+          applicationUniversalIdentifier,
+          now,
+          allUniversalFlatEntityMaps,
         });
       }
     }
@@ -137,10 +142,11 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
             ?.isSearchable,
       });
 
-      addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
-        universalFlatEntity: flatFieldMetadata,
-        universalFlatEntityMapsToMutate:
-          allUniversalFlatEntityMaps.flatFieldMetadataMaps,
+      this.addFieldMetadataAndOptions({
+        universalFlatFieldMetadata: flatFieldMetadata,
+        applicationUniversalIdentifier,
+        now,
+        allUniversalFlatEntityMaps,
       });
     }
 
@@ -153,7 +159,9 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
     for (const flatField of Object.values(
       allUniversalFlatEntityMaps.flatFieldMetadataMaps.byUniversalIdentifier,
     )) {
-      if (!isDefined(flatField)) continue;
+      if (!isDefined(flatField)) {
+        continue;
+      }
 
       const bucket =
         fieldsByObjectUniversalIdentifier.get(
@@ -214,6 +222,14 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
       });
     }
 
+    const connectionFlowLogicFunctionUniversalIdentifiers = new Set(
+      (manifest.connectionProviders ?? []).flatMap((connectionProvider) =>
+        getConnectionProviderManifestLogicFunctionReferences(connectionProvider)
+          .filter(({ hook }) => CONNECTION_FLOW_HOOKS.has(hook))
+          .map(({ universalIdentifier }) => universalIdentifier),
+      ),
+    );
+
     for (const logicFunctionManifest of manifest.logicFunctions) {
       addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
         universalFlatEntity:
@@ -223,7 +239,7 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
             applicationSourceType,
             existingFlatLogicFunctionMaps:
               fromAllFlatEntityMaps.flatLogicFunctionMaps,
-            isPrebuiltModeEnabled: isLogicFunctionPrebuiltModeEnabled,
+            connectionFlowLogicFunctionUniversalIdentifiers,
             now,
           }),
         universalFlatEntityMapsToMutate:
@@ -231,8 +247,15 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
       });
     }
 
-    const settingsFrontComponentUniversalIdentifier =
-      manifest.application.settingsFrontComponent?.universalIdentifier;
+    const settingsFrontComponentUniversalIdentifiers = new Set(
+      [
+        manifest.application.settingsFrontComponent?.universalIdentifier,
+        ...(manifest.settingsMenuItems ?? []).map(
+          (settingsMenuItemManifest) =>
+            settingsMenuItemManifest.frontComponentUniversalIdentifier,
+        ),
+      ].filter(isDefined),
+    );
 
     for (const frontComponentManifest of manifest.frontComponents) {
       addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
@@ -241,8 +264,9 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
             frontComponentManifest,
             applicationUniversalIdentifier,
             isSettingsFrontComponent:
-              frontComponentManifest.universalIdentifier ===
-              settingsFrontComponentUniversalIdentifier,
+              settingsFrontComponentUniversalIdentifiers.has(
+                frontComponentManifest.universalIdentifier,
+              ),
             now,
           }),
         universalFlatEntityMapsToMutate:
@@ -261,6 +285,44 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
           }),
         universalFlatEntityMapsToMutate:
           allUniversalFlatEntityMaps.flatConnectionProviderMaps,
+      });
+    }
+
+    for (const messagingProviderManifest of manifest.messagingProviders ?? []) {
+      addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
+        universalFlatEntity:
+          fromMessagingProviderManifestToUniversalFlatMessagingProvider({
+            messagingProviderManifest,
+            applicationUniversalIdentifier,
+            now,
+          }),
+        universalFlatEntityMapsToMutate:
+          allUniversalFlatEntityMaps.flatMessagingProviderMaps,
+      });
+    }
+
+    for (const mcpServerManifest of manifest.mcpServers ?? []) {
+      addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
+        universalFlatEntity: fromMcpServerManifestToUniversalFlatMcpServer({
+          mcpServerManifest,
+          applicationUniversalIdentifier,
+          now,
+        }),
+        universalFlatEntityMapsToMutate:
+          allUniversalFlatEntityMaps.flatMcpServerMaps,
+      });
+    }
+
+    for (const relatedRecordPathManifest of manifest.relatedRecordPaths ?? []) {
+      addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
+        universalFlatEntity:
+          fromRelatedRecordPathManifestToUniversalFlatRelatedRecordPath({
+            relatedRecordPathManifest,
+            applicationUniversalIdentifier,
+            now,
+          }),
+        universalFlatEntityMapsToMutate:
+          allUniversalFlatEntityMaps.flatRelatedRecordPathMaps,
       });
     }
 
@@ -332,35 +394,76 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
         });
       }
 
-      for (const rowLevelPermissionPredicateGroupManifest of roleManifest.rowLevelPermissionPredicateGroups ??
-        []) {
+      const universalFlatPredicateGroups = (
+        roleManifest.rowLevelPermissionPredicateGroups ?? []
+      ).map((rowLevelPermissionPredicateGroupManifest) =>
+        fromRowLevelPermissionPredicateGroupManifestToUniversalFlatRowLevelPermissionPredicateGroup(
+          {
+            rowLevelPermissionPredicateGroupManifest,
+            roleUniversalIdentifier: roleManifest.universalIdentifier,
+            applicationUniversalIdentifier,
+            now,
+          },
+        ),
+      );
+      const universalFlatPredicates = (
+        roleManifest.rowLevelPermissionPredicates ?? []
+      ).map((rowLevelPermissionPredicateManifest) =>
+        fromRowLevelPermissionPredicateManifestToUniversalFlatRowLevelPermissionPredicate(
+          {
+            rowLevelPermissionPredicateManifest,
+            roleUniversalIdentifier: roleManifest.universalIdentifier,
+            applicationUniversalIdentifier,
+            now,
+          },
+        ),
+      );
+      const {
+        rules,
+        ruleUniversalIdentifierByPredicateGroupUniversalIdentifier,
+        ruleUniversalIdentifierByPredicateUniversalIdentifier,
+      } = buildRowLevelPermissionRules({
+        predicateGroups: universalFlatPredicateGroups,
+        predicates: universalFlatPredicates,
+        now,
+      });
+
+      for (const rule of rules) {
         addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
-          universalFlatEntity:
-            fromRowLevelPermissionPredicateGroupManifestToUniversalFlatRowLevelPermissionPredicateGroup(
-              {
-                rowLevelPermissionPredicateGroupManifest,
-                roleUniversalIdentifier: roleManifest.universalIdentifier,
-                applicationUniversalIdentifier,
-                now,
-              },
-            ),
+          universalFlatEntity: rule,
+          universalFlatEntityMapsToMutate:
+            allUniversalFlatEntityMaps.flatRowLevelPermissionRuleMaps,
+        });
+      }
+
+      for (const universalFlatPredicateGroup of universalFlatPredicateGroups) {
+        const linkedPredicateGroup: UniversalFlatRowLevelPermissionPredicateGroup =
+          {
+            ...universalFlatPredicateGroup,
+            rowLevelPermissionRuleUniversalIdentifier:
+              ruleUniversalIdentifierByPredicateGroupUniversalIdentifier.get(
+                universalFlatPredicateGroup.universalIdentifier,
+              ) ?? null,
+          };
+
+        addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
+          universalFlatEntity: linkedPredicateGroup,
           universalFlatEntityMapsToMutate:
             allUniversalFlatEntityMaps.flatRowLevelPermissionPredicateGroupMaps,
         });
       }
 
-      for (const rowLevelPermissionPredicateManifest of roleManifest.rowLevelPermissionPredicates ??
-        []) {
+      for (const universalFlatPredicate of universalFlatPredicates) {
+        const linkedPredicate: UniversalFlatRowLevelPermissionPredicate = {
+          ...universalFlatPredicate,
+          rowLevelPermissionRuleUniversalIdentifier:
+            ruleUniversalIdentifierByPredicateUniversalIdentifier.get(
+              universalFlatPredicate.universalIdentifier,
+            ) ?? null,
+        };
+
         addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
-          universalFlatEntity:
-            fromRowLevelPermissionPredicateManifestToUniversalFlatRowLevelPermissionPredicate(
-              {
-                rowLevelPermissionPredicateManifest,
-                roleUniversalIdentifier: roleManifest.universalIdentifier,
-                applicationUniversalIdentifier,
-                now,
-              },
-            ),
+          universalFlatEntity: linkedPredicate,
           universalFlatEntityMapsToMutate:
             allUniversalFlatEntityMaps.flatRowLevelPermissionPredicateMaps,
         });
@@ -598,17 +701,17 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
       manifest.application.applicationVariables ?? {},
     )) {
       const type = applicationVariableManifest.type ?? FieldMetadataType.TEXT;
+      const isSecret = applicationVariableManifest.isSecret;
 
-      const plaintextValue =
-        'value' in applicationVariableManifest
+      const defaultValue =
+        !isSecret &&
+        'value' in applicationVariableManifest &&
+        isDefined(applicationVariableManifest.value)
           ? serializeApplicationVariableValue(
               applicationVariableManifest.value,
               type,
             )
-          : '';
-
-      const isSecret = applicationVariableManifest.isSecret;
-      const rawValue = isSecret ? '' : plaintextValue;
+          : null;
 
       addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
         universalFlatEntity:
@@ -616,10 +719,7 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
             key,
             universalIdentifier:
               applicationVariableManifest.universalIdentifier,
-            encryptedValue: this.secretEncryptionService.encryptVersioned(
-              rawValue as PlaintextString,
-              { workspaceId },
-            ),
+            defaultValue,
             description: applicationVariableManifest.description,
             label: applicationVariableManifest.label,
             isSecret,
@@ -627,6 +727,7 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
             isRequired: applicationVariableManifest.isRequired,
             type,
             options: applicationVariableManifest.options,
+            scope: applicationVariableManifest.scope,
             applicationUniversalIdentifier,
             now,
           }),
@@ -689,6 +790,50 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
     }
 
     return allUniversalFlatEntityMaps;
+  }
+
+  private addFieldMetadataAndOptions({
+    universalFlatFieldMetadata,
+    applicationUniversalIdentifier,
+    now,
+    allUniversalFlatEntityMaps,
+  }: {
+    universalFlatFieldMetadata: UniversalFlatFieldMetadata;
+    applicationUniversalIdentifier: string;
+    now: string;
+    allUniversalFlatEntityMaps: AllFlatEntityMaps;
+  }): void {
+    addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
+      universalFlatEntity: universalFlatFieldMetadata,
+      universalFlatEntityMapsToMutate:
+        allUniversalFlatEntityMaps.flatFieldMetadataMaps,
+    });
+
+    for (const universalFlatFieldMetadataOption of buildUniversalFlatFieldMetadataOptionsForField(
+      {
+        universalFlatFieldMetadata,
+        applicationUniversalIdentifier,
+        now,
+      },
+    )) {
+      // An option id reused across fields keeps its first field's row.
+      if (
+        isDefined(
+          allUniversalFlatEntityMaps.flatFieldMetadataOptionMaps
+            .byUniversalIdentifier[
+            universalFlatFieldMetadataOption.universalIdentifier
+          ],
+        )
+      ) {
+        continue;
+      }
+
+      addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
+        universalFlatEntity: universalFlatFieldMetadataOption,
+        universalFlatEntityMapsToMutate:
+          allUniversalFlatEntityMaps.flatFieldMetadataOptionMaps,
+      });
+    }
   }
 
   private addPageLayoutTab({

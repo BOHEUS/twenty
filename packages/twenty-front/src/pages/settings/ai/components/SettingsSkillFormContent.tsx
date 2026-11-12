@@ -1,16 +1,16 @@
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
 import { SettingsPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
-import { IconInfoCircle, IconRefresh, useIcons } from 'twenty-ui/icon';
+import { Section } from 'twenty-ui/components/layout';
+import { IconInfoCircle, IconRefresh } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
+import { Collapsible } from 'twenty-ui/primitives/layout';
 import { Card, Tooltip } from 'twenty-ui/primitives/surfaces';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 
 import { FormAdvancedTextFieldInput } from '@/advanced-text-editor/components/FormAdvancedTextFieldInput';
 import { AI_INSTRUCTIONS_EDITOR_PROFILE } from '@/ai/constants/AiInstructionsEditorProfile';
-import { AdvancedSettingsWrapper } from '@/settings/components/AdvancedSettingsWrapper';
 import { SaveAndCancelButtons } from '@/settings/components/SaveAndCancelButtons/SaveAndCancelButtons';
 import { SettingsEditableTitle } from '@/settings/components/SettingsEditableTitle';
 import { SettingsOptionCardContentSwitch } from '@/settings/components/SettingsOptions/SettingsOptionCardContentSwitch';
@@ -27,7 +27,9 @@ import { useSettingsSkillSave } from '~/pages/settings/ai/hooks/useSettingsSkill
 import { type SettingsSkillFormValues } from '~/pages/settings/ai/types/SettingsSkillFormValues';
 import { getSettingsAiBreadcrumbLinks } from '~/pages/settings/ai/utils/getSettingsAiBreadcrumbLinks';
 import { getSettingsSkillInitialFormValues } from '~/pages/settings/ai/utils/getSettingsSkillInitialFormValues';
-import { computeMetadataNameFromLabel } from '~/pages/settings/data-model/utils/computeMetadataNameFromLabel';
+import { computeMetadataNameFromLabel } from '@/object-metadata/utils/computeMetadataNameFromLabel';
+import { useGetIsMetadataItemCustom } from '@/object-metadata/hooks/useGetIsMetadataItemCustom';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledFormContainer = styled.div`
   display: flex;
@@ -45,15 +47,8 @@ const StyledNameContainer = styled.div`
   flex: 1;
 `;
 
-const StyledAdvancedSettingsOuterContainer = styled.div`
+const StyledApiNameInputContainer = styled.div`
   padding-top: ${themeCssVariables.spacing[4]};
-`;
-
-const StyledAdvancedSettingsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${themeCssVariables.spacing[4]};
-  width: 100%;
 `;
 
 type SettingsSkillFormContentProps = {
@@ -63,12 +58,15 @@ type SettingsSkillFormContentProps = {
 export const SettingsSkillFormContent = ({
   skill,
 }: SettingsSkillFormContentProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
   const { getIcon } = useIcons();
   const navigate = useNavigateSettings();
 
+  const getIsMetadataItemCustom = useGetIsMetadataItemCustom();
+
   const isCreateMode = !isDefined(skill);
-  const isReadonlyMode = isDefined(skill) && !skill.isCustom;
+  const isReadonlyMode = isDefined(skill) && !getIsMetadataItemCustom(skill);
 
   const [initialFormValues] = useState(() =>
     getSettingsSkillInitialFormValues(skill),
@@ -122,13 +120,6 @@ export const SettingsSkillFormContent = ({
   };
 
   const breadcrumbText = isDefined(skill) ? skill.label : t`New Skill`;
-
-  const isNameEditEnabled =
-    !isReadonlyMode && !formValues.isLabelSyncedWithName;
-
-  const apiNameTooltipText = formValues.isLabelSyncedWithName
-    ? t`Deactivate "Synchronize Label and API Name" to set a custom API name`
-    : t`Input must be in camel case and cannot start with a number`;
 
   const title = isCreateMode ? (
     t`New Skill`
@@ -219,52 +210,52 @@ export const SettingsSkillFormContent = ({
               minHeight={300}
             />
 
-            <AdvancedSettingsWrapper hideDot>
-              <StyledAdvancedSettingsOuterContainer>
-                <StyledAdvancedSettingsContainer>
-                  <SettingsTextInput
-                    instanceId="skill-api-name"
-                    label={t`API Name`}
-                    placeholder={t`mySkill`}
-                    value={formValues.name}
-                    onChange={(value) => handleFieldChange('name', value)}
-                    disabled={!isNameEditEnabled}
-                    fullWidth
-                    RightIcon={() =>
-                      apiNameTooltipText && (
-                        <Tooltip
-                          content={apiNameTooltipText}
-                          sideOffset={5}
-                          side="bottom"
-                          positionMethod="fixed"
-                          delay={TooltipDelay.shortDelay}
-                        >
-                          <IconInfoCircle
-                            id="info-circle-id-skill-name"
-                            size={theme.icon.size.md}
-                            color={theme.font.color.tertiary}
-                            style={{ outline: 'none' }}
-                          />
-                        </Tooltip>
-                      )
+            {!isReadonlyMode && (
+              <div>
+                <Card.Root>
+                  <SettingsOptionCardContentSwitch
+                    Icon={IconRefresh}
+                    title={t`Synchronize Label and API Name`}
+                    description={t`Should changing the label also change the API name?`}
+                    checked={formValues.isLabelSyncedWithName}
+                    onChange={(value) =>
+                      handleFieldChange('isLabelSyncedWithName', value)
                     }
                   />
-                  <Card.Root rounded>
-                    <SettingsOptionCardContentSwitch
-                      Icon={IconRefresh}
-                      title={t`Synchronize Label and API Name`}
-                      description={t`Should changing the label also change the API name?`}
-                      checked={formValues.isLabelSyncedWithName}
-                      disabled={isReadonlyMode}
-                      advancedMode
-                      onChange={(value) =>
-                        handleFieldChange('isLabelSyncedWithName', value)
-                      }
-                    />
-                  </Card.Root>
-                </StyledAdvancedSettingsContainer>
-              </StyledAdvancedSettingsOuterContainer>
-            </AdvancedSettingsWrapper>
+                </Card.Root>
+                <Collapsible.Root open={!formValues.isLabelSyncedWithName}>
+                  <Collapsible.Panel
+                    dimension="height"
+                    containAnimation={false}
+                  >
+                    <StyledApiNameInputContainer>
+                      <SettingsTextInput
+                        instanceId="skill-api-name"
+                        label={t`API Name`}
+                        placeholder={t`mySkill`}
+                        value={formValues.name}
+                        onChange={(value) => handleFieldChange('name', value)}
+                        fullWidth
+                        RightIcon={() => (
+                          <Tooltip
+                            content={t`Input must be in camel case and cannot start with a number`}
+                            sideOffset={5}
+                            side="bottom"
+                            positionMethod="fixed"
+                            delay={TooltipDelay.shortDelay}
+                          >
+                            <IconInfoCircle
+                              size={theme.icon.size.md}
+                              color={theme.font.color.tertiary}
+                            />
+                          </Tooltip>
+                        )}
+                      />
+                    </StyledApiNameInputContainer>
+                  </Collapsible.Panel>
+                </Collapsible.Root>
+              </div>
+            )}
           </StyledFormContainer>
         </Section.Root>
 

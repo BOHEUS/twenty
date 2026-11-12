@@ -14,7 +14,7 @@ import { css } from '@linaria/core';
 import { useLingui } from '@lingui/react/macro';
 import { useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppPath, CoreObjectNameSingular } from 'twenty-shared/types';
+import { AppPath, StandardObjectNameSingular } from 'twenty-shared/types';
 import { getAppPath, isDefined } from 'twenty-shared/utils';
 import { Avatar } from 'twenty-ui/primitives/data-display';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
@@ -23,10 +23,10 @@ import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 
 // The card brings its own surface, so the tooltip only contributes the shadow.
 const previewTooltipClass = css`
-  background: transparent !important;
-  border-radius: ${themeCssVariables.border.radius.md} !important;
-  box-shadow: ${themeCssVariables.boxShadow.strong} !important;
-  padding: 0 !important;
+  background: transparent;
+  border-radius: ${themeCssVariables.border.radius.md};
+  box-shadow: ${themeCssVariables.boxShadow.strong};
+  padding: 0;
 `;
 
 export const SidePanelSearchRecordsPage = () => {
@@ -62,16 +62,16 @@ export const SidePanelSearchRecordsPage = () => {
           <SidePanelGroup heading={t`Results`}>
             {searchResultItems.map((item) => {
               const isTaskOrNote = [
-                CoreObjectNameSingular.Task,
-                CoreObjectNameSingular.Note,
-              ].includes(item.objectNameSingular as CoreObjectNameSingular);
+                StandardObjectNameSingular.Task,
+                StandardObjectNameSingular.Note,
+              ].includes(item.objectNameSingular as StandardObjectNameSingular);
 
               const handleClick = () => {
                 if (isTaskOrNote) {
                   openRecordInSidePanel({
                     recordId: item.recordId,
                     objectNameSingular:
-                      item.objectNameSingular as CoreObjectNameSingular,
+                      item.objectNameSingular as StandardObjectNameSingular,
                   });
                 } else {
                   closeCommandMenu();
@@ -121,21 +121,26 @@ export const SidePanelSearchRecordsPage = () => {
 
       {shouldDisplayPreview && (
         <Tooltip.Root key={previewedItem.id} open>
-          <Tooltip.Popup
-            anchor={previewAnchorRef}
-            side="left"
-            align="start"
-            sideOffset={16}
-            className={previewTooltipClass}
-            maxWidth={`${SIDE_PANEL_SEARCH_RECORD_PREVIEW_WIDTH}px`}
-          >
-            <SidePanelSearchRecordPreviewCard
-              key={previewedItem.recordId}
-              objectNameSingular={previewedItem.objectNameSingular}
-              recordId={previewedItem.recordId}
-              label={previewedItem.label}
-            />
-          </Tooltip.Popup>
+          <Tooltip.Portal>
+            <Tooltip.Positioner
+              anchor={previewAnchorRef}
+              side="left"
+              align="start"
+              sideOffset={16}
+            >
+              <Tooltip.Popup
+                maxWidth={SIDE_PANEL_SEARCH_RECORD_PREVIEW_WIDTH}
+                className={previewTooltipClass}
+              >
+                <SidePanelSearchRecordPreviewCard
+                  key={previewedItem.recordId}
+                  objectNameSingular={previewedItem.objectNameSingular}
+                  recordId={previewedItem.recordId}
+                  label={previewedItem.label}
+                />
+              </Tooltip.Popup>
+            </Tooltip.Positioner>
+          </Tooltip.Portal>
         </Tooltip.Root>
       )}
     </>

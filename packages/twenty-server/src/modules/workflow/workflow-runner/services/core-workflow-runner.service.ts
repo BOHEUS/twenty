@@ -3,7 +3,6 @@ import { Injectable, Logger } from '@nestjs/common';
 import { type ActorMetadata } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
-import { ApplicationService } from 'src/engine/core-modules/application/application.service';
 import { BillingUsageService } from 'src/engine/core-modules/billing/services/billing-usage.service';
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
@@ -25,7 +24,9 @@ import {
   WorkflowRunEnqueueJob,
   type WorkflowRunEnqueueJobData,
 } from 'src/modules/workflow/workflow-runner/workflow-run-queue/jobs/workflow-run-enqueue.job';
+import { WorkflowRunEnqueueWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run-queue/workspace-services/workflow-run-enqueue.workspace-service';
 import { WorkflowThrottlingWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run-queue/workspace-services/workflow-throttling.workspace-service';
+import { WorkflowRunJobScopeWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run/workflow-run-job-scope.workspace-service';
 import { WorkflowRunWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run/workflow-run.workspace-service';
 import { WorkflowTriggerType } from 'src/modules/workflow/workflow-trigger/types/workflow-trigger.type';
 
@@ -40,7 +41,8 @@ export class CoreWorkflowRunnerService {
     private readonly billingUsageService: BillingUsageService,
     private readonly workflowThrottlingWorkspaceService: WorkflowThrottlingWorkspaceService,
     private readonly metricsService: MetricsService,
-    private readonly applicationService: ApplicationService,
+    private readonly workflowRunJobScopeWorkspaceService: WorkflowRunJobScopeWorkspaceService,
+    private readonly workflowRunEnqueueWorkspaceService: WorkflowRunEnqueueWorkspaceService,
     @InjectMessageQueue(MessageQueue.workflowQueue)
     private readonly messageQueueService: MessageQueueService,
   ) {}
@@ -92,9 +94,7 @@ export class CoreWorkflowRunnerService {
 
     if (
       !isDefined(workflow) ||
-      workflowVersion.workflowId !== workflow.workspaceWorkflowId ||
-      isDefined(workflow.workspaceWorkflowId) !==
-        isDefined(workspaceWorkflowVersionId)
+      workflowVersion.workflowId !== workflow.workspaceWorkflowId
     ) {
       throw new WorkflowRunException(
         'Core workflow not found',
@@ -119,23 +119,14 @@ export class CoreWorkflowRunnerService {
       : isManualTrigger
         ? WorkflowRunStatus.ENQUEUED
         : WorkflowRunStatus.NOT_STARTED;
-    const { workspaceCustomFlatApplication, twentyStandardFlatApplication } =
-      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
-        { workspaceId },
-      );
     const createdBy = buildWorkflowRunCreatedBy({
       source,
       workflowApplicationId: workflow.applicationId,
-      workspaceOwnedApplicationIds: [
-        workspaceCustomFlatApplication.id,
-        twentyStandardFlatApplication.id,
-      ],
     });
     const createdWorkflowRunId =
       await this.workflowRunWorkspaceService.createCoreWorkflowRun({
         coreWorkflowId: workflow.id,
         coreWorkflowVersionId: workflowVersion.id,
-        workspaceWorkflowId: workflow.workspaceWorkflowId,
         workspaceWorkflowVersionId,
         workflowName: workflow.name,
         trigger: workflowVersion.triggers[0],
@@ -153,11 +144,17 @@ export class CoreWorkflowRunnerService {
     }
 
     if (isManualTrigger) {
-      await this.messageQueueService.add<RunWorkflowJobData>(
-        RunWorkflowJob.name,
-        { workspaceId, workflowRunId: createdWorkflowRunId },
-        buildRunWorkflowJobOptions(createdWorkflowRunId),
-      );
+      const scope =
+        await this.workflowRunJobScopeWorkspaceService.resolveForCoreWorkflow({
+          workspaceId,
+          coreWorkflowId: workflow.id,
+        });
+
+      await this.workflowRunEnqueueWorkspaceService.enqueueRunOrFailIt({
+        workspaceId,
+        workflowRunId: createdWorkflowRunId,
+        scope,
+      });
     } else {
       await this.workflowThrottlingWorkspaceService.increaseWorkflowRunNotStartedCount(
         workspaceId,
@@ -165,6 +162,10 @@ export class CoreWorkflowRunnerService {
       await this.messageQueueService.add<WorkflowRunEnqueueJobData>(
         WorkflowRunEnqueueJob.name,
         { workspaceId, isCacheMode: true },
+        {
+          workspaceId,
+          isWorkspaceJob: true,
+        },
       );
     }
 

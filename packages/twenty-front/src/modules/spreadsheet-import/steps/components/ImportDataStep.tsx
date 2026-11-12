@@ -1,4 +1,4 @@
-import { Dialog } from 'twenty-ui/primitives/surfaces';
+import { SpreadsheetImportStepBody } from '@/spreadsheet-import/components/SpreadsheetImportStepBody';
 import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
 import { StepNavigationButton } from '@/spreadsheet-import/components/StepNavigationButton';
 import { useSpreadsheetImportInternal } from '@/spreadsheet-import/hooks/useSpreadsheetImportInternal';
@@ -6,8 +6,8 @@ import { spreadsheetImportCreatedRecordsProgressState } from '@/spreadsheet-impo
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
 import { themeCssVariables } from 'twenty-ui/theme';
-import { t } from '@lingui/core/macro';
 import { Loader } from 'twenty-ui/primitives/feedback';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledHeader = styled.span`
   color: ${themeCssVariables.font.color.primary};
@@ -30,6 +30,7 @@ type ImportDataStepProps = {
 export const ImportDataStep = ({
   recordsToImportCount,
 }: ImportDataStepProps) => {
+  const { t } = useLingui();
   const { onClose } = useSpreadsheetImportInternal();
   const spreadsheetImportCreatedRecordsProgress = useAtomStateValue(
     spreadsheetImportCreatedRecordsProgressState,
@@ -43,20 +44,11 @@ export const ImportDataStep = ({
 
   return (
     <>
-      <Dialog.Body
-        style={{
-          display: 'flex',
-          flex: '1 1 0%',
-          flexDirection: 'column',
-          padding: 0,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <SpreadsheetImportStepBody isCenteredHorizontally isCenteredVertically>
         <StyledHeader>{t`Importing Data ...`}</StyledHeader>
         <StyledDescription>{t`${formattedCreatedRecordsProgress} out of ${formattedRecordsToImportCount} records imported.`}</StyledDescription>
         <Loader />
-      </Dialog.Body>
+      </SpreadsheetImportStepBody>
       <StepNavigationButton onBack={onClose} backTitle={t`Cancel`} />
     </>
   );

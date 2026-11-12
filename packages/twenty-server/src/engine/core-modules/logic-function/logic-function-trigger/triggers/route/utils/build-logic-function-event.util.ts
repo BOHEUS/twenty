@@ -4,6 +4,7 @@ import { type LogicFunctionEvent } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { isObject, isString } from '@sniptt/guards';
 
+import { type SERVER_ROUTE_FORWARDABLE_CREDENTIAL_HEADER_NAME } from 'src/engine/metadata-modules/logic-function/constants/server-route-forwardable-credential-header-name.constant';
 import { isCredentialRequestHeaderName } from 'src/engine/metadata-modules/logic-function/utils/is-credential-request-header-name.util';
 
 const normalizeHeaderValue = (
@@ -15,10 +16,12 @@ export const filterRequestHeaders = ({
   requestHeaders,
   forwardedRequestHeaders,
   forwardAllHeaders = false,
+  forwardableCredentialHeaderName,
 }: {
   requestHeaders: Request['headers'];
   forwardedRequestHeaders: string[];
   forwardAllHeaders?: boolean;
+  forwardableCredentialHeaderName?: typeof SERVER_ROUTE_FORWARDABLE_CREDENTIAL_HEADER_NAME;
 }): Record<string, string | undefined> => {
   if (forwardAllHeaders) {
     const allHeaders: Record<string, string | undefined> = {};
@@ -39,7 +42,11 @@ export const filterRequestHeaders = ({
 
   const lowercaseForwardedHeaders = forwardedRequestHeaders
     .map((headerName) => headerName.toLowerCase())
-    .filter((headerName) => !isCredentialRequestHeaderName(headerName));
+    .filter(
+      (headerName) =>
+        !isCredentialRequestHeaderName(headerName) ||
+        headerName === forwardableCredentialHeaderName,
+    );
 
   const filteredHeaders: Record<string, string | undefined> = {};
 
@@ -54,8 +61,10 @@ export const filterRequestHeaders = ({
   return filteredHeaders;
 };
 
-export const extractRawBody = (request: Request): string | undefined => {
-  const rawBody = (request as RawBodyRequest<Request>).rawBody;
+export const extractRawBody = (
+  request: Pick<RawBodyRequest<Request>, 'rawBody'>,
+): string | undefined => {
+  const rawBody = request.rawBody;
 
   if (!isDefined(rawBody)) {
     return undefined;
@@ -64,7 +73,7 @@ export const extractRawBody = (request: Request): string | undefined => {
   return rawBody.toString('utf-8');
 };
 
-export const extractBody = (request: Request): object | null => {
+export const extractBody = (request: Pick<Request, 'body'>): object | null => {
   if (!isDefined(request.body)) {
     return null;
   }
@@ -93,7 +102,7 @@ export const extractBody = (request: Request): object | null => {
 };
 
 export const normalizeQueryStringParameters = (
-  query: Request['query'],
+  query: Record<string, unknown>,
 ): Record<string, string | undefined> => {
   const normalized: Record<string, string | undefined> = {};
 
@@ -143,12 +152,17 @@ export const buildLogicFunctionEvent = ({
   pathParameters,
   forwardedRequestHeaders,
   forwardAllHeaders = false,
+  forwardableCredentialHeaderName,
   userWorkspaceId,
 }: {
-  request: Request;
+  request: Pick<
+    RawBodyRequest<Request>,
+    'headers' | 'query' | 'body' | 'method' | 'path' | 'rawBody'
+  >;
   pathParameters: Record<string, string | string[] | undefined>;
   forwardedRequestHeaders: string[];
   forwardAllHeaders?: boolean;
+  forwardableCredentialHeaderName?: typeof SERVER_ROUTE_FORWARDABLE_CREDENTIAL_HEADER_NAME;
   userWorkspaceId: string | null;
 }): LogicFunctionEvent => {
   const rawBody = extractRawBody(request);
@@ -158,6 +172,7 @@ export const buildLogicFunctionEvent = ({
       requestHeaders: request.headers,
       forwardedRequestHeaders,
       forwardAllHeaders,
+      forwardableCredentialHeaderName,
     }),
     queryStringParameters: normalizeQueryStringParameters(request.query),
     pathParameters: normalizePathParameters(pathParameters),

@@ -1,4 +1,3 @@
-import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { isString } from '@sniptt/guards';
 import { type DynamicToolUIPart, type ToolUIPart } from 'ai';
@@ -8,26 +7,10 @@ import {
 } from 'twenty-shared/ai';
 import { isDefined } from 'twenty-shared/utils';
 import { IconListDetails } from 'twenty-ui/icon';
-import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 
-import {
-  StyledAiChatAskStatusContainer,
-  StyledAiChatAskStatusMessage,
-} from '@/ai/components/AiChatAskStyledComponents';
-import { ShimmeringText } from '@/ai/components/ShimmeringText';
-
-const StyledContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${themeCssVariables.spacing['0.5']};
-  min-width: 0;
-`;
-
-const StyledDetail = styled.span`
-  color: ${themeCssVariables.font.color.secondary};
-  font-size: ${themeCssVariables.font.size.sm};
-  overflow-wrap: anywhere;
-`;
+import { AiChatAskStatusRow } from '@/ai/components/AiChatAskStatusRow';
+import { useIsAgentChatToolCallAskedInComposer } from '@/ai/hooks/useIsAgentChatToolCallAskedInComposer';
+import { StyledAiChatAskStatusDetail } from '@/ai/components/StyledAiChatAskStatusDetail';
 
 export const AiChatFormStatusRenderer = ({
   toolPart,
@@ -37,7 +20,9 @@ export const AiChatFormStatusRenderer = ({
   isStreaming: boolean;
 }) => {
   const { t } = useLingui();
-  const theme = useTheme();
+  const isAskedInComposer = useIsAgentChatToolCallAskedInComposer(
+    toolPart.toolCallId,
+  );
 
   const fields =
     (toolPart.input as Partial<RequestFormToolInput> | undefined)?.fields ?? [];
@@ -53,33 +38,27 @@ export const AiChatFormStatusRenderer = ({
     skipped: t`Form skipped`,
   };
 
-  return (
-    <StyledAiChatAskStatusContainer>
-      <IconListDetails size={theme.icon.size.sm} />
-      <StyledContent>
-        {isStreaming && status === 'pending' ? (
-          <ShimmeringText>
-            <StyledAiChatAskStatusMessage>
-              {messageByStatus[status]}
-            </StyledAiChatAskStatusMessage>
-          </ShimmeringText>
-        ) : (
-          <StyledAiChatAskStatusMessage>
-            {messageByStatus[status]}
-          </StyledAiChatAskStatusMessage>
-        )}
-        {fields
-          .filter((field) => isDefined(values[field.name]))
-          .map((field) => {
-            const value = values[field.name];
+  if (isAskedInComposer) {
+    return null;
+  }
 
-            return (
-              <StyledDetail key={field.name}>
-                {`${field.label}: ${isString(value) ? value : JSON.stringify(value)}`}
-              </StyledDetail>
-            );
-          })}
-      </StyledContent>
-    </StyledAiChatAskStatusContainer>
+  return (
+    <AiChatAskStatusRow
+      Icon={IconListDetails}
+      message={messageByStatus[status]}
+      isShimmering={isStreaming && status === 'pending'}
+    >
+      {fields
+        .filter((field) => isDefined(values[field.name]))
+        .map((field) => {
+          const value = values[field.name];
+
+          return (
+            <StyledAiChatAskStatusDetail key={field.name}>
+              {`${field.label}: ${isString(value) ? value : JSON.stringify(value)}`}
+            </StyledAiChatAskStatusDetail>
+          );
+        })}
+    </AiChatAskStatusRow>
   );
 };

@@ -5,18 +5,60 @@ import userEvent from '@testing-library/user-event';
 import { createStore, Provider as JotaiProvider } from 'jotai';
 import { type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
+import { SettingsPath } from 'twenty-shared/types';
 
+import { SettingsRoleRouteGuard } from '@/settings/roles/components/SettingsRoleRouteGuard';
 import { SettingsRole } from '@/settings/roles/role/components/SettingsRole';
 import { settingsDraftRoleFamilyState } from '@/settings/roles/states/settingsDraftRoleFamilyState';
 import { settingsPersistedRoleFamilyState } from '@/settings/roles/states/settingsPersistedRoleFamilyState';
+import { settingsRolesIsLoadingState } from '@/settings/roles/states/settingsRolesIsLoadingState';
 import { type RoleWithPartialMembers } from '@/settings/roles/types/RoleWithPartialMembers';
+import { RoutedFlowStateScopeContext } from '@/ui/utilities/state/contexts/RoutedFlowStateScopeContext';
 
 const mockSaveDraftRoleToDB = jest.fn();
 const mockLoadCurrentUser = jest.fn();
 const mockEnqueueToast = jest.fn();
+const mockNavigateSettings = jest.fn();
+
+jest.mock('@/settings/roles/components/SettingsRolesQueryEffect', () => ({
+  SettingsRolesQueryEffect: () => null,
+}));
+
+jest.mock('@/ui/layout/page/components/WorkspaceRouteUnavailable', () => ({
+  WorkspaceRouteUnavailable: () => <div>Role unavailable</div>,
+}));
 
 jest.mock('@/settings/roles/role/hooks/useSaveDraftRoleToDB', () => ({
   useSaveDraftRoleToDB: () => ({ saveDraftRoleToDB: mockSaveDraftRoleToDB }),
+}));
+
+jest.mock(
+  '@/settings/roles/role-permissions/agent-chat-channels/hooks/useIsRoleAgentChatChannelAccessDirty',
+  () => ({
+    useIsRoleAgentChatChannelAccessDirty: () => false,
+  }),
+);
+
+jest.mock(
+  '@/settings/roles/role-permissions/agent-chat-channels/hooks/useSaveRoleAgentChatChannelAccess',
+  () => ({
+    useSaveRoleAgentChatChannelAccess: () => ({
+      saveRoleAgentChatChannelAccess: jest.fn(),
+    }),
+  }),
+);
+
+jest.mock(
+  '@/settings/roles/role-permissions/agent-chat-channels/hooks/useResetRoleAgentChatChannelAccess',
+  () => ({
+    useResetRoleAgentChatChannelAccess: () => ({
+      resetRoleAgentChatChannelAccess: jest.fn(),
+    }),
+  }),
+);
+
+jest.mock('@/ai/hooks/useRefreshAgentChatChannels', () => ({
+  useRefreshAgentChatChannels: () => ({ refreshAgentChatChannels: jest.fn() }),
 }));
 
 jest.mock('@/users/hooks/useLoadCurrentUser', () => ({
@@ -24,11 +66,11 @@ jest.mock('@/users/hooks/useLoadCurrentUser', () => ({
 }));
 
 jest.mock('~/hooks/useNavigateSettings', () => ({
-  useNavigateSettings: () => jest.fn(),
+  useNavigateSettings: () => mockNavigateSettings,
 }));
 
-jest.mock('twenty-ui/components', () => ({
-  ...jest.requireActual('twenty-ui/components'),
+jest.mock('twenty-ui/components/feedback', () => ({
+  ...jest.requireActual('twenty-ui/components/feedback'),
   useToast: () => ({ enqueueToast: mockEnqueueToast }),
 }));
 
@@ -83,6 +125,7 @@ const PERSISTED_ROLE: RoleWithPartialMembers = {
   icon: 'IconUser',
   canUpdateAllSettings: false,
   canAccessAllTools: false,
+  canAccessAllAgentChatChannels: false,
   canReadAllObjectRecords: true,
   canUpdateAllObjectRecords: true,
   canSoftDeleteAllObjectRecords: true,
@@ -90,6 +133,7 @@ const PERSISTED_ROLE: RoleWithPartialMembers = {
   canBeAssignedToUsers: true,
   canBeAssignedToAgents: true,
   canBeAssignedToApiKeys: true,
+  applicationId: 'application-id',
   isEditable: true,
   workspaceMembers: [],
   agents: [],
@@ -101,32 +145,91 @@ const PERSISTED_ROLE: RoleWithPartialMembers = {
   rowLevelPermissionPredicateGroups: [],
 };
 
-const renderSettingsRole = ({ draftLabel }: { draftLabel: string }) => {
+const renderSettingsRole = ({
+  draftLabel,
+  isCreateMode = false,
+  scopeId = null,
+}: {
+  draftLabel: string;
+  isCreateMode?: boolean;
+  scopeId?: string | null;
+}) => {
   const store = createStore();
 
   store.set(
     settingsPersistedRoleFamilyState.atomFamily(ROLE_ID),
-    PERSISTED_ROLE,
+    isCreateMode ? undefined : PERSISTED_ROLE,
   );
-  store.set(settingsDraftRoleFamilyState.atomFamily(ROLE_ID), {
+  store.set(settingsDraftRoleFamilyState.getAtom(ROLE_ID, scopeId), {
     ...PERSISTED_ROLE,
     label: draftLabel,
   });
 
-  render(
+  const rendered = render(
     <I18nProvider i18n={i18n}>
       <MemoryRouter>
         <JotaiProvider store={store}>
-          <SettingsRole roleId={ROLE_ID} isCreateMode={false} />
+          <RoutedFlowStateScopeContext.Provider value={scopeId}>
+            <SettingsRole roleId={ROLE_ID} isCreateMode={isCreateMode} />
+          </RoutedFlowStateScopeContext.Provider>
         </JotaiProvider>
       </MemoryRouter>
     </I18nProvider>,
   );
+
+  return { ...rendered, store };
 };
 
 describe('SettingsRole', () => {
   afterEach(() => {
     jest.resetAllMocks();
+  });
+
+  it.each([null, 'role-creation-flow'])(
+    'should prevent a canceled draft from reopening in scope %s',
+    async (scopeId) => {
+      const user = userEvent.setup();
+      const { store, unmount } = renderSettingsRole({
+        draftLabel: 'Canceled role',
+        isCreateMode: true,
+        scopeId,
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(mockNavigateSettings).toHaveBeenCalledTimes(1);
+      expect(mockNavigateSettings).toHaveBeenCalledWith(SettingsPath.Roles);
+      expect(mockSaveDraftRoleToDB).not.toHaveBeenCalled();
+
+      unmount();
+      store.set(settingsRolesIsLoadingState.atom, false);
+
+      render(
+        <JotaiProvider store={store}>
+          <RoutedFlowStateScopeContext.Provider value={scopeId}>
+            <SettingsRoleRouteGuard roleId={ROLE_ID}>
+              <div>Role editor</div>
+            </SettingsRoleRouteGuard>
+          </RoutedFlowStateScopeContext.Provider>
+        </JotaiProvider>,
+      );
+
+      expect(screen.getByText('Role unavailable')).toBeInTheDocument();
+      expect(screen.queryByText('Role editor')).not.toBeInTheDocument();
+    },
+  );
+
+  it('should restore the persisted role when canceling edits', async () => {
+    const user = userEvent.setup();
+    const { store } = renderSettingsRole({ draftLabel: 'Changed role' });
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(store.get(settingsDraftRoleFamilyState.atomFamily(ROLE_ID))).toEqual(
+      PERSISTED_ROLE,
+    );
+    expect(mockNavigateSettings).not.toHaveBeenCalled();
+    expect(mockSaveDraftRoleToDB).not.toHaveBeenCalled();
   });
 
   it('should leave the save button usable when saving is rejected because the role name is empty', async () => {
@@ -140,7 +243,7 @@ describe('SettingsRole', () => {
 
     expect(mockEnqueueToast).toHaveBeenCalledWith(
       expect.objectContaining({
-        variant: 'error',
+        status: 'error',
         children: 'Role name cannot be empty',
       }),
     );
@@ -193,7 +296,7 @@ describe('SettingsRole', () => {
       expect(mockEnqueueToast).toHaveBeenCalledTimes(1);
     });
     expect(mockEnqueueToast).toHaveBeenCalledWith(
-      expect.objectContaining({ variant: 'error' }),
+      expect.objectContaining({ status: 'error' }),
     );
     expect(mockLoadCurrentUser).not.toHaveBeenCalled();
     expect(saveButton).not.toHaveAttribute('aria-busy', 'true');

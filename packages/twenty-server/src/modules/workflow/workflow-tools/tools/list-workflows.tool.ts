@@ -9,7 +9,7 @@ import {
   CoreWorkflowOrderByDirection,
   CoreWorkflowOrderByField,
 } from 'src/engine/core-modules/workflow/dtos/core-workflows.input';
-import { WorkflowStatus } from 'src/modules/workflow/common/standard-objects/workflow.workspace-entity';
+import { WorkflowStatus } from 'src/engine/core-modules/workflow/enums/workflow-status.enum';
 import {
   type WorkflowToolContext,
   type WorkflowToolDependencies,
@@ -53,6 +53,7 @@ export const createListWorkflowsTool = (
         await deps.coreWorkflowListService.findManyByWorkspaceId({
           workspaceId: context.workspaceId,
           userWorkspaceId: context.userWorkspaceId,
+          callerApplication: undefined,
           first: parameters.limit ?? DEFAULT_LIST_WORKFLOWS_LIMIT,
           after: parameters.after,
           orderBy: CoreWorkflowOrderByField.UPDATED_AT,

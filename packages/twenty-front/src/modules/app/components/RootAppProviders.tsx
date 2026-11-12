@@ -1,4 +1,5 @@
 import { StrictMode } from 'react';
+import { useLingui } from '@lingui/react';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import { TrackPageViewEffect } from '@/analytics/components/TrackPageViewEffect';
@@ -14,13 +15,15 @@ import { UserMetadataProviderInitialEffect } from '@/metadata-store/effect-compo
 import { DialogManager } from '@/ui/feedback/dialog-manager/components/DialogManager';
 import { DialogComponentInstanceContext } from '@/ui/feedback/dialog-manager/contexts/DialogComponentInstanceContext';
 import { AppToaster } from '@/ui/feedback/toast/components/AppToaster';
-import { PageFavicon } from '@/ui/utilities/page-favicon/components/PageFavicon';
+import { PageFavicon } from '@/app/components/PageFavicon';
 import { PageTitle } from '@/ui/utilities/page-title/components/PageTitle';
 import { WorkspaceProviderEffect } from '@/workspace/components/WorkspaceProviderEffect';
 import { getPageTitleFromPath } from '~/utils/title-utils';
 
 export const RootAppProviders = () => {
   const { pathname } = useLocation();
+  // getPageTitleFromPath reads the global i18n, so subscribe to re-render on locale change
+  useLingui();
   const pageTitle = getPageTitleFromPath(pathname);
 
   return (

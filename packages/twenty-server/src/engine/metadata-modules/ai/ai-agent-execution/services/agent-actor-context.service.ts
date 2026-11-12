@@ -1,14 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
 import { type ActorMetadata, FieldActorSource } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { Repository } from 'typeorm';
 
 import { buildCreatedByFromFullNameMetadata } from 'src/engine/core-modules/actor/utils/build-created-by-from-full-name-metadata.util';
 import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
+import { ApplicationLookupService } from 'src/engine/core-modules/application/application-lookup/application-lookup.service';
+import { type ApplicationWorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
+import { buildApplicationAuthContext } from 'src/engine/core-modules/auth/utils/build-application-auth-context.util';
 import { buildUserAuthContext } from 'src/engine/core-modules/auth/utils/build-user-auth-context.util';
 import { fromUserEntityToFlat } from 'src/engine/core-modules/user/utils/from-user-entity-to-flat.util';
 import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/user-workspace.service';
 import { fromWorkspaceEntityToFlat } from 'src/engine/core-modules/workspace/utils/from-workspace-entity-to-flat.util';
+import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { AiAgentRoleService } from 'src/engine/metadata-modules/ai/ai-agent-role/ai-agent-role.service';
+import { type AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
 import {
   AiException,
   AiExceptionCode,
@@ -17,8 +25,8 @@ import { type RunAsWorkspaceMemberContext } from 'src/engine/metadata-modules/ai
 import {
   PermissionsException,
   PermissionsExceptionCode,
-} from 'src/engine/metadata-modules/permissions/permissions.exception';
-import { UserRoleService } from 'src/engine/metadata-modules/user-role/user-role.service';
+} from 'src/engine/permissions/permissions.exception';
+import { RolePermissionsService } from 'src/engine/permissions/role-permissions.service';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 
@@ -43,9 +51,51 @@ export type AgentActorContext = {
 export class AgentActorContextService {
   constructor(
     private readonly userWorkspaceService: UserWorkspaceService,
-    private readonly userRoleService: UserRoleService,
+    private readonly rolePermissionsService: RolePermissionsService,
     private readonly workspaceOrmManager: WorkspaceOrmManager,
+    private readonly applicationLookupService: ApplicationLookupService,
+    private readonly aiAgentRoleService: AiAgentRoleService,
+    @InjectRepository(WorkspaceEntity)
+    private readonly workspaceRepository: Repository<WorkspaceEntity>,
   ) {}
+
+  // An agent acting through its own application, as a trigger or API run does; null once the application is gone
+  async buildApplicationAgentContext({
+    workspaceId,
+    agent,
+  }: {
+    workspaceId: string;
+    agent: Pick<AgentEntity, 'id' | 'applicationId'>;
+  }): Promise<{
+    application: FlatApplication;
+    authContext: ApplicationWorkspaceAuthContext;
+    agentRoleId: string | undefined;
+  } | null> {
+    const [workspace, application, agentRoleId] = await Promise.all([
+      this.workspaceRepository.findOneOrFail({ where: { id: workspaceId } }),
+      this.applicationLookupService.findById({
+        id: agent.applicationId,
+        workspaceId,
+      }),
+      this.aiAgentRoleService.findAgentRoleId({
+        workspaceId,
+        agentId: agent.id,
+      }),
+    ]);
+
+    if (!isDefined(application)) {
+      return null;
+    }
+
+    return {
+      application,
+      authContext: buildApplicationAuthContext({
+        workspace: fromWorkspaceEntityToFlat(workspace),
+        application,
+      }),
+      agentRoleId,
+    };
+  }
 
   async buildUserAndAgentActorContext(
     userWorkspaceId: string,
@@ -66,9 +116,9 @@ export class AgentActorContextService {
     const workspaceMember =
       await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
         const workspaceMemberRepository =
-          this.workspaceOrmManager.getRepository('workspaceMember', {
-            shouldBypassPermissionChecks: true,
-          });
+          this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+            'workspaceMember',
+          );
 
         return workspaceMemberRepository.findOne({
           where: {
@@ -84,17 +134,11 @@ export class AgentActorContextService {
       );
     }
 
-    const roleId = await this.userRoleService.getRoleIdForUserWorkspace({
-      userWorkspaceId,
-      workspaceId,
-    });
-
-    if (!roleId) {
-      throw new AiException(
-        'User role not found',
-        AiExceptionCode.AGENT_EXECUTION_FAILED,
-      );
-    }
+    const roleId =
+      await this.rolePermissionsService.findUserWorkspaceRoleIdOrThrow({
+        userWorkspaceId,
+        workspaceId,
+      });
 
     const actorContext = buildCreatedByFromFullNameMetadata({
       fullNameMetadata: workspaceMember.name,
@@ -122,11 +166,9 @@ export class AgentActorContextService {
   async buildRunAsWorkspaceMemberContext({
     workspaceMemberId,
     workspaceId,
-    viaApplication,
   }: {
     workspaceMemberId: string;
     workspaceId: string;
-    viaApplication?: FlatApplication;
   }): Promise<RunAsWorkspaceMemberContext> {
     const workspaceMember = await this.userWorkspaceService.getWorkspaceMember({
       workspaceMemberId,
@@ -172,7 +214,7 @@ export class AgentActorContextService {
         user: fromUserEntityToFlat(userWorkspace.user),
         workspaceMemberId: workspaceMember.id,
         workspaceMember,
-        viaApplication,
+        userSessionVariant: 'standard',
       }),
       roleId,
     };
@@ -188,7 +230,7 @@ export class AgentActorContextService {
     workspaceMemberId: string;
   }): Promise<string> {
     try {
-      return await this.userRoleService.getRoleIdForUserWorkspace({
+      return await this.rolePermissionsService.findUserWorkspaceRoleIdOrThrow({
         userWorkspaceId,
         workspaceId,
       });

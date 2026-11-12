@@ -23,11 +23,14 @@ import {
 import { isDefined } from 'twenty-shared/utils';
 import { type LoggerOptions } from 'typeorm/logger/LoggerOptions';
 
+import { IsLambdaResourceTags } from 'src/engine/core-modules/logic-function/logic-function-drivers/drivers/lambda/decorators/is-lambda-resource-tags.decorator';
 import { LogicFunctionDriverType } from 'src/engine/core-modules/logic-function/logic-function-drivers/interfaces/logic-function-driver.interface';
 import { type AwsRegion } from 'src/engine/core-modules/twenty-config/interfaces/aws-region.interface';
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
 import { SupportDriver } from 'src/engine/core-modules/twenty-config/interfaces/support.interface';
 
+import { IsBillingPlansConfig } from 'src/engine/core-modules/billing/decorators/is-billing-plans-config.decorator';
+import { type BillingPlansConfig } from 'src/engine/core-modules/billing/types/billing-plans-config.type';
 import { CaptchaDriverType } from 'src/engine/core-modules/captcha/interfaces';
 import { CodeInterpreterDriverType } from 'src/engine/core-modules/code-interpreter/code-interpreter.interface';
 import { DpaRegion } from 'src/engine/core-modules/dpa/enums/dpa-region.enum';
@@ -63,6 +66,7 @@ import {
   ConfigVariableExceptionCode,
 } from 'src/engine/core-modules/twenty-config/twenty-config.exception';
 import { type OnboardingEnrichmentCreditRewardTier } from 'src/engine/core-modules/onboarding/types/onboarding-enrichment-credit-reward-tier.type';
+import { type PlanUsageLimitDefaults } from 'src/engine/core-modules/usage-limit/types/plan-usage-limit-defaults.type';
 import { type AiProvidersConfig } from 'src/engine/metadata-modules/ai/ai-models/types/ai-providers-config.type';
 import {
   DEFAULT_DISABLED_MODELS,
@@ -108,6 +112,15 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ADVANCED_SETTINGS,
     description:
+      'Accept IMAP and SMTP servers whose TLS certificate cannot be verified, e.g. self-signed. Prefer adding your CA with NODE_EXTRA_CA_CERTS, which keeps verification on.',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  IMAP_SMTP_ALLOW_SELF_SIGNED = false;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
       'Deprecated: set OUTBOUND_HTTP_ALLOWED_INTERNAL_HOSTS to * instead. While this is false every private address is reachable and OUTBOUND_HTTP_ALLOWED_INTERNAL_HOSTS is ignored.',
     type: ConfigVariableType.BOOLEAN,
   })
@@ -141,6 +154,16 @@ export class ConfigVariables {
   @IsPositiveDuration()
   @IsOptional()
   PASSWORD_RESET_TOKEN_EXPIRES_IN = '5m';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.TOKENS_DURATION,
+    description:
+      'Duration for which an admin-issued two-factor authentication recovery code is valid',
+    type: ConfigVariableType.STRING,
+  })
+  @IsPositiveDuration()
+  @IsOptional()
+  TWO_FACTOR_AUTHENTICATION_RECOVERY_CODE_EXPIRES_IN = '1h';
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.GOOGLE_AUTH,
@@ -701,22 +724,22 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.STORAGE_CONFIG,
     description:
-      'Maximum bytes of file storage a single workspace may hold, all its files counted. An upload that would cross it is refused',
+      'Maximum bytes of file storage a single workspace may hold, all its files counted. No limit when unset. USAGE_LIMIT_DEFAULTS_BY_PLAN can set it per billing plan',
     type: ConfigVariableType.NUMBER,
   })
   @CastToPositiveNumber()
   @IsOptional()
-  WORKSPACE_STORAGE_LIMIT_BYTES: number = 100 * 1024 * 1024 * 1024;
+  WORKSPACE_STORAGE_LIMIT_BYTES?: number;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.STORAGE_CONFIG,
     description:
-      'Maximum number of records a single workspace may hold across its objects, system objects other than messages and calendar events left out, soft-deleted records included. A write that would cross it is refused',
+      'Maximum number of records a single workspace may hold across its objects, system objects other than messages and calendar events left out, soft-deleted records included. No limit when unset. USAGE_LIMIT_DEFAULTS_BY_PLAN can set it per billing plan',
     type: ConfigVariableType.NUMBER,
   })
   @CastToPositiveNumber()
   @IsOptional()
-  WORKSPACE_RECORD_LIMIT: number = 10_000_000;
+  WORKSPACE_RECORD_LIMIT?: number;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
@@ -782,6 +805,18 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
+    description:
+      'Resource tags applied when creating AWS Lambda functions (JSON object with up to 48 string values)',
+    type: ConfigVariableType.JSON,
+  })
+  @ValidateIf(
+    (env) => env.LOGIC_FUNCTION_TYPE === LogicFunctionDriverType.LAMBDA,
+  )
+  @IsLambdaResourceTags()
+  LOGIC_FUNCTION_LAMBDA_RESOURCE_TAGS: Record<string, string> = {};
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
     isSensitive: true,
     description: 'Access key ID for AWS Lambda functions',
     type: ConfigVariableType.STRING,
@@ -806,7 +841,8 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
-    description: 'S3 bucket for uploading Lambda layer zip files',
+    description:
+      'S3 bucket for uploading Lambda layer zip files. Required with the Lambda driver unless STORAGE_S3_NAME is set.',
     type: ConfigVariableType.STRING,
   })
   @ValidateIf(
@@ -827,6 +863,18 @@ export class ConfigVariables {
   @IsOptional()
   @IsAWSRegion()
   LOGIC_FUNCTION_LAMBDA_LAYER_BUCKET_REGION?: AwsRegion;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
+    description:
+      'Custom Lambda endpoint URL. Optional, only needed for Lambda-compatible emulators (e.g. http://floci:4566). Omit for AWS Lambda, where the SDK resolves the endpoint from the region.',
+    type: ConfigVariableType.STRING,
+  })
+  @ValidateIf(
+    (env) => env.LOGIC_FUNCTION_TYPE === LogicFunctionDriverType.LAMBDA,
+  )
+  @IsOptional()
+  LOGIC_FUNCTION_LAMBDA_ENDPOINT?: string;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.CODE_INTERPRETER_CONFIG,
@@ -852,6 +900,15 @@ export class ConfigVariables {
     (env) => env.CODE_INTERPRETER_TYPE === CodeInterpreterDriverType.E_2_B,
   )
   E2B_API_KEY?: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CODE_INTERPRETER_CONFIG,
+    description:
+      'E2B template for code interpreter sandboxes; build one with the libraries the PDF and Office skills need using scripts/build-code-interpreter-e2b-template.ts (default: code-interpreter-v1)',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  E2B_TEMPLATE: string = 'code-interpreter-v1';
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.CODE_INTERPRETER_CONFIG,
@@ -951,6 +1008,17 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.BILLING_CONFIG,
+    description:
+      'Required when billing is enabled. How each billing plan is sold, as {"PRO":{"isDefault":true,"upgradePlanKeys":["ENTERPRISE"]},"ENTERPRISE":{"downgradePlanKeys":["PRO"]}}. Upgrades apply now with proration, downgrades at period end. A plan left out has no switch. The plans some plan can switch to are the two plans on sale, and the one marked isDefault is the default plan at signup',
+    isHiddenInAdminPanel: true,
+    type: ConfigVariableType.JSON,
+  })
+  @IsBillingPlansConfig()
+  @ValidateIf((env) => env.IS_BILLING_ENABLED === true)
+  BILLING_PLANS: BillingPlansConfig = {};
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BILLING_CONFIG,
     description: 'Duration of free trial with credit card in days',
     type: ConfigVariableType.NUMBER,
   })
@@ -972,6 +1040,15 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.BILLING_CONFIG,
     description:
+      'Email domains whose users keep the free trial on every workspace, however many trialing workspaces they are already in (twenty.com, acme.com). Exact domain match, subdomains not included',
+    type: ConfigVariableType.ARRAY,
+  })
+  @IsOptional()
+  BILLING_TRIAL_LIMIT_EXEMPT_EMAIL_DOMAINS: string[] = [];
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BILLING_CONFIG,
+    description:
       'Amount of credits for the free trial without credit card (in microCredits)',
     type: ConfigVariableType.NUMBER,
   })
@@ -988,6 +1065,26 @@ export class ConfigVariables {
   @CastToPositiveNumber()
   @ValidateIf((env) => env.IS_BILLING_ENABLED === true)
   BILLING_FREE_WORKFLOW_CREDITS_FOR_TRIAL_PERIOD_WITH_CREDIT_CARD = 2_500_000;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BILLING_CONFIG,
+    description:
+      'User credits each user can spend on AI chat and web search per period of the AI user credit limit default, before workspace credits (in microCredits). No user credits when unset. USAGE_LIMIT_DEFAULTS_BY_PLAN can set it per billing plan',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  AI_USER_CREDITS_LIMIT?: number;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BILLING_CONFIG,
+    description:
+      'Quota and stock usage limit default values per billing plan, keyed by plan key then by the default\'s config variable, as {"PRO":{"WORKSPACE_RECORD_LIMIT":1000000},"ENTERPRISE":{"WORKSPACE_RECORD_LIMIT":null},"TRIAL":{"AI_USER_CREDITS_LIMIT":null}}. TRIAL applies to every trialing subscription and wins over its plan. null means no limit, and a variable left out keeps its own value',
+    isHiddenInAdminPanel: true,
+    type: ConfigVariableType.JSON,
+  })
+  @IsOptional()
+  USAGE_LIMIT_DEFAULTS_BY_PLAN: Record<string, PlanUsageLimitDefaults> = {};
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.BILLING_CONFIG,
@@ -1111,17 +1208,6 @@ export class ConfigVariables {
   @IsInt()
   @IsOptional()
   ONBOARDING_INVITE_TEAM_CREDITS_REWARD_PER_USER = 500_000;
-
-  @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.BILLING_CONFIG,
-    description:
-      'Free credits granted for installing apps during the install-apps onboarding step, whatever the number of apps (in microCredits)',
-    type: ConfigVariableType.NUMBER,
-  })
-  @CastToPositiveNumber()
-  @IsInt()
-  @IsOptional()
-  ONBOARDING_INSTALL_APPS_CREDITS_REWARD = 500_000;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.BILLING_CONFIG,
@@ -1335,7 +1421,7 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LOGGING,
     description:
-      'Share of sampled server traces that are also profiled, between 0 and 1. Read before the config store is available, so it cannot be overridden from the database.',
+      'Share of server processes that profile their sampled traces, between 0 and 1. Read before the config store is available, so it cannot be overridden from the database.',
     type: ConfigVariableType.NUMBER,
     isEnvOnly: true,
   })
@@ -1485,6 +1571,17 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Optional prefix for cache-storage keys. Empty preserves existing key names. Use a Redis hash tag (e.g. "{twenty-cache}") to place all cache-storage keys in one hash slot and avoid CROSSSLOT errors. Changing it switches cache namespaces and requires all servers and workers to restart with the same value.',
+    isEnvOnly: true,
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  @IsString()
+  REDIS_CACHE_PREFIX: string = '';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
     isSensitive: true,
     description:
       'Optional separate Redis connection for queues with a different eviction policy (advanced production use case, most self-hosters do not need this)',
@@ -1529,6 +1626,67 @@ export class ConfigVariables {
   })
   @IsOptional()
   WORKER_EXCLUDED_QUEUES: string[] = [];
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Refuse jobs that would take more than their fair share of the job queue Redis memory',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  IS_REDIS_MEMORY_FAIRNESS_ENABLED = false;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Delay the jobs that carry a limiter (workflows, logic functions) at enqueue: a burst of max, then one every durationMs / max, per workspace and application. Execution starts are not rechecked, so a paused worker can run overdue jobs together. Off: jobs are never delayed by their limiter.',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  IS_WORKER_GROUP_LIMITER_ENABLED = false;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Maximum size in bytes of a single job (serialized data and options) when Redis memory fairness is enabled',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  JOB_QUEUE_MAX_JOB_SIZE_BYTES = 5_242_880;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Share of the free job queue memory a single workspace may use. Any value below 1 keeps Redis below capacity',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  @Max(1)
+  JOB_QUEUE_MEMORY_SHARE_BY_WORKSPACE_ID = 0.3;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Share of the free job queue memory a single application, across all workspaces, may use. Any value below 1 keeps Redis below capacity',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  @Max(1)
+  JOB_QUEUE_MEMORY_SHARE_BY_APPLICATION_UNIVERSAL_IDENTIFIER = 0.4;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Share of Redis maxmemory never given to job queue tenants (allocator error, non-job keys, Redis reserved memory)',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  @Max(1)
+  JOB_QUEUE_MEMORY_RESERVE = 0.1;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.SERVER_CONFIG,
@@ -1583,6 +1741,17 @@ export class ConfigVariables {
   @IsUrl({ require_tld: false, require_protocol: true })
   @IsOptional()
   SERVER_URL = 'http://localhost:3000';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description:
+      'Private URL logic functions use to call the server, e.g. http://server:3000 with Docker Compose, so their requests skip an authenticating proxy in front of SERVER_URL. Must be reachable from the server and worker. Local driver only: leave it unset with the Lambda driver, whose functions run outside your network and cannot reach it. Falls back to SERVER_URL.',
+    type: ConfigVariableType.STRING,
+    isEnvOnly: true,
+  })
+  @IsOptionalOrEmptyString()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  SERVER_INTERNAL_URL?: string;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.SERVER_CONFIG,
@@ -1774,7 +1943,7 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.RATE_LIMITING,
     description:
-      'Maximum number of emails a single workspace may send per UTC day, campaign and one-off sends counted together. A workspace limit configured in the app replaces it',
+      'Maximum number of emails a single workspace may send per UTC day, campaign and one-off sends counted together. USAGE_LIMIT_DEFAULTS_BY_PLAN can set it per billing plan, and a workspace limit configured in the app replaces it',
     type: ConfigVariableType.NUMBER,
   })
   @CastToPositiveNumber()
@@ -1966,6 +2135,19 @@ export class ConfigVariables {
   CLOUDFLARE_DCV_DELEGATION_ID: string;
 
   @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CLOUDFLARE_CONFIG,
+    description:
+      'Store the visitor location headers Cloudflare adds (cf-ipcountry, ' +
+      'cf-region, cf-ipcity) on user sessions. Only enable when every ' +
+      'request reaches the server through Cloudflare: otherwise clients ' +
+      'can forge them.',
+    type: ConfigVariableType.BOOLEAN,
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  IS_CLOUDFLARE_GEOLOCATION_ENABLED = false;
+
+  @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LLM,
     isSensitive: true,
     description: 'API key for OpenAI models (GPT, o-series)',
@@ -2032,7 +2214,7 @@ export class ConfigVariables {
     group: ConfigVariablesGroup.LLM,
     isSensitive: true,
     description:
-      'AI provider configurations. Custom providers are deep-merged on top of the built-in catalog (ai-providers.json). Use for custom endpoints, extra regions, or credentials set via admin panel.',
+      'AI provider configurations. An entry with the same name as a built-in provider (ai-providers.json) replaces it and keeps only the models it lists. Use for custom endpoints, extra regions, or credentials set via admin panel.',
     type: ConfigVariableType.JSON,
   })
   @IsOptional()
@@ -2226,6 +2408,24 @@ export class ConfigVariables {
   CAPTCHA_SECRET_KEY?: string;
 
   @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CAPTCHA_CONFIG,
+    description:
+      'Minimum Google reCAPTCHA v3 score, between 0 and 1, required to accept a request',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  CAPTCHA_MIN_SCORE = 0;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CAPTCHA_CONFIG,
+    description: 'Require a valid captcha to create a new workspace',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  IS_WORKSPACE_CREATION_CAPTCHA_ENABLED = false;
+
+  @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.SERVER_CONFIG,
     isSensitive: true,
     description: 'License key for the Enterprise version',
@@ -2335,28 +2535,6 @@ export class ConfigVariables {
   })
   @IsOptional()
   IS_ONBOARDING_AI_CHAT_ENABLED = false;
-
-  @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
-    isSensitive: true,
-    description: 'Mintlify API key for documentation search',
-    isEnvOnly: true,
-    isHiddenInAdminPanel: true,
-    type: ConfigVariableType.STRING,
-  })
-  @IsOptional()
-  MINTLIFY_API_KEY: string;
-
-  @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
-    isSensitive: true,
-    description: 'Mintlify subdomain for documentation search',
-    isEnvOnly: true,
-    isHiddenInAdminPanel: true,
-    type: ConfigVariableType.STRING,
-  })
-  @IsOptional()
-  MINTLIFY_SUBDOMAIN: string;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.AWS_SES_SETTINGS,

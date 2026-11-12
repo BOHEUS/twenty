@@ -7,6 +7,7 @@ import { type FrontComponentToolCall } from 'twenty-sdk/front-component';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   buildFrontComponentStorageNamespace,
   clearFrontComponentStorage,
@@ -23,6 +24,7 @@ import {
   OpenRecordIn,
   SidePanelPages,
   type EnqueueSnackbarParams,
+  type RecordGqlOperationFilter,
 } from 'twenty-shared/types';
 
 import { serializePlainTextAsAdvancedTextEditorDocument } from '@/advanced-text-editor/utils/serializePlainTextAsAdvancedTextEditorDocument';
@@ -36,6 +38,7 @@ import { contextStoreRecordShowParentViewComponentState } from '@/context-store/
 import { useDirectFileUpload } from '@/file/hooks/useDirectFileUpload';
 import { useFrontComponentApplicationTokenPair } from '@/front-components/hooks/useFrontComponentApplicationTokenPair';
 import { getMediaFileExtension } from '@/front-components/media-session/utils/getMediaFileExtension';
+import { isNonEmptyBlob } from '@/front-components/utils/isNonEmptyBlob';
 import { setRecordPageActiveTabId } from '@/page-layout/utils/setRecordPageActiveTabId';
 import { useNavigateSidePanel } from '@/side-panel/hooks/useNavigateSidePanel';
 import { useOpenComposeEmailInSidePanel } from '@/side-panel/hooks/useOpenComposeEmailInSidePanel';
@@ -43,15 +46,18 @@ import { useOpenFrontComponentInSidePanel } from '@/side-panel/hooks/useOpenFron
 import { useOpenRecordInSidePanel } from '@/side-panel/hooks/useOpenRecordInSidePanel';
 import { useOpenRichTextInSidePanel } from '@/side-panel/hooks/useOpenRichTextInSidePanel';
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
+import { isPageLayoutSidePanelPage } from '@/side-panel/pages/page-layout/utils/isPageLayoutSidePanelPage';
 import { useOpenRoutedPageInSidePanel } from '@/side-panel/routing/hooks/useOpenRoutedPageInSidePanel';
 import { sidePanelSearchState } from '@/side-panel/states/sidePanelSearchState';
+import { openRecordInPreferenceState } from '@/workspace-member/states/openRecordInPreferenceState';
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomFamilyState } from '@/ui/utilities/state/jotai/hooks/useSetAtomFamilyState';
 import { useStore } from 'jotai';
 import { CustomError, getAppPath, isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
-import { useIcons } from 'twenty-ui/icon';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { useToast } from 'twenty-ui/components/feedback';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { useIsMobile } from 'twenty-ui/utilities';
 import { FileFolder } from '~/generated-metadata/graphql';
 import { useCopyToClipboard } from '~/hooks/useCopyToClipboard';
@@ -122,6 +128,7 @@ export const useFrontComponentExecutionContext = ({
   applicationId,
   commandMenuItemId,
   selectedRecordIds,
+  selectedRecordsFilter,
   objectNameSingular,
   timelineActivityId,
   toolCall,
@@ -131,6 +138,7 @@ export const useFrontComponentExecutionContext = ({
   applicationId: string;
   commandMenuItemId?: string;
   selectedRecordIds?: string[];
+  selectedRecordsFilter?: RecordGqlOperationFilter | null;
   objectNameSingular?: string;
   timelineActivityId?: string;
   toolCall?: FrontComponentToolCall;
@@ -142,6 +150,7 @@ export const useFrontComponentExecutionContext = ({
 } => {
   const currentUser = useAtomStateValue(currentUserState);
   const navigateApp = useNavigateApp();
+  const location = useLocation();
   const store = useStore();
   const { requestApplicationAccessTokenRefresh } =
     useFrontComponentApplicationTokenPair();
@@ -218,7 +227,7 @@ export const useFrontComponentExecutionContext = ({
       if ('to' in params) {
         if (params.to.includes(':') && !isDefined(params.params)) {
           throw new CustomError(
-            `Missing params for side-panel route: ${params.to}`,
+            doNotTranslate(`Missing params for side-panel route: ${params.to}`),
             'FRONT_COMPONENT_SIDE_PANEL_ROUTE_PARAMS_REQUIRED',
           );
         }
@@ -240,7 +249,7 @@ export const useFrontComponentExecutionContext = ({
 
         if (!isDefined(pageId)) {
           throw new CustomError(
-            `Unsupported side-panel route: ${pathWithHash}`,
+            doNotTranslate(`Unsupported side-panel route: ${pathWithHash}`),
             'FRONT_COMPONENT_UNSUPPORTED_SIDE_PANEL_ROUTE',
           );
         }
@@ -257,7 +266,7 @@ export const useFrontComponentExecutionContext = ({
 
         if (!isDefined(pageId)) {
           throw new CustomError(
-            `Unsupported side-panel route: ${params.path}`,
+            doNotTranslate(`Unsupported side-panel route: ${params.path}`),
             'FRONT_COMPONENT_UNSUPPORTED_SIDE_PANEL_ROUTE',
           );
         }
@@ -267,7 +276,9 @@ export const useFrontComponentExecutionContext = ({
 
       if (params.page === SidePanelPages.ViewRecords) {
         throw new CustomError(
-          'ViewRecords is no longer supported. Open AppPath.RecordIndexPage with typed params instead.',
+          doNotTranslate(
+            'ViewRecords is no longer supported. Open AppPath.RecordIndexPage with typed params instead.',
+          ),
           'FRONT_COMPONENT_VIEW_RECORDS_UNSUPPORTED',
         );
       }
@@ -290,7 +301,7 @@ export const useFrontComponentExecutionContext = ({
         const resolvedOpenRecordIn = resolveOpenRecordIn({
           objectOpenRecordIn:
             objectMetadataItem?.openRecordIn ?? ObjectOpenRecordIn.USER_CHOICE,
-          openRecordInPreference: OpenRecordIn.SIDE_PANEL,
+          openRecordInPreference: store.get(openRecordInPreferenceState.atom),
           canDisplaySidePanel: !isMobile,
         });
 
@@ -349,12 +360,17 @@ export const useFrontComponentExecutionContext = ({
       }
 
       if (params.page === SidePanelPages.ViewFrontComponent) {
-        const recordContext = isDefined(params.objectNameSingular)
-          ? {
-              objectNameSingular: params.objectNameSingular,
-              recordId: params.recordId,
-            }
-          : undefined;
+        const recordContext =
+          isDefined(params.objectNameSingular) ||
+          isDefined(params.selectedRecordIds) ||
+          isDefined(params.recordId)
+            ? {
+                objectNameSingular: params.objectNameSingular,
+                selectedRecordIds:
+                  params.selectedRecordIds ??
+                  (isDefined(params.recordId) ? [params.recordId] : undefined),
+              }
+            : undefined;
 
         openFrontComponentInSidePanel({
           frontComponentId: params.frontComponentId,
@@ -385,6 +401,15 @@ export const useFrontComponentExecutionContext = ({
         }
 
         return;
+      }
+
+      if (isPageLayoutSidePanelPage(params.page)) {
+        throw new CustomError(
+          doNotTranslate(
+            `${params.page} edits the page layout it was opened from and cannot be opened by a front component`,
+          ),
+          'FRONT_COMPONENT_PAGE_LAYOUT_SIDE_PANEL_PAGE_UNSUPPORTED',
+        );
       }
 
       navigateSidePanel({
@@ -424,7 +449,7 @@ export const useFrontComponentExecutionContext = ({
     }: EnqueueSnackbarParams) => {
       enqueueToast({
         children: message,
-        variant,
+        status: variant,
         duration,
         description: detailedMessage,
         dedupeKey,
@@ -436,6 +461,7 @@ export const useFrontComponentExecutionContext = ({
     userId: currentUser?.id ?? null,
     recordId: selectedRecordIds?.length === 1 ? selectedRecordIds[0] : null,
     selectedRecordIds: selectedRecordIds ?? [],
+    selectedRecordsFilter: selectedRecordsFilter ?? null,
     selectedObjectMetadata: isDefined(selectedObjectMetadataItem)
       ? {
           id: selectedObjectMetadataItem.id,
@@ -448,6 +474,12 @@ export const useFrontComponentExecutionContext = ({
     colorScheme,
     // The host is always configured with APP_LOCALES, so this is a valid AppLocale.
     locale: i18n.locale as AppLocale,
+    location: {
+      pathname: location.pathname,
+      search: location.search,
+      hash: location.hash,
+      origin: window.location.origin,
+    },
   };
 
   const unmountFrontComponent: FrontComponentHostCommunicationApi['unmountFrontComponent'] =
@@ -498,8 +530,7 @@ export const useFrontComponentExecutionContext = ({
     async (file, params) => {
       // Sandboxed input; fieldMetadataId is mandatory since a file uploaded outside a FILES field could never be attached and would leak.
       if (
-        !(file instanceof Blob) ||
-        file.size === 0 ||
+        !isNonEmptyBlob(file) ||
         !isDefined(params) ||
         !isNonEmptyString(params.fieldMetadataId)
       ) {
@@ -557,7 +588,7 @@ export const useFrontComponentExecutionContext = ({
   const requireStorageNamespace = (): string => {
     if (!isDefined(storageNamespace)) {
       throw new CustomError(
-        'Device storage requires a signed-in user',
+        doNotTranslate('Device storage requires a signed-in user'),
         'FRONT_COMPONENT_STORAGE_REQUIRES_SIGNED_IN_USER',
       );
     }

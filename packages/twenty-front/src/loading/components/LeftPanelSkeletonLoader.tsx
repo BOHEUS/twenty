@@ -1,9 +1,9 @@
+import { SkeletonLine } from '@/ui/feedback/skeleton/components/SkeletonLine';
 import { styled } from '@linaria/react';
 import { motion } from 'framer-motion';
-import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
+import { SKELETON_HEIGHT_SIZES } from 'twenty-ui/primitives/feedback';
 
-import { SKELETON_LOADER_HEIGHT_SIZES } from '@/activities/components/SkeletonLoader';
-import { NAVIGATION_DRAWER_CONSTRAINTS } from '@/ui/layout/resizable-panel/constants/NavigationDrawerConstraints';
+import { NAVIGATION_DRAWER_CONSTRAINTS } from '@/ui/navigation/navigation-drawer/constants/NavigationDrawerConstraints';
 import { useIsMobile } from 'twenty-ui/utilities';
 import { MainNavigationDrawerItemsSkeletonLoader } from '~/loading/components/MainNavigationDrawerItemsSkeletonLoader';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
@@ -15,8 +15,8 @@ const StyledAnimatedContainer = styled(motion.div)`
   flex-shrink: 0;
   height: 100%;
   overflow: hidden;
-  padding: ${themeCssVariables.spacing[2]} 0 ${themeCssVariables.spacing[4]}
-    ${themeCssVariables.spacing[2]};
+  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[2]}
+    ${themeCssVariables.spacing[4]} ${themeCssVariables.spacing[2]};
 `;
 
 const StyledItemsContainer = styled.div`
@@ -61,16 +61,11 @@ export const LeftPanelSkeletonLoader = () => {
     >
       <StyledItemsContainer>
         <StyledSkeletonTitleContainer>
-          <SkeletonTheme
-            baseColor={theme.background.quaternary}
-            highlightColor={theme.background.transparent.lighter}
-            borderRadius={4}
-          >
-            <Skeleton
-              width={96}
-              height={SKELETON_LOADER_HEIGHT_SIZES.standard.s}
-            />
-          </SkeletonTheme>
+          <SkeletonLine
+            width={96}
+            height={SKELETON_HEIGHT_SIZES.s}
+            baseColor={themeCssVariables.background.quaternary}
+          />
         </StyledSkeletonTitleContainer>
         <StyledSkeletonContainer>
           <MainNavigationDrawerItemsSkeletonLoader length={3} />

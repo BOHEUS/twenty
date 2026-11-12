@@ -7,9 +7,16 @@ import { CurrencyPickerExample } from './CurrencyPickerExample';
 import { openCurrencyPicker } from './openCurrencyPicker';
 
 const meta: Meta<typeof CurrencyPickerExample> = {
-  title: 'UI/Input/CurrencyPicker/Locale',
+  id: 'ui-input-currencypicker-locale',
+  title: 'UI/Components/Input/CurrencyPicker/Locale',
   component: CurrencyPickerExample,
-  render: (args) => <CurrencyPickerExample key={args.defaultValue} {...args} />,
+  render: (args) => (
+    <CurrencyPickerExample
+      key={args.defaultValue}
+      // oxlint-disable-next-line react/jsx-props-no-spreading
+      {...args}
+    />
+  ),
   decorators: [ComponentDecorator],
   args: { onValueChange: fn() },
   parameters: {
@@ -48,32 +55,38 @@ export const TurkishLocaleSearch: Story = {
 
     await userEvent.type(firstPicker.search, 'indian');
     await expect(
-      within(firstPicker.dialog).getByRole('button', {
+      within(firstPicker.dialog).getByRole('option', {
         name: 'Indian Rupee (INR)',
       }),
     ).toBeVisible();
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(firstPicker.dialog).not.toBeInTheDocument());
-    await expect(args.onValueChange).toHaveBeenLastCalledWith('INR');
+    await expect(args.onValueChange).toHaveBeenLastCalledWith(
+      'INR',
+      expect.objectContaining({ reason: 'item-press', isCanceled: false }),
+    );
 
     const secondPicker = await openCurrencyPicker({ canvasElement });
 
     await userEvent.type(secondPicker.search, 'idr');
     await expect(
-      within(secondPicker.dialog).getByRole('button', {
+      within(secondPicker.dialog).getByRole('option', {
         name: 'Indonesian Rupiah (IDR)',
       }),
     ).toBeVisible();
     await userEvent.clear(secondPicker.search);
     await userEvent.type(secondPicker.search, 'IDR');
     await expect(
-      within(secondPicker.dialog).getByRole('button', {
+      within(secondPicker.dialog).getByRole('option', {
         name: 'Indonesian Rupiah (IDR)',
       }),
     ).toBeVisible();
     await userEvent.keyboard('{Enter}');
     await waitFor(() => expect(secondPicker.dialog).not.toBeInTheDocument());
-    await expect(args.onValueChange).toHaveBeenLastCalledWith('IDR');
+    await expect(args.onValueChange).toHaveBeenLastCalledWith(
+      'IDR',
+      expect.objectContaining({ reason: 'item-press', isCanceled: false }),
+    );
     await expect(args.onValueChange).toHaveBeenCalledTimes(2);
   },
 };

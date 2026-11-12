@@ -7,7 +7,7 @@ import { FormSelectFieldInput } from '@/object-record/record-field/ui/form-types
 import { FormTextFieldInput } from '@/object-record/record-field/ui/form-types/components/FormTextFieldInput';
 import { useMyConnectedAccounts } from '@/settings/accounts/hooks/useMyConnectedAccounts';
 import { useTriggerApisOAuth } from '@/settings/accounts/hooks/useTriggerApiOAuth';
-import { AVAILABLE_TIMEZONE_OPTIONS } from '@/settings/experience/constants/AvailableTimezoneOptions';
+import { AVAILABLE_TIMEZONE_OPTIONS } from '@/localization/constants/AvailableTimezoneOptions';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
@@ -17,15 +17,15 @@ import { WorkflowStepBody } from '@/workflow/workflow-steps/components/WorkflowS
 import { WorkflowStepFooter } from '@/workflow/workflow-steps/components/WorkflowStepFooter';
 import { useCalendarEventForm } from '@/workflow/workflow-steps/workflow-actions/hooks/useCalendarEventForm';
 import { WorkflowVariablePicker } from '@/workflow/workflow-variables/components/WorkflowVariablePicker';
-import { t } from '@lingui/core/macro';
 import { useEffect } from 'react';
 import { SettingsPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { Callout } from 'twenty-ui/components';
+import { Callout } from 'twenty-ui/components/feedback';
 import { IconPlus } from 'twenty-ui/icon';
 import { type SelectOption } from 'twenty-ui/primitives/input';
 import { PermissionFlagType } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import { useLingui } from '@lingui/react/macro';
 
 type WorkflowEditActionCreateCalendarEventProps = {
   action: WorkflowCreateCalendarEventAction;
@@ -43,6 +43,7 @@ export const WorkflowEditActionCreateCalendarEvent = ({
   action,
   actionOptions,
 }: WorkflowEditActionCreateCalendarEventProps) => {
+  const { t } = useLingui();
   const { formData, handleFieldChange, saveAction } = useCalendarEventForm({
     action,
     onActionUpdate:
@@ -131,17 +132,20 @@ export const WorkflowEditActionCreateCalendarEvent = ({
         />
         {isDefined(missingScopes) && (
           <Callout
-            variant={'error'}
+            status={'error'}
             title={t`Missing calendar permission.`}
             description={
               hasConnectedAccountsPermission
                 ? t`This account is connected, but we don't have permission to create calendar events on your behalf yet. You'll be redirected to approve this access.`
-                : t`Ask a workspace admin for the Sync Account permission to reconnect this account.`
+                : t`Ask a workspace admin for the User Apps permission to reconnect this account.`
             }
             action={
-              hasConnectedAccountsPermission
-                ? { label: t`Reauthorize`, onClick: handleReauthorize }
-                : undefined
+              hasConnectedAccountsPermission ? (
+                <Callout.Action
+                  type="button"
+                  onClick={handleReauthorize}
+                >{t`Reauthorize`}</Callout.Action>
+              ) : undefined
             }
           />
         )}
@@ -188,9 +192,11 @@ export const WorkflowEditActionCreateCalendarEvent = ({
         />
         <FormSelectFieldInput
           label={t`Time zone`}
+          hint={t`UTC is used when no time zone is selected`}
           defaultValue={formData.timeZone}
           options={AVAILABLE_TIMEZONE_OPTIONS as SelectOption<string>[]}
           onChange={(value) => handleFieldChange('timeZone', value ?? '')}
+          isNullable
           readonly={actionOptions.readonly}
           VariablePicker={WorkflowVariablePicker}
         />

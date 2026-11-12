@@ -28,11 +28,12 @@ export type DatabaseEventTriggerSettings = {
   eventName: string;
   updatedFields?: string[];
   batchMode?: boolean;
+  condition?: string;
 };
 
 export type HttpRouteTriggerSettings = {
   path: string;
-  httpMethod: HTTPMethod | `${HTTPMethod}`;
+  httpMethod: HTTPMethod;
   isAuthRequired: boolean;
   forwardedRequestHeaders?: string[];
 };

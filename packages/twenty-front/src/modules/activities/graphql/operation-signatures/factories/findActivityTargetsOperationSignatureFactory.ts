@@ -1,12 +1,15 @@
-import { type CoreObjectNameSingular } from 'twenty-shared/types';
+import { type StandardObjectNameSingular } from 'twenty-shared/types';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { generateDepthRecordGqlFieldsFromObject } from '@/object-record/graphql/record-gql-fields/utils/generateDepthRecordGqlFieldsFromObject';
 import { type RecordGqlOperationSignatureFactory } from '@/object-record/graphql/types/RecordGqlOperationSignatureFactory';
 import { getObjectMorphJunctionConfig } from '@/object-record/record-field/ui/utils/junction/getObjectMorphJunctionConfig';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 type FindActivityTargetsOperationSignatureFactory = {
-  objectNameSingular: CoreObjectNameSingular.Note | CoreObjectNameSingular.Task;
+  objectNameSingular:
+    | StandardObjectNameSingular.Note
+    | StandardObjectNameSingular.Task;
   objectMetadataItems: EnrichedObjectMetadataItem[];
 };
 
@@ -22,7 +25,9 @@ export const findActivityTargetsOperationSignatureFactory: RecordGqlOperationSig
   );
 
   if (!isDefined(activityObjectMetadataItem)) {
-    throw new Error('Cannot resolve activity junction metadata');
+    throw new Error(
+      doNotTranslate('Cannot resolve activity junction metadata'),
+    );
   }
 
   const junctionConfig = getObjectMorphJunctionConfig({
@@ -31,7 +36,9 @@ export const findActivityTargetsOperationSignatureFactory: RecordGqlOperationSig
   });
 
   if (!isDefined(junctionConfig)) {
-    throw new Error('Cannot resolve activity relation on junction object');
+    throw new Error(
+      doNotTranslate('Cannot resolve activity relation on junction object'),
+    );
   }
 
   const {

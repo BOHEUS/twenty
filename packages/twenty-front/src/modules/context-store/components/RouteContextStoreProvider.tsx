@@ -1,4 +1,5 @@
 import { useWorkspaceRouteObjects } from '@/app/routing/components/WorkspaceRouteObjectsProvider';
+import { RouteContextStoreCoreObjectNameEffect } from '@/context-store/components/RouteContextStoreCoreObjectNameEffect';
 import { RouteContextStoreProviderEffect } from '@/context-store/components/RouteContextStoreProviderEffect';
 import { metadataStoreState } from '@/metadata-store/states/metadataStoreState';
 import { useIsSettingsPage } from '@/navigation/hooks/useIsSettingsPage';
@@ -10,23 +11,20 @@ import { viewsSelector } from '@/views/states/selectors/viewsSelector';
 import { computeObjectViewTargetIds } from '@/views/utils/computeObjectViewTargetIds';
 import { isUsableLastVisitedView } from '@/views/utils/isUsableLastVisitedView';
 import { matchRoutes, useLocation, useSearchParams } from 'react-router-dom';
-import { AppPath, CoreObjectNameSingular } from 'twenty-shared/types';
+import { AppPath, StandardObjectNameSingular } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { FeatureFlagKey, ViewType } from '~/generated-metadata/graphql';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
+import { ViewType } from '~/generated-metadata/graphql';
 import { isMatchingLocation } from '~/utils/isMatchingLocation';
 
 const getViewId = ({
   viewIdFromQueryParams,
   indexViewId,
   lastVisitedViewId,
-  firstAvailableViewId,
   firstSelectableViewId,
 }: {
   viewIdFromQueryParams: string | null;
   indexViewId?: string;
   lastVisitedViewId?: string;
-  firstAvailableViewId?: string;
   firstSelectableViewId?: string;
 }) => {
   if (isDefined(viewIdFromQueryParams)) {
@@ -45,43 +43,44 @@ const getViewId = ({
     return indexViewId;
   }
 
-  if (isDefined(firstAvailableViewId)) {
-    return firstAvailableViewId;
-  }
-
   return undefined;
 };
 
 export const RouteContextStoreProvider = () => {
   const location = useLocation();
   const routeObjects = useWorkspaceRouteObjects();
-  const isRecordIndexPage = isMatchingLocation(
+  const isCoreWorkflowIndexPage = isMatchingLocation(
     location,
-    AppPath.RecordIndexPage,
+    AppPath.WorkflowIndexPage,
   );
+  const isRecordIndexPage =
+    isCoreWorkflowIndexPage ||
+    isMatchingLocation(location, AppPath.RecordIndexPage);
   const isCoreWorkflowShowPage = isMatchingLocation(
     location,
     AppPath.WorkflowCoreShowPage,
   );
+  const isCoreWorkflowPage = isCoreWorkflowIndexPage || isCoreWorkflowShowPage;
   const routeParams = matchRoutes(routeObjects, location)?.at(-1)?.params;
-  // A chat on screen, full page or in the inbox, is the record page of the chat
+  // The chat page and the whole inbox act on chats: the chat on screen, or
+  // the chats selected in the inbox list
   const isAiChatPage =
     isMatchingLocation(location, AppPath.AiChat) ||
-    (isMatchingLocation(location, AppPath.AiChatInbox) &&
-      isDefined(routeParams?.threadId));
+    isMatchingLocation(location, AppPath.AiChatInbox);
   const isRecordShowPage =
     isCoreWorkflowShowPage ||
     isAiChatPage ||
     isMatchingLocation(location, AppPath.RecordShowPage);
   const isStandalonePage = isMatchingLocation(location, AppPath.PageLayoutPage);
+  const isCoreAgentPage =
+    isMatchingLocation(location, AppPath.AgentIndexPage) ||
+    isMatchingLocation(location, AppPath.AgentShowPage);
   const isSettingsPage = useIsSettingsPage();
 
   const objectNamePlural = routeParams?.objectNamePlural;
-  const objectNameSingular = isCoreWorkflowShowPage
-    ? CoreObjectNameSingular.Workflow
-    : isAiChatPage
-      ? CoreObjectNameSingular.AgentChatThread
-      : routeParams?.objectNameSingular;
+  const objectNameSingular = isAiChatPage
+    ? StandardObjectNameSingular.AgentChatThread
+    : routeParams?.objectNameSingular;
 
   const [searchParams] = useSearchParams();
   const viewIdQueryParamRaw = searchParams.get('viewId');
@@ -118,29 +117,21 @@ export const RouteContextStoreProvider = () => {
     (view) => view.id === lastVisitedViewIdRaw,
   );
 
-  const isInitialObjectViewEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_INITIAL_OBJECT_VIEW_ENABLED,
-  );
-
   const lastVisitedViewId = isUsableLastVisitedView({
     lastVisitedView,
-    isInitialObjectViewEnabled,
   })
     ? lastVisitedViewIdRaw
     : undefined;
 
-  const { firstSelectableViewId, indexViewId, firstAvailableViewId } =
-    computeObjectViewTargetIds({
-      views,
-      objectMetadataId: objectMetadataItem?.id,
-      isInitialObjectViewEnabled,
-    });
+  const { firstSelectableViewId, indexViewId } = computeObjectViewTargetIds({
+    views,
+    objectMetadataId: objectMetadataItem?.id,
+  });
 
   const viewId = getViewId({
     viewIdFromQueryParams: viewIdQueryParam,
     indexViewId,
     lastVisitedViewId,
-    firstAvailableViewId,
     firstSelectableViewId,
   });
 
@@ -148,21 +139,27 @@ export const RouteContextStoreProvider = () => {
     (isRecordIndexPage ||
       isRecordShowPage ||
       isStandalonePage ||
-      isSettingsPage) &&
+      isSettingsPage ||
+      isCoreAgentPage) &&
     metadataStore.status === 'up-to-date';
 
-  if (!shouldComputeContextStore) {
-    return null;
-  }
+  const coreObjectName =
+    isCoreWorkflowIndexPage || isCoreWorkflowShowPage ? 'workflow' : null;
 
+  // Set on every route: pages without a context store (e.g. /agents) must not keep a previous core object.
   return (
-    <RouteContextStoreProviderEffect
-      viewId={isCoreWorkflowShowPage || isAiChatPage ? undefined : viewId}
-      objectMetadataItem={objectMetadataItem}
-      isRecordIndexPage={isRecordIndexPage}
-      isRecordShowPage={isRecordShowPage}
-      isStandalonePage={isStandalonePage}
-      isSettingsPage={isSettingsPage}
-    />
+    <>
+      <RouteContextStoreCoreObjectNameEffect coreObjectName={coreObjectName} />
+      {shouldComputeContextStore && (
+        <RouteContextStoreProviderEffect
+          viewId={isCoreWorkflowPage || isAiChatPage ? undefined : viewId}
+          objectMetadataItem={objectMetadataItem}
+          isRecordIndexPage={isRecordIndexPage}
+          isRecordShowPage={isRecordShowPage}
+          isStandalonePage={isStandalonePage}
+          isSettingsPage={isSettingsPage}
+        />
+      )}
+    </>
   );
 };

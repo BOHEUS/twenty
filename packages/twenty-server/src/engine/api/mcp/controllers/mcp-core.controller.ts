@@ -22,10 +22,12 @@ import { isDefined } from 'twenty-shared/utils';
 import { JsonRpc } from 'src/engine/api/mcp/dtos/json-rpc';
 import { McpAuthGuard } from 'src/engine/api/mcp/guards/mcp-auth.guard';
 import { McpProtocolService } from 'src/engine/api/mcp/services/mcp-protocol.service';
+import { type McpCoreQueryContext } from 'src/engine/api/mcp/types/mcp-core-query-context.type';
 import { getMcpRequestLogFields } from 'src/engine/api/mcp/utils/get-mcp-request-log-fields.util';
 import { writeSseEvent } from 'src/engine/api/mcp/utils/write-sse-event.util';
 import { RestApiExceptionFilter } from 'src/engine/api/rest/rest-api-exception.filter';
 import { AuthRestApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-rest-api-exception.filter';
+import { buildWorkspaceAuthContextFromRequest } from 'src/engine/core-modules/auth/utils/build-workspace-auth-context-from-request.util';
 import { FlatApiKey } from 'src/engine/core-modules/api-key/types/flat-api-key.type';
 import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
 import { FlatWorkspace } from 'src/engine/core-modules/workspace/types/flat-workspace.type';
@@ -35,26 +37,27 @@ import { AuthApplication } from 'src/engine/decorators/auth/auth-application.dec
 import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
 import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
-import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
 import { WorkspaceNotSuspendedGuard } from 'src/engine/guards/workspace-not-suspended.guard';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
 @Controller(ApiPath.Mcp)
 @UseGuards(
   McpAuthGuard,
-  AuthPrincipalGuard({
-    userSession: {
-      standard: true,
-      impersonated: true,
-      playground: true,
-      workspaceAgnostic: false,
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: true,
+      oauthClient: true,
+      application: { withUser: true, withoutUser: true, withAgent: true },
     },
-    apiKey: true,
-    oauthClient: true,
-    application: true,
+    requiredPermissionFlags: [],
   }),
   WorkspaceNotSuspendedGuard,
-  NoPermissionGuard,
 )
 @UseFilters(RestApiExceptionFilter, AuthRestApiExceptionFilter)
 export class McpCoreController {
@@ -94,18 +97,21 @@ export class McpCoreController {
       ...(isDefined(mcpToolName) && { 'mcp.tool_name': mcpToolName }),
     });
 
-    const authContext = {
+    // The guard authenticates after WorkspaceAuthContextMiddleware has run, so the context is built here
+    const queryContext: McpCoreQueryContext = {
+      authContext: buildWorkspaceAuthContextFromRequest(request),
       workspace,
       userId: user?.id,
       userWorkspaceId,
       apiKey,
       application,
-      isDirectMode: mode === 'direct',
+      agentId: request.agentId,
+      isDirectMode: mode !== 'meta',
     };
 
     // JSON-RPC notifications (no id) expect no response body regardless of Accept
     if (!isDefined(body.id)) {
-      await this.mcpProtocolService.handleMCPCoreQuery(body, authContext);
+      await this.mcpProtocolService.handleMCPCoreQuery(body, queryContext);
 
       res.status(HttpStatus.ACCEPTED);
 
@@ -131,7 +137,7 @@ export class McpCoreController {
 
       const result = await this.mcpProtocolService.handleMCPCoreQuery(
         body,
-        authContext,
+        queryContext,
         sseWriter,
       );
 
@@ -146,7 +152,7 @@ export class McpCoreController {
 
     const result = await this.mcpProtocolService.handleMCPCoreQuery(
       body,
-      authContext,
+      queryContext,
     );
 
     return result;

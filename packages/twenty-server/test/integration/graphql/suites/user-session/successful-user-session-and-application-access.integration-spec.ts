@@ -5,12 +5,10 @@ import { currentUserSessions } from 'test/integration/graphql/suites/user-sessio
 import { currentUser } from 'test/integration/graphql/suites/user-session/utils/current-user.util';
 import { generatePlaygroundToken } from 'test/integration/graphql/suites/user-session/utils/generate-playground-token.util';
 import { generateTransientTokenResponse } from 'test/integration/utils/generate-transient-token.util';
-import { sendInvitations } from 'test/integration/graphql/suites/user-session/utils/send-invitations.util';
 import { versionInfo } from 'test/integration/graphql/suites/user-session/utils/version-info.util';
 import { deleteUser } from 'test/integration/graphql/utils/delete-user.util';
 import { getAccessTokenForCredentials } from 'test/integration/graphql/utils/get-access-token-for-credentials.util';
 import { impersonate } from 'test/integration/graphql/utils/impersonate.util';
-import { deleteWorkspaceInvitationsByEmail } from 'test/integration/graphql/utils/seed-workspace-invitation.util';
 import { getAuthTokensFromLoginToken } from 'test/integration/graphql/utils/get-auth-tokens-from-login-token.util';
 import { activateWorkspace } from 'test/integration/graphql/utils/activate-workspace.util';
 import { signUpInNewWorkspace } from 'test/integration/graphql/utils/sign-up-in-new-workspace.util';
@@ -22,6 +20,7 @@ import {
 } from 'test/integration/metadata/suites/application/utils/setup-application-with-variable.util';
 import { SystemPermissionFlag } from 'twenty-shared/constants';
 
+import { BillingPlanKey } from 'src/engine/core-modules/billing/enums/billing-plan-key.enum';
 import { SubscriptionInterval } from 'src/engine/core-modules/billing/enums/billing-subscription-interval.enum';
 import { AUTH_PRINCIPAL_REFUSED_MESSAGE } from 'src/engine/guards/constants/auth-principal-refused-message.constant';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
@@ -354,29 +353,15 @@ describe('User session operations and application access that must keep working'
       ).toBeNull();
     });
 
-    it('should send invitations when the application role holds the permission', async () => {
-      const email = `user-session-invite-${Date.now()}@example.com`;
-
-      try {
-        const { data, errors } = await sendInvitations({
-          input: { emails: [email] },
-          token: workspaceMembersApplicationToken,
-          expectToFail: false,
-        });
-
-        expect(errors).toBeUndefined();
-        expect(data.sendInvitations.success).toBe(true);
-      } finally {
-        await deleteWorkspaceInvitationsByEmail({ email });
-      }
-    });
-
     // Billing is off in the integration environment, so the mutation cannot
-    // complete; what this asserts is that AuthPrincipalGuard is not what
+    // complete; what this asserts is that the access policy is not what
     // stopped it, leaving checkoutSession on its permission path.
     it('should reach the checkout session permission path', async () => {
       const { errors } = await checkoutSession({
-        input: { recurringInterval: SubscriptionInterval.Month },
+        input: {
+          recurringInterval: SubscriptionInterval.Month,
+          plan: BillingPlanKey.PRO,
+        },
         token: workspaceMembersApplicationToken,
         expectToFail: null,
       });

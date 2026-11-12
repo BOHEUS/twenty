@@ -3,18 +3,21 @@ import { useState } from 'react';
 
 import { MemberEmailField } from '@/settings/members/components/MemberEmailField';
 import { MemberNameFields } from '@/settings/members/components/MemberNameFields';
+import { MemberTwoFactorAuthenticationRecoverySection } from '@/settings/members/components/MemberTwoFactorAuthenticationRecoverySection';
 import { WorkspaceMemberPictureUploader } from '@/settings/workspace-member/components/WorkspaceMemberPictureUploader';
 import { type WorkspaceMember } from '@/workspace-member/types/WorkspaceMember';
-import { t } from '@lingui/core/macro';
-import { Section } from 'twenty-ui/components';
+import { isDefined } from 'twenty-shared/utils';
+import { Section } from 'twenty-ui/components/layout';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 type MemberInfosTabProps = {
   member: WorkspaceMember;
   onNameChange: (firstName: string, lastName: string) => void;
   onImpersonate?: () => void;
   onDelete: () => void;
+  twoFactorAuthenticationRecoveryUserId?: string;
 };
 
 const StyledNameRow = styled.div`
@@ -33,7 +36,9 @@ export const MemberInfosTab = ({
   onNameChange,
   onImpersonate,
   onDelete,
+  twoFactorAuthenticationRecoveryUserId,
 }: MemberInfosTabProps) => {
+  const { t } = useLingui();
   const [firstName, setFirstName] = useState(member.name.firstName);
   const [lastName, setLastName] = useState(member.name.lastName);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
@@ -81,6 +86,14 @@ export const MemberInfosTab = ({
         />
         <MemberEmailField email={member.userEmail} />
       </Section.Root>
+
+      {isDefined(twoFactorAuthenticationRecoveryUserId) && (
+        <MemberTwoFactorAuthenticationRecoverySection
+          key={twoFactorAuthenticationRecoveryUserId}
+          userId={twoFactorAuthenticationRecoveryUserId}
+          memberName={`${firstName} ${lastName}`.trim()}
+        />
+      )}
 
       <Section.Root>
         <Section.Header

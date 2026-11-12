@@ -3,9 +3,10 @@ import { FormFieldInputContainer } from '@/ui/input/components/FormFieldInputCon
 import { InputLabel } from '@/ui/input/components/internal/InputLabel/InputLabel';
 import { type WorkflowFormActionField } from '@/workflow/workflow-steps/workflow-actions/form-action/types/WorkflowFormActionField';
 import { getDefaultFormFieldSettings } from '@/workflow/workflow-steps/workflow-actions/form-action/utils/getDefaultFormFieldSettings';
-import { t } from '@lingui/core/macro';
+import { getFormFieldDisplayText } from '@/workflow/workflow-steps/workflow-actions/form-action/utils/getFormFieldDisplayText';
 import camelCase from 'lodash.camelcase';
 import { FieldMetadataType } from 'twenty-shared/types';
+import { useLingui } from '@lingui/react/macro';
 
 type WorkflowFormFieldSettingsDateProps = {
   field: WorkflowFormActionField;
@@ -16,6 +17,7 @@ export const WorkflowFormFieldSettingsDate = ({
   field,
   onChange,
 }: WorkflowFormFieldSettingsDateProps) => {
+  const { t } = useLingui();
   return (
     <FormFieldInputContainer>
       <InputLabel>{t`Label`}</InputLabel>
@@ -28,7 +30,10 @@ export const WorkflowFormFieldSettingsDate = ({
           });
         }}
         defaultValue={field.label}
-        placeholder={getDefaultFormFieldSettings(FieldMetadataType.DATE).label}
+        placeholder={getFormFieldDisplayText({
+          type: FieldMetadataType.DATE,
+          text: getDefaultFormFieldSettings(FieldMetadataType.DATE).label,
+        })}
       />
     </FormFieldInputContainer>
   );

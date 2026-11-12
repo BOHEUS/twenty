@@ -1,31 +1,26 @@
-import { SKELETON_LOADER_HEIGHT_SIZES } from '@/activities/components/SkeletonLoader';
+import { SkeletonLine } from '@/ui/feedback/skeleton/components/SkeletonLine';
 import {
   StyledMarkdownContainer,
   StyledSkeletonContainer,
 } from '@/ai/components/LazyMarkdownRendererStyledComponents';
 import { MarkdownRenderer } from '@/ai/components/MarkdownRenderer';
 import { EMPTY_MARKDOWN_BLOCK_SPLIT_CACHE } from '@/ai/constants/EmptyMarkdownBlockSplitCache';
+import { type MarkdownDisplayMode } from '@/ai/types/MarkdownDisplayMode';
 import { getMarkdownBlocksIncrementally } from '@/ai/utils/getMarkdownBlocksIncrementally';
 import { protectChatReferencesForMarkdown } from '@/ai/utils/protectChatReferencesForMarkdown';
 import { memo, Suspense, useRef } from 'react';
-import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
-import { useTheme } from 'twenty-ui/theme';
+import { SKELETON_HEIGHT_SIZES } from 'twenty-ui/primitives/feedback';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 export const MarkdownLoadingSkeleton = () => {
-  const theme = useTheme();
   return (
-    <SkeletonTheme
-      baseColor={theme.background.tertiary}
-      highlightColor={theme.background.transparent.lighter}
-      borderRadius={theme.border.radius.sm}
-    >
-      <StyledSkeletonContainer>
-        <Skeleton
-          width={200}
-          height={SKELETON_LOADER_HEIGHT_SIZES.standard.s}
-        />
-      </StyledSkeletonContainer>
-    </SkeletonTheme>
+    <StyledSkeletonContainer>
+      <SkeletonLine
+        borderRadius={themeCssVariables.border.radius.smRound}
+        width={200}
+        height={SKELETON_HEIGHT_SIZES.s}
+      />
+    </StyledSkeletonContainer>
   );
 };
 
@@ -41,11 +36,13 @@ const MemoizedMarkdownBlock = memo(
 type LazyMarkdownContentProps = {
   text: string;
   noImage?: boolean;
+  displayMode?: MarkdownDisplayMode;
 };
 
 export const LazyMarkdownContent = ({
   text,
   noImage,
+  displayMode = 'default',
 }: LazyMarkdownContentProps) => {
   // Not state: only caches the previous split so streaming appends skip settled blocks.
   // oxlint-disable-next-line twenty/no-state-useref
@@ -61,6 +58,7 @@ export const LazyMarkdownContent = ({
   return (
     <StyledMarkdownContainer
       className="markdown-section"
+      displayMode={displayMode}
       data-replay-ignore-mutations="true"
     >
       {markdownBlocks.map((blockText, blockIndex) => (
@@ -79,8 +77,13 @@ type LazyMarkdownRendererProps = LazyMarkdownContentProps;
 export const LazyMarkdownRenderer = ({
   text,
   noImage,
+  displayMode,
 }: LazyMarkdownRendererProps) => (
   <Suspense fallback={<MarkdownLoadingSkeleton />}>
-    <LazyMarkdownContent text={text} noImage={noImage} />
+    <LazyMarkdownContent
+      text={text}
+      noImage={noImage}
+      displayMode={displayMode}
+    />
   </Suspense>
 );

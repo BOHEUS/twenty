@@ -5,26 +5,22 @@ import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLay
 import { useCreateUnsubscribeTopic } from '@/settings/unsubscribe-topics/hooks/useCreateUnsubscribeTopic';
 import { SETTINGS_UNSUBSCRIBE_TAB_IDS } from '@/settings/unsubscribers/constants/SettingsUnsubscribeTabIds';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import { useLingui } from '@lingui/react/macro';
 import { useCallback, useState } from 'react';
-import { FeatureFlagKey, SettingsPath } from 'twenty-shared/types';
+import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { Section, useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { IconEye } from 'twenty-ui/icon';
 import { Card } from 'twenty-ui/primitives/surfaces';
 import { UnsubscribeTopicVisibility } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
-import { NotFound } from '~/pages/not-found/NotFound';
 
 export const SettingsWorkspaceNewUnsubscribeTopic = () => {
   const { t } = useLingui();
   const navigate = useNavigateSettings();
   const { enqueueToast } = useToast();
   const { createUnsubscribeTopic, loading } = useCreateUnsubscribeTopic();
-  const isMessageCampaignEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED,
-  );
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -64,7 +60,7 @@ export const SettingsWorkspaceNewUnsubscribeTopic = () => {
       }
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to create unsubscribe topic.`,
       });
     }
@@ -78,10 +74,6 @@ export const SettingsWorkspaceNewUnsubscribeTopic = () => {
     enqueueToast,
     t,
   ]);
-
-  if (!isMessageCampaignEnabled) {
-    return <NotFound />;
-  }
 
   return (
     <SettingsPageLayout
@@ -140,6 +132,7 @@ export const SettingsWorkspaceNewUnsubscribeTopic = () => {
           <SettingsTextInput
             instanceId="unsubscribe-topic-description"
             label={t`Description`}
+            placeholder={t`Product news and tips, once a month`}
             value={description}
             onChange={setDescription}
             disabled={loading}
@@ -151,7 +144,7 @@ export const SettingsWorkspaceNewUnsubscribeTopic = () => {
             title={t`Visibility`}
             description={t`Control whether recipients can find and manage this topic.`}
           />
-          <Card.Root rounded>
+          <Card.Root>
             <SettingsOptionCardContentSwitch
               Icon={IconEye}
               title={t`Listed on the unsubscribe page`}

@@ -1,6 +1,6 @@
 import { isPlainObject } from '@nestjs/common/utils/shared.utils';
 
-import { isNull } from '@sniptt/guards';
+import { isNull, isString } from '@sniptt/guards';
 import {
   FieldActorSource,
   FieldMetadataType,
@@ -12,8 +12,8 @@ import {
   DEFAULT_ARRAY_FIELD_NULL_EQUIVALENT_VALUE,
   DEFAULT_COMPOSITE_FIELDS_NULL_EQUIVALENT_VALUE,
   DEFAULT_TEXT_FIELD_NULL_EQUIVALENT_VALUE,
-} from 'src/engine/api/common/common-args-processors/data-arg-processor/constants/null-equivalent-values.constant';
-import { getFlatFieldsFromFlatObjectMetadata } from 'src/engine/api/graphql/workspace-schema-builder/utils/get-flat-fields-for-flat-object-metadata.util';
+} from 'src/engine/record-filter/constants/null-equivalent-values.constant';
+import { getFlatFieldsFromFlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/utils/get-flat-fields-for-flat-object-metadata.util';
 import { computeCompositeColumnName } from 'src/engine/metadata-modules/field-metadata/utils/compute-column-name.util';
 import { isCompositeFieldMetadataType } from 'src/engine/metadata-modules/field-metadata/utils/is-composite-field-metadata-type.util';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
@@ -209,12 +209,14 @@ function formatResultRecursively<T>(
     }
 
     if (
-      typeof rawUpdatedDateTime === 'string' ||
+      isString(rawUpdatedDateTime) ||
       rawUpdatedDateTime instanceof Date ||
       isPlainObject(rawUpdatedDateTime)
     ) {
       // @ts-expect-error legacy noImplicitAny
-      newData[dateTimeField.name] = rawUpdatedDateTime;
+      newData[dateTimeField.name] = isString(rawUpdatedDateTime)
+        ? new Date(rawUpdatedDateTime)
+        : rawUpdatedDateTime;
     } else {
       const stringifiedUnknownValue = stringifySafely(rawUpdatedDateTime);
 
@@ -305,7 +307,9 @@ function getCompositeFieldMetadataMapFromCollection(
     compositeFieldMetadataCollection.flatMap((fieldMetadata) => {
       const compositeType = compositeTypeDefinitions.get(fieldMetadata.type);
 
-      if (!compositeType) return [];
+      if (!compositeType) {
+        return [];
+      }
 
       return compositeType.properties.map((compositeProperty) => [
         computeCompositeColumnName(fieldMetadata.name, compositeProperty),
@@ -356,7 +360,9 @@ function transformCompositeFieldNullValue(
   compositePropertyName: string,
   fieldMetadata: OrmFlatFieldMetadata,
 ) {
-  if (!isNull(value)) return value;
+  if (!isNull(value)) {
+    return value;
+  }
 
   return (
     DEFAULT_COMPOSITE_FIELDS_NULL_EQUIVALENT_VALUE[fieldMetadata.type]?.[

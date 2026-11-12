@@ -1,4 +1,5 @@
 import {
+  type AgentManifest,
   type FieldPermissionManifest,
   type NavigationMenuItemManifest,
   type ObjectPermissionManifest,
@@ -16,13 +17,17 @@ import {
   type ViewFilterManifest,
   type ViewGroupManifest,
   type ViewManifest,
+  type RelatedRecordPathManifest,
+  type SkillManifest,
   type ViewSortManifest,
+  type WorkflowManifest,
 } from 'twenty-shared/application';
 import {
   AggregateOperations,
   FieldMetadataType,
-  PageLayoutTabLayoutMode,
   NavigationMenuItemType,
+  PageLayoutTabLayoutMode,
+  PageLayoutType,
   RowLevelPermissionPredicateGroupLogicalOperator,
   RowLevelPermissionPredicateOperand,
   ViewCalendarLayout,
@@ -32,8 +37,16 @@ import {
   ViewSortDirection,
   ViewType,
   ViewVisibility,
+  WidgetType,
 } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
 
+import { fromFlatAgentToAgentManifest } from 'src/engine/core-modules/application/application-manifest/converters/from-flat-agent-to-agent-manifest.util';
+import { fromFlatRelatedRecordPathToRelatedRecordPathManifest } from 'src/engine/core-modules/application/application-manifest/converters/from-flat-related-record-path-to-related-record-path-manifest.util';
+import { fromRelatedRecordPathManifestToUniversalFlatRelatedRecordPath } from 'src/engine/core-modules/application/application-manifest/converters/from-related-record-path-manifest-to-universal-flat-related-record-path.util';
+import { fromFlatSkillToSkillManifest } from 'src/engine/core-modules/application/application-manifest/converters/from-flat-skill-to-skill-manifest.util';
+import { fromSkillManifestToUniversalFlatSkill } from 'src/engine/core-modules/application/application-manifest/converters/from-skill-manifest-to-universal-flat-skill.util';
+import { fromAgentManifestToUniversalFlatAgent } from 'src/engine/core-modules/application/utils/from-agent-manifest-to-universal-flat-agent.util';
 import { fromFieldPermissionManifestToUniversalFlatFieldPermission } from 'src/engine/core-modules/application/application-manifest/converters/from-field-permission-manifest-to-universal-flat-field-permission.util';
 import { fromFlatFieldMetadataToFieldManifest } from 'src/engine/core-modules/application/application-manifest/converters/from-flat-field-metadata-to-field-manifest.util';
 import { fromFlatFieldPermissionToFieldPermissionManifest } from 'src/engine/core-modules/application/application-manifest/converters/from-flat-field-permission-to-field-permission-manifest.util';
@@ -70,6 +83,8 @@ import { fromViewFilterGroupManifestToUniversalFlatViewFilterGroup } from 'src/e
 import { fromViewFilterManifestToUniversalFlatViewFilter } from 'src/engine/core-modules/application/application-manifest/converters/from-view-filter-manifest-to-universal-flat-view-filter.util';
 import { fromViewGroupManifestToUniversalFlatViewGroup } from 'src/engine/core-modules/application/application-manifest/converters/from-view-group-manifest-to-universal-flat-view-group.util';
 import { fromViewManifestToUniversalFlatView } from 'src/engine/core-modules/application/application-manifest/converters/from-view-manifest-to-universal-flat-view.util';
+import { fromFlatWorkflowToWorkflowManifest } from 'src/engine/core-modules/application/application-manifest/converters/from-flat-workflow-to-workflow-manifest.util';
+import { fromWorkflowManifestToUniversalFlatWorkflowOrThrow } from 'src/engine/core-modules/application/application-manifest/converters/from-workflow-manifest-to-universal-flat-workflow-or-throw.util';
 import { fromViewSortManifestToUniversalFlatViewSort } from 'src/engine/core-modules/application/application-manifest/converters/from-view-sort-manifest-to-universal-flat-view-sort.util';
 import { ALL_UNIVERSAL_FLAT_ENTITY_PROPERTIES_TO_COMPARE_AND_STRINGIFY } from 'src/engine/metadata-modules/flat-entity/constant/all-universal-flat-entity-properties-to-compare-and-stringify.constant';
 import { getFlatFieldMetadataMock } from 'src/engine/metadata-modules/flat-field-metadata/__mocks__/get-flat-field-metadata.mock';
@@ -179,7 +194,7 @@ const PAGE_LAYOUT_WIDGET_UID = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
 const PAGE_LAYOUT_WIDGET_MANIFEST: NormalizedPageLayoutWidgetManifest = {
   universalIdentifier: PAGE_LAYOUT_WIDGET_UID,
   title: 'Fields',
-  type: 'FIELDS',
+  type: WidgetType.FIELDS,
   objectUniversalIdentifier: OBJECT_UID,
   conditionalDisplay: { device: 'DESKTOP' },
   position: { layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST, index: 0 },
@@ -202,9 +217,10 @@ const PAGE_LAYOUT_TAB_MANIFEST: NormalizedPageLayoutTabManifest = {
 const PAGE_LAYOUT_MANIFEST: PageLayoutManifest = {
   universalIdentifier: PAGE_LAYOUT_UID,
   name: 'Pet page',
-  type: 'RECORD_PAGE',
+  type: PageLayoutType.RECORD_PAGE,
   objectUniversalIdentifier: OBJECT_UID,
   defaultTabToFocusOnMobileAndSidePanelUniversalIdentifier: PAGE_LAYOUT_TAB_UID,
+  isFirstTabPinned: false,
   tabs: [PAGE_LAYOUT_TAB_MANIFEST],
 };
 
@@ -216,6 +232,7 @@ const NAVIGATION_MENU_ITEM_MANIFEST: Required<NavigationMenuItemManifest> = {
   color: 'green',
   position: 12,
   link: 'https://example.com/pets',
+  nativePageKey: 'workflows',
   folderUniversalIdentifier: '88888888-8888-4888-8888-888888888888',
   viewUniversalIdentifier: VIEW_UID,
   targetObjectUniversalIdentifier: OBJECT_UID,
@@ -326,9 +343,121 @@ const ROW_LEVEL_PERMISSION_PREDICATE_MANIFEST: RowLevelPermissionPredicateManife
     position: 0,
   };
 
+const CREATE_PERMISSION_DERIVED_ON_IMPORT =
+  'Not in the manifest yet: importing derives it from the update permission';
+
+const RULE_DERIVED_ON_IMPORT =
+  'rules are derived on import from the predicate groups and predicates';
+const PREDICATE_GROUP_OPERATIONS_GAP =
+  'not in app manifests until the engine reads predicate group operations';
+
 const ROW_LEVEL_PERMISSION_KIND_GAPS = {
   deletedAt:
     'soft-deleted row-level permission predicates and groups are reported as excluded instead of exported',
+};
+
+const WORKFLOW_MANIFEST: WorkflowManifest = {
+  universalIdentifier: APP_UID,
+  name: 'Workflow',
+  version: {
+    trigger: {
+      universalIdentifier: OBJECT_UID,
+      type: 'MANUAL',
+      nextStepIds: [FIELD_UID],
+    },
+    steps: [
+      {
+        universalIdentifier: FIELD_UID,
+        name: 'Empty',
+        type: 'EMPTY',
+        nextStepIds: [],
+        input: {},
+      },
+    ],
+  },
+};
+
+const exportWorkflowManifestOrThrow = (manifest: WorkflowManifest) => {
+  const references = { logicFunctionIdByUniversalIdentifier: new Map() };
+  const { flatUniversalWorkflowVersion, ...universalFlatWorkflow } =
+    fromWorkflowManifestToUniversalFlatWorkflowOrThrow({
+      manifest,
+      applicationUniversalIdentifier: APP_UID,
+      now: NOW,
+      ...references,
+    });
+
+  if (!isDefined(flatUniversalWorkflowVersion)) {
+    throw new Error('Expected the synced workflow version');
+  }
+  const conversion = fromFlatWorkflowToWorkflowManifest({
+    flatWorkflow: {
+      ...universalFlatWorkflow,
+      workspaceId: 'workspace-id',
+      applicationId: 'application-id',
+      navigationMenuItemIds: [],
+    },
+    flatWorkflowVersion: {
+      ...flatUniversalWorkflowVersion,
+      workspaceId: 'workspace-id',
+      applicationId: 'application-id',
+    },
+    references,
+  });
+
+  if ('reason' in conversion) {
+    throw new Error(conversion.reason);
+  }
+
+  return conversion.manifest;
+};
+
+const AGENT_MANIFEST: AgentManifest = {
+  universalIdentifier: APP_UID,
+  name: 'lead-scorer',
+  label: 'Lead Scorer',
+  icon: 'IconRobot',
+  avatarColor: 'pink',
+  avatarShape: 'pill',
+  description: 'Scores new leads',
+  prompt: 'Score the lead.',
+  modelId: 'gpt-4o',
+  responseFormat: { type: 'text' },
+  roleUniversalIdentifier: OBJECT_UID,
+  triggers: [
+    {
+      universalIdentifier: FIELD_UID,
+      type: 'CRON',
+      settings: { pattern: '0 9 * * 1' },
+    },
+  ],
+};
+
+const EXPORTED_AGENT_MANIFEST = fromFlatAgentToAgentManifest({
+  flatAgent: fromAgentManifestToUniversalFlatAgent({
+    agentManifest: AGENT_MANIFEST,
+    applicationUniversalIdentifier: APP_UID,
+    now: NOW,
+  }),
+  roleUniversalIdentifier: AGENT_MANIFEST.roleUniversalIdentifier,
+});
+
+const SKILL_MANIFEST: SkillManifest = {
+  universalIdentifier: APP_UID,
+  name: 'sales-outreach',
+  label: 'Sales Outreach',
+  icon: 'IconBrain',
+  description: 'Guides an outreach',
+  content: 'Research the company first.',
+};
+
+const RELATED_RECORD_PATH_MANIFEST: RelatedRecordPathManifest = {
+  universalIdentifier: APP_UID,
+  objectUniversalIdentifier: OBJECT_UID,
+  firstFieldMetadataUniversalIdentifier: FIELD_UID,
+  secondFieldMetadataUniversalIdentifier: FIELD_UID,
+  thirdFieldMetadataUniversalIdentifier: FIELD_UID,
+  isInherent: true,
 };
 
 type ExportedKind = {
@@ -352,6 +481,7 @@ const EXPORTED_KINDS: ExportedKind[] = [
           description: 'An object',
           icon: 'IconBox',
           color: 'blue',
+          disabledObjectPermissionActions: ['canDestroyObjectRecords'],
           imageIdentifierFieldMetadataUniversalIdentifier: FIELD_UID,
           labelIdentifierFieldMetadataUniversalIdentifier: FIELD_UID,
         }),
@@ -375,6 +505,7 @@ const EXPORTED_KINDS: ExportedKind[] = [
           type: FieldMetadataType.TEXT,
           description: 'A field',
           icon: 'IconAbc',
+          disabledFieldPermissionActions: ['canUpdateFieldValue'],
           defaultValue: "'x'",
           options: null,
           universalSettings: null,
@@ -550,11 +681,7 @@ const EXPORTED_KINDS: ExportedKind[] = [
       objectMetadataUniversalIdentifier: 'objectUniversalIdentifier',
     },
     workspaceLocalProperties: [],
-    knownGaps: {
-      ...PAGE_LAYOUT_KIND_GAPS,
-      isFirstTabPinned:
-        'workspace-owned: the sync keeps the live value, so the forward default never diffs',
-    },
+    knownGaps: PAGE_LAYOUT_KIND_GAPS,
   },
   {
     metadataName: 'pageLayoutTab',
@@ -615,7 +742,9 @@ const EXPORTED_KINDS: ExportedKind[] = [
     ),
     renamedProperties: {},
     workspaceLocalProperties: [],
-    knownGaps: {},
+    knownGaps: {
+      canCreateAllObjectRecords: CREATE_PERMISSION_DERIVED_ON_IMPORT,
+    },
   },
   {
     metadataName: 'objectPermission',
@@ -632,7 +761,10 @@ const EXPORTED_KINDS: ExportedKind[] = [
       objectMetadataUniversalIdentifier: 'objectUniversalIdentifier',
     },
     workspaceLocalProperties: [],
-    knownGaps: NESTED_ROLE_CHILD_GAPS,
+    knownGaps: {
+      ...NESTED_ROLE_CHILD_GAPS,
+      canCreateObjectRecords: CREATE_PERMISSION_DERIVED_ON_IMPORT,
+    },
   },
   {
     metadataName: 'fieldPermission',
@@ -650,7 +782,12 @@ const EXPORTED_KINDS: ExportedKind[] = [
       fieldMetadataUniversalIdentifier: 'fieldUniversalIdentifier',
     },
     workspaceLocalProperties: [],
-    knownGaps: NESTED_ROLE_CHILD_GAPS,
+    knownGaps: {
+      ...NESTED_ROLE_CHILD_GAPS,
+      rowLevelPermissionPredicateGroupUniversalIdentifier:
+        'manifests do not declare field permissions on a row level permission rule yet',
+      rowLevelPermissionRuleUniversalIdentifier: RULE_DERIVED_ON_IMPORT,
+    },
   },
   {
     metadataName: 'rolePermissionFlag',
@@ -694,7 +831,15 @@ const EXPORTED_KINDS: ExportedKind[] = [
       positionInRowLevelPermissionPredicateGroup: 'position',
     },
     workspaceLocalProperties: [],
-    knownGaps: ROW_LEVEL_PERMISSION_KIND_GAPS,
+    knownGaps: {
+      ...ROW_LEVEL_PERMISSION_KIND_GAPS,
+      canReadRecords: PREDICATE_GROUP_OPERATIONS_GAP,
+      canCreateRecords: PREDICATE_GROUP_OPERATIONS_GAP,
+      canUpdateRecords: PREDICATE_GROUP_OPERATIONS_GAP,
+      canSoftDeleteRecords: PREDICATE_GROUP_OPERATIONS_GAP,
+      canDestroyRecords: PREDICATE_GROUP_OPERATIONS_GAP,
+      rowLevelPermissionRuleUniversalIdentifier: RULE_DERIVED_ON_IMPORT,
+    },
   },
   {
     metadataName: 'rowLevelPermissionPredicate',
@@ -719,7 +864,12 @@ const EXPORTED_KINDS: ExportedKind[] = [
         'workspaceMemberFieldUniversalIdentifier',
     },
     workspaceLocalProperties: [],
-    knownGaps: ROW_LEVEL_PERMISSION_KIND_GAPS,
+    knownGaps: {
+      ...ROW_LEVEL_PERMISSION_KIND_GAPS,
+      relationFieldMetadataUniversalIdentifier:
+        'no manifest slot yet for a predicate reached through a relation',
+      rowLevelPermissionRuleUniversalIdentifier: RULE_DERIVED_ON_IMPORT,
+    },
   },
   {
     metadataName: 'permissionFlag',
@@ -734,6 +884,85 @@ const EXPORTED_KINDS: ExportedKind[] = [
       }),
     ),
     renamedProperties: {},
+    workspaceLocalProperties: [],
+    knownGaps: {},
+  },
+  {
+    metadataName: 'workflow',
+    emittedProperties: Object.keys(
+      exportWorkflowManifestOrThrow(WORKFLOW_MANIFEST),
+    ),
+    renamedProperties: { versionDefinitionHash: 'version' },
+    workspaceLocalProperties: ['visibility'],
+    knownGaps: {
+      isSystem: 'system workflows are reported as excluded',
+      jobConfig:
+        'no manifest slot yet, every application workflow gets the default',
+      lastPublishedVersionId:
+        'legacy workspace version pointer, kept while the active version matches the definition',
+      lastPublishedCoreWorkflowVersionId:
+        'the sync points it at the active version, or at the one it publishes from the definition',
+    },
+  },
+  {
+    metadataName: 'agent',
+    emittedProperties: Object.keys(EXPORTED_AGENT_MANIFEST),
+    renamedProperties: {},
+    workspaceLocalProperties: WORKSPACE_LOCAL_PROPERTIES,
+    knownGaps: {
+      modelConfiguration:
+        'no manifest slot; an agent with one is reported as unsupported',
+      isSystem:
+        'always true for application agents; any other value is reported as unsupported',
+    },
+  },
+  {
+    metadataName: 'roleTarget',
+    emittedProperties: Object.keys(EXPORTED_AGENT_MANIFEST),
+    renamedProperties: { agentUniversalIdentifier: 'universalIdentifier' },
+    workspaceLocalProperties: [],
+    knownGaps: {
+      userWorkspaceId:
+        'member role assignments are reported as excluded, only agent roles are exported',
+      apiKeyId:
+        'API key role assignments are reported as excluded, only agent roles are exported',
+      webhookUniversalIdentifier:
+        'webhook role assignments are reported as excluded, only agent roles are exported',
+    },
+  },
+  {
+    metadataName: 'skill',
+    emittedProperties: Object.keys(
+      fromFlatSkillToSkillManifest({
+        flatSkill: fromSkillManifestToUniversalFlatSkill({
+          skillManifest: SKILL_MANIFEST,
+          applicationUniversalIdentifier: APP_UID,
+          now: NOW,
+        }),
+      }),
+    ),
+    renamedProperties: {},
+    workspaceLocalProperties: WORKSPACE_LOCAL_PROPERTIES,
+    knownGaps: {
+      isSystem:
+        'always false for application skills; any other value is reported as unsupported',
+    },
+  },
+  {
+    metadataName: 'relatedRecordPath',
+    emittedProperties: Object.keys(
+      fromFlatRelatedRecordPathToRelatedRecordPathManifest({
+        flatRelatedRecordPath:
+          fromRelatedRecordPathManifestToUniversalFlatRelatedRecordPath({
+            relatedRecordPathManifest: RELATED_RECORD_PATH_MANIFEST,
+            applicationUniversalIdentifier: APP_UID,
+            now: NOW,
+          }),
+      }),
+    ),
+    renamedProperties: {
+      objectMetadataUniversalIdentifier: 'objectUniversalIdentifier',
+    },
     workspaceLocalProperties: [],
     knownGaps: {},
   },

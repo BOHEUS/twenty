@@ -2,7 +2,7 @@ import { NavigationButton } from '@/ui/input/components/NavigationButton';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { WorkspaceRouteUnavailable } from '@/app/routing/components/WorkspaceRouteUnavailable';
+import { WorkspaceRouteUnavailable } from '@/ui/layout/page/components/WorkspaceRouteUnavailable';
 import { ObjectMetadataIcon } from '@/object-metadata/components/ObjectMetadataIcon';
 import { useFilteredObjectMetadataItems } from '@/object-metadata/hooks/useFilteredObjectMetadataItems';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
@@ -16,7 +16,7 @@ import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomState
 import { styled } from '@linaria/react';
 import {
   AppPath,
-  CoreObjectNameSingular,
+  StandardObjectNameSingular,
   SettingsPath,
 } from 'twenty-shared/types';
 
@@ -37,7 +37,7 @@ import {
 } from 'twenty-ui/icon';
 import { useNavigateApp } from '~/hooks/useNavigateApp';
 import { SETTINGS_OBJECT_DETAIL_TABS } from '~/pages/settings/data-model/constants/SettingsObjectDetailTabs';
-import { updatedObjectNamePluralState } from '~/pages/settings/data-model/states/updatedObjectNamePluralState';
+import { updatedObjectNamePluralState } from '@/settings/data-model/object-details/states/updatedObjectNamePluralState';
 
 const StyledContentContainer = styled.div`
   flex: 1;
@@ -81,14 +81,16 @@ export const SettingsObjectDetailPage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (objectNamePlural === updatedObjectNamePlural)
+    if (objectNamePlural === updatedObjectNamePlural) {
       setUpdatedObjectNamePlural('');
+    }
     if (
       workspaceSurface.type === 'main' &&
       !isDeleting &&
       !isDefined(objectMetadataItem)
-    )
+    ) {
       navigateApp(AppPath.NotFound);
+    }
   }, [
     objectMetadataItem,
     navigateApp,
@@ -124,7 +126,8 @@ export const SettingsObjectDetailPage = () => {
       Icon: IconAppWindow,
       hide:
         objectMetadataItem.isRemote ||
-        objectMetadataItem.nameSingular === CoreObjectNameSingular.Dashboard,
+        objectMetadataItem.nameSingular ===
+          StandardObjectNameSingular.Dashboard,
     },
   ];
 

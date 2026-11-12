@@ -1,22 +1,23 @@
 import { FormFieldInputInnerContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputInnerContainer';
 import { FormFieldInputRowContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputRowContainer';
 import { VariableChipStandalone } from '@/object-record/record-field/ui/form-types/components/VariableChipStandalone';
-import { type VariablePickerComponent } from '@/object-record/record-field/ui/form-types/types/VariablePickerComponent';
+import { type VariablePickerComponent } from '@/ui/input/types/VariablePickerComponent';
 import { FormFieldInputContainer } from '@/ui/input/components/FormFieldInputContainer';
 import { Select } from '@/ui/input/components/Select';
 import { type SelectCallToActionButton } from '@/ui/input/types/SelectCallToActionButton';
 import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
 import { useRemoveFocusItemFromFocusStackById } from '@/ui/utilities/focus/hooks/useRemoveFocusItemFromFocusStackById';
 import { useHotkeysOnFocusedElement } from '@/ui/utilities/hotkey/hooks/useHotkeysOnFocusedElement';
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useId, useState } from 'react';
 import { Key } from 'ts-key-enum';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { isStandaloneVariableString } from 'twenty-shared/workflow';
 import { IconCircleOff } from 'twenty-ui/icon';
 import { Field, type SelectOption } from 'twenty-ui/primitives/input';
 import { useTheme } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 type FormSelectFieldInputProps = {
   label?: string;
@@ -28,6 +29,7 @@ type FormSelectFieldInputProps = {
   readonly?: boolean;
   isNullable?: boolean;
   callToActionButton?: SelectCallToActionButton;
+  placeholder?: string;
 };
 
 export const FormSelectFieldInput = ({
@@ -40,7 +42,9 @@ export const FormSelectFieldInput = ({
   readonly,
   isNullable,
   callToActionButton,
+  placeholder,
 }: FormSelectFieldInputProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
   const instanceId = useId();
 
@@ -84,7 +88,9 @@ export const FormSelectFieldInput = ({
 
   const onCancel = () => {
     if (draftValue.type !== 'static') {
-      throw new Error('Can only be called when editing a static value');
+      throw new Error(
+        doNotTranslate('Can only be called when editing a static value'),
+      );
     }
 
     setDraftValue({
@@ -104,9 +110,14 @@ export const FormSelectFieldInput = ({
   const optionsWithEmptyOption =
     isNullable || options.length === 0 ? [emptyOption, ...options] : options;
 
-  const selectedOption = optionsWithEmptyOption.find(
-    (option) => option.value === draftValue.value,
-  );
+  const isEmptyValueShownAsPlaceholder =
+    isDefined(placeholder) && draftValue.value === '';
+
+  const selectedOption = isEmptyValueShownAsPlaceholder
+    ? undefined
+    : optionsWithEmptyOption.find(
+        (option) => option.value === draftValue.value,
+      );
 
   const handleUnlinkVariable = () => {
     setDraftValue({
@@ -144,6 +155,11 @@ export const FormSelectFieldInput = ({
             dropdownId={`${instanceId}-select-display`}
             options={optionsWithEmptyOption}
             value={selectedOption?.value}
+            emptyOption={
+              isDefined(placeholder)
+                ? { label: placeholder, value: '' }
+                : undefined
+            }
             onChange={onSelect}
             callToActionButton={callToActionButton}
             fullWidth

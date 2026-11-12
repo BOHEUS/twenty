@@ -2,7 +2,7 @@ import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
 import { MetadataReadability, MetadataWritability } from 'twenty-shared/types';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 
-import { AGENT_HISTORY_TABLES } from 'src/database/commands/agent-history/agent-history-tables.constant';
+import { ACTIVE_AGENT_HISTORY_TABLES } from 'src/database/commands/agent-history/agent-history-tables.constant';
 import { type AllFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/all-flat-entity-maps.type';
 
 type AgentHistorySchemaMaps = Pick<
@@ -10,15 +10,40 @@ type AgentHistorySchemaMaps = Pick<
   'flatObjectMetadataMaps' | 'flatFieldMetadataMaps' | 'flatIndexMaps'
 >;
 
+export type LegacyObjectAccess = {
+  readability: MetadataReadability;
+  writability: MetadataWritability;
+};
+
+const hasValidLegacyProtection = ({
+  identifier,
+  legacyObjectAccess,
+}: {
+  identifier: string;
+  legacyObjectAccess: LegacyObjectAccess | undefined;
+}): boolean =>
+  !isDefined(legacyObjectAccess) ||
+  (legacyObjectAccess.readability === MetadataReadability.SYSTEM &&
+    legacyObjectAccess.writability === MetadataWritability.SYSTEM) ||
+  (identifier === STANDARD_OBJECTS.agentChatThread.universalIdentifier &&
+    // INHERITED once threads can belong to a workflow run; a thread without one reads through its own grants
+    (legacyObjectAccess.readability === MetadataReadability.PRIVATE ||
+      legacyObjectAccess.readability === MetadataReadability.INHERITED) &&
+    legacyObjectAccess.writability === MetadataWritability.OPEN);
+
 export const getAgentHistorySchemaAdditions = ({
   existing,
   standard,
+  legacyObjectAccessByUniversalIdentifier = {},
 }: {
   existing: AgentHistorySchemaMaps;
   standard: AgentHistorySchemaMaps;
+  legacyObjectAccessByUniversalIdentifier?: Partial<
+    Record<string, LegacyObjectAccess>
+  >;
 }) => {
   const objectIdentifiers = new Set<string>(
-    AGENT_HISTORY_TABLES.map(
+    ACTIVE_AGENT_HISTORY_TABLES.map(
       ({ name }) => STANDARD_OBJECTS[name].universalIdentifier,
     ),
   );
@@ -27,19 +52,14 @@ export const getAgentHistorySchemaAdditions = ({
       existing.flatObjectMetadataMaps.byUniversalIdentifier[identifier];
     const expected =
       standard.flatObjectMetadataMaps.byUniversalIdentifier[identifier];
-    const hasValidProtection =
-      isDefined(current) &&
-      ((current.readability === MetadataReadability.SYSTEM &&
-        current.writability === MetadataWritability.SYSTEM) ||
-        (identifier === STANDARD_OBJECTS.agentChatThread.universalIdentifier &&
-          // INHERITED once threads can belong to a workflow run; a thread without one reads through its own grants
-          (current.readability === MetadataReadability.PRIVATE ||
-            current.readability === MetadataReadability.INHERITED) &&
-          current.writability === MetadataWritability.OPEN));
     if (
       isDefined(current) &&
       (current.nameSingular !== expected?.nameSingular ||
-        !hasValidProtection ||
+        !hasValidLegacyProtection({
+          identifier,
+          legacyObjectAccess:
+            legacyObjectAccessByUniversalIdentifier[identifier],
+        }) ||
         current.isSearchable ||
         current.isAuditLogged)
     ) {
@@ -61,12 +81,6 @@ export const getAgentHistorySchemaAdditions = ({
           ],
         ),
     );
-  // Preparation can run before history is copied and ownership backfilled, so stay protected until the sharing upgrade
-  const protectedObjects: typeof objects = objects.map((object) => ({
-    ...object,
-    readability: MetadataReadability.SYSTEM,
-    writability: MetadataWritability.SYSTEM,
-  }));
   // Objects added later (e.g. agentChatThreadTarget) get both relation legs from their own command; a leg emitted
   // here before that object exists would have no other side and fail validation
   const existsOnceProvisioned = (objectUniversalIdentifier: string) =>
@@ -121,11 +135,10 @@ export const getAgentHistorySchemaAdditions = ({
           ],
         ),
     );
-  // Inverse fields keep their standard definition so every provisioning path creates them identically
-  const protectedFields: typeof fields = fields.map((field) =>
-    objectIdentifiers.has(field.objectMetadataUniversalIdentifier)
-      ? { ...field, writability: MetadataWritability.SYSTEM }
-      : field,
-  );
-  return { objects: protectedObjects, fields: protectedFields, indexes };
+  const protectedFieldUniversalIdentifiers = fields
+    .filter((field) =>
+      objectIdentifiers.has(field.objectMetadataUniversalIdentifier),
+    )
+    .map(({ universalIdentifier }) => universalIdentifier);
+  return { objects, fields, indexes, protectedFieldUniversalIdentifiers };
 };

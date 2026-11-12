@@ -14,7 +14,7 @@ import {
 } from 'typeorm';
 import { v4 } from 'uuid';
 
-import { POSTGRESQL_ERROR_CODES } from 'src/engine/api/graphql/workspace-query-runner/constants/postgres-error-codes.constants';
+import { POSTGRESQL_ERROR_CODES } from 'src/engine/workspace-query-executor/constants/postgres-error-codes.constants';
 import { USER_SIGNUP_EVENT_NAME } from 'src/engine/api/graphql/workspace-query-runner/constants/user-signup-event-name.constants';
 import { type QueryFailedErrorWithCode } from 'src/engine/api/graphql/workspace-query-runner/utils/workspace-query-runner-graphql-api-exception-handler.util';
 import { EventLogEmitterService } from 'src/engine/core-modules/event-logs/emit/event-log-emitter.service';
@@ -26,6 +26,12 @@ import {
 } from 'src/engine/core-modules/app-token/app-token.entity';
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
 import { FileStorageService } from 'src/engine/core-modules/file-storage/services/file-storage.service';
+import {
+  BillingException,
+  BillingExceptionCode,
+} from 'src/engine/core-modules/billing/billing.exception';
+import { BILLING_SEAT_LIMIT_REACHED_MESSAGE } from 'src/engine/core-modules/billing/constants/billing-seat-limit-reached-message.constant';
+import { BillingSeatService } from 'src/engine/core-modules/billing/services/billing-seat.service';
 import { BillingService } from 'src/engine/core-modules/billing/services/billing.service';
 import {
   AuthException,
@@ -35,13 +41,9 @@ import {
   PASSWORD_REGEX,
   hashPassword,
 } from 'src/engine/core-modules/auth/auth.util';
-import { MAX_WORKSPACES_WITHOUT_ENTERPRISE_KEY } from 'src/engine/core-modules/auth/constants/max-workspaces-without-organization-key.constants';
+import { MAX_WORKSPACES_WITHOUT_ENTERPRISE_KEY } from 'src/engine/core-modules/auth/constants/max-workspaces-without-organization-key.constant';
 import { getSignUpWithoutWorkspaceDecision } from 'src/engine/core-modules/auth/utils/get-sign-up-without-workspace-decision.util';
 import { hasProvisionedSignUpDestination } from 'src/engine/core-modules/auth/utils/has-provisioned-sign-up-destination.util';
-import { DEFAULT_DPA_REGION } from 'src/engine/core-modules/dpa/config/dpa-region-config.constant';
-import { DpaAgreementEntity } from 'src/engine/core-modules/dpa/entities/dpa-agreement.entity';
-import { DpaAgreementType } from 'src/engine/core-modules/dpa/enums/dpa-agreement-type.enum';
-import { buildDpaAgreementRecord } from 'src/engine/core-modules/dpa/utils/build-dpa-agreement-record.util';
 import {
   type AuthProviderWithPasswordType,
   type ExistingUserOrPartialUserWithPicture,
@@ -99,6 +101,7 @@ export class SignInUpService {
     private readonly enterprisePlanService: EnterprisePlanService,
     private readonly eventLogEmitterService: EventLogEmitterService,
     private readonly billingService: BillingService,
+    private readonly billingSeatService: BillingSeatService,
     @InjectDataSource()
     private readonly dataSource: DataSource,
   ) {}
@@ -187,6 +190,7 @@ export class SignInUpService {
       throw new AuthException(
         'Invitation not found',
         AuthExceptionCode.FORBIDDEN_EXCEPTION,
+        { userFriendlyMessage: msg`Invitation not found` },
       );
     }
 
@@ -215,6 +219,7 @@ export class SignInUpService {
       throw new AuthException(
         'Invitation not found',
         AuthExceptionCode.FORBIDDEN_EXCEPTION,
+        { userFriendlyMessage: msg`Invitation not found` },
       );
     }
 
@@ -298,6 +303,14 @@ export class SignInUpService {
         newUserWithPicture: PartialUserWithPicture;
       };
 
+      if (
+        await this.billingSeatService.isWorkspaceAtSeatLimit(
+          params.workspace.id,
+        )
+      ) {
+        throw this.buildSeatLimitReachedException();
+      }
+
       const user = await this.saveNewUser(userData.newUserWithPicture, {
         canAccessFullAdminPanel: false,
         canImpersonate: false,
@@ -307,14 +320,13 @@ export class SignInUpService {
         user,
         workspace: params.workspace,
         shouldShowConnectAccountStep: true,
-        shouldShowInstallAppsStep: false,
       });
 
-      await this.userWorkspaceService.addUserToWorkspaceIfUserNotInWorkspace(
+      await this.addUserToWorkspaceWithinSeatLimit({
         user,
-        params.workspace,
-        params.roleId,
-      );
+        workspace: params.workspace,
+        roleId: params.roleId,
+      });
 
       return user;
     }
@@ -326,13 +338,50 @@ export class SignInUpService {
 
     const user = userData.existingUser;
 
-    await this.userWorkspaceService.addUserToWorkspaceIfUserNotInWorkspace(
+    await this.addUserToWorkspaceWithinSeatLimit({
       user,
-      params.workspace,
-      params.roleId,
-    );
+      workspace: params.workspace,
+      roleId: params.roleId,
+    });
 
     return user;
+  }
+
+  private async addUserToWorkspaceWithinSeatLimit({
+    user,
+    workspace,
+    roleId,
+  }: {
+    user: UserEntity;
+    workspace: WorkspaceEntity;
+    roleId?: string | null;
+  }) {
+    try {
+      await this.userWorkspaceService.addUserToWorkspaceIfUserNotInWorkspace(
+        user,
+        workspace,
+        roleId,
+      );
+    } catch (error) {
+      if (
+        error instanceof BillingException &&
+        error.code === BillingExceptionCode.BILLING_SEAT_LIMIT_REACHED
+      ) {
+        throw this.buildSeatLimitReachedException();
+      }
+
+      throw error;
+    }
+  }
+
+  private buildSeatLimitReachedException() {
+    return new AuthException(
+      'This workspace has used all its seats. Contact your workspace admin to add more.',
+      AuthExceptionCode.FORBIDDEN_EXCEPTION,
+      {
+        userFriendlyMessage: BILLING_SEAT_LIMIT_REACHED_MESSAGE,
+      },
+    );
   }
 
   private async activateOnboardingForUser(
@@ -340,12 +389,10 @@ export class SignInUpService {
       user,
       workspace,
       shouldShowConnectAccountStep,
-      shouldShowInstallAppsStep,
     }: {
       user: Pick<UserEntity, 'id' | 'firstName' | 'lastName'>;
       workspace: WorkspaceEntity;
       shouldShowConnectAccountStep: boolean;
-      shouldShowInstallAppsStep: boolean;
     },
     queryRunner?: QueryRunner,
   ) {
@@ -368,17 +415,6 @@ export class SignInUpService {
       },
       queryRunner,
     );
-
-    if (shouldShowInstallAppsStep) {
-      await this.onboardingService.setOnboardingInstallAppsPending(
-        {
-          userId: user.id,
-          workspaceId: workspace.id,
-          value: true,
-        },
-        queryRunner,
-      );
-    }
   }
 
   private async saveNewUser(
@@ -449,6 +485,7 @@ export class SignInUpService {
       throw new AuthException(
         'New workspace setup is disabled',
         AuthExceptionCode.SIGNUP_DISABLED,
+        { userFriendlyMessage: msg`New workspace setup is disabled` },
       );
     }
   }
@@ -481,6 +518,7 @@ export class SignInUpService {
     throw new AuthException(
       'New workspace setup is disabled',
       AuthExceptionCode.SIGNUP_DISABLED,
+      { userFriendlyMessage: msg`New workspace setup is disabled` },
     );
   }
 
@@ -653,7 +691,11 @@ export class SignInUpService {
 
   async signUpOnNewWorkspace(
     userData: ExistingUserOrPartialUserWithPicture['userData'],
-    options?: { displayName?: string; subdomain?: string },
+    options?: {
+      displayName?: string;
+      subdomain?: string;
+      affiliatePartnerName?: string;
+    },
   ) {
     const email =
       userData.type === 'newUserWithPicture'
@@ -763,7 +805,6 @@ export class SignInUpService {
               user,
               workspace,
               shouldShowConnectAccountStep: true,
-              shouldShowInstallAppsStep: true,
             },
             queryRunner,
           );
@@ -775,26 +816,6 @@ export class SignInUpService {
             },
             queryRunner,
           );
-
-          // Click-through DPA, recorded with the workspace as proof: only on managed cloud, where Twenty is the Processor
-          // Billing is an independent flag and must not be used to detect cloud
-          if (
-            this.twentyConfigService.get('IS_MULTIWORKSPACE_ENABLED') === true
-          ) {
-            await queryRunner.manager.save(
-              DpaAgreementEntity,
-              buildDpaAgreementRecord({
-                workspaceId: workspace.id,
-                type: DpaAgreementType.CLICK_THROUGH,
-                region:
-                  this.twentyConfigService.get('DPA_DEPLOYMENT_REGION') ??
-                  DEFAULT_DPA_REGION,
-                acceptedAt: new Date(),
-                acceptedByUserId: user.id,
-                acceptedByEmail: email,
-              }),
-            );
-          }
 
           return {
             user,
@@ -825,6 +846,7 @@ export class SignInUpService {
           userEmail: email,
           workspaceId: workspace.id,
           workspaceDisplayName: workspace.displayName,
+          affiliatePartnerName: options?.affiliatePartnerName,
         });
       }
 

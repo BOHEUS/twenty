@@ -4,6 +4,7 @@ import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { SettingsBillingCreditsSection } from '@/settings/billing/components/SettingsBillingCreditsSection';
 import { SettingsBillingSubscriptionInfo } from '@/settings/billing/components/SettingsBillingSubscriptionInfo';
 import { SettingsBillingTrialNoPaymentMethodBanner } from '@/settings/billing/components/SettingsBillingTrialNoPaymentMethodBanner';
+import { SettingsBillingUserCreditsSection } from '@/settings/billing/components/SettingsBillingUserCreditsSection';
 import { UpdatePaymentMethodModal } from '@/settings/billing/components/UpdatePaymentMethodModal';
 import { useGetResourceCreditUsage } from '@/settings/billing/hooks/useGetResourceCreditUsage';
 import { usePaymentMethodFlow } from '@/settings/billing/hooks/usePaymentMethodFlow';
@@ -12,7 +13,7 @@ import { SettingsPageContainer } from '@/settings/components/SettingsPageContain
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSubscriptionStatus } from '@/workspace/hooks/useSubscriptionStatus';
 import { isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { IconCircleX, IconCreditCard } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { SubscriptionStatus } from '~/generated-metadata/graphql';
@@ -88,6 +89,9 @@ export const SettingsBillingContent = () => {
             isUpdatePaymentDisabled={isPaymentMethodFlowDisabled}
           />
         )}
+      {hasNotCanceledCurrentSubscription && (
+        <SettingsBillingUserCreditsSection />
+      )}
       <Section.Root>
         <Section.Header
           title={t`Manage billing information`}

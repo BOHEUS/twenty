@@ -1,3 +1,10 @@
+import {
+  PREVIEW_FRONT_COMPONENT_TOOL_NAME,
+  ToolCategory,
+} from 'twenty-shared/ai';
+import { type ToolIndexEntry } from 'src/engine/core-modules/tool-provider/types/tool-index-entry.type';
+import { WORKSPACE_SETUP_ALTERNATIVE_SYSTEM_PROMPT } from 'src/engine/metadata-modules/ai/ai-chat/constants/workspace-setup-alternative-system-prompt.constant';
+import { WORKSPACE_SETUP_SYSTEM_PROMPT } from 'src/engine/metadata-modules/ai/ai-chat/constants/workspace-setup-system-prompt.constant';
 import { buildFullSystemPrompt } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-full-system-prompt.util';
 import { type ReferencedSkill } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-referenced-skills-section.util';
 
@@ -11,6 +18,8 @@ const WORKSPACE_INSTRUCTIONS_DOCUMENT = JSON.stringify({
   ],
 });
 
+const USER_WORKSPACE_ID = 'user-workspace-id';
+
 const USER_CONTEXT = {
   firstName: 'Ada',
   lastName: 'Lovelace',
@@ -19,13 +28,21 @@ const USER_CONTEXT = {
   timezone: 'Europe/Paris',
 };
 
-const buildPrompt = (isWorkspaceSetupThread?: boolean) =>
+const EVEN_WORKSPACE_ID = '20202020-1c25-4d02-bf25-6aeccf7ea410';
+const ODD_WORKSPACE_ID = '20202020-1c25-4d02-bf25-6aeccf7ea419';
+
+const buildPrompt = (
+  isWorkspaceSetupThread?: boolean,
+  workspaceId = EVEN_WORKSPACE_ID,
+) =>
   buildFullSystemPrompt({
     toolCatalog: [],
     skillCatalog: [],
     preloadedTools: [],
+    userWorkspaceId: USER_WORKSPACE_ID,
     workspaceInstructions: WORKSPACE_INSTRUCTIONS_DOCUMENT,
     userContext: USER_CONTEXT,
+    workspaceId,
     isWorkspaceSetupThread,
   });
 
@@ -44,16 +61,48 @@ const REFERENCED_SKILL: ReferencedSkill = {
 };
 
 describe('buildFullSystemPrompt', () => {
-  it('should inline referenced skills after the skill catalog', () => {
+  it('only adds component authoring guidance when preview is available', () => {
+    const previewTool: ToolIndexEntry = {
+      name: PREVIEW_FRONT_COMPONENT_TOOL_NAME,
+      label: 'Preview frontend component',
+      description: 'Build a sample preview',
+      category: ToolCategory.FRONT_COMPONENT,
+      executionRef: {
+        kind: 'static',
+        toolId: PREVIEW_FRONT_COMPONENT_TOOL_NAME,
+      },
+    };
+    const prompt = buildFullSystemPrompt({
+      toolCatalog: [previewTool],
+      skillCatalog: [],
+      preloadedTools: [],
+      userWorkspaceId: USER_WORKSPACE_ID,
+      workspaceId: EVEN_WORKSPACE_ID,
+    });
+
+    expect(prompt).toContain('## Custom frontend components');
+    expect(prompt).toContain('propose_tool_call for publish_front_component');
+    expect(prompt).toContain('that exact draftId and checksum');
+    expect(buildPrompt(false)).not.toContain('## Custom frontend components');
+  });
+
+  it('should inline referenced skills for the configured assistant', () => {
+    const assistantDisplayName = 'Scout "CRM"';
     const prompt = buildFullSystemPrompt({
       toolCatalog: [],
       skillCatalog: [],
       referencedSkills: [REFERENCED_SKILL],
+      assistantDisplayName,
       preloadedTools: [],
+      userWorkspaceId: USER_WORKSPACE_ID,
+      workspaceId: EVEN_WORKSPACE_ID,
     });
 
     expect(prompt).toContain('## Referenced Skills (already loaded)');
     expect(prompt).toContain('Always create a trigger first.');
+    expect(prompt).toContain(
+      `Your display name in this workspace is ${JSON.stringify(assistantDisplayName)}.`,
+    );
   });
 
   it('should omit the referenced skills section when nothing is referenced', () => {
@@ -92,6 +141,15 @@ describe('buildFullSystemPrompt', () => {
     expect(prompt).not.toContain('A <browsing_context> tag may appear');
   });
 
+  it('should pick the setup prompt variant from the workspace id', () => {
+    expect(buildPrompt(true, EVEN_WORKSPACE_ID)).toContain(
+      WORKSPACE_SETUP_SYSTEM_PROMPT,
+    );
+    expect(buildPrompt(true, ODD_WORKSPACE_ID)).toContain(
+      WORKSPACE_SETUP_ALTERNATIVE_SYSTEM_PROMPT,
+    );
+  });
+
   it('should ignore workspace instructions on setup threads', () => {
     const prompt = buildPrompt(true);
 
@@ -107,6 +165,8 @@ describe('buildFullSystemPrompt', () => {
         toolCatalog: [],
         skillCatalog: [],
         preloadedTools: [],
+        userWorkspaceId: USER_WORKSPACE_ID,
+        workspaceId: EVEN_WORKSPACE_ID,
         canAttachConversationToRecords,
       });
 
@@ -114,8 +174,14 @@ describe('buildFullSystemPrompt', () => {
       '## Attaching this conversation to records',
     );
     expect(buildPromptWithAttachment(false)).not.toContain(
-      'attach_conversation_to_record',
+      'attach_conversation_to_records',
     );
-    expect(buildPrompt(false)).not.toContain('attach_conversation_to_record');
+    expect(buildPrompt(false)).not.toContain('attach_conversation_to_records');
+  });
+
+  it('should end by scoping actions to the current participant', () => {
+    expect(buildPrompt(false)).toMatch(
+      /\n\nThis conversation can have multiple participants\. .*workspace membership user-workspace-id;.*$/,
+    );
   });
 });

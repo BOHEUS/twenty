@@ -9,14 +9,13 @@ import { objectMetadataItemsSelector } from '@/object-metadata/states/objectMeta
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { formatFieldMetadataItemAsColumnDefinition } from '@/object-metadata/utils/formatFieldMetadataItemAsColumnDefinition';
 import { RecordComponentInstanceContextsWrapper } from '@/object-record/components/RecordComponentInstanceContextsWrapper';
-import { RecordCreationFormProvider } from '@/object-record/record-form/components/RecordCreationFormProvider';
 import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
 import { useIsObjectReadOnly } from '@/object-record/read-only/hooks/useIsObjectReadOnly';
 import { currentRecordFieldsComponentState } from '@/object-record/record-field/states/currentRecordFieldsComponentState';
 import { visibleRecordFieldsComponentSelector } from '@/object-record/record-field/states/visibleRecordFieldsComponentSelector';
 import { RecordIndexContextProvider } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { useLoadRecordIndexStates } from '@/object-record/record-index/hooks/useLoadRecordIndexStates';
-import { RecordTableBodyContextProvider } from '@/object-record/record-table/contexts/RecordTableBodyContext';
+import { RecordTableBodyContextValueProvider } from '@/object-record/record-table/contexts/RecordTableBodyContext';
 import {
   RecordTableContextProvider,
   useRecordTableContextOrThrow,
@@ -190,17 +189,17 @@ const InternalTableContextProviders = ({
           triggerEvent,
         }}
       >
-        <RecordTableBodyContextProvider
+        <RecordTableBodyContextValueProvider
           value={{
             onCloseTableCell: () => {},
             onOpenTableCell: () => {},
-            onCommandMenuDropdownOpened: () => {},
+            openRecordContextMenu: () => {},
             onMoveFocus: () => {},
             onMoveHoverToCurrentCell: () => {},
           }}
         >
           {children}
-        </RecordTableBodyContextProvider>
+        </RecordTableBodyContextValueProvider>
       </RecordTableContextProvider>
     </RecordIndexContextProvider>
   );
@@ -246,12 +245,10 @@ export const RecordTableDecorator: Decorator = (Story, context) => {
             <InternalTableContextProviders
               objectMetadataItem={objectMetadataItem}
             >
-              <RecordCreationFormProvider>
-                <InternalTableStateLoaderEffect
-                  objectMetadataItem={objectMetadataItem}
-                />
-                <Story />
-              </RecordCreationFormProvider>
+              <InternalTableStateLoaderEffect
+                objectMetadataItem={objectMetadataItem}
+              />
+              <Story />
             </InternalTableContextProviders>
           </CommandMenuComponentInstanceContext.Provider>
         </RecordComponentInstanceContextsWrapper>

@@ -1,4 +1,5 @@
 import { type AgentManifest } from 'twenty-shared/application';
+import { isDefined } from 'twenty-shared/utils';
 
 import { AUTO_SELECT_WORKSPACE_DEFAULT_MODEL_ID } from 'twenty-shared/ai';
 import { type ModelId } from 'src/engine/metadata-modules/ai/ai-models/types/model-id.type';
@@ -19,15 +20,27 @@ export const fromAgentManifestToUniversalFlatAgent = ({
     name: agentManifest.name,
     label: agentManifest.label,
     icon: agentManifest.icon ?? null,
+    avatarColor: agentManifest.avatarColor ?? null,
+    avatarShape: agentManifest.avatarShape ?? null,
     description: agentManifest.description ?? null,
     prompt: agentManifest.prompt,
     modelId:
       (agentManifest.modelId as ModelId) ??
       AUTO_SELECT_WORKSPACE_DEFAULT_MODEL_ID,
     responseFormat: agentManifest.responseFormat ?? { type: 'text' },
-    modelConfiguration: null,
-    evaluationInputs: [],
-    isCustom: false,
+    modelConfiguration: agentManifest.modelConfiguration ?? null,
+    triggers: (agentManifest.triggers ?? []).map(
+      ({ universalIdentifier, isActive, instructions, ...trigger }) => ({
+        ...trigger,
+        id: universalIdentifier,
+        isActive: isActive ?? true,
+        instructions: isDefined(instructions) ? instructions : null,
+      }),
+    ),
+    isSystem: agentManifest.isSystem ?? false,
+    isActive: true,
+    overrides: null,
+    navigationMenuItemUniversalIdentifiers: [],
     createdAt: now,
     updatedAt: now,
     deletedAt: null,

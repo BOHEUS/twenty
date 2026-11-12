@@ -15,7 +15,7 @@ import { useLingui } from '@lingui/react/macro';
 import { QUERY_MAX_RECORDS } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 import { TRIGGER_STEP_ID } from 'twenty-shared/workflow';
-import { useIcons } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { type SelectOption } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 
@@ -44,6 +44,8 @@ const StyledDescription = styled.span`
   font-size: ${themeCssVariables.font.size.sm};
   margin-top: 1px;
 `;
+
+const MANUAL_TRIGGER_VISIBLE_ICON_COUNT = 72;
 
 const StyledIconPickerContainer = styled.div`
   display: flex;
@@ -93,7 +95,10 @@ export const WorkflowEditTriggerManual = ({
           fullWidth
           disabled={triggerOptions.readonly}
           value={availability?.type}
-          options={MANUAL_TRIGGER_AVAILABILITY_TYPE_OPTIONS}
+          options={MANUAL_TRIGGER_AVAILABILITY_TYPE_OPTIONS.map((option) => ({
+            ...option,
+            label: t(option.label),
+          }))}
           onChange={(availabilityType) => {
             if (triggerOptions.readonly === true) {
               return;
@@ -153,12 +158,13 @@ export const WorkflowEditTriggerManual = ({
         <IconPicker
           dropdownId="workflow-edit-manual-trigger-icon"
           selectedIconKey={trigger.settings.icon}
-          dropdownOffset={{ y: -12 }}
+          dropdownSideOffset={-12}
           dropdownWidth={GenericDropdownContentWidth.ExtraLarge}
-          maxIconsVisible={9 * 8} // 9 columns * 8 lines
+          maxIconsVisible={MANUAL_TRIGGER_VISIBLE_ICON_COUNT}
           disabled={triggerOptions.readonly}
           clickableComponent={
             <StyledIconPickerContainer
+              aria-label={t`Command Icon`}
               onClick={(e) => {
                 if (triggerOptions.readonly === true) {
                   e.stopPropagation();
@@ -199,7 +205,10 @@ export const WorkflowEditTriggerManual = ({
           description={t`Display a button in the top navbar to trigger this workflow`}
           fullWidth
           value={trigger.settings.isPinned}
-          options={MANUAL_TRIGGER_IS_PINNED_OPTIONS}
+          options={MANUAL_TRIGGER_IS_PINNED_OPTIONS.map((option) => ({
+            ...option,
+            label: t(option.label),
+          }))}
           disabled={triggerOptions.readonly}
           onChange={(updatedValue) => {
             if (triggerOptions.readonly === true) {

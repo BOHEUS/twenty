@@ -6,15 +6,16 @@ import { waitForSubscriptionRecovery } from '@/settings/billing/utils/waitForSub
 import { NavigationButton } from '@/ui/input/components/NavigationButton';
 import { useLoadCurrentUser } from '@/users/hooks/useLoadCurrentUser';
 import { useApolloClient } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import { GetCurrentUserDocument } from '~/generated-metadata/graphql';
 import { logError } from '~/utils/logError';
 import { sleep } from '~/utils/sleep';
+import { useLingui } from '@lingui/react/macro';
 
 export const useWaitForPaymentRecovery = () => {
+  const { t } = useLingui();
   const client = useApolloClient();
   const { loadCurrentUser } = useLoadCurrentUser();
   const { applyCurrentWorkspaceBillingUpdate } =
@@ -46,7 +47,7 @@ export const useWaitForPaymentRecovery = () => {
 
     if (recovery.outcome !== 'recovered') {
       enqueueToast({
-        variant: 'warning',
+        status: 'warning',
         children: t`Your card was saved, but the payment still needs attention.`,
         action: (
           <NavigationButton
@@ -79,7 +80,7 @@ export const useWaitForPaymentRecovery = () => {
     // The payment method webhook can still be in flight
     markBillingPaymentMethodAsAdded();
 
-    enqueueToast({ variant: 'success', children: t`Payment successful.` });
+    enqueueToast({ status: 'success', children: t`Payment successful.` });
   };
 
   return { waitForPaymentRecovery };

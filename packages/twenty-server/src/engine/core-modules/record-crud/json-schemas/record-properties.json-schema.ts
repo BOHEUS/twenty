@@ -1,10 +1,6 @@
 import { isNonEmptyString } from '@sniptt/guards';
 import { type JSONSchema7 } from 'json-schema';
-import {
-  FieldMetadataType,
-  NumberDataType,
-  type RestrictedFieldsPermissions,
-} from 'twenty-shared/types';
+import { FieldMetadataType, NumberDataType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
 import { filesFieldSchema } from 'src/engine/api/common/common-args-processors/data-arg-processor/validator-utils/validate-files-field-or-throw.util';
@@ -16,6 +12,7 @@ import { referenceJsonSchemaDefinition } from 'src/engine/core-modules/record-cr
 import { toToolJsonSchema } from 'src/engine/core-modules/record-crud/utils/to-tool-json-schema.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { isFlatFieldMetadataOfType } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-flat-field-metadata-of-type.util';
+import { isFlatFieldMetadataRequiredOnCreate } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-flat-field-metadata-required-on-create.util';
 import { isMorphOrRelationFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-morph-or-relation-flat-field-metadata.util';
 import { computeMorphOrRelationFieldJoinColumnName } from 'src/engine/metadata-modules/field-metadata/utils/compute-morph-or-relation-field-join-column-name.util';
 import { isManyToOneFlatFieldMetadata } from 'src/engine/twenty-orm/utils/is-many-to-one-flat-field-metadata.util';
@@ -157,12 +154,12 @@ const getPropertyJsonSchema = ({
 
 export const generateRecordPropertiesJsonSchema = ({
   objectMetadata,
-  restrictedFields,
+  nonUpdatableFieldMetadataIds,
   definitions,
   isPartial = false,
 }: {
   objectMetadata: Pick<ObjectMetadataForToolSchema, 'fields'>;
-  restrictedFields?: RestrictedFieldsPermissions;
+  nonUpdatableFieldMetadataIds?: ReadonlySet<string>;
   definitions: JsonSchemaDefinitions;
   isPartial?: boolean;
 }): { properties: Record<string, JSONSchema7>; required: string[] } => {
@@ -173,12 +170,12 @@ export const generateRecordPropertiesJsonSchema = ({
     if (
       SYSTEM_MANAGED_FIELD_NAMES.has(field.name) ||
       field.type === FieldMetadataType.TS_VECTOR ||
-      restrictedFields?.[field.id]?.canUpdate === false
+      nonUpdatableFieldMetadataIds?.has(field.id)
     ) {
       continue;
     }
 
-    const isRequired = !field.isNullable && !isPartial;
+    const isRequired = !isPartial && isFlatFieldMetadataRequiredOnCreate(field);
 
     if (isMorphOrRelationFlatFieldMetadata(field)) {
       if (!isManyToOneFlatFieldMetadata(field)) {

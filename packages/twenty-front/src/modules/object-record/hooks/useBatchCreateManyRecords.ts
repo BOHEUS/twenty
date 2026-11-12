@@ -9,8 +9,8 @@ import {
 import { useRefetchAggregateQueries } from '@/object-record/hooks/useRefetchAggregateQueries';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
-import { t } from '@lingui/core/macro';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
+import { useLingui } from '@lingui/react/macro';
 
 export const useBatchCreateManyRecords = <
   CreatedObjectRecord extends ObjectRecord = ObjectRecord,
@@ -27,6 +27,7 @@ export const useBatchCreateManyRecords = <
   setBatchedRecordsCount?: (count: number) => void;
   abortController?: AbortController;
 }) => {
+  const { t } = useLingui();
   const { createManyRecords } = useCreateManyRecords({
     objectNameSingular,
     recordGqlFields,
@@ -87,7 +88,7 @@ export const useBatchCreateManyRecords = <
       ) {
         const formattedCreatedRecordsCount = formatNumber(createdRecordsCount);
         enqueueToast({
-          variant: 'warning',
+          status: 'warning',
           children: t`Record creation stopped. ${formattedCreatedRecordsCount} records created.`,
           duration: 5000,
         });

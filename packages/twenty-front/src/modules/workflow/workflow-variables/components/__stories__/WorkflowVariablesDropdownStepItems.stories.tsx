@@ -1,6 +1,6 @@
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
-import { Dropdown } from 'twenty-ui/components';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { Button } from 'twenty-ui/primitives/input';
 import { WorkflowVariablesDropdownStepItems } from '@/workflow/workflow-variables/components/WorkflowVariablesDropdownStepItems';
 import { type Meta, type StoryObj } from '@storybook/react-vite';
@@ -76,5 +76,32 @@ export const NestedFieldSearch: Story = {
     ).toBeInTheDocument();
     await userEvent.click(canvas.getByText('Employees'));
     expect(args.onSelect).toHaveBeenCalledWith('{{code.result.employees}}');
+  },
+};
+
+export const UntestedCodeStep: Story = {
+  args: {
+    step: {
+      id: 'code',
+      name: 'Run code',
+      type: 'CODE',
+      outputSchema: {},
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole('button', {
+        name: 'Open variables',
+      }),
+    );
+    const canvas = within(canvasElement.ownerDocument.body);
+
+    expect(
+      await canvas.findByText(
+        'Test this step to see its outputs',
+        undefined,
+        ASYNC_DECORATOR_WAIT_OPTIONS,
+      ),
+    ).toBeInTheDocument();
   },
 };

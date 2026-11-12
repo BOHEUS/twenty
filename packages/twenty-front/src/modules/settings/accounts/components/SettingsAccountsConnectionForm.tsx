@@ -9,7 +9,7 @@ import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { SettingsAccountsPasswordController } from '@/settings/accounts/components/SettingsAccountsPasswordController';
 import { type ConnectionFormData } from '@/settings/accounts/hooks/useImapSmtpCaldavConnectionForm';
 import { type AccountType } from 'twenty-shared/constants';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { MOBILE_VIEWPORT, themeCssVariables } from 'twenty-ui/theme';
 
 const StyledFormContainer = styled.div`
@@ -53,10 +53,6 @@ const StyledFieldRow = styled.div`
 
 const StyledFieldGroup = styled.div`
   flex: 1;
-
-  & > * {
-    width: 100%;
-  }
 `;
 
 type SettingsAccountsConnectionFormProps = {
@@ -193,7 +189,7 @@ export const SettingsAccountsConnectionForm = ({
                     label={t`IMAP Port`}
                     type="number"
                     placeholder="993"
-                    value={field?.value ? field.value : 993}
+                    value={field.value || ''}
                     onChange={(value) =>
                       field.onChange(handlePortChange(value))
                     }
@@ -211,7 +207,7 @@ export const SettingsAccountsConnectionForm = ({
                   <Select
                     label={t`IMAP Connection security`}
                     options={[
-                      { label: 'None', value: 'NONE' },
+                      { label: t`None`, value: 'NONE' },
                       { label: 'STARTTLS', value: 'STARTTLS' },
                       { label: 'SSL/TLS', value: 'SSL_TLS' },
                     ]}
@@ -290,7 +286,7 @@ export const SettingsAccountsConnectionForm = ({
                     label={t`SMTP Port`}
                     type="number"
                     placeholder="587"
-                    value={field?.value ? field.value : 587}
+                    value={field.value || ''}
                     onChange={(value) =>
                       field.onChange(handlePortChange(value))
                     }
@@ -308,7 +304,7 @@ export const SettingsAccountsConnectionForm = ({
                   <Select
                     label={t`SMTP Connection security`}
                     options={[
-                      { label: 'None', value: 'NONE' },
+                      { label: t`None`, value: 'NONE' },
                       { label: 'STARTTLS', value: 'STARTTLS' },
                       { label: 'SSL/TLS', value: 'SSL_TLS' },
                     ]}

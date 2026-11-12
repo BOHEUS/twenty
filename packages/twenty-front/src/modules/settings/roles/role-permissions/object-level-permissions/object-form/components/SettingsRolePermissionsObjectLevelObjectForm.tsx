@@ -1,7 +1,8 @@
 import { NavigationButton } from '@/ui/input/components/NavigationButton';
+import { getCoreAgentBreadcrumbLinks } from '@/object-core/agents/utils/getCoreAgentBreadcrumbLinks';
+import { getCoreAgentLink } from '@/object-core/agents/utils/getCoreAgentLink';
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { useObjectMetadataItemById } from '@/object-metadata/hooks/useObjectMetadataItemById';
-import { mapRLSOperandToRecordFilterOperand } from '@/object-record/record-filter/utils/mapRLSOperandToRecordFilterOperand';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
 import { SettingsRolePermissionsObjectLevelObjectFieldPermissionTable } from '@/settings/roles/role-permissions/object-level-permissions/field-permissions/components/SettingsRolePermissionsObjectLevelObjectFieldPermissionTable';
 import { SettingsRolePermissionsObjectLevelObjectFormObjectLevel } from '@/settings/roles/role-permissions/object-level-permissions/object-form/components/SettingsRolePermissionsObjectLevelObjectFormObjectLevel';
@@ -10,7 +11,6 @@ import { settingsDraftRoleFamilyState } from '@/settings/roles/states/settingsDr
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { SettingsWizardStepBar } from '@/settings/components/layout/SettingsWizardStepBar';
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
-import { t } from '@lingui/core/macro';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { SettingsPath } from 'twenty-shared/types';
@@ -18,6 +18,7 @@ import {
   getSettingsPath,
   isDefined,
   isRecordFilterValueValid,
+  mapRLSOperandToRecordFilterOperand,
 } from 'twenty-shared/utils';
 import { themeCssVariables } from 'twenty-ui/theme';
 import { useQuery } from '@apollo/client/react';
@@ -26,6 +27,7 @@ import {
   BillingEntitlementKey,
   FindOneAgentDocument,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsRolePermissionsObjectLevelObjectFormProps = {
   roleId: string;
@@ -36,6 +38,7 @@ export const SettingsRolePermissionsObjectLevelObjectForm = ({
   roleId,
   objectMetadataId,
 }: SettingsRolePermissionsObjectLevelObjectFormProps) => {
+  const { t } = useLingui();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const fromAgentId = searchParams.get('fromAgent');
@@ -71,25 +74,10 @@ export const SettingsRolePermissionsObjectLevelObjectForm = ({
 
   const breadcrumbLinks =
     fromAgentId && isDefined(agent)
-      ? [
-          {
-            children: t`Workspace`,
-            href: getSettingsPath(SettingsPath.General),
-          },
-          {
-            children: t`AI`,
-            href: getSettingsPath(SettingsPath.AI),
-          },
-          {
-            children: agent.label,
-            href: getSettingsPath(SettingsPath.AiAgentDetail, {
-              agentId: agent.id,
-            }),
-          },
-          {
-            children: t`Permissions · ${objectLabelSingular}`,
-          },
-        ]
+      ? getCoreAgentBreadcrumbLinks([
+          { children: agent.label, href: getCoreAgentLink(agent.id) },
+          { children: t`Permissions · ${objectLabelSingular}` },
+        ])
       : [
           {
             children: t`Workspace`,
@@ -116,7 +104,7 @@ export const SettingsRolePermissionsObjectLevelObjectForm = ({
 
   const finishButtonPath =
     fromAgentId && isDefined(agent)
-      ? getSettingsPath(SettingsPath.AiAgentDetail, { agentId: agent.id })
+      ? getCoreAgentLink(agent.id)
       : getSettingsPath(SettingsPath.RoleDetail, { roleId });
 
   const previousStepPath = `${getSettingsPath(SettingsPath.RoleAddObjectLevel, {

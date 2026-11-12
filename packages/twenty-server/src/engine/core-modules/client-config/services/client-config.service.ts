@@ -21,9 +21,10 @@ import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twent
 import { toDisplayCredits } from 'src/engine/core-modules/usage/utils/to-display-credits.util';
 import { AI_MODEL_TIERS, parseAiModelVariantId } from 'twenty-shared/ai';
 import { ENTERPRISE_INSTANCE_TYPE } from 'twenty-shared/constants';
-import { MODEL_FAMILY_LABELS } from 'src/engine/metadata-modules/ai/ai-models/constants/model-family-labels.const';
+import { MODEL_FAMILY_LABELS } from 'src/engine/metadata-modules/ai/ai-models/constants/model-family-labels.constant';
 import { getAvailableEfforts } from 'src/engine/metadata-modules/ai/ai-models/utils/get-available-efforts.util';
 import { getNativeModelCapabilities } from 'src/engine/metadata-modules/ai/ai-models/utils/get-native-model-capabilities.util';
+import { AI_DATA_POLICIES } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-data-policies.constant';
 import { AiModelRegistryService } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-registry.service';
 import { type AiModelBenchmark } from 'src/engine/metadata-modules/ai/ai-models/types/ai-model-benchmark.type';
 import { type AiModelConfig } from 'src/engine/metadata-modules/ai/ai-models/types/ai-model-config.type';
@@ -120,6 +121,7 @@ export class ClientConfigService {
           maxOutputTokens: modelConfig?.maxOutputTokens,
           isDeprecated: modelConfig?.isDeprecated,
           dataResidency: modelConfig?.dataResidency,
+          zeroDataRetention: modelConfig?.zeroDataRetention,
           intelligenceIndex: benchmark?.intelligenceIndex,
           outputTokensPerSecond: benchmark?.outputTokensPerSecond,
           costPerTask: benchmark?.costPerTask,
@@ -156,11 +158,29 @@ export class ClientConfigService {
           isDeprecated: modelConfig.isDeprecated,
         }));
 
-    const aiModelTiers = AI_MODEL_TIERS.flatMap((tier) => {
-      const model = this.aiModelRegistryService.findDefaultModelForTier(tier);
+    const aiModelTiers = AI_DATA_POLICIES.flatMap((aiDataPolicy) =>
+      AI_MODEL_TIERS.flatMap((tier) => {
+        const model = this.aiModelRegistryService.findDefaultModelForTier({
+          tier,
+          aiDataPolicy,
+        });
 
-      return isDefined(model) ? [{ tier, modelId: model.modelId }] : [];
-    });
+        if (!isDefined(model)) {
+          return [];
+        }
+
+        return [
+          {
+            tier,
+            modelId: model.modelId,
+            requiredDataResidencyRegion:
+              aiDataPolicy.requiredDataResidencyRegion,
+            isZeroDataRetentionRequired:
+              aiDataPolicy.isZeroDataRetentionRequired,
+          },
+        ];
+      }),
+    );
 
     const clientConfig: ClientConfig = {
       appVersion: this.twentyConfigService.get('APP_VERSION'),
@@ -204,6 +224,7 @@ export class ClientConfigService {
       ),
       defaultSubdomain: this.twentyConfigService.get('DEFAULT_SUBDOMAIN'),
       frontDomain: this.domainServerConfigService.getFrontUrl().hostname,
+      serverUrl: this.twentyConfigService.get('SERVER_URL'),
       publicFunctionDomain:
         this.domainServerConfigService.getPublicBaseHostnameOrUndefined() ??
         null,
@@ -240,11 +261,6 @@ export class ClientConfigService {
             inviteTeamCreditsRewardPerUser: toDisplayCredits(
               this.twentyConfigService.get(
                 'ONBOARDING_INVITE_TEAM_CREDITS_REWARD_PER_USER',
-              ),
-            ),
-            installAppsCreditsReward: toDisplayCredits(
-              this.twentyConfigService.get(
-                'ONBOARDING_INSTALL_APPS_CREDITS_REWARD',
               ),
             ),
             createProfileCreditsReward: toDisplayCredits(

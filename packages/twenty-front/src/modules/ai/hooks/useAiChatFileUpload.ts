@@ -1,10 +1,14 @@
 import { agentChatSelectedFilesState } from '@/ai/states/agentChatSelectedFilesState';
 import { agentChatUploadedFilesState } from '@/ai/states/agentChatUploadedFilesState';
+import { currentAiChatThreadState } from '@/ai/states/currentAiChatThreadState';
+import { agentChatThreadRecordFamilySelector } from '@/ai/states/selectors/agentChatThreadRecordFamilySelector';
 import { useDirectFileUpload } from '@/file/hooks/useDirectFileUpload';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useLingui } from '@lingui/react/macro';
+import { useStore } from 'jotai';
+import { AgentChatThreadConversationType } from 'twenty-shared/ai';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 
 import { type AgentChatFileUIPart } from '@/ai/types/AgentChatFileUIPart';
 import { FileFolder } from '~/generated-metadata/graphql';
@@ -19,12 +23,28 @@ export const useAiChatFileUpload = () => {
   const setAgentChatUploadedFiles = useSetAtomState(
     agentChatUploadedFilesState,
   );
+  const store = useStore();
 
   const sendFile = async (file: File): Promise<AgentChatFileUIPart | null> => {
+    const abortController = new AbortController();
+    const unsubscribeFromSelectedFiles = store.sub(
+      agentChatSelectedFilesState.atom,
+      () => {
+        if (!store.get(agentChatSelectedFilesState.atom).includes(file)) {
+          abortController.abort();
+        }
+      },
+    );
+
     try {
       const uploadedFile = await directUploadFile(file, {
         fileFolder: FileFolder.AgentChat,
+        signal: abortController.signal,
       });
+
+      if (!store.get(agentChatSelectedFilesState.atom).includes(file)) {
+        return null;
+      }
 
       return {
         filename: file.name,
@@ -35,33 +55,45 @@ export const useAiChatFileUpload = () => {
       };
     } catch {
       const fileName = file.name;
-      enqueueToast({
-        variant: 'error',
-        children: t`Failed to upload file: ${fileName}`,
-      });
+
+      if (!abortController.signal.aborted) {
+        enqueueToast({
+          status: 'error',
+          children: t`Failed to upload file: ${fileName}`,
+        });
+      }
+
       return null;
     } finally {
+      unsubscribeFromSelectedFiles();
       setAgentChatSelectedFiles((previousSelectedFiles) =>
-        previousSelectedFiles.filter(
-          (selectedFile) => selectedFile.name !== file.name,
-        ),
+        previousSelectedFiles.filter((selectedFile) => selectedFile !== file),
       );
     }
   };
 
   const uploadFiles = async (files: File[]) => {
-    const uploadResults = await Promise.allSettled(
-      files.map((file) => sendFile(file)),
+    const currentAiChatThread = store.get(currentAiChatThreadState.atom);
+    const currentThread = store.get(
+      agentChatThreadRecordFamilySelector.selectorFamily(
+        currentAiChatThread ?? '',
+      ),
     );
 
-    const successfulUploads = uploadResults.reduce<AgentChatFileUIPart[]>(
-      (acc, result) => {
-        if (result.status === 'fulfilled' && isDefined(result.value)) {
-          acc.push(result.value);
-        }
-        return acc;
-      },
-      [],
+    if (
+      currentThread?.conversationType ===
+      AgentChatThreadConversationType.DIRECT_MESSAGE
+    ) {
+      return [];
+    }
+
+    setAgentChatSelectedFiles((previousSelectedFiles) => [
+      ...previousSelectedFiles,
+      ...files,
+    ]);
+
+    const successfulUploads = (await Promise.all(files.map(sendFile))).filter(
+      isDefined,
     );
 
     if (isNonEmptyArray(successfulUploads)) {
@@ -71,15 +103,7 @@ export const useAiChatFileUpload = () => {
       ]);
     }
 
-    const failedCount = uploadResults.filter(
-      (result) => result.status === 'rejected',
-    ).length;
-    if (failedCount > 0) {
-      enqueueToast({
-        variant: 'error',
-        children: t`${failedCount} file(s) failed to upload`,
-      });
-    }
+    return successfulUploads;
   };
 
   return { uploadFiles };

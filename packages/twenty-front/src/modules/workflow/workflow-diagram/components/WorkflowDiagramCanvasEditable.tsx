@@ -1,3 +1,4 @@
+import { useAtomComponentStateCallbackState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateCallbackState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
 import { flowComponentState } from '@/workflow/states/flowComponentState';
@@ -14,7 +15,9 @@ import {
   type WorkflowDiagramEdge,
   type WorkflowDiagramNode,
 } from '@/workflow/workflow-diagram/types/WorkflowDiagram';
+import { getDisplayedWorkflowDiagramWithDroppedNode } from '@/workflow/workflow-diagram/utils/getDisplayedWorkflowDiagramWithDroppedNode';
 import { getWorkflowVersionStatusTagProps } from '@/workflow/workflow-diagram/utils/getWorkflowVersionStatusTagProps';
+import { hasUnpositionedWorkflowNode } from '@/workflow/workflow-diagram/utils/hasUnpositionedWorkflowNode';
 import { WorkflowDiagramBlankEdge } from '@/workflow/workflow-diagram/workflow-edges/components/WorkflowDiagramBlankEdge';
 import { WorkflowDiagramDefaultEdgeEditable } from '@/workflow/workflow-diagram/workflow-edges/components/WorkflowDiagramDefaultEdgeEditable';
 import { getConnectionOptionsForSourceHandle } from '@/workflow/workflow-diagram/workflow-edges/utils/getConnectionOptionsForSourceHandle';
@@ -24,7 +27,8 @@ import { useCreateEdge } from '@/workflow/workflow-steps/hooks/useCreateEdge';
 import { useDeleteEdge } from '@/workflow/workflow-steps/hooks/useDeleteEdge';
 import { useUpdateStep } from '@/workflow/workflow-steps/hooks/useUpdateStep';
 import { prepareIfElseStepWithNewBranch } from '@/workflow/workflow-steps/workflow-actions/if-else-action/utils/prepareIfElseStepWithNewBranch';
-import { useUpdateWorkflowVersionTrigger } from '@/workflow/workflow-trigger/hooks/useUpdateWorkflowVersionTrigger';
+import { useUpdateTrigger } from '@/workflow/workflow-trigger/hooks/useUpdateTrigger';
+import { useUpdateWorkflowVersionPositions } from '@/workflow/workflow-version/hooks/useUpdateWorkflowVersionPositions';
 import {
   addEdge,
   ReactFlowProvider,
@@ -32,8 +36,11 @@ import {
   type OnNodeDrag,
   type OnReconnect,
 } from '@xyflow/react';
+import { useStore } from 'jotai';
 import { useRef } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { logError } from '~/utils/logError';
 
 export const WorkflowDiagramCanvasEditable = () => {
   const workflowVisualizerWorkflowId = useAtomComponentStateValue(
@@ -47,6 +54,10 @@ export const WorkflowDiagramCanvasEditable = () => {
   const setWorkflowDiagram = useSetAtomComponentState(
     workflowDiagramComponentState,
   );
+  const workflowDiagramCallbackState = useAtomComponentStateCallbackState(
+    workflowDiagramComponentState,
+  );
+  const store = useStore();
 
   const setWorkflowDiagramRightClickMenuPosition = useSetAtomComponentState(
     workflowDiagramRightClickMenuPositionState,
@@ -60,9 +71,12 @@ export const WorkflowDiagramCanvasEditable = () => {
   // oxlint-disable-next-line twenty/no-state-useref
   const reconnectionQueueRef = useRef<Promise<void>>(Promise.resolve());
 
-  const { updateStep } = useUpdateStep();
+  const { updateStep, updateStepNow } = useUpdateStep();
 
-  const { updateTrigger } = useUpdateWorkflowVersionTrigger();
+  const { updateTrigger } = useUpdateTrigger();
+
+  const { updateWorkflowVersionPositions } =
+    useUpdateWorkflowVersionPositions();
 
   const { startNodeCreation } = useStartNodeCreation();
 
@@ -80,13 +94,15 @@ export const WorkflowDiagramCanvasEditable = () => {
         targetStepId: edgeConnect.target,
       });
 
-      await updateStep(updatedStep);
+      await updateStepNow(updatedStep);
     }
 
     setWorkflowDiagram((diagram) => {
       if (isDefined(diagram) === false) {
         throw new Error(
-          'It must be impossible for the edges to be updated if the diagram is not defined yet. Be sure the diagram is rendered only when defined.',
+          doNotTranslate(
+            'It must be impossible for the edges to be updated if the diagram is not defined yet. Be sure the diagram is rendered only when defined.',
+          ),
         );
       }
 
@@ -177,11 +193,44 @@ export const WorkflowDiagramCanvasEditable = () => {
     return reconnection;
   };
 
+  const persistDisplayedLayoutWithDraggedNode = (
+    draggedNode: Pick<WorkflowDiagramNode, 'id' | 'position'>,
+  ) => {
+    const workflowDiagram = store.get(workflowDiagramCallbackState);
+
+    if (!isDefined(workflowDiagram)) {
+      return;
+    }
+
+    const displayedWorkflowDiagram = getDisplayedWorkflowDiagramWithDroppedNode(
+      {
+        diagram: workflowDiagram,
+        flow,
+        droppedNode: draggedNode,
+      },
+    );
+
+    setWorkflowDiagram(displayedWorkflowDiagram);
+
+    updateWorkflowVersionPositions(
+      displayedWorkflowDiagram.nodes.map(({ id, position }) => ({
+        id,
+        position,
+      })),
+    ).catch(logError);
+  };
+
   const onNodeDragStop: OnNodeDrag<WorkflowDiagramNode> = async (_, node) => {
+    if (isDefined(flow) && hasUnpositionedWorkflowNode(flow)) {
+      persistDisplayedLayoutWithDraggedNode(node);
+
+      return;
+    }
+
     const stepToUpdate = flow?.steps?.find((step) => step.id === node.id);
 
     if (isDefined(stepToUpdate)) {
-      await updateStep({
+      updateStep({
         ...stepToUpdate,
         position: node.position,
       });
@@ -192,7 +241,7 @@ export const WorkflowDiagramCanvasEditable = () => {
     const triggerToUpdate = flow?.trigger;
 
     if (isDefined(triggerToUpdate)) {
-      await updateTrigger({
+      updateTrigger({
         ...triggerToUpdate,
         position: node.position,
       });

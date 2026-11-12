@@ -1,8 +1,11 @@
 import { randomUUID } from 'crypto';
 
-import { msg } from '@lingui/core/macro';
-import { type Repository } from 'typeorm';
+import { Test } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 
+import { msg } from '@lingui/core/macro';
+
+import { CoreEntityCacheService } from 'src/engine/core-entity-cache/services/core-entity-cache.service';
 import {
   AuthException,
   AuthExceptionCode,
@@ -10,8 +13,13 @@ import {
 import { type JwtPayload } from 'src/engine/core-modules/auth/types/jwt-payload.type';
 import { JwtTokenTypeEnum } from 'src/engine/core-modules/auth/types/jwt-token-type.enum';
 import { ImpersonationAuthorizationService } from 'src/engine/core-modules/impersonation/services/impersonation-authorization.service';
+import { JwtWrapperService } from 'src/engine/core-modules/jwt/services/jwt-wrapper.service';
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
+import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { SettingPermissionsService } from 'src/engine/permissions/setting-permissions.service';
+import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 
 import { JwtAuthStrategy } from './jwt.auth.strategy';
@@ -20,7 +28,7 @@ describe('JwtAuthStrategy', () => {
   let strategy: JwtAuthStrategy;
   let userWorkspaceRepository: any;
   let jwtWrapperService: any;
-  let permissionsService: any;
+  let settingPermissionsService: any;
   let twentyConfigService: any;
   let workspaceCacheService: any;
   let coreEntityCacheService: any;
@@ -57,8 +65,8 @@ describe('JwtAuthStrategy', () => {
       })),
     };
 
-    permissionsService = {
-      userHasWorkspaceSettingPermission: jest.fn(),
+    settingPermissionsService = {
+      userWorkspaceHasPermissionFlag: jest.fn(),
     };
 
     twentyConfigService = {
@@ -129,18 +137,32 @@ describe('JwtAuthStrategy', () => {
     jest.clearAllMocks();
   });
 
-  const createStrategy = () =>
-    new JwtAuthStrategy(
-      jwtWrapperService,
-      userWorkspaceRepository,
-      workspaceCacheService,
-      coreEntityCacheService,
-      new ImpersonationAuthorizationService(
-        permissionsService,
-        twentyConfigService,
-      ),
-      workspaceRepository as unknown as Repository<WorkspaceEntity>,
-    );
+  const createStrategy = async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        JwtAuthStrategy,
+        ImpersonationAuthorizationService,
+        { provide: JwtWrapperService, useValue: jwtWrapperService },
+        {
+          provide: getRepositoryToken(UserWorkspaceEntity),
+          useValue: userWorkspaceRepository,
+        },
+        { provide: WorkspaceCacheService, useValue: workspaceCacheService },
+        { provide: CoreEntityCacheService, useValue: coreEntityCacheService },
+        {
+          provide: SettingPermissionsService,
+          useValue: settingPermissionsService,
+        },
+        { provide: TwentyConfigService, useValue: twentyConfigService },
+        {
+          provide: getRepositoryToken(WorkspaceEntity),
+          useValue: workspaceRepository,
+        },
+      ],
+    }).compile();
+
+    return module.get(JwtAuthStrategy);
+  };
 
   describe('API_KEY validation', () => {
     it('should throw AuthException if type is API_KEY and workspace is not found', async () => {
@@ -149,7 +171,7 @@ describe('JwtAuthStrategy', () => {
         type: JwtTokenTypeEnum.API_KEY,
       };
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -171,7 +193,7 @@ describe('JwtAuthStrategy', () => {
       workspaceStore[payload.sub] = mockWorkspace;
       apiKeyStore['workspace-id'] = {};
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -198,7 +220,7 @@ describe('JwtAuthStrategy', () => {
         },
       };
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -207,6 +229,44 @@ describe('JwtAuthStrategy', () => {
         ),
       );
     });
+
+    it.each([
+      { offsetMilliseconds: -1, isAllowed: false },
+      { offsetMilliseconds: 0, isAllowed: true },
+      { offsetMilliseconds: 1, isAllowed: true },
+    ])(
+      'validates cached API-key expiry at offset $offsetMilliseconds ms',
+      async ({ offsetMilliseconds, isAllowed }) => {
+        const payload: JwtPayload = {
+          ...jwt,
+          type: JwtTokenTypeEnum.API_KEY,
+          workspaceId: 'workspace-id',
+        };
+        const workspace = new WorkspaceEntity();
+
+        workspace.id = 'workspace-id';
+        workspaceStore[payload.sub] = workspace;
+        apiKeyStore[workspace.id] = {
+          [jwt.jti]: {
+            id: 'api-key-id',
+            revokedAt: null,
+            expiresAt: new Date(Date.now() + offsetMilliseconds).toISOString(),
+          },
+        };
+
+        strategy = await createStrategy();
+
+        if (isAllowed) {
+          await expect(strategy.validate(payload)).resolves.toMatchObject({
+            apiKey: { id: 'api-key-id' },
+          });
+        } else {
+          await expect(strategy.validate(payload)).rejects.toThrow(
+            'This API Key is expired',
+          );
+        }
+      },
+    );
 
     it('should be truthy if type is API_KEY and API_KEY is not revoked', async () => {
       const payload = {
@@ -225,7 +285,7 @@ describe('JwtAuthStrategy', () => {
         },
       };
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       const result = await strategy.validate(payload as JwtPayload);
 
@@ -249,12 +309,12 @@ describe('JwtAuthStrategy', () => {
 
       workspaceStore[validWorkspaceId] = new WorkspaceEntity();
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
           'User or user workspace not found',
-          expect.any(String),
+          AuthExceptionCode.USER_NOT_FOUND,
           {
             userFriendlyMessage: msg`User does not have access to this workspace`,
           },
@@ -285,12 +345,12 @@ describe('JwtAuthStrategy', () => {
 
       userWorkspaceRepository.findOne.mockResolvedValue(null);
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
           'User or user workspace not found',
-          expect.any(String),
+          AuthExceptionCode.USER_NOT_FOUND,
           {
             userFriendlyMessage: msg`User does not have access to this workspace`,
           },
@@ -344,7 +404,7 @@ describe('JwtAuthStrategy', () => {
         },
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       const user = await strategy.validate(payload as JwtPayload);
 
@@ -394,12 +454,12 @@ describe('JwtAuthStrategy', () => {
         },
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
           'User or user workspace not found',
-          expect.any(String),
+          AuthExceptionCode.USER_NOT_FOUND,
           {
             userFriendlyMessage: msg`User does not have access to this workspace`,
           },
@@ -424,7 +484,7 @@ describe('JwtAuthStrategy', () => {
       workspaceRepository.findOne.mockResolvedValue(workspace);
       applicationStore[workspaceId] = { [applicationId]: application };
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(
         strategy.validate({
@@ -462,7 +522,7 @@ describe('JwtAuthStrategy', () => {
         }),
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(
         strategy.validate({
@@ -498,12 +558,16 @@ describe('JwtAuthStrategy', () => {
       mockWorkspace.id = validWorkspaceId;
       workspaceStore[validWorkspaceId] = mockWorkspace;
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
-        new AuthException('Application not found', expect.any(String), {
-          userFriendlyMessage: msg`Application not found.`,
-        }),
+        new AuthException(
+          'Application not found',
+          AuthExceptionCode.APPLICATION_NOT_FOUND,
+          {
+            userFriendlyMessage: msg`Application not found.`,
+          },
+        ),
       );
 
       try {
@@ -511,6 +575,31 @@ describe('JwtAuthStrategy', () => {
       } catch (e) {
         expect(e.code).toBe(AuthExceptionCode.APPLICATION_NOT_FOUND);
       }
+    });
+
+    it('should carry the agent an application token names', async () => {
+      const applicationId = randomUUID();
+      const workspaceId = randomUUID();
+      const workspace = new WorkspaceEntity();
+
+      workspace.id = workspaceId;
+      workspaceStore[workspaceId] = workspace;
+      applicationStore[workspaceId] = {
+        [applicationId]: { id: applicationId },
+      };
+
+      strategy = await createStrategy();
+
+      const result = await strategy.validate({
+        sub: applicationId,
+        type: JwtTokenTypeEnum.APPLICATION_ACCESS,
+        applicationId,
+        workspaceId,
+        agentId: 'agent-id',
+      } as JwtPayload);
+
+      expect(result.application).toEqual({ id: applicationId });
+      expect(result.agentId).toBe('agent-id');
     });
 
     it('should reject an application token bound to a user that cannot be resolved', async () => {
@@ -535,7 +624,7 @@ describe('JwtAuthStrategy', () => {
         [validApplicationId]: { id: validApplicationId },
       };
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       try {
         await strategy.validate(payload as JwtPayload);
@@ -593,7 +682,7 @@ describe('JwtAuthStrategy', () => {
         },
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       try {
         await strategy.validate(payload as JwtPayload);
@@ -679,7 +768,7 @@ describe('JwtAuthStrategy', () => {
         },
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       try {
         await strategy.validate(payload as JwtPayload);
@@ -716,7 +805,7 @@ describe('JwtAuthStrategy', () => {
         workspace: { id: validWorkspaceId },
       });
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -752,7 +841,7 @@ describe('JwtAuthStrategy', () => {
         workspace: { id: validWorkspaceId },
       });
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -786,11 +875,11 @@ describe('JwtAuthStrategy', () => {
         user: { id: validUserId, lastName: 'lastNameDefault' },
         workspace: { id: validWorkspaceId },
       });
-      permissionsService.userHasWorkspaceSettingPermission.mockResolvedValue(
+      settingPermissionsService.userWorkspaceHasPermissionFlag.mockResolvedValue(
         true,
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -857,7 +946,7 @@ describe('JwtAuthStrategy', () => {
           workspace: mockWorkspace,
         });
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -919,7 +1008,7 @@ describe('JwtAuthStrategy', () => {
 
       userWorkspaceRepository.findOne.mockResolvedValueOnce(null);
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -991,11 +1080,11 @@ describe('JwtAuthStrategy', () => {
           workspace: mockWorkspace,
         });
 
-      permissionsService.userHasWorkspaceSettingPermission.mockResolvedValue(
+      settingPermissionsService.userWorkspaceHasPermissionFlag.mockResolvedValue(
         false,
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -1066,11 +1155,11 @@ describe('JwtAuthStrategy', () => {
           workspace: mockWorkspace,
         });
 
-      permissionsService.userHasWorkspaceSettingPermission.mockResolvedValue(
+      settingPermissionsService.userWorkspaceHasPermissionFlag.mockResolvedValue(
         false,
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -1104,7 +1193,7 @@ describe('JwtAuthStrategy', () => {
 
       workspaceStore[validWorkspaceId] = mockWorkspace;
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       await expect(strategy.validate(payload as JwtPayload)).rejects.toThrow(
         new AuthException(
@@ -1175,11 +1264,11 @@ describe('JwtAuthStrategy', () => {
           workspace: mockWorkspace,
         });
 
-      permissionsService.userHasWorkspaceSettingPermission.mockResolvedValue(
+      settingPermissionsService.userWorkspaceHasPermissionFlag.mockResolvedValue(
         true,
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       const result = await strategy.validate(payload as JwtPayload);
 
@@ -1256,7 +1345,7 @@ describe('JwtAuthStrategy', () => {
           workspace: mockWorkspace,
         });
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       const result = await strategy.validate(payload as JwtPayload);
 
@@ -1312,7 +1401,7 @@ describe('JwtAuthStrategy', () => {
         },
       );
 
-      strategy = createStrategy();
+      strategy = await createStrategy();
 
       const result = await strategy.validate(payload as JwtPayload);
 

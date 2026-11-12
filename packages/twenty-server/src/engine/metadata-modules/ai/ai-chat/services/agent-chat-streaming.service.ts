@@ -1,375 +1,111 @@
+import { type WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { AgentChatStreamClaimService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-stream-claim.service';
 import { isNonEmptyString } from '@sniptt/guards';
+import { AgentChatQueueService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-queue.service';
 import { AuthException } from 'src/engine/core-modules/auth/auth.exception';
-import { PermissionsException } from 'src/engine/metadata-modules/permissions/permissions.exception';
+import { PermissionsException } from 'src/engine/permissions/permissions.exception';
 import { AgentChatActorService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-actor.service';
 import { AgentChatStreamRecoveryService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-stream-recovery.service';
 import { InjectAgentHistoryRepository } from 'src/engine/metadata-modules/ai/ai-history/repositories/inject-agent-history-repository.decorator';
 import { AgentHistoryRepository } from 'src/engine/metadata-modules/ai/ai-history/repositories/agent-history-repository';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { type TextUIPart } from 'ai';
 
-import { generateId } from 'ai';
 import {
-  type ExtendedFileUIPart,
-  type ExtendedUIMessagePart,
-  isExtendedFileUIPart,
+  AgentChatThreadConversationType,
+  type ExtendedUIMessage,
 } from 'twenty-shared/ai';
-import { FileFolder } from 'twenty-shared/types';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
-import { type FindOptionsWhere, In, IsNull, Like, Not } from 'typeorm';
 
-import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
-import { FileUrlService } from 'src/engine/core-modules/file/file-url/file-url.service';
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
-import { MetricsService } from 'src/engine/core-modules/metrics/metrics.service';
-import { MetricsKeys } from 'src/engine/core-modules/metrics/types/metrics-keys.type';
-import { type WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
-import {
-  AgentMessageRole,
-  AgentMessageStatus,
-} from 'src/engine/metadata-modules/ai/ai-agent-execution/entities/agent-message.entity';
-import { skipAwaitingToolParts } from 'src/engine/metadata-modules/ai/ai-agent-execution/pausing-tools/utils/skip-awaiting-tool-parts.util';
-import { mapDBPartsToUIMessageParts } from 'src/engine/metadata-modules/ai/ai-agent-execution/utils/mapDBPartsToUIMessageParts';
+import { AgentMessageStatus } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-message-status.enum';
+import { AgentRunSuspensionService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-run-suspension.service';
+import { mapDBPartsToUIMessageParts } from 'src/engine/metadata-modules/ai/ai-history/utils/map-db-parts-to-ui-message-parts.util';
 import { type BrowsingContextType } from 'src/engine/metadata-modules/ai/ai-agent/types/browsing-context.type';
 import { AgentChatThreadWorkspaceEntity } from 'src/engine/metadata-modules/ai/ai-history/standard-objects/agent-chat-thread.workspace-entity';
-import { AgentMessagePartWorkspaceEntity } from 'src/engine/metadata-modules/ai/ai-history/standard-objects/agent-message-part.workspace-entity';
-import { type AgentChatThreadLastStreamError } from 'src/engine/metadata-modules/ai/ai-chat/types/agent-chat-thread-last-stream-error.type';
 import { STREAM_AGENT_CHAT_JOB_NAME } from 'src/engine/metadata-modules/ai/ai-chat/jobs/stream-agent-chat-job-name.constant';
 import { type StreamAgentChatJobData } from 'src/engine/metadata-modules/ai/ai-chat/jobs/stream-agent-chat-job.types';
 import { AgentChatEventPublisherService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-event-publisher.service';
-import { AgentChatStreamHeartbeatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-stream-heartbeat.service';
 import { AgentChatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat.service';
-import { AiChatFileAttachment } from 'src/engine/metadata-modules/ai/ai-chat/types/ai-chat-file-attachment.type';
-import { formatErrorWithCause } from 'src/engine/metadata-modules/ai/ai-chat/utils/format-error-with-cause.util';
-import { mapErrorToStreamError } from 'src/engine/metadata-modules/ai/ai-chat/utils/map-error-to-stream-error.util';
+import { AgentChatThreadService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread.service';
+import { AgentConversationReaderService } from 'src/engine/metadata-modules/ai/ai-history/services/agent-conversation-reader.service';
 import {
   AiException,
   AiExceptionCode,
 } from 'src/engine/metadata-modules/ai/ai.exception';
-import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
-import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
-
-type StreamAgentChatOptions = {
-  threadId: string;
-  userWorkspaceId: string;
-  workspaceMemberId: string;
-  workspace: WorkspaceEntity;
-  text: string;
-  browsingContext: BrowsingContextType | null;
-  modelId?: string;
-  messageId?: string;
-  fileAttachments?: AiChatFileAttachment[];
-};
+import { AgentTurnStatus } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-turn-status.enum';
+import { AgentTurnRecorderService } from 'src/engine/metadata-modules/ai/ai-history/services/agent-turn-recorder.service';
 
 @Injectable()
 export class AgentChatStreamingService {
-  private readonly logger = new Logger(AgentChatStreamingService.name);
-
   constructor(
     @InjectAgentHistoryRepository('agentChatThread')
     private readonly threadRepository: AgentHistoryRepository<AgentChatThreadWorkspaceEntity>,
-    @InjectWorkspaceScopedRepository(FileEntity)
-    private readonly fileRepository: WorkspaceScopedRepository<FileEntity>,
     @InjectMessageQueue(MessageQueue.aiStreamQueue)
     private readonly messageQueueService: MessageQueueService,
     private readonly agentChatService: AgentChatService,
+    private readonly agentChatQueueService: AgentChatQueueService,
+    private readonly threadService: AgentChatThreadService,
     private readonly eventPublisherService: AgentChatEventPublisherService,
-    private readonly fileUrlService: FileUrlService,
-    private readonly streamHeartbeatService: AgentChatStreamHeartbeatService,
-    private readonly metricsService: MetricsService,
+    private readonly conversationReaderService: AgentConversationReaderService,
     private readonly streamRecoveryService: AgentChatStreamRecoveryService,
     private readonly actorService: AgentChatActorService,
-    @InjectAgentHistoryRepository('agentMessagePart')
-    private readonly messagePartRepository: AgentHistoryRepository<AgentMessagePartWorkspaceEntity>,
+    private readonly turnRecorderService: AgentTurnRecorderService,
+    private readonly agentRunSuspensionService: AgentRunSuspensionService,
+    private readonly streamClaimService: AgentChatStreamClaimService,
   ) {}
 
-  async reapDeadStream({
-    thread,
-    workspaceId,
-  }: {
-    thread: Pick<AgentChatThreadWorkspaceEntity, 'id' | 'activeStreamId'>;
-    workspaceId: string;
-  }): Promise<AgentChatThreadLastStreamError | null> {
-    return this.streamRecoveryService.reapDeadStream({
-      thread,
-      workspaceId,
-    });
-  }
-
-  async tryClaimStream({
-    threadId,
-    workspaceId,
-    streamId,
-    where = {},
-  }: {
-    threadId: string;
-    workspaceId: string;
-    streamId: string;
-    where?: FindOptionsWhere<AgentChatThreadWorkspaceEntity>;
-  }): Promise<boolean> {
-    await this.streamHeartbeatService.markClaimed(streamId);
-
-    const claim = await this.threadRepository.update(
-      workspaceId,
-      { id: threadId, activeStreamId: IsNull(), ...where },
-      { activeStreamId: streamId, lastStreamError: null },
-    );
-
-    if (!claim.affected) {
-      await this.streamHeartbeatService.clear(streamId);
-
-      return false;
-    }
-
-    return true;
-  }
-
-  async streamAgentChat({
-    threadId,
-    userWorkspaceId,
-    workspaceMemberId,
-    workspace,
-    text,
-    browsingContext,
-    modelId,
-    messageId,
-    fileAttachments,
-  }: StreamAgentChatOptions): Promise<
-    | {
-        queued: false;
-        streamId: string;
-        messageId: string;
-        turnId: string | null;
-      }
-    | { queued: true; messageId: string }
-  > {
-    const thread = await this.agentChatService.getWritableThread({
-      threadId,
-      workspaceMemberId,
-      workspaceId: workspace.id,
-    });
-
-    const [, hasQueuedBacklog] = await Promise.all([
-      this.settlePendingToolCallsBeforeSending({
-        thread,
-        workspaceId: workspace.id,
-      }),
-      this.agentChatService.hasQueuedMessages({
-        threadId,
-        workspaceId: workspace.id,
-      }),
-    ]);
-
-    const streamId = generateId();
-
-    const claimed =
-      !hasQueuedBacklog &&
-      (await this.tryClaimStream({
-        threadId,
-        workspaceId: workspace.id,
-        streamId,
-      }));
-
-    if (!claimed) {
-      const queuedMessage = await this.agentChatService.queueMessage({
-        threadId,
-        text,
-        id: messageId,
-        fileAttachments,
-        workspaceId: workspace.id,
-        userWorkspaceId,
-        workspaceMemberId,
-      });
-
-      if (hasQueuedBacklog) {
-        await this.flushNextQueuedMessage({
-          threadId,
-          workspaceId: workspace.id,
-          hasTitle: !!thread.title,
-        });
-      }
-
-      return { queued: true, messageId: queuedMessage.id };
-    }
-
-    try {
-      const fileParts = await this.buildFilePartsFromAttachments(
-        fileAttachments,
-        workspace.id,
-      );
-
-      const userMessageParts: ExtendedUIMessagePart[] = [
-        { type: 'text' as const, text },
-        ...fileParts,
-      ];
-
-      const savedUserMessage = await this.agentChatService.addMessage({
-        threadId,
-        userWorkspaceId,
-        id: messageId,
-        uiMessage: {
-          role: AgentMessageRole.USER,
-          parts: userMessageParts,
-        },
-        workspaceId: workspace.id,
-      });
-
-      await this.eventPublisherService.publish({
-        workspaceId: workspace.id,
-        threadId,
-        event: { type: 'message-persisted', messageId: savedUserMessage.id },
-      });
-
-      await this.agentChatService.notifyThreadActivityUpdated({
-        threadId,
-        workspaceMemberId,
-        workspaceId: workspace.id,
-        text,
-      });
-
-      const previousMessages = await this.loadMessagesFromDB(
-        threadId,
-        userWorkspaceId,
-        workspace.id,
-        workspaceMemberId,
-      );
-
-      await this.messageQueueService.add<StreamAgentChatJobData>(
-        STREAM_AGENT_CHAT_JOB_NAME,
-        {
-          threadId: thread.id,
-          streamId,
-          userWorkspaceId,
-          workspaceId: workspace.id,
-          messages: previousMessages,
-          browsingContext,
-          modelId,
-          lastUserMessageText: text,
-          hasTitle: !!thread.title,
-          conversationSizeTokens: thread.conversationSize,
-          existingTurnId: savedUserMessage.turnId ?? undefined,
-          messageId: savedUserMessage.id,
-        },
-      );
-
-      return {
-        queued: false,
-        streamId,
-        messageId: savedUserMessage.id,
-        turnId: savedUserMessage.turnId,
-      };
-    } catch (error) {
-      await this.releaseStreamClaim(threadId, workspace.id, streamId);
-      this.recordEnqueueFailure({
-        threadId,
-        workspaceId: workspace.id,
-        model: modelId ?? 'unknown',
-        error,
-      });
-      throw error;
-    }
-  }
-
-  async startHiddenKickoffStream({
+  // the agent speaks first, from a context in place of a user message
+  async startOpeningTurn({
     thread,
     userWorkspaceId,
     workspaceMemberId,
     workspace,
-    text,
+    context,
     modelId,
   }: {
     thread: AgentChatThreadWorkspaceEntity;
     userWorkspaceId: string;
     workspaceMemberId: string;
     workspace: WorkspaceEntity;
-    text: string;
+    context: string;
     modelId: string;
-  }): Promise<{ streamId: string; messageId: string; turnId: string } | null> {
+  }): Promise<{ streamId: string; turnId: string } | null> {
     const threadId = thread.id;
-    const streamId = generateId();
+    const workspaceId = workspace.id;
 
-    const hasClaimedStreamForKickoff = await this.tryClaimStream({
+    return this.streamClaimService.claimAndStartStream({
       threadId,
-      workspaceId: workspace.id,
-      streamId,
-    });
+      workspaceId,
+      modelId,
+      startStream: async (streamId) => {
+        if (
+          await this.agentChatService.hasMessages({ threadId, workspaceId })
+        ) {
+          return null;
+        }
 
-    if (!hasClaimedStreamForKickoff) {
-      return null;
-    }
-
-    try {
-      const hasConversationMessages =
-        await this.agentChatService.hasConversationMessages({
+        const turnId = await this.agentChatService.replaceOpeningTurn({
           threadId,
-          workspaceId: workspace.id,
+          workspaceId,
+          context,
         });
 
-      if (hasConversationMessages) {
-        await this.releaseStreamClaim(threadId, workspace.id, streamId);
-        await this.flushNextQueuedMessage({
+        await this.enqueueStreamJob({
           threadId,
-          workspaceId: workspace.id,
-          hasTitle: !!thread.title,
-        });
-
-        return null;
-      }
-
-      const { id: messageId, turnId } =
-        await this.agentChatService.ensureHiddenKickoffMessage({
-          threadId,
-          workspaceId: workspace.id,
-          text,
-          userWorkspaceId,
-        });
-
-      const messages = await this.loadMessagesFromDB(
-        threadId,
-        userWorkspaceId,
-        workspace.id,
-        workspaceMemberId,
-      );
-
-      const kickoffMessage = messages[messages.length - 1];
-
-      if (!kickoffMessage || kickoffMessage.id !== messageId) {
-        throw new AiException(
-          'Workspace setup kickoff message could not be loaded',
-          AiExceptionCode.MESSAGE_NOT_FOUND,
-        );
-      }
-
-      await this.messageQueueService.add<StreamAgentChatJobData>(
-        STREAM_AGENT_CHAT_JOB_NAME,
-        {
-          threadId,
+          workspaceId,
+          workspaceMemberId,
           streamId,
           userWorkspaceId,
-          workspaceId: workspace.id,
-          messages,
-          browsingContext: null,
           modelId,
-          lastUserMessageText: text,
-          hasTitle: !!thread.title,
-          conversationSizeTokens: thread.conversationSize,
-          existingTurnId: turnId,
-          messageId,
-        },
-      );
+          turnId,
+        });
 
-      return { streamId, messageId, turnId };
-    } catch (error) {
-      await this.releaseStreamClaim(threadId, workspace.id, streamId);
-      this.recordEnqueueFailure({
-        threadId,
-        workspaceId: workspace.id,
-        model: modelId,
-        error,
-      });
-      throw error;
-    }
+        return { streamId, turnId };
+      },
+    });
   }
 
   async retryLastFailedTurn({
@@ -378,244 +114,307 @@ export class AgentChatStreamingService {
     workspaceMemberId,
     workspace,
     modelId,
+    browsingContext,
   }: {
     threadId: string;
     userWorkspaceId: string;
     workspaceMemberId: string;
-    workspace: WorkspaceEntity;
+    workspace: Pick<WorkspaceEntity, 'id'>;
     modelId?: string;
-  }): Promise<{ streamId: string; messageId: string; turnId: string }> {
-    const thread = await this.agentChatService.getWritableThread({
+    browsingContext?: BrowsingContextType | null;
+  }): Promise<{ streamId: string; messageId: string | null; turnId: string }> {
+    const workspaceId = workspace.id;
+    const thread = await this.threadService.getWritableThread({
       threadId,
       workspaceMemberId,
-      workspaceId: workspace.id,
+      workspaceId,
+    });
+    if (isNonEmptyString(thread.activeStreamId)) {
+      throw this.noFailedTurnToRetry();
+    }
+
+    const latestTurn = await this.turnRecorderService.findLatestTurn({
+      threadId,
+      workspaceId,
     });
 
-    if (
-      !isDefined(thread.lastStreamError) ||
-      isNonEmptyString(thread.activeStreamId)
-    ) {
-      throw new AiException(
-        'There is no failed turn to retry on this thread',
-        AiExceptionCode.NO_FAILED_TURN_TO_RETRY,
-      );
+    if (latestTurn?.status !== AgentTurnStatus.FAILED) {
+      throw this.noFailedTurnToRetry();
     }
 
-    const latestMessage = await this.agentChatService.findLatestSentUserMessage(
-      { threadId, workspaceId: workspace.id },
-    );
-    if (!isDefined(latestMessage)) {
-      throw new AiException(
-        'There is no failed turn to retry',
-        AiExceptionCode.NO_FAILED_TURN_TO_RETRY,
-      );
-    }
-    await this.actorService.authorizeRetry({
-      workspaceId: workspace.id,
+    const turnId = latestTurn.id;
+
+    const { message } = await this.actorService.authorizeRetry({
+      workspaceId,
       threadId,
-      messageId: latestMessage.id,
+      turnId,
       userWorkspaceId,
     });
 
-    const streamId = generateId();
-
-    const claimed = await this.tryClaimStream({
+    const started = await this.streamClaimService.claimAndStartStream({
       threadId,
-      workspaceId: workspace.id,
-      streamId,
-      where: { lastStreamError: Not(IsNull()) },
-    });
-
-    if (!claimed) {
-      throw new AiException(
-        'There is no failed turn to retry on this thread',
-        AiExceptionCode.NO_FAILED_TURN_TO_RETRY,
-      );
-    }
-
-    try {
-      const lastUserMessage =
-        await this.agentChatService.findLatestSentUserMessage({
+      workspaceId,
+      modelId,
+      startStream: async (streamId) => {
+        // the latest turn may have changed while claiming, and its output is not ours to delete
+        const claimedTurn = await this.turnRecorderService.findLatestTurn({
           threadId,
-          workspaceId: workspace.id,
+          workspaceId,
         });
 
-      if (
-        !isDefined(lastUserMessage) ||
-        !isDefined(lastUserMessage.turnId) ||
-        lastUserMessage.id !== latestMessage.id
-      ) {
-        throw new AiException(
-          'There is no failed turn to retry on this thread',
-          AiExceptionCode.NO_FAILED_TURN_TO_RETRY,
-        );
-      }
+        if (
+          claimedTurn?.id !== turnId ||
+          claimedTurn.status !== AgentTurnStatus.FAILED
+        ) {
+          throw this.noFailedTurnToRetry();
+        }
 
-      await this.actorService.authorizeRetry({
-        workspaceId: workspace.id,
-        threadId,
-        messageId: lastUserMessage.id,
-        userWorkspaceId,
-      });
+        const isRunning = await this.turnRecorderService.markRunning({
+          workspaceId,
+          turnId,
+          streamClaim: { threadId, streamId },
+        });
 
-      await this.agentChatService.deleteAssistantMessagesForTurn({
-        turnId: lastUserMessage.turnId,
-        workspaceId: workspace.id,
-      });
+        if (!isRunning) {
+          throw this.noFailedTurnToRetry();
+        }
 
-      const messages = await this.loadMessagesFromDB(
-        threadId,
-        userWorkspaceId,
-        workspace.id,
-        workspaceMemberId,
-      );
-
-      const retriedMessage = messages[messages.length - 1];
-
-      if (!retriedMessage || retriedMessage.id !== lastUserMessage.id) {
-        throw new AiException(
-          'There is no failed turn to retry on this thread',
-          AiExceptionCode.NO_FAILED_TURN_TO_RETRY,
-        );
-      }
-
-      const textPart = retriedMessage.parts.find(
-        (part) => part.type === 'text',
-      );
-
-      await this.messageQueueService.add<StreamAgentChatJobData>(
-        STREAM_AGENT_CHAT_JOB_NAME,
-        {
+        await this.agentChatService.deleteAssistantMessagesForTurn({
           threadId,
+          turnId,
+          workspaceId,
+        });
+
+        await this.enqueueStreamJob({
+          threadId,
+          workspaceId,
+          workspaceMemberId,
           streamId,
           userWorkspaceId,
-          workspaceId: workspace.id,
-          messages,
-          browsingContext: null,
           modelId,
-          lastUserMessageText: textPart?.text ?? '',
-          hasTitle: !!thread.title,
-          conversationSizeTokens: thread.conversationSize,
-          existingTurnId: lastUserMessage.turnId,
-          messageId: lastUserMessage.id,
-        },
-      );
+          turnId,
+          messageId: message?.id,
+          browsingContext,
+        });
 
-      return {
-        streamId,
-        messageId: lastUserMessage.id,
-        turnId: lastUserMessage.turnId,
-      };
-    } catch (error) {
-      await this.releaseStreamClaim(threadId, workspace.id, streamId, {
-        lastStreamError: thread.lastStreamError,
-      });
-      this.recordEnqueueFailure({
-        threadId,
-        workspaceId: workspace.id,
-        model: modelId ?? 'unknown',
-        error,
-      });
-      throw error;
-    }
-  }
-
-  async enqueueResumeStream({
-    threadId,
-    userWorkspaceId,
-    workspaceMemberId,
-    workspace,
-    turnId,
-    streamId,
-    modelId,
-    messageId,
-  }: {
-    messageId: string;
-    threadId: string;
-    userWorkspaceId: string;
-    workspaceMemberId: string;
-    workspace: WorkspaceEntity;
-    turnId: string | null;
-    streamId: string;
-    modelId?: string;
-  }): Promise<void> {
-    const thread = await this.threadRepository.findOneOrFail(workspace.id, {
-      where: { id: threadId },
+        return { streamId, messageId: message?.id ?? null, turnId };
+      },
     });
 
-    const messages = await this.loadMessagesFromDB(
-      threadId,
-      userWorkspaceId,
-      workspace.id,
-      workspaceMemberId,
-    );
+    if (!isDefined(started)) {
+      throw this.noFailedTurnToRetry();
+    }
 
-    await this.messageQueueService.add<StreamAgentChatJobData>(
-      STREAM_AGENT_CHAT_JOB_NAME,
-      {
-        threadId,
-        streamId,
-        userWorkspaceId,
-        workspaceId: workspace.id,
-        messages,
-        browsingContext: null,
-        modelId,
-        lastUserMessageText: '',
-        hasTitle: !!thread.title,
-        conversationSizeTokens: thread.conversationSize,
-        existingTurnId: turnId ?? undefined,
-        messageId,
-      },
-    );
+    return started;
   }
 
   async flushNextQueuedMessage({
     threadId,
     workspaceId,
-    hasTitle,
   }: {
     threadId: string;
     workspaceId: string;
-    hasTitle: boolean;
   }): Promise<void> {
-    const threadStatus = await this.threadRepository.findOne(workspaceId, {
+    const thread = await this.threadRepository.findOne(workspaceId, {
       where: { id: threadId },
-      select: ['id', 'deletedAt', 'pendingQuestionMessageId'],
+      select: ['id', 'deletedAt', 'pendingQuestionMessageId', 'activeStreamId'],
     });
 
-    // queued messages wait behind a pending tool call: they follow the answer rather than replace it
+    // the stream flushes the queue when it lets go, so a send behind it reads nothing more
     if (
-      !threadStatus ||
-      threadStatus.deletedAt ||
-      isDefined(threadStatus.pendingQuestionMessageId)
+      !thread ||
+      thread.deletedAt ||
+      isNonEmptyString(thread.activeStreamId)
     ) {
       return;
     }
 
-    const queuedMessages = await this.agentChatService.getQueuedMessages({
+    const next = await this.findQueuedMessageToSend({ thread, workspaceId });
+
+    if (!isDefined(next)) {
+      await this.streamRecoveryService.wakeNext({
+        threadId,
+        workspaceId,
+        shouldFlush: false,
+      });
+
+      return;
+    }
+
+    const { message, userWorkspaceId, workspaceMemberId } = next;
+    const textPart = message.parts?.find((part) => part.type === 'text');
+    const hasFileAttachment = (message.parts ?? []).some(
+      (part) => part.type === 'file',
+    );
+
+    if (!isNonEmptyString(textPart?.textContent) && !hasFileAttachment) {
+      await this.agentChatQueueService.deleteQueuedMessage({
+        messageId: message.id,
+        workspaceId,
+      });
+
+      return;
+    }
+
+    await this.streamClaimService.claimAndStartStream({
       threadId,
       workspaceId,
-    });
+      startStream: async (streamId) => {
+        const turnId = await this.agentChatQueueService.promoteQueuedMessage({
+          messageId: message.id,
+          threadId,
+          workspaceId,
+        });
 
-    let nextQueued: (typeof queuedMessages)[number] | undefined;
-    let userWorkspaceId: string | undefined;
-    let workspaceMemberId: string | undefined;
-    for (const candidate of queuedMessages) {
+        if (turnId === null) {
+          return null;
+        }
+
+        await this.eventPublisherService.publish({
+          threadId,
+          workspaceId,
+          event: { type: 'queue-updated' },
+        });
+
+        await this.eventPublisherService.publish({
+          threadId,
+          workspaceId,
+          event: { type: 'message-persisted', messageId: message.id },
+        });
+
+        await this.enqueueStreamJob({
+          threadId,
+          workspaceId,
+          workspaceMemberId,
+          streamId,
+          userWorkspaceId,
+          turnId,
+          messageId: message.id,
+        });
+
+        return turnId;
+      },
+    });
+  }
+
+  // the thread's claim must be held; the title comes from the turn's message unless the caller passes its own
+  async enqueueStreamJob({
+    threadId,
+    workspaceId,
+    workspaceMemberId,
+    turnId,
+    messageId,
+    browsingContext = null,
+    lastUserMessageText,
+    ...data
+  }: Pick<
+    StreamAgentChatJobData,
+    | 'threadId'
+    | 'workspaceId'
+    | 'streamId'
+    | 'userWorkspaceId'
+    | 'modelId'
+    | 'messageId'
+  > & {
+    workspaceMemberId: string;
+    turnId: string;
+    browsingContext?: BrowsingContextType | null;
+    lastUserMessageText?: string;
+  }): Promise<void> {
+    const [thread, messages] = await Promise.all([
+      this.threadRepository.findOneOrFail(workspaceId, {
+        where: { id: threadId },
+        select: ['id', 'title', 'conversationType', 'conversationSize'],
+      }),
+      this.loadMessagesFromDB(threadId, workspaceId, workspaceMemberId),
+    ]);
+
+    await this.messageQueueService.add<StreamAgentChatJobData>(
+      STREAM_AGENT_CHAT_JOB_NAME,
+      {
+        ...data,
+        threadId,
+        workspaceId,
+        messageId,
+        messages,
+        browsingContext,
+        existingTurnId: turnId,
+        lastUserMessageText:
+          lastUserMessageText ??
+          messages
+            .find(({ id }) => id === messageId)
+            ?.parts.find((part): part is TextUIPart => part.type === 'text')
+            ?.text ??
+          '',
+        hasTitle:
+          thread.conversationType ===
+            AgentChatThreadConversationType.DIRECT_MESSAGE ||
+          isNonEmptyString(thread.title),
+        conversationSizeTokens: thread.conversationSize,
+      },
+      {
+        workspaceId,
+        isWorkspaceJob: true,
+      },
+    );
+  }
+
+  private async findQueuedMessageToSend({
+    thread,
+    workspaceId,
+  }: {
+    thread: Pick<
+      AgentChatThreadWorkspaceEntity,
+      'id' | 'pendingQuestionMessageId'
+    >;
+    workspaceId: string;
+  }) {
+    const threadId = thread.id;
+    const [queuedMessages, { suspendedRun, pendingQuestionMessageId }] =
+      await Promise.all([
+        this.agentChatQueueService.getQueuedMessages({ threadId, workspaceId }),
+        this.agentRunSuspensionService.findConversationWait({
+          workspaceId,
+          thread,
+        }),
+      ]);
+
+    // a run that went on to ask something reads what was sent meanwhile, as a message sent now would skip its question
+    if (isNonEmptyArray(queuedMessages) && isDefined(suspendedRun)) {
+      await this.agentRunSuspensionService.scheduleContinuation({
+        workspaceId,
+        threadId,
+        wakeUpId: suspendedRun.id,
+        outcome: { type: 'MESSAGE_RECEIVED' },
+      });
+
+      return null;
+    }
+
+    // queued messages wait behind a pending tool call: they follow the answer rather than replace it
+    if (isDefined(pendingQuestionMessageId)) {
+      return null;
+    }
+
+    for (const message of queuedMessages) {
       try {
         const { sender } = await this.actorService.resolveMessage({
           workspaceId,
           threadId,
-          messageId: candidate.id,
+          messageId: message.id,
         });
-        const authorization = await this.actorService.authorize({
-          workspaceId,
-          threadId,
-          sender,
-        });
-        workspaceMemberId = authorization.authContext.workspaceMemberId;
-        nextQueued = candidate;
-        userWorkspaceId = sender.userWorkspaceId;
-        break;
+        const { authContext } =
+          await this.actorService.resolveAuthorizedConversation({
+            workspaceId,
+            threadId,
+            sender,
+          });
+
+        return {
+          message,
+          userWorkspaceId: sender.userWorkspaceId,
+          workspaceMemberId: authContext.workspaceMemberId,
+        };
       } catch (error) {
         // during a rolling upgrade a worker may run an older access policy, so keep the request for another worker
         if (
@@ -635,8 +434,8 @@ export class AgentChatStreamingService {
         ) {
           throw error;
         }
-        await this.agentChatService.deleteQueuedMessage({
-          messageId: candidate.id,
+        await this.agentChatQueueService.deleteQueuedMessage({
+          messageId: message.id,
           workspaceId,
         });
         await this.eventPublisherService.publish({
@@ -646,296 +445,62 @@ export class AgentChatStreamingService {
         });
       }
     }
-    if (
-      !isDefined(nextQueued) ||
-      !isDefined(userWorkspaceId) ||
-      !isDefined(workspaceMemberId)
-    ) {
-      return;
-    }
 
-    const textPart = nextQueued.parts?.find((part) => part.type === 'text');
-    const messageText = textPart?.textContent ?? '';
-    const hasFileAttachment = (nextQueued.parts ?? []).some(
-      (part) => part.type === 'file',
-    );
-
-    if (messageText === '' && !hasFileAttachment) {
-      await this.agentChatService.deleteQueuedMessage({
-        messageId: nextQueued.id,
-        workspaceId,
-      });
-
-      return;
-    }
-
-    const streamId = generateId();
-
-    const claimed = await this.tryClaimStream({
-      threadId,
-      workspaceId,
-      streamId,
-    });
-
-    if (!claimed) {
-      return;
-    }
-
-    try {
-      const turnId = await this.agentChatService.promoteQueuedMessage({
-        messageId: nextQueued.id,
-        threadId,
-        workspaceId,
-      });
-
-      if (turnId === null) {
-        await this.releaseStreamClaim(threadId, workspaceId, streamId);
-
-        return;
-      }
-
-      await this.eventPublisherService.publish({
-        threadId,
-        workspaceId,
-        event: { type: 'queue-updated' },
-      });
-
-      await this.eventPublisherService.publish({
-        threadId,
-        workspaceId,
-        event: { type: 'message-persisted', messageId: nextQueued.id },
-      });
-
-      const [uiMessages, thread] = await Promise.all([
-        this.loadMessagesFromDB(
-          threadId,
-          userWorkspaceId,
-          workspaceId,
-          workspaceMemberId,
-        ),
-        this.threadRepository.findOneOrFail(workspaceId, {
-          where: { id: threadId },
-        }),
-      ]);
-
-      await this.messageQueueService.add<StreamAgentChatJobData>(
-        STREAM_AGENT_CHAT_JOB_NAME,
-        {
-          threadId,
-          streamId,
-          userWorkspaceId,
-          workspaceId,
-          messages: uiMessages,
-          browsingContext: null,
-          lastUserMessageText: messageText,
-          hasTitle,
-          conversationSizeTokens: thread.conversationSize,
-          existingTurnId: turnId,
-          messageId: nextQueued.id,
-        },
-      );
-    } catch (error) {
-      await this.releaseStreamClaim(threadId, workspaceId, streamId);
-      this.recordEnqueueFailure({
-        threadId,
-        workspaceId,
-        model: 'unknown',
-        error,
-      });
-      throw error;
-    }
+    return null;
   }
 
-  // a message sent while the agent waits on a person closes its pending calls as skipped, so the model sees why
-  // clearing the marker is the claim, which an answer holding the stream keeps
-  // workflow-run calls gate the run, so a chat message never closes them
-  private async settlePendingToolCallsBeforeSending({
-    thread,
-    workspaceId,
-  }: {
-    thread: Pick<
-      AgentChatThreadWorkspaceEntity,
-      'id' | 'workflowRunId' | 'pendingQuestionMessageId'
-    >;
-    workspaceId: string;
-  }): Promise<void> {
-    const messageId = thread.pendingQuestionMessageId;
-
-    if (!isDefined(messageId)) {
-      return;
-    }
-
-    if (isDefined(thread.workflowRunId)) {
-      throw new AiException(
-        'This conversation is waiting on an answer to its workflow run',
-        AiExceptionCode.THREAD_AWAITING_WORKFLOW_INPUT,
-      );
-    }
-
-    const claim = await this.threadRepository.update(
-      workspaceId,
-      {
-        id: thread.id,
-        pendingQuestionMessageId: messageId,
-        activeStreamId: IsNull(),
-      },
-      { pendingQuestionMessageId: null },
+  private noFailedTurnToRetry(): AiException {
+    return new AiException(
+      'There is no failed turn to retry on this thread',
+      AiExceptionCode.NO_FAILED_TURN_TO_RETRY,
     );
-
-    if (!claim.affected) {
-      return;
-    }
-
-    await skipAwaitingToolParts({
-      messagePartRepository: this.messagePartRepository,
-      messageId,
-      workspaceId,
-    });
-  }
-
-  private recordEnqueueFailure({
-    threadId,
-    workspaceId,
-    model,
-    error,
-  }: {
-    threadId: string;
-    workspaceId: string;
-    model: string;
-    error: unknown;
-  }): void {
-    this.metricsService.incrementCounterBy({
-      key: MetricsKeys.AiChatTurnFailed,
-      amount: 1,
-      attributes: {
-        model,
-        failure_phase: 'enqueue',
-        error_code: mapErrorToStreamError(error).code,
-      },
-    });
-
-    this.logger.error(
-      `[AI_CHAT_TURN_FAILED] failurePhase=enqueue, model=${model}, threadId=${threadId}, workspaceId=${workspaceId}: ${formatErrorWithCause(error)}`,
-    );
-  }
-
-  async releaseStreamClaim(
-    threadId: string,
-    workspaceId: string,
-    streamId: string,
-    restore?: { lastStreamError: AgentChatThreadLastStreamError | null },
-  ): Promise<void> {
-    await this.threadRepository
-      .update(
-        workspaceId,
-        { id: threadId, activeStreamId: streamId },
-        { activeStreamId: null, ...restore },
-      )
-      .catch((error) => {
-        this.logger.error(
-          `Failed to release stream claim for thread ${threadId}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      });
-    await this.streamHeartbeatService.clear(streamId);
   }
 
   private async loadMessagesFromDB(
     threadId: string,
-    userWorkspaceId: string,
     workspaceId: string,
     workspaceMemberId: string,
-  ) {
-    const allMessages = await this.agentChatService.getMessagesForThread({
-      threadId,
-      workspaceMemberId,
-      workspaceId,
-      includeHidden: true,
-    });
+  ): Promise<ExtendedUIMessage[]> {
+    const [allMessages, contexts] = await Promise.all([
+      this.agentChatService.getMessagesForThread({
+        threadId,
+        workspaceMemberId,
+        workspaceId,
+      }),
+      this.agentChatService.getThreadContexts({
+        threadId,
+        workspaceMemberId,
+        workspaceId,
+      }),
+    ]);
 
-    const thread = allMessages.some((message) => message.isHidden)
-      ? await this.threadRepository.findOneOrFail(workspaceId, {
-          where: { id: threadId },
-        })
-      : undefined;
-    // a hidden row without parts is an interrupted seed and would reach the model as an empty message
-    const filteredMessages = allMessages.filter(
-      (message) =>
-        message.status !== AgentMessageStatus.QUEUED &&
-        (!message.isHidden ||
-          (isNonEmptyArray(message.parts) &&
-            (isDefined(message.senderUserWorkspaceId)
-              ? message.senderUserWorkspaceId === userWorkspaceId
-              : thread?.workspaceMemberId === workspaceMemberId))),
+    const sentMessages = allMessages.filter(
+      (message) => message.status !== AgentMessageStatus.QUEUED,
     );
 
-    return Promise.all(
-      filteredMessages.map(async (message) => ({
+    const uiMessages = await Promise.all(
+      sentMessages.map(async (message) => ({
         id: message.id,
-        role: message.role as 'user' | 'assistant' | 'system',
-        parts: await Promise.all(
-          mapDBPartsToUIMessageParts(message.parts ?? []).map(async (part) => {
-            if (isExtendedFileUIPart(part as Record<string, unknown>)) {
-              const filePart = part as ExtendedFileUIPart;
-
-              return {
-                ...filePart,
-                url: await this.fileUrlService.signFileByIdUrl({
-                  fileId: filePart.fileId,
-                  workspaceId,
-                  fileFolder: FileFolder.AgentChat,
-                }),
-              } as ExtendedFileUIPart;
-            }
-
-            return part;
-          }),
-        ),
-        // no createdAt so injectMessageTimestamps skips the seed, whose insert time postdates the first real message
-        ...(message.isHidden
-          ? {}
-          : {
-              metadata: {
-                createdAt: new Date(message.createdAt).toISOString(),
-                senderUserWorkspaceId: message.senderUserWorkspaceId,
-              },
-            }),
+        role: message.role,
+        parts: await this.conversationReaderService.signFileParts({
+          workspaceId,
+          parts: mapDBPartsToUIMessageParts(message.parts ?? []),
+        }),
+        metadata: {
+          createdAt: new Date(message.createdAt).toISOString(),
+          senderWorkspaceMemberId: message.senderWorkspaceMemberId,
+        },
       })),
     );
-  }
 
-  private async buildFilePartsFromAttachments(
-    fileAttachments: AiChatFileAttachment[] | undefined,
-    workspaceId: string,
-  ): Promise<ExtendedUIMessagePart[]> {
-    if (!fileAttachments || fileAttachments.length === 0) {
-      return [];
-    }
-
-    const fileIds = fileAttachments.map((attachment) => attachment.id);
-
-    const validFiles = await this.fileRepository.find(workspaceId, {
-      where: {
-        id: In(fileIds),
-        path: Like(`${FileFolder.AgentChat}/%`),
-      },
-    });
-
-    const validFileIds = new Set(validFiles.map((file) => file.id));
-
-    return fileAttachments
-      .filter((attachment) => validFileIds.has(attachment.id))
-      .map((attachment): ExtendedFileUIPart => {
-        const file = validFiles.find(
-          (validFile) => validFile.id === attachment.id,
-        );
-
-        return {
-          type: 'file' as const,
-          mediaType: file?.mimeType ?? 'application/octet-stream',
-          filename: attachment.filename,
-          url: '',
-          fileId: attachment.id,
-        };
-      });
+    // contexts open their thread, and Google and Bedrock only take system messages ahead of the conversation
+    return [
+      ...contexts.map((context, index): ExtendedUIMessage => ({
+        id: `context-${index}`,
+        role: 'system',
+        parts: [{ type: 'text', text: context }],
+      })),
+      ...uiMessages,
+    ];
   }
 }

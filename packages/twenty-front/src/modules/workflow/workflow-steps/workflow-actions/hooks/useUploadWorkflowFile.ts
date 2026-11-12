@@ -1,14 +1,15 @@
 import { MAX_ATTACHMENT_SIZE } from '@/advanced-text-editor/utils/maxAttachmentSize';
 import { useDirectFileUpload } from '@/file/hooks/useDirectFileUpload';
 import { formatFileSize } from '@/file/utils/formatFileSize';
-import { t } from '@lingui/core/macro';
 import { extractFolderPathFilenameAndTypeOrThrow } from 'twenty-shared/utils';
 import { type WorkflowAttachment } from 'twenty-shared/workflow';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import { FileFolder } from '~/generated-metadata/graphql';
 import { logError } from '~/utils/logError';
+import { useLingui } from '@lingui/react/macro';
 
 export const useUploadWorkflowFile = () => {
+  const { t } = useLingui();
   const { uploadFile: directUploadFile } = useDirectFileUpload();
   const { enqueueToast } = useToast();
 
@@ -20,7 +21,7 @@ export const useUploadWorkflowFile = () => {
         const fileName = file.name;
         const maxUploadSize = formatFileSize(MAX_ATTACHMENT_SIZE);
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`File "${fileName}" exceeds ${maxUploadSize}`,
         });
         return null;
@@ -39,7 +40,7 @@ export const useUploadWorkflowFile = () => {
 
       const fileName = file.name;
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`File "${fileName}" uploaded successfully`,
       });
 
@@ -49,7 +50,7 @@ export const useUploadWorkflowFile = () => {
 
       const fileNameForError = file.name;
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to upload "${fileNameForError}"`,
       });
 

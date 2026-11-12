@@ -1,16 +1,18 @@
+import { getEffectiveToolName } from '@/ai/utils/getEffectiveToolName';
 import { type DynamicToolUIPart, type ToolUIPart } from 'ai';
+import { PREVIEW_FRONT_COMPONENT_TOOL_NAME } from 'twenty-shared/ai';
+import { isDefined } from 'twenty-shared/utils';
 
-import { type ToolWidget } from '@/ai/types/ToolWidget';
-
-type FrontComponentToolWidget = Extract<
-  ToolWidget,
-  { kind: 'front-component' }
->;
-
-// Record results stay in the step group, since the answer cites the records that matter.
-// An app widget owns the whole call, so it mounts on its own once its input has settled.
-export const shouldToolPartRenderStandalone = (
-  toolPart: ToolUIPart | DynamicToolUIPart,
-  widget: ToolWidget | undefined,
-): widget is FrontComponentToolWidget =>
-  widget?.kind === 'front-component' && toolPart.state !== 'input-streaming';
+export const shouldToolPartRenderStandalone = ({
+  toolPart,
+  frontComponentId,
+  isFrontComponentPreviewEnabled = false,
+}: {
+  toolPart: ToolUIPart | DynamicToolUIPart;
+  frontComponentId?: string;
+  isFrontComponentPreviewEnabled?: boolean;
+}): boolean =>
+  (isDefined(frontComponentId) ||
+    (isFrontComponentPreviewEnabled &&
+      getEffectiveToolName(toolPart) === PREVIEW_FRONT_COMPONENT_TOOL_NAME)) &&
+  toolPart.state !== 'input-streaming';

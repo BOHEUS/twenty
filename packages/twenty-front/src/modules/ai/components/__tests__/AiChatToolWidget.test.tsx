@@ -3,8 +3,8 @@ import { type ToolUIPart } from 'ai';
 
 import { AiChatToolWidget } from '@/ai/components/AiChatToolWidget';
 
-jest.mock('@/ai/components/ToolStepRenderer', () => ({
-  ToolStepRenderer: () => <div data-testid="tool-step-renderer" />,
+jest.mock('@/ai/components/ThinkingToolStepRow', () => ({
+  ThinkingToolStepRow: () => <div data-testid="tool-step-row" />,
 }));
 
 jest.mock('@/front-components/components/FrontComponentRenderer', () => ({
@@ -40,7 +40,7 @@ describe('AiChatToolWidget', () => {
       state: 'output-available',
       input: { subject: 'Hello' },
       output: {},
-    } as unknown as ToolUIPart);
+    });
 
     expect(await screen.findByTestId('front-component')).toHaveTextContent(
       'app_draft_reply:{"subject":"Hello"}',
@@ -57,7 +57,7 @@ describe('AiChatToolWidget', () => {
         arguments: { subject: 'Hello' },
       },
       output: {},
-    } as unknown as ToolUIPart);
+    });
 
     expect(await screen.findByTestId('front-component')).toHaveTextContent(
       'app_draft_reply:{"subject":"Hello"}',

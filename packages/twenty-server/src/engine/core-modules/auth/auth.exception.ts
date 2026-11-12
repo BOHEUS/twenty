@@ -2,7 +2,7 @@ import { type MessageDescriptor } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import { assertUnreachable } from 'twenty-shared/utils';
 
-import { STANDARD_ERROR_MESSAGE } from 'src/engine/api/common/common-query-runners/errors/standard-error-message.constant';
+import { STANDARD_ERROR_MESSAGE } from 'src/engine/constants/standard-error-message.constant';
 import {
   appendCommonExceptionCode,
   CustomException,
@@ -20,6 +20,7 @@ export const AuthExceptionCode = appendCommonExceptionCode({
   FORBIDDEN_EXCEPTION: 'FORBIDDEN_EXCEPTION',
   INSUFFICIENT_SCOPES: 'INSUFFICIENT_SCOPES',
   UNAUTHENTICATED: 'UNAUTHENTICATED',
+  SESSION_SUPERSEDED: 'SESSION_SUPERSEDED',
   APPLICATION_REFRESH_TOKEN_INVALID_OR_EXPIRED:
     'APPLICATION_REFRESH_TOKEN_INVALID_OR_EXPIRED',
   INVALID_DATA: 'INVALID_DATA',
@@ -62,6 +63,7 @@ const getAuthExceptionUserFriendlyMessage = (
     case AuthExceptionCode.INSUFFICIENT_SCOPES:
       return msg`Insufficient permissions.`;
     case AuthExceptionCode.UNAUTHENTICATED:
+    case AuthExceptionCode.SESSION_SUPERSEDED:
     case AuthExceptionCode.APPLICATION_REFRESH_TOKEN_INVALID_OR_EXPIRED:
       return msg`You must be authenticated to perform this action.`;
     case AuthExceptionCode.OAUTH_ACCESS_DENIED:
@@ -96,6 +98,48 @@ const getAuthExceptionUserFriendlyMessage = (
   }
 };
 
+const getAuthExceptionStatusCode = (
+  code: keyof typeof AuthExceptionCode,
+): number => {
+  switch (code) {
+    case AuthExceptionCode.CLIENT_NOT_FOUND:
+      return 404;
+    case AuthExceptionCode.INVALID_INPUT:
+      return 400;
+    case AuthExceptionCode.FORBIDDEN_EXCEPTION:
+    case AuthExceptionCode.WORKSPACE_SUSPENDED:
+    case AuthExceptionCode.INSUFFICIENT_SCOPES:
+    case AuthExceptionCode.OAUTH_ACCESS_DENIED:
+    case AuthExceptionCode.SSO_AUTH_FAILED:
+    case AuthExceptionCode.USE_SSO_AUTH:
+    case AuthExceptionCode.SIGNUP_DISABLED:
+    case AuthExceptionCode.GOOGLE_API_AUTH_DISABLED:
+    case AuthExceptionCode.MICROSOFT_API_AUTH_DISABLED:
+    case AuthExceptionCode.MISSING_ENVIRONMENT_VARIABLE:
+    case AuthExceptionCode.EMAIL_NOT_VERIFIED:
+    case AuthExceptionCode.INVALID_JWT_TOKEN_TYPE:
+    case AuthExceptionCode.USER_ALREADY_EXISTS:
+    case AuthExceptionCode.ENTERPRISE_VALIDITY_TOKEN_NOT_VALID:
+      return 403;
+    case AuthExceptionCode.TWO_FACTOR_AUTHENTICATION_PROVISION_REQUIRED:
+    case AuthExceptionCode.TWO_FACTOR_AUTHENTICATION_VERIFICATION_REQUIRED:
+    case AuthExceptionCode.INVALID_DATA:
+    case AuthExceptionCode.UNAUTHENTICATED:
+    case AuthExceptionCode.SESSION_SUPERSEDED:
+    case AuthExceptionCode.APPLICATION_REFRESH_TOKEN_INVALID_OR_EXPIRED:
+    case AuthExceptionCode.USER_NOT_FOUND:
+    case AuthExceptionCode.WORKSPACE_NOT_FOUND:
+    case AuthExceptionCode.APPLICATION_NOT_FOUND:
+      return 401;
+    case AuthExceptionCode.INTERNAL_SERVER_ERROR:
+    case AuthExceptionCode.USER_WORKSPACE_NOT_FOUND:
+      return 500;
+    default: {
+      assertUnreachable(code);
+    }
+  }
+};
+
 export class AuthException extends CustomException<
   keyof typeof AuthExceptionCode
 > {
@@ -107,6 +151,7 @@ export class AuthException extends CustomException<
     super(message, code, {
       userFriendlyMessage:
         userFriendlyMessage ?? getAuthExceptionUserFriendlyMessage(code),
+      statusCode: getAuthExceptionStatusCode(code),
     });
   }
 }

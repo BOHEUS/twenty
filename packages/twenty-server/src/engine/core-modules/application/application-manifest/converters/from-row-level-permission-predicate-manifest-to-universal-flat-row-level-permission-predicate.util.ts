@@ -23,6 +23,7 @@ export const fromRowLevelPermissionPredicateManifestToUniversalFlatRowLevelPermi
         rowLevelPermissionPredicateManifest.objectUniversalIdentifier,
       fieldMetadataUniversalIdentifier:
         rowLevelPermissionPredicateManifest.fieldUniversalIdentifier,
+      relationFieldMetadataUniversalIdentifier: null,
       operand: rowLevelPermissionPredicateManifest.operand,
       value: rowLevelPermissionPredicateManifest.value ?? null,
       subFieldName: rowLevelPermissionPredicateManifest.subFieldName ?? null,
@@ -34,6 +35,7 @@ export const fromRowLevelPermissionPredicateManifestToUniversalFlatRowLevelPermi
       rowLevelPermissionPredicateGroupUniversalIdentifier:
         rowLevelPermissionPredicateManifest.predicateGroupUniversalIdentifier ??
         null,
+      rowLevelPermissionRuleUniversalIdentifier: null,
       positionInRowLevelPermissionPredicateGroup:
         rowLevelPermissionPredicateManifest.position ?? null,
       createdAt: now,

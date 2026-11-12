@@ -1,6 +1,9 @@
 import { type NavigationMenuItemSection } from '@/navigation-menu-item/common/types/NavigationMenuItemSection';
 import { useLingui } from '@lingui/react/macro';
-import { type NavigationMenuItemType } from 'twenty-shared/types';
+import {
+  type NavigationMenuItemType,
+  type NativePageKey,
+} from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { v4 } from 'uuid';
 import { type NavigationMenuItem } from '~/generated-metadata/graphql';
@@ -13,18 +16,21 @@ import { buildCreateNavigationMenuItemInput } from '@/navigation-menu-item/commo
 import { computeInsertIndexAndPosition } from '@/navigation-menu-item/common/utils/computeInsertIndexAndPosition';
 import { useNavigationMenuItemsData } from '@/navigation-menu-item/display/hooks/useNavigationMenuItemsData';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 
 export type NewNavigationMenuItemInput = {
   type: NavigationMenuItemType;
   targetObjectMetadataId?: string | null;
   viewId?: string | null;
   pageLayoutId?: string | null;
+  workflowId?: string | null;
+  agentId?: string | null;
   icon?: string | null;
   targetRecordId?: string | null;
   targetRecordIdentifier?: NavigationMenuItem['targetRecordIdentifier'];
   name?: string | null;
   link?: string | null;
+  nativePageKey?: NativePageKey | null;
   color?: string | null;
 };
 
@@ -88,9 +94,12 @@ export const useNavigationMenuItemEditController = (
       targetRecordIdentifier: input.targetRecordIdentifier,
       viewId: input.viewId ?? undefined,
       pageLayoutId: input.pageLayoutId ?? undefined,
+      workflowId: input.workflowId ?? undefined,
+      agentId: input.agentId ?? undefined,
       icon: input.icon ?? undefined,
       name: input.name ?? undefined,
       link: input.link ?? undefined,
+      nativePageKey: input.nativePageKey ?? undefined,
       color: input.color ?? undefined,
       applicationId: undefined,
       createdAt: new Date().toISOString(),
@@ -117,13 +126,13 @@ export const useNavigationMenuItemEditController = (
         },
       ]).catch(() =>
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Couldn't add to favorites`,
         }),
       );
     } else {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Couldn't add to favorites`,
       });
     }
@@ -149,7 +158,7 @@ export const useNavigationMenuItemEditController = (
     try {
       await updateManyNavigationMenuItems([{ id, update }]);
     } catch {
-      enqueueToast({ variant: 'error', children: t`Couldn't update favorite` });
+      enqueueToast({ status: 'error', children: t`Couldn't update favorite` });
     }
   };
 
@@ -166,7 +175,7 @@ export const useNavigationMenuItemEditController = (
     try {
       await deleteManyNavigationMenuItems(ids);
     } catch {
-      enqueueToast({ variant: 'error', children: t`Couldn't remove favorite` });
+      enqueueToast({ status: 'error', children: t`Couldn't remove favorite` });
     }
   };
 

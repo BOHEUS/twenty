@@ -2,6 +2,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 
+import { isNonEmptyString } from '@sniptt/guards';
 import { isDefined } from 'twenty-shared/utils';
 import type Stripe from 'stripe';
 
@@ -35,6 +36,46 @@ export class StripeCustomerService {
   ) {
     await this.stripe.customers.update(stripeCustomerId, {
       metadata: { workspaceId: workspaceId },
+    });
+  }
+
+  async getCustomerPartnerAndEmail(
+    stripeCustomerId: string,
+  ): Promise<{ partner: string | null; email: string | null }> {
+    const customer = await this.stripe.customers.retrieve(stripeCustomerId);
+
+    if ('deleted' in customer && customer.deleted === true) {
+      return { partner: null, email: null };
+    }
+
+    const partner = customer.metadata.partner;
+
+    return {
+      partner: isNonEmptyString(partner) ? partner : null,
+      email: customer.email,
+    };
+  }
+
+  async isPreviousCustomer({
+    email,
+    currentStripeCustomerId,
+  }: {
+    email: string;
+    currentStripeCustomerId?: string;
+  }): Promise<boolean> {
+    const { data: customers } = await this.stripe.customers.list({
+      email,
+      limit: 2,
+    });
+
+    return customers.some(
+      (customer) => customer.id !== currentStripeCustomerId,
+    );
+  }
+
+  async updateCustomerPartner(stripeCustomerId: string, partner: string) {
+    await this.stripe.customers.update(stripeCustomerId, {
+      metadata: { partner },
     });
   }
 
@@ -98,16 +139,25 @@ export class StripeCustomerService {
     });
   }
 
-  async createStripeCustomer(
-    userEmail: string,
-    workspaceId: string,
-    customerName: string | undefined,
-  ) {
+  async createStripeCustomer({
+    userEmail,
+    workspaceId,
+    customerName,
+    affiliatePartnerName,
+  }: {
+    userEmail: string;
+    workspaceId: string;
+    customerName: string | undefined;
+    affiliatePartnerName?: string;
+  }) {
     const customer = await this.stripe.customers.create({
       name: customerName,
       email: userEmail,
       metadata: {
         workspaceId,
+        ...(isNonEmptyString(affiliatePartnerName)
+          ? { partner: affiliatePartnerName }
+          : {}),
       },
     });
 

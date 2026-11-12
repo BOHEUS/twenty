@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+import { msg } from '@lingui/core/macro';
 import { type LanguageModel, type TranscriptionModel } from 'ai';
 import { isNonEmptyString } from '@sniptt/guards';
 import {
@@ -10,7 +11,9 @@ import {
   type AiModelTier,
   type AiSdkPackage,
   AI_MODEL_EFFORT_LABELS,
+  isAiModelCompliantWithDataPolicy,
   parseAiModelVariantId,
+  type AiDataPolicy,
 } from 'twenty-shared/ai';
 
 import { MAX_SEATS_WITHOUT_ENTERPRISE_KEY } from 'src/engine/core-modules/enterprise/constants/max-seats-without-organization-key.constant';
@@ -48,6 +51,7 @@ import { getAvailableEfforts } from 'src/engine/metadata-modules/ai/ai-models/ut
 import { getPositiveTokenLimitOrDefault } from 'src/engine/metadata-modules/ai/ai-models/utils/get-positive-token-limit-or-default.util';
 import { inferModelFamily } from 'src/engine/metadata-modules/ai/ai-models/utils/infer-model-family.util';
 import { isProviderConfigured } from 'src/engine/metadata-modules/ai/ai-models/utils/is-provider-configured.util';
+import { NO_AI_DATA_POLICY } from 'src/engine/metadata-modules/ai/ai-models/constants/no-ai-data-policy.constant';
 import { type WorkspaceAiModelSettings } from 'src/engine/metadata-modules/ai/ai-models/types/workspace-ai-model-settings.type';
 
 export interface RegisteredAiModel {
@@ -448,22 +452,6 @@ export class AiModelRegistryService {
     return this.evaluationRegistry.get(modelId);
   }
 
-  getAvailableEvaluationModels(): RegisteredAiEvaluationModel[] {
-    this.ensureFresh();
-
-    return Array.from(this.evaluationRegistry.values());
-  }
-
-  // first in provider config order; skips admin-disabled models so withdrawing the only one sends unpinned
-  // steps to the language fallback
-  getDefaultEvaluationModel(): RegisteredAiEvaluationModel | undefined {
-    return this.getAvailableEvaluationModels().find(
-      (model) =>
-        !this.getEvaluationModelConfig(model.modelId)?.isDeprecated &&
-        this.isModelAdminAllowed(model.modelId),
-    );
-  }
-
   getEvaluationModelConfig(
     modelId: string,
   ): AiEvaluationModelConfig | undefined {
@@ -476,10 +464,6 @@ export class AiModelRegistryService {
     this.ensureFresh();
 
     return Array.from(this.evaluationConfigCache.values());
-  }
-
-  hasEvaluationModel(): boolean {
-    return isDefined(this.getDefaultEvaluationModel());
   }
 
   private toAiModelConfig(
@@ -541,13 +525,43 @@ export class AiModelRegistryService {
     return this.modelConfigCache.get(modelId);
   }
 
-  private getFirstAvailableModelFromList(
-    modelIds: string[],
-  ): RegisteredAiModel | undefined {
+  private isModelCompliantWithDataPolicy({
+    modelId,
+    aiDataPolicy,
+  }: {
+    modelId: string;
+    aiDataPolicy: AiDataPolicy;
+  }): boolean {
+    return isAiModelCompliantWithDataPolicy({
+      model: this.getModelConfig(modelId) ?? {},
+      aiDataPolicy,
+    });
+  }
+
+  private isModelUsable({
+    modelId,
+    aiDataPolicy,
+  }: {
+    modelId: string;
+    aiDataPolicy: AiDataPolicy;
+  }): boolean {
+    return (
+      this.isModelAdminAllowed(modelId) &&
+      this.isModelCompliantWithDataPolicy({ modelId, aiDataPolicy })
+    );
+  }
+
+  private getFirstAvailableModelFromList({
+    modelIds,
+    aiDataPolicy,
+  }: {
+    modelIds: string[];
+    aiDataPolicy: AiDataPolicy;
+  }): RegisteredAiModel | undefined {
     for (const modelId of modelIds) {
       const model = this.getModel(modelId);
 
-      if (isDefined(model) && this.isModelAdminAllowed(modelId)) {
+      if (isDefined(model) && this.isModelUsable({ modelId, aiDataPolicy })) {
         return model;
       }
     }
@@ -555,19 +569,31 @@ export class AiModelRegistryService {
     return undefined;
   }
 
-  // borrow the nearest tier's chain before falling back to any allowed model, never a disabled one
-  findDefaultModelForTier(tier: AiModelTier): RegisteredAiModel | undefined {
+  findDefaultModelForTier({
+    tier,
+    aiDataPolicy,
+  }: {
+    tier: AiModelTier;
+    aiDataPolicy: AiDataPolicy;
+  }): RegisteredAiModel | undefined {
     for (const candidateTier of getAiModelTiersByDistance(tier)) {
-      const model = this.getFirstAvailableModelFromList(
-        this.preferencesService.getDefaultModelIdsForTier(candidateTier),
-      );
+      const model = this.getFirstAvailableModelFromList({
+        modelIds:
+          this.preferencesService.getDefaultModelIdsForTier(candidateTier),
+        aiDataPolicy,
+      });
 
       if (isDefined(model)) {
         return model;
       }
     }
 
-    const allowedModels = this.getAdminFilteredModels();
+    const allowedModels = this.getAdminFilteredModels().filter((model) =>
+      this.isModelCompliantWithDataPolicy({
+        modelId: model.modelId,
+        aiDataPolicy,
+      }),
+    );
 
     return (
       allowedModels.find(
@@ -576,31 +602,57 @@ export class AiModelRegistryService {
     );
   }
 
-  getDefaultModelForTier(tier: AiModelTier): RegisteredAiModel {
-    const model = this.findDefaultModelForTier(tier);
+  findInstanceDefaultModelForTier(
+    tier: AiModelTier,
+  ): RegisteredAiModel | undefined {
+    return this.findDefaultModelForTier({
+      tier,
+      aiDataPolicy: NO_AI_DATA_POLICY,
+    });
+  }
 
-    if (!model) {
+  private getDefaultModelForTier({
+    tier,
+    aiDataPolicy,
+  }: {
+    tier: AiModelTier;
+    aiDataPolicy: AiDataPolicy;
+  }): RegisteredAiModel {
+    const model = this.findDefaultModelForTier({ tier, aiDataPolicy });
+
+    if (isDefined(model)) {
+      return model;
+    }
+
+    if (isDefined(this.findInstanceDefaultModelForTier(tier))) {
       throw new AiException(
-        'No AI models are available. Configure at least one AI provider.',
-        AiExceptionCode.API_KEY_NOT_CONFIGURED,
+        'No AI model meets the workspace data policy.',
+        AiExceptionCode.MODEL_NOT_ALLOWED_BY_DATA_POLICY,
       );
     }
 
-    return model;
+    throw new AiException(
+      'No AI models are available. Configure at least one AI provider.',
+      AiExceptionCode.API_KEY_NOT_CONFIGURED,
+    );
   }
 
-  // a pin applies only while its model resolves and is enabled, so a tier never goes dark
   private resolveModelForTier(
     tier: AiModelTier,
     workspaceSettings?: WorkspaceAiModelSettings,
   ): RegisteredAiModel {
+    const aiDataPolicy =
+      workspaceSettings?.effectiveAiDataPolicy ?? NO_AI_DATA_POLICY;
     const pinnedModelId =
       isDefined(workspaceSettings) &&
       !workspaceSettings.isAutoModelSelectionEnabled
         ? workspaceSettings.aiModelIdByTier[tier]
         : undefined;
 
-    if (isDefined(pinnedModelId) && this.isModelAdminAllowed(pinnedModelId)) {
+    if (
+      isDefined(pinnedModelId) &&
+      this.isModelUsable({ modelId: pinnedModelId, aiDataPolicy })
+    ) {
       const pinnedModel = this.getModel(pinnedModelId);
 
       if (isDefined(pinnedModel)) {
@@ -608,7 +660,7 @@ export class AiModelRegistryService {
       }
     }
 
-    return this.getDefaultModelForTier(tier);
+    return this.getDefaultModelForTier({ tier, aiDataPolicy });
   }
 
   private resolveAutoSelectModel(
@@ -717,21 +769,51 @@ export class AiModelRegistryService {
   }
 
   // catalog membership, not registration: a provider key added later makes the stored id work
-  validateModelAvailability(modelId: string): void {
+  validateModelAvailabilityOrThrow({
+    modelId,
+    aiDataPolicy,
+  }: {
+    modelId: string;
+    aiDataPolicy: AiDataPolicy;
+  }): void {
     if (!this.isModelAdminAllowed(modelId)) {
       throw new AiException(
         'The selected model has been disabled by the administrator.',
         AiExceptionCode.AGENT_EXECUTION_FAILED,
+        {
+          userFriendlyMessage: msg`The selected model has been disabled by the administrator.`,
+        },
       );
     }
 
-    if (
-      !isAutoSelectModelId(modelId) &&
-      !isDefined(this.getModelConfig(modelId))
-    ) {
+    if (isAutoSelectModelId(modelId)) {
+      return;
+    }
+
+    if (!isDefined(this.getModelConfig(modelId))) {
       throw new AiException(
         this.buildModelNotFoundMessage(modelId),
         AiExceptionCode.AGENT_EXECUTION_FAILED,
+      );
+    }
+
+    this.assertModelIsCompliantWithDataPolicy({ modelId, aiDataPolicy });
+  }
+
+  private assertModelIsCompliantWithDataPolicy({
+    modelId,
+    aiDataPolicy,
+  }: {
+    modelId: string;
+    aiDataPolicy: AiDataPolicy;
+  }): void {
+    if (!this.isModelCompliantWithDataPolicy({ modelId, aiDataPolicy })) {
+      throw new AiException(
+        `Model ${modelId} does not meet the workspace data policy`,
+        AiExceptionCode.MODEL_NOT_ALLOWED_BY_DATA_POLICY,
+        {
+          userFriendlyMessage: msg`The selected model is not allowed by this workspace's privacy settings.`,
+        },
       );
     }
   }
@@ -840,7 +922,7 @@ export class AiModelRegistryService {
 
   resolveModelForAgent(
     agent: { modelId: string } | null,
-    workspaceSettings?: WorkspaceAiModelSettings,
+    workspaceSettings: WorkspaceAiModelSettings,
   ): RegisteredAiModel {
     const aiModel = this.getEffectiveModelConfig(
       agent?.modelId ?? AUTO_SELECT_WORKSPACE_DEFAULT_MODEL_ID,
@@ -855,6 +937,11 @@ export class AiModelRegistryService {
         AiExceptionCode.API_KEY_NOT_CONFIGURED,
       );
     }
+
+    this.assertModelIsCompliantWithDataPolicy({
+      modelId: registeredModel.modelId,
+      aiDataPolicy: workspaceSettings.effectiveAiDataPolicy,
+    });
 
     return registeredModel;
   }

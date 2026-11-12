@@ -7,10 +7,9 @@ import { Select } from '@/ui/input/components/Select';
 import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
 
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { useContext } from 'react';
-import { capitalize } from 'twenty-shared/utils';
 import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledText = styled.div`
   align-items: center;
@@ -35,7 +34,19 @@ export const AdvancedFilterSidePanelLogicalOperatorCell = ({
   index,
   recordFilterGroup,
 }: AdvancedFilterSidePanelLogicalOperatorCellProps) => {
+  const { t } = useLingui();
   const { readonly } = useContext(AdvancedFilterContext);
+
+  const logicalOperatorOptions = ADVANCED_FILTER_LOGICAL_OPERATOR_OPTIONS.map(
+    (option) => ({
+      ...option,
+      label: t(option.label),
+    }),
+  );
+
+  const logicalOperatorLabel = logicalOperatorOptions.find(
+    (option) => option.value === recordFilterGroup.logicalOperator,
+  )?.label;
 
   return (
     <StyledContainer>
@@ -47,7 +58,7 @@ export const AdvancedFilterSidePanelLogicalOperatorCell = ({
             dropdownWidth={GenericDropdownContentWidth.Narrow}
             dropdownId={`advanced-filter-logical-operator-${recordFilterGroup.id}`}
             value={recordFilterGroup.logicalOperator}
-            options={ADVANCED_FILTER_LOGICAL_OPERATOR_OPTIONS}
+            options={logicalOperatorOptions}
             dropdownSideOffset={DEFAULT_ADVANCED_FILTER_DROPDOWN_SIDE_OFFSET}
             disabled
           />
@@ -57,9 +68,7 @@ export const AdvancedFilterSidePanelLogicalOperatorCell = ({
           />
         )
       ) : (
-        <StyledText>
-          {capitalize(recordFilterGroup.logicalOperator.toLowerCase())}
-        </StyledText>
+        <StyledText>{logicalOperatorLabel}</StyledText>
       )}
     </StyledContainer>
   );

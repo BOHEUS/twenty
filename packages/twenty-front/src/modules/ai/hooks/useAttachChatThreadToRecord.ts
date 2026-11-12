@@ -1,6 +1,9 @@
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import {
+  StandardObjectNameSingular,
+  type RecordGqlFields,
+} from 'twenty-shared/types';
 import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 
 import { type AgentChatConversationTarget } from '@/ai/types/AgentChatConversationTarget';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
@@ -13,23 +16,23 @@ import { useRefetchAggregateQueries } from '@/object-record/hooks/useRefetchAggr
 import { useObjectMorphJunctionConfig } from '@/object-record/record-field/ui/hooks/useObjectMorphJunctionConfig';
 import { findTargetFieldInfo } from '@/object-record/record-field/ui/utils/junction/findTargetFieldInfo';
 
-const EXISTING_LINK_GQL_FIELDS = { id: true };
+const EXISTING_LINK_GQL_FIELDS = { id: true } satisfies RecordGqlFields;
 
 export const useAttachChatThreadToRecord = () => {
   const { enqueueToast } = useToast();
   const apolloCoreClient = useApolloCoreClient();
   const { objectMetadataItems } = useObjectMetadataItems();
   const junctionConfig = useObjectMorphJunctionConfig({
-    objectNameSingular: CoreObjectNameSingular.AgentChatThread,
+    objectNameSingular: StandardObjectNameSingular.AgentChatThread,
   });
 
   const { findManyRecordsQuery: findExistingLinksQuery } =
     useFindManyRecordsQuery({
-      objectNameSingular: CoreObjectNameSingular.AgentChatThreadTarget,
+      objectNameSingular: StandardObjectNameSingular.AgentChatThreadTarget,
       recordGqlFields: EXISTING_LINK_GQL_FIELDS,
     });
   const { createManyRecords: createLinks } = useCreateManyRecords({
-    objectNameSingular: CoreObjectNameSingular.AgentChatThreadTarget,
+    objectNameSingular: StandardObjectNameSingular.AgentChatThreadTarget,
     shouldRefetchAggregateQueries: false,
   });
   const { refetchAggregateQueries } = useRefetchAggregateQueries();

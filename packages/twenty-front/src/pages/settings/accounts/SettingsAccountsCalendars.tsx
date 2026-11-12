@@ -10,11 +10,10 @@ import { useLingui } from '@lingui/react/macro';
 import { useMemo } from 'react';
 import { CalendarChannelSyncStage, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 
 export const SettingsAccountsCalendars = () => {
   const { t } = useLingui();
-
   const { channels: allCalendarChannels, loading } = useMyCalendarChannels();
 
   const calendarChannels = useMemo(

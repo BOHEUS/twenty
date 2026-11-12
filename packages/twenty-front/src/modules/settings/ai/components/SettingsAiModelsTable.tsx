@@ -1,19 +1,18 @@
-import { t } from '@lingui/core/macro';
 import { useRef, useState } from 'react';
 
 import { css } from '@linaria/core';
 import { styled } from '@linaria/react';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
 import { IconTrash } from 'twenty-ui/icon';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
 import { Checkbox } from 'twenty-ui/primitives/input';
-import { IconButton } from 'twenty-ui/components';
+import { IconButton } from 'twenty-ui/components/input';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 
 import { SettingsAiModelHoverCard } from '@/settings/ai/components/SettingsAiModelHoverCard';
 import { type AiModelSummary } from '@/settings/ai/types/AiModelSummary';
-import { getModelIcon } from '@/settings/ai/utils/getModelIcon';
+import { getModelIcon } from '@/ai/utils/getModelIcon';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableBody } from '@/ui/layout/table/components/TableBody';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
@@ -53,10 +52,10 @@ const StyledKindBadge = styled.span`
 `;
 
 const hoverCardTooltipClass = css`
-  border-radius: ${themeCssVariables.border.radius.rounded} !important;
+  border-radius: ${themeCssVariables.border.radius.rounded};
   corner-shape: round;
 
-  padding: 0 !important;
+  padding: 0;
 `;
 
 const sanitizeIdForSelector = (id: string): string =>
@@ -86,6 +85,7 @@ export const SettingsAiModelsTable = <TModel extends AiModelSummary>({
   showProviderColumn = true,
   anchorPrefix,
 }: SettingsAiModelsTableProps<TModel>) => {
+  const { t } = useLingui();
   const hoveredRowRef = useRef<HTMLDivElement>(null);
   const [hoveredModelId, setHoveredModelId] = useState<string | null>(null);
   const theme = useTheme();
@@ -235,16 +235,18 @@ export const SettingsAiModelsTable = <TModel extends AiModelSummary>({
 
       {anchorPrefix && hoveredModel && (
         <Tooltip.Root key={hoveredModel.modelId} open>
-          <Tooltip.Popup
-            anchor={hoveredRowRef}
-            side="top"
-            align="end"
-            sideOffset={8}
-            className={hoverCardTooltipClass}
-            maxWidth="320px"
-          >
-            <SettingsAiModelHoverCard model={hoveredModel} />
-          </Tooltip.Popup>
+          <Tooltip.Portal>
+            <Tooltip.Positioner
+              anchor={hoveredRowRef}
+              side="top"
+              align="end"
+              sideOffset={8}
+            >
+              <Tooltip.Popup maxWidth={320} className={hoverCardTooltipClass}>
+                <SettingsAiModelHoverCard model={hoveredModel} />
+              </Tooltip.Popup>
+            </Tooltip.Positioner>
+          </Tooltip.Portal>
         </Tooltip.Root>
       )}
     </>

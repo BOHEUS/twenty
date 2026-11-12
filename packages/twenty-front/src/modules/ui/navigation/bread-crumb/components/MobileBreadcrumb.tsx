@@ -1,8 +1,7 @@
 import { useIsSettingsPage } from '@/navigation/hooks/useIsSettingsPage';
 import { type BreadcrumbProps } from '@/ui/navigation/bread-crumb/types/BreadcrumbProps';
 import { getBreadcrumbItems } from '@/ui/navigation/bread-crumb/utils/getBreadcrumbItems';
-import { t } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { styled } from '@linaria/react';
 import { isNonEmptyString } from '@sniptt/guards';
 import { Link } from 'react-router-dom';
@@ -50,10 +49,8 @@ const StyledText = styled.span`
   white-space: nowrap;
 `;
 
-export const MobileBreadcrumb = ({
-  className,
-  links,
-}: MobileBreadcrumbProps) => {
+export const MobileBreadcrumb = ({ links }: MobileBreadcrumbProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
   const isSettingsPage = useIsSettingsPage();
 
@@ -67,7 +64,6 @@ export const MobileBreadcrumb = ({
     return (
       <BreadcrumbPrimitive
         aria-label={t`Breadcrumb`}
-        className={className}
         links={getBreadcrumbItems(links)}
       />
     );
@@ -77,7 +73,7 @@ export const MobileBreadcrumb = ({
   const title = isNonEmptyString(text) ? text : undefined;
 
   return (
-    <StyledWrapper aria-label={t`Breadcrumb`} className={className}>
+    <StyledWrapper aria-label={t`Breadcrumb`}>
       {isNonEmptyString(previousLink.href) ? (
         <>
           <IconChevronLeft size={theme.icon.size.md} aria-hidden />

@@ -1,9 +1,10 @@
+import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
 import { CronTriggerDeduplicationService } from 'src/engine/core-modules/cron/services/cron-trigger-deduplication.service';
 import { randomUUID } from 'node:crypto';
 import { USER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/core/utils/seed-users.util';
 
 import request from 'supertest';
-import { FeatureFlagKey, FieldMetadataType } from 'twenty-shared/types';
+import { FieldMetadataType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 import { type UserEntity } from 'src/engine/core-modules/user/user.entity';
@@ -12,6 +13,7 @@ import { WorkflowActionType } from 'twenty-shared/workflow';
 
 import {
   type WorkflowAction,
+  type WorkflowAiAgentAction,
   type WorkflowEmptyAction,
 } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
@@ -25,19 +27,44 @@ import { type CacheStorageService } from 'src/engine/core-modules/cache-storage/
 import { CacheStorageNamespace } from 'src/engine/core-modules/cache-storage/types/cache-storage-namespace.enum';
 import { getWorkspaceSchemaName } from 'src/engine/workspace-datasource/utils/get-workspace-schema-name.util';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
+import { type WorkspaceWorkflowAutomatedTriggerMapCacheService } from 'src/engine/core-modules/workflow/services/workspace-workflow-automated-trigger-map-cache.service';
+import { WorkspaceCacheRowsBatchLoader } from 'src/engine/workspace-cache/services/workspace-cache-rows-batch-loader';
+import { TEST_AI_MODEL_ID } from 'test/integration/constants/test-ai-model-ids.constants';
 import { answerToolCall } from 'test/integration/graphql/suites/workflow/utils/answer-tool-call.util';
+import {
+  activateCoreWorkflowVersion,
+  coreWorkflowGraphqlRequest,
+  createCoreWorkflow,
+  deleteCoreWorkflows,
+  deleteLegacyWorkspaceWorkflowRecords,
+  linkCoreWorkflowToLegacyWorkspaceIds,
+  runCoreWorkflowVersion,
+  updateCoreWorkflowVersionTrigger,
+} from 'test/integration/graphql/suites/workflow/utils/core-workflow.util';
+import { submitFormStep } from 'test/integration/graphql/suites/workflow/utils/submit-form-step.util';
 import { workflowGraphqlRequest } from 'test/integration/graphql/suites/workflow/utils/workflow-graphql-request.util';
+import { createOneAgent } from 'test/integration/metadata/suites/agent/utils/create-one-agent.util';
+import { deleteOneAgent } from 'test/integration/metadata/suites/agent/utils/delete-one-agent.util';
+import { expectEventually } from 'test/integration/utils/expect-eventually.util';
 import { getAppProviderByClassName } from 'test/integration/utils/get-app-provider-by-class-name.util';
-import { type AgentChatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat.service';
+import {
+  buildAgentExecutionResult,
+  buildWaitingAgentExecutionResult,
+  mockAgentRunTurns,
+} from 'test/utils/mock-agent-run-turns.util';
+import { type ToolCallAnswerRecorderService } from 'src/engine/metadata-modules/ai/ai-tool-call-answer/services/tool-call-answer-recorder.service';
+import { type AgentChatThreadService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread.service';
 import { type ProvisionedWorkspaceCommandRunner } from 'src/database/commands/command-runners/provisioned-workspace.command-runner';
 
-import { type AutomatedTriggerWorkspaceService } from 'src/modules/workflow/workflow-trigger/automated-trigger/automated-trigger.workspace-service';
 import { type CoreWorkflowVersionWriteService } from 'src/engine/core-modules/workflow/services/core-workflow-version-write.service';
+import { type WorkspaceMigrationValidateBuildAndRunService } from 'src/engine/workspace-manager/workspace-migration/services/workspace-migration-validate-build-and-run-service';
 import { WORKFLOW_CRON_TRIGGER_CACHE_KEY } from 'src/modules/workflow/workflow-trigger/automated-trigger/crons/constants/workflow-cron-trigger-cache-key.constant';
 
-import { type CodeStepBuildService } from 'src/modules/workflow/workflow-builder/workflow-version-step/code-step/services/code-step-build.service';
-import { type AgentAsyncExecutorService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-async-executor.service';
+import { type WorkflowCommonWorkspaceService } from 'src/modules/workflow/common/workspace-services/workflow-common.workspace-service';
 import { type AgentExecutionResult } from 'src/engine/metadata-modules/ai/ai-agent-execution/types/agent-execution-result.type';
+import { type AgentRunTurnService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-run-turn.service';
+import { type ChatExecutionService } from 'src/engine/metadata-modules/ai/ai-chat/services/chat-execution.service';
+import { type AiModelRegistryService } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-registry.service';
 import { type WorkflowActionFactory } from 'src/modules/workflow/workflow-executor/factories/workflow-action.factory';
 
 const workspaceId = SEED_APPLE_WORKSPACE_ID;
@@ -85,8 +112,8 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     steps?: WorkflowAction[];
     triggerNextStepIds?: string[];
   } = {}): Promise<Fixture> => {
-    let coreWorkflowId = randomUUID();
-    let coreWorkflowVersionId = randomUUID();
+    let coreWorkflowId: string = randomUUID();
+    let coreWorkflowVersionId: string = randomUUID();
     let workflowId: string | null = null;
     let workflowVersionId: string | null = null;
     const trigger = {
@@ -126,24 +153,20 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         ],
       );
     } else {
-      const response = await workflowGraphqlRequest(
-        'mutation { createWorkflow(data: { name: "B-Async execution" }) { id coreWorkflowId } }',
-      );
+      const coreWorkflow = await createCoreWorkflow({
+        name: 'B-Async execution',
+      });
 
-      expect(response.body.errors).toBeUndefined();
-      workflowId = response.body.data.createWorkflow.id;
-      const [version] = await global.testDataSource.query(
-        `SELECT id, "coreWorkflowVersionId" FROM "${schema}"."workflowVersion" WHERE "workflowId" = $1`,
-        [workflowId],
-      );
-      const [workflow] = await global.testDataSource.query(
-        `SELECT "coreWorkflowId" FROM "${schema}".workflow WHERE id = $1`,
-        [workflowId],
-      );
+      coreWorkflowId = coreWorkflow.coreWorkflowId;
+      coreWorkflowVersionId = coreWorkflow.coreWorkflowVersionId;
 
-      workflowVersionId = version.id;
-      coreWorkflowId = workflow.coreWorkflowId;
-      coreWorkflowVersionId = version.coreWorkflowVersionId;
+      const legacyIds = await linkCoreWorkflowToLegacyWorkspaceIds({
+        coreWorkflowId,
+        withWorkspaceRecords: true,
+      });
+
+      workflowId = legacyIds.workspaceWorkflowId;
+      workflowVersionId = legacyIds.workspaceWorkflowVersionIds[0];
       await global.testDataSource.query(
         `UPDATE core."workflowVersion" SET triggers = $2, steps = $3, status = 'ACTIVE' WHERE id = $1`,
         [
@@ -155,10 +178,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       await global.testDataSource.query(
         `UPDATE "${schema}"."workflowVersion" SET trigger = $2, steps = $3, status = 'ACTIVE' WHERE id = $1`,
         [workflowVersionId, JSON.stringify(trigger), JSON.stringify(steps)],
-      );
-      await global.testDataSource.query(
-        `UPDATE "${schema}".workflow SET "lastPublishedVersionId" = $2 WHERE id = $1`,
-        [workflowId, workflowVersionId],
       );
     }
 
@@ -178,10 +197,29 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     fixtures.push(fixture);
     await global.workflowTestServices.workspaceCache.invalidateAndRecompute(
       workspaceId,
-      ['workflowAutomatedTriggerMaps'],
+      [
+        'flatWorkflowMaps',
+        'flatWorkflowVersionMaps',
+        'workflowAutomatedTriggerMaps',
+      ],
     );
 
     return fixture;
+  };
+
+  const markFixtureVersionAsDraft = async (fixture: Fixture) => {
+    await global.testDataSource.query(
+      `UPDATE core."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
+      [fixture.coreWorkflowVersionId],
+    );
+    await global.testDataSource.query(
+      `UPDATE "${schema}"."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
+      [fixture.workflowVersionId],
+    );
+    await global.workflowTestServices.workspaceCache.invalidateAndRecompute(
+      workspaceId,
+      ['flatWorkflowVersionMaps', 'workflowAutomatedTriggerMaps'],
+    );
   };
 
   const getRun = async (runId: string) => {
@@ -194,7 +232,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
   };
 
   const waitForRun = async (runId: string, status: string) => {
-    for (let attempt = 0; attempt < 150; attempt++) {
+    for (let attempt = 0; attempt < 600; attempt++) {
       const run = await getRun(runId);
 
       if (run?.status === status) {
@@ -206,25 +244,16 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     expect((await getRun(runId))?.status).toBe(status);
   };
 
-  const runFixture = async (fixture: Fixture, legacy = false) => {
+  const runFixture = async (fixture: Fixture) => {
     const workflowRunId = randomUUID();
-    const response = await workflowGraphqlRequest(
-      legacy
-        ? 'mutation Run($input: RunWorkflowVersionInput!) { runWorkflowVersion(input: $input) { workflowRunId } }'
-        : 'mutation Run($input: RunCoreWorkflowVersionInput!) { runCoreWorkflowVersion(input: $input) { workflowRunId } }',
-      {
-        input: {
-          ...(legacy
-            ? { workflowVersionId: fixture.workflowVersionId }
-            : { coreWorkflowVersionId: fixture.coreWorkflowVersionId }),
-          workflowRunId,
-          payload: { marker: 'B-Async payload' },
-        },
-      },
-    );
 
-    expect(response.body.errors).toBeUndefined();
-    expect(Object.values(response.body.data)[0]).toEqual({ workflowRunId });
+    expect(
+      await runCoreWorkflowVersion({
+        coreWorkflowVersionId: fixture.coreWorkflowVersionId,
+        workflowRunId,
+        payload: { marker: 'B-Async payload' },
+      }),
+    ).toBe(workflowRunId);
 
     return workflowRunId;
   };
@@ -238,11 +267,14 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         [fixture.coreWorkflowId],
       );
       if (fixture.workflowId) {
-        const response = await workflowGraphqlRequest(
-          'mutation Destroy($id: UUID!) { destroyWorkflow(id: $id) { id } }',
-          { id: fixture.workflowId },
-        );
-        expect(response.body.errors).toBeUndefined();
+        await deleteCoreWorkflows({
+          coreWorkflowIds: [fixture.coreWorkflowId],
+        });
+        if (isDefined(fixture.workflowVersionId)) {
+          await deleteLegacyWorkspaceWorkflowRecords({
+            workspaceWorkflowVersionIds: [fixture.workflowVersionId],
+          });
+        }
       }
       await global.testDataSource.query(
         'DELETE FROM core."workflowVersion" WHERE "coreWorkflowId" = $1',
@@ -266,7 +298,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     expect(run).toMatchObject({
       coreWorkflowId: fixture.coreWorkflowId,
       coreWorkflowVersionId: fixture.coreWorkflowVersionId,
-      workflowId: null,
       workflowVersionId: null,
       state: {
         flow: { steps: fixture.steps },
@@ -276,7 +307,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     expect(run.createdByWorkspaceMemberId).toBeTruthy();
   });
 
-  it('executes the same core definition from both APIs despite divergent workspace content', async () => {
+  it('executes the core definition despite divergent workspace content', async () => {
     const fixture = await createFixture();
 
     await global.testDataSource.query(
@@ -284,27 +315,15 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       [fixture.workflowVersionId],
     );
 
-    for (const legacy of [false, true]) {
-      const run = await waitForRun(
-        await runFixture(fixture, legacy),
-        'COMPLETED',
-      );
+    const run = await waitForRun(await runFixture(fixture), 'COMPLETED');
 
-      expect(run.coreWorkflowVersionId).toBe(fixture.coreWorkflowVersionId);
-      expect(run.state.flow.steps).toEqual(fixture.steps);
-    }
+    expect(run.coreWorkflowVersionId).toBe(fixture.coreWorkflowVersionId);
+    expect(run.state.flow.steps).toEqual(fixture.steps);
   });
 
-  it.each(
-    Object.values(WorkflowActionType).flatMap((actionType) =>
-      [false, true].map((isCoreEnabled) => ({ actionType, isCoreEnabled })),
-    ),
-  )(
-    'dispatches $actionType from the API selected with the core flag set to $isCoreEnabled',
-    async ({ actionType, isCoreEnabled }) => {
-      const flags = global.workflowTestServices.flags;
-      const featureFlag = FeatureFlagKey.IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED;
-      const original = await flags.isFeatureEnabled(featureFlag, workspaceId);
+  it.each(Object.values(WorkflowActionType))(
+    'dispatches %s from the core API',
+    async (actionType) => {
       const step = {
         id: randomUUID(),
         name: `${actionType} dispatch marker`,
@@ -335,29 +354,13 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
 
       jest.spyOn(actionFactory, 'get').mockReturnValue({ execute });
 
-      try {
-        await flags.upsertWorkspaceFeatureFlag({
-          workspaceId,
-          featureFlag,
-          value: isCoreEnabled,
-        });
-        const fixture = await createFixture({ steps: [step] });
-        const run = await waitForRun(
-          await runFixture(fixture, !isCoreEnabled),
-          'COMPLETED',
-        );
+      const fixture = await createFixture({ steps: [step] });
+      const run = await waitForRun(await runFixture(fixture), 'COMPLETED');
 
-        expect(actionFactory.get).toHaveBeenCalledWith(actionType);
-        expect(execute).toHaveBeenCalledTimes(1);
-        expect(run.state.flow.steps[0].type).toBe(actionType);
-        expect(run.state.stepInfos[step.id].status).toBe('SUCCESS');
-      } finally {
-        await flags.upsertWorkspaceFeatureFlag({
-          workspaceId,
-          featureFlag,
-          value: original,
-        });
-      }
+      expect(actionFactory.get).toHaveBeenCalledWith(actionType);
+      expect(execute).toHaveBeenCalledTimes(1);
+      expect(run.state.flow.steps[0].type).toBe(actionType);
+      expect(run.state.stepInfos[step.id].status).toBe('SUCCESS');
     },
   );
 
@@ -365,10 +368,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     'bills the core-owned spender mapping (mirrorless=%s)',
     async (mirrorless) => {
       const fixture = await createFixture({ mirrorless });
-      const consume = jest.spyOn(
-        global.workflowTestServices.quota,
-        'consumeQuota',
-      );
+      const charge = jest.spyOn(global.workflowTestServices.quota, 'charge');
 
       await waitForRun(await runFixture(fixture), 'COMPLETED');
 
@@ -377,81 +377,64 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         [workspaceId],
       );
 
-      expect(consume).toHaveBeenCalledWith(
-        expect.objectContaining({
-          workspaceId,
-          spenders: {
-            workflowId: fixture.workflowId ?? fixture.coreWorkflowId,
-            applicationId: workspace.workspaceCustomApplicationId,
-          },
-        }),
-      );
+      expect(charge).toHaveBeenCalledWith({
+        workspaceId,
+        events: [
+          expect.objectContaining({
+            spenders: {
+              workflowId: fixture.workflowId ?? fixture.coreWorkflowId,
+              applicationId: workspace.workspaceCustomApplicationId,
+            },
+          }),
+        ],
+      });
     },
   );
 
-  it.each([
-    'unversioned',
-    'workspace-version',
-    'core-version',
-    'backfilled-paired',
-  ] as const)('accepts the %s legacy queue envelope', async (envelope) => {
-    const fixture = await createFixture();
+  it.each(['unversioned', 'workspace-version', 'core-version'] as const)(
+    'accepts the %s legacy queue envelope',
+    async (envelope) => {
+      const fixture = await createFixture();
 
-    if (envelope === 'backfilled-paired') {
-      await global.testDataSource.query(
-        'UPDATE core."workflowVersion" SET "workspaceWorkflowVersionId" = NULL WHERE id = $1',
-        [fixture.coreWorkflowVersionId],
+      const queue = global.app.get<MessageQueueService>(
+        getQueueToken(MessageQueue.workflowQueue),
       );
-      await expect(backfill()).rejects.toThrow(
-        'Missing or conflicting workflow version mapping',
+
+      await queue.add(
+        'WorkflowTriggerJob',
+        {
+          workspaceId,
+          workflowId: fixture.workflowId ?? fixture.coreWorkflowId,
+          payload: { marker: envelope },
+          ...(envelope === 'workspace-version'
+            ? { workspaceWorkflowVersionId: fixture.workflowVersionId }
+            : {}),
+          ...(envelope === 'core-version'
+            ? { coreWorkflowVersionId: fixture.coreWorkflowVersionId }
+            : {}),
+        },
+        {
+          workspaceId,
+          isWorkspaceJob: true,
+        },
       );
-      await global.workflowTestServices.versionAliasBackfill.runOnWorkspace({
-        workspaceId,
-        dataSource: global.testDataSource,
-        options: {},
-        index: 0,
-        total: 1,
-      });
-      await global.workflowTestServices.backfill.runOnWorkspace({
-        workspaceId,
-        dataSource: global.testDataSource,
-        options: {},
-        index: 0,
-        total: 1,
-      });
-    }
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const [run] = await global.testDataSource.query(
+          `SELECT id FROM "${schema}"."workflowRun" WHERE "coreWorkflowId" = $1`,
+          [fixture.coreWorkflowId],
+        );
+        if (run) {
+          const completedRun = await waitForRun(run.id, 'COMPLETED');
 
-    const queue = global.app.get<MessageQueueService>(
-      getQueueToken(MessageQueue.workflowQueue),
-    );
-
-    await queue.add('WorkflowTriggerJob', {
-      workspaceId,
-      workflowId: fixture.workflowId as string,
-      payload: { marker: envelope },
-      ...(envelope === 'workspace-version' || envelope === 'backfilled-paired'
-        ? { workspaceWorkflowVersionId: fixture.workflowVersionId }
-        : {}),
-      ...(envelope === 'core-version' || envelope === 'backfilled-paired'
-        ? { coreWorkflowVersionId: fixture.coreWorkflowVersionId }
-        : {}),
-    });
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const [run] = await global.testDataSource.query(
-        `SELECT id FROM "${schema}"."workflowRun" WHERE "coreWorkflowId" = $1`,
-        [fixture.coreWorkflowId],
-      );
-      if (run) {
-        const completedRun = await waitForRun(run.id, 'COMPLETED');
-
-        expect(completedRun.createdByName).toBe('B-Async execution');
-        expect(completedRun.createdBySource).toBe('WORKFLOW');
-        return;
+          expect(completedRun.createdByName).toBe('B-Async execution');
+          expect(completedRun.createdBySource).toBe('WORKFLOW');
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    throw new Error('Legacy queue envelope did not dispatch');
-  });
+      throw new Error('Legacy queue envelope did not dispatch');
+    },
+  );
 
   it('rejects a queued version belonging to another workflow or tenant', async () => {
     const first = await createFixture();
@@ -499,89 +482,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     expect(response.status).toBe(201);
     expect(response.body.success).toBe(true);
     await waitForRun(response.body.workflowRunId, 'COMPLETED');
-  });
-
-  it('backfills a queued legacy run and starts its persisted snapshot after a core edit', async () => {
-    const fixture = await createFixture();
-    const workflowRunId = randomUUID();
-    const state = {
-      flow: { trigger: fixture.trigger, steps: fixture.steps },
-      stepInfos: {
-        trigger: { status: 'NOT_STARTED', result: {} },
-        ...Object.fromEntries(
-          fixture.steps.map((step) => [
-            (step as { id: string }).id,
-            { status: 'NOT_STARTED' },
-          ]),
-        ),
-      },
-    };
-
-    await global.testDataSource.query(
-      `INSERT INTO "${schema}"."workflowRun" (id, name, "workflowId", "workflowVersionId", status, state, position) VALUES ($1, 'B-Async old queued run', $2, $3, 'ENQUEUED', $4, 0)`,
-      [
-        workflowRunId,
-        fixture.workflowId,
-        fixture.workflowVersionId,
-        JSON.stringify(state),
-      ],
-    );
-    await global.workflowTestServices.backfill.runOnWorkspace({
-      workspaceId,
-      dataSource: global.testDataSource,
-      options: {},
-      index: 0,
-      total: 1,
-    });
-    await global.testDataSource.query(
-      'UPDATE core."workflowVersion" SET triggers = NULL, steps = NULL WHERE id = $1',
-      [fixture.coreWorkflowVersionId],
-    );
-    await (
-      await global.workflowTestServices.runJob()
-    ).handle({ workspaceId, workflowRunId });
-    const run = await waitForRun(workflowRunId, 'COMPLETED');
-
-    expect(run.coreWorkflowVersionId).toBe(fixture.coreWorkflowVersionId);
-    expect(run.state.flow).toEqual(state.flow);
-  });
-
-  it('defers the core trigger cache during historical upgrades and rebuilds it after backfill', async () => {
-    const fixture = await createFixture({
-      triggerType: 'CRON',
-      triggerSettings: { type: 'CUSTOM', pattern: '* * * * *' },
-    });
-    const { workspaceCache, upgradeState, backfill } =
-      global.workflowTestServices;
-    const hiddenColumns = jest
-      .spyOn(upgradeState, 'getHiddenColumnPropertyNames')
-      .mockReturnValue(new Set(['workspaceWorkflowVersionId']));
-
-    await workspaceCache.invalidateAndRecompute(workspaceId, [
-      'workflowAutomatedTriggerMaps',
-    ]);
-    const duringUpgrade = await workspaceCache.getOrRecompute(workspaceId, [
-      'workflowAutomatedTriggerMaps',
-    ]);
-
-    expect(duringUpgrade.workflowAutomatedTriggerMaps.byWorkflowId).toEqual({});
-    hiddenColumns.mockRestore();
-    await backfill.runOnWorkspace({
-      workspaceId,
-      dataSource: global.testDataSource,
-      options: {},
-      index: 0,
-      total: 1,
-    });
-    const afterUpgrade = await workspaceCache.getOrRecompute(workspaceId, [
-      'workflowAutomatedTriggerMaps',
-    ]);
-
-    expect(
-      afterUpgrade.workflowAutomatedTriggerMaps.byWorkflowId[
-        fixture.coreWorkflowId
-      ],
-    ).toMatchObject({ coreWorkflowVersionId: fixture.coreWorkflowVersionId });
   });
 
   it('normalizes overlapping old and core cron caches without duplicate runs', async () => {
@@ -636,7 +536,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     throw new Error('Cron failed to dispatch');
   });
   const waitForStep = async (runId: string, stepId: string, status: string) => {
-    for (let attempt = 0; attempt < 150; attempt++) {
+    for (let attempt = 0; attempt < 600; attempt++) {
       const run = await getRun(runId);
 
       if (run?.state?.stepInfos[stepId]?.status === status) {
@@ -649,26 +549,30 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     );
   };
 
-  const backfill = async (dryRun = false) =>
-    global.workflowTestServices.backfill.runOnWorkspace({
-      workspaceId,
-      dataSource: global.testDataSource,
-      options: { dryRun },
-      index: 0,
-      total: 1,
-    });
+  // an agent step waits as soon as it starts its run, which pauses later in its own job
+  const waitForPausedAgentStep = async (runId: string, stepId: string) => {
+    const pendingRun = await waitForStep(runId, stepId, 'PENDING');
+    const threadId: string = pendingRun.stepLogs[stepId].details.threadId;
 
-  const migratePendingRun = async (fixture: Fixture, runId: string) => {
-    if (fixture.workflowVersionId) {
-      await global.testDataSource.query(
-        `UPDATE "${schema}"."workflowRun" SET "coreWorkflowId" = NULL, "coreWorkflowVersionId" = NULL WHERE id = $1`,
-        [runId],
-      );
-      await backfill();
-      expect((await getRun(runId)).coreWorkflowVersionId).toBe(
-        fixture.coreWorkflowVersionId,
-      );
-    }
+    await expectEventually(
+      async () => {
+        const [turn] = await global.testDataSource.query(
+          `SELECT turn.status, thread."activeStreamId" FROM "${schema}"."agentTurn" turn
+           JOIN "${schema}"."agentChatThread" thread ON thread.id = turn."threadId"
+           WHERE turn."threadId" = $1 ORDER BY turn."createdAt" DESC LIMIT 1`,
+          [threadId],
+        );
+
+        expect(turn).toMatchObject({ activeStreamId: null });
+        expect(turn.status).not.toBe('running');
+        expect(
+          (await getRun(runId)).stepLogs[stepId].details.usage.totalTokens,
+        ).toBeGreaterThan(0);
+      },
+      { timeoutMs: 15_000 },
+    );
+
+    return getRun(runId);
   };
 
   const clearDefinitions = async (fixture: Fixture) => {
@@ -685,7 +589,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
   };
 
   it.each([false, true])(
-    'resumes a delayed run after backfill and definition changes (mirrorless=%s)',
+    'resumes a delayed run after definition changes (mirrorless=%s)',
     async (mirrorless) => {
       const finalStep = emptyStep();
       const delay: WorkflowAction = {
@@ -703,7 +607,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       });
       const runId = await runFixture(fixture);
       await waitForStep(runId, delay.id, 'PENDING');
-      await migratePendingRun(fixture, runId);
       await clearDefinitions(fixture);
       const run = await waitForRun(runId, 'COMPLETED');
 
@@ -713,7 +616,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
   );
 
   it.each([false, true])(
-    'resumes a pending form after backfill and definition changes (mirrorless=%s)',
+    'resumes a pending form after definition changes (mirrorless=%s)',
     async (mirrorless) => {
       const finalStep = emptyStep();
       const form: WorkflowAction = {
@@ -738,10 +641,10 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       });
       const runId = await runFixture(fixture);
       await waitForStep(runId, form.id, 'PENDING');
-      await migratePendingRun(fixture, runId);
       await clearDefinitions(fixture);
-      const response = await answerToolCall({
-        toolCall: { workflowRunId: runId, stepId: form.id },
+      const response = await submitFormStep({
+        workflowRunId: runId,
+        stepId: form.id,
         response: { answer: 'From the stored form' },
       });
 
@@ -779,43 +682,12 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     runId: string;
     stepId: string;
     answer: string;
-  }) =>
-    answerToolCall({
-      toolCall: { workflowRunId: runId, stepId },
-      response: { answer },
-    });
+  }) => submitFormStep({ workflowRunId: runId, stepId, response: { answer } });
 
-  describe('the conversation a form step records', () => {
-    const approvalForm = (nextStepIds: string[]): WorkflowAction => ({
-      ...formStep(nextStepIds),
-      name: 'Approve the discount',
-    });
-
-    const getFormConversation = async (runId: string, stepId: string) => {
-      const threadId = (await getRun(runId)).state.stepInfos[stepId].threadId;
-      const [thread] = await global.testDataSource.query(
-        `SELECT title, "pendingQuestionMessageId" FROM "${schema}"."agentChatThread" WHERE id = $1`,
-        [threadId],
-      );
-      const [part] = await global.testDataSource.query(
-        `SELECT part."toolName", part."toolInput", part."toolOutput" FROM "${schema}"."agentMessagePart" part JOIN "${schema}"."agentMessage" message ON message.id = part."messageId" WHERE message."threadId" = $1 AND part."toolCallId" = $2`,
-        [threadId, stepId],
-      );
-
-      return {
-        threadId,
-        title: thread?.title,
-        isWaiting: isDefined(thread?.pendingQuestionMessageId),
-        toolName: part?.toolName,
-        toolInput: part?.toolInput,
-        status: part?.toolOutput?.result?.status,
-        values: part?.toolOutput?.result?.values,
-      };
-    };
-
-    it('asks for the fields in a request_form call while the form waits, and records the answer on submit', async () => {
+  describe('submitting a form step', () => {
+    it('waits without a conversation and completes with the submitted values', async () => {
       const finalStep = emptyStep();
-      const form = approvalForm([finalStep.id]);
+      const form = formStep([finalStep.id]);
       const fixture = await createFixture({
         mirrorless: true,
         steps: [form, finalStep],
@@ -824,13 +696,9 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
 
       await waitForStep(runId, form.id, 'PENDING');
 
-      expect(await getFormConversation(runId, form.id)).toMatchObject({
-        title: 'Approve the discount',
-        isWaiting: true,
-        toolName: 'request_form',
-        toolInput: { fields: form.settings.input },
-        status: 'pending',
-      });
+      expect((await getRun(runId)).state.stepInfos[form.id].threadId).toBe(
+        undefined,
+      );
 
       const response = await submitForm({
         runId,
@@ -839,18 +707,17 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       });
 
       expect(response.body.errors).toBeUndefined();
-      await waitForRun(runId, 'COMPLETED');
 
-      expect(await getFormConversation(runId, form.id)).toMatchObject({
-        isWaiting: false,
-        status: 'answered',
-        values: { answer: 'Approved' },
+      const run = await waitForRun(runId, 'COMPLETED');
+
+      expect(run.state.stepInfos[form.id].result).toEqual({
+        answer: 'Approved',
       });
     });
 
-    it('refuses a submission whose answer cannot be recorded, leaving the form waiting', async () => {
+    it('refuses values for fields the form does not have', async () => {
       const finalStep = emptyStep();
-      const form = approvalForm([finalStep.id]);
+      const form = formStep([finalStep.id]);
       const fixture = await createFixture({
         mirrorless: true,
         steps: [form, finalStep],
@@ -859,40 +726,21 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
 
       await waitForStep(runId, form.id, 'PENDING');
 
-      const recordToolCallAnswer = jest
-        .spyOn(
-          getAppProviderByClassName<AgentChatService>('AgentChatService'),
-          'recordToolCallAnswer',
-        )
-        .mockRejectedValueOnce(new Error('Answer write failed'));
-
-      const refused = await submitForm({
-        runId,
+      const refused = await submitFormStep({
+        workflowRunId: runId,
         stepId: form.id,
-        answer: 'Approved',
+        response: { unknownField: 'Approved' },
       });
-
-      recordToolCallAnswer.mockRestore();
 
       expect(refused.body.errors).toBeDefined();
       expect((await getRun(runId)).state.stepInfos[form.id].status).toBe(
         'PENDING',
       );
-      expect(await getFormConversation(runId, form.id)).toMatchObject({
-        isWaiting: true,
-        status: 'pending',
-      });
-
-      expect(
-        (await submitForm({ runId, stepId: form.id, answer: 'Approved' })).body
-          .errors,
-      ).toBeUndefined();
-      await waitForRun(runId, 'COMPLETED');
     });
 
     it('refuses a second submission and keeps the first answer', async () => {
       const finalStep = emptyStep();
-      const form = approvalForm([finalStep.id]);
+      const form = formStep([finalStep.id]);
       const fixture = await createFixture({
         mirrorless: true,
         steps: [form, finalStep],
@@ -917,19 +765,16 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       });
 
       expect(JSON.stringify(second.body.errors)).toContain(
-        'TOOL_CALL_NOT_PENDING',
+        'no longer waiting for an answer',
       );
       expect((await getRun(runId)).state.stepInfos[form.id].result).toEqual({
         answer: 'Approved',
       });
-      expect(await getFormConversation(runId, form.id)).toMatchObject({
-        values: { answer: 'Approved' },
-      });
     });
 
-    it('records a conversation for each iteration of a form inside a loop', async () => {
+    it('takes a submission for each iteration of a form inside a loop', async () => {
       const afterLoop = emptyStep();
-      const form = approvalForm([]);
+      const form = formStep([]);
       const iterator: WorkflowAction = {
         ...emptyStep(),
         type: WorkflowActionType.ITERATOR,
@@ -953,11 +798,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
 
       await waitForStep(runId, form.id, 'PENDING');
 
-      const { threadId: firstThreadId } = await getFormConversation(
-        runId,
-        form.id,
-      );
-
       const first = await submitForm({
         runId,
         stepId: form.id,
@@ -967,14 +807,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       expect(first.body.errors).toBeUndefined();
       await waitForStep(runId, form.id, 'PENDING');
 
-      const secondConversation = await getFormConversation(runId, form.id);
-
-      expect(secondConversation.threadId).not.toBe(firstThreadId);
-      expect(secondConversation).toMatchObject({
-        isWaiting: true,
-        status: 'pending',
-      });
-
       const second = await submitForm({
         runId,
         stepId: form.id,
@@ -982,15 +814,17 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       });
 
       expect(second.body.errors).toBeUndefined();
-      await waitForRun(runId, 'COMPLETED');
-      expect(await getFormConversation(runId, form.id)).toMatchObject({
-        values: { answer: 'Second item' },
+
+      const run = await waitForRun(runId, 'COMPLETED');
+
+      expect(run.state.stepInfos[form.id].result).toEqual({
+        answer: 'Second item',
       });
     });
 
-    it('closes the call when its run ends before anyone answers', async () => {
+    it('refuses a submission once its run ended', async () => {
       const finalStep = emptyStep();
-      const form = approvalForm([finalStep.id]);
+      const form = formStep([finalStep.id]);
       const fixture = await createFixture({
         mirrorless: true,
         steps: [form, finalStep],
@@ -1006,10 +840,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
 
       expect(response.body.errors).toBeUndefined();
       await waitForRun(runId, 'STOPPED');
-      expect(await getFormConversation(runId, form.id)).toMatchObject({
-        isWaiting: false,
-        status: 'skipped',
-      });
 
       const late = await submitForm({
         runId,
@@ -1018,7 +848,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       });
 
       expect(JSON.stringify(late.body.errors)).toContain(
-        'TOOL_CALL_NOT_PENDING',
+        'no longer waiting for an answer',
       );
 
       const run = await getRun(runId);
@@ -1052,7 +882,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     });
 
     expect(JSON.stringify(response.body.errors)).toContain(
-      'TOOL_CALL_NOT_PENDING',
+      'no longer waiting for an answer',
     );
     expect((await getRun(runId)).state.stepInfos[form.id].status).toBe(
       'PENDING',
@@ -1060,15 +890,32 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
   });
 
   describe('an agent step that asks a question', () => {
-    const QUESTIONS = [
-      {
-        header: 'Quote',
-        question: 'Send the quote to the customer?',
-        options: [{ label: 'Send it' }, { label: 'Hold it' }],
-      },
-    ];
+    let agentId: string;
 
-    const agentStep = (nextStepIds: string[]): WorkflowAction =>
+    beforeAll(async () => {
+      const { data } = await createOneAgent({
+        expectToFail: false,
+        input: {
+          label: 'Quote Agent',
+          prompt: 'Draft the quote',
+          modelId: TEST_AI_MODEL_ID,
+        },
+      });
+
+      agentId = data.createOneAgent.id;
+    });
+
+    afterAll(async () => {
+      await deleteOneAgent({ expectToFail: false, input: { id: agentId } });
+    });
+
+    const QUESTION = {
+      header: 'Quote',
+      question: 'Send the quote to the customer?',
+      options: [{ label: 'Send it' }, { label: 'Hold it' }],
+    };
+
+    const agentStep = (nextStepIds: string[]): WorkflowAiAgentAction =>
       ({
         ...emptyStep(),
         name: 'Draft the quote',
@@ -1076,24 +923,16 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         nextStepIds,
         settings: {
           ...settings,
-          input: { prompt: 'Draft the quote', canAskQuestions: true },
+          input: {
+            agentId,
+            prompt: 'Draft the quote',
+            humanInputInstructions: 'Ask before choosing a plan.',
+            workspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.JANE,
+          },
         },
-      }) as WorkflowAction;
+      }) as WorkflowAiAgentAction;
 
-    const agentResult = (
-      overrides: Partial<AgentExecutionResult>,
-    ): AgentExecutionResult =>
-      ({
-        result: { response: '' },
-        usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
-        cacheCreationTokens: 0,
-        nativeWebSearchCallCount: 0,
-        hasNoMoreAvailableCredits: false,
-        modelId: 'test-model',
-        ...overrides,
-      }) as AgentExecutionResult;
-
-    const askingResult = agentResult({
+    const askingResult = buildAgentExecutionResult({
       isPaused: true,
       steps: [
         {
@@ -1101,19 +940,19 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
             {
               type: 'tool-call',
               toolCallId: 'ask-1',
-              toolName: 'ask_questions',
-              input: { questions: QUESTIONS },
+              toolName: 'ask_question',
+              input: QUESTION,
             },
             {
               type: 'tool-result',
               toolCallId: 'ask-1',
-              toolName: 'ask_questions',
-              input: { questions: QUESTIONS },
+              toolName: 'ask_question',
+              input: QUESTION,
               output: {
                 success: true,
                 message:
-                  'Questions presented to the user; awaiting their answer.',
-                result: { questions: QUESTIONS, status: 'pending' },
+                  'Question presented to the user; awaiting their answer.',
+                result: { question: QUESTION, status: 'pending' },
               },
             },
           ],
@@ -1121,23 +960,14 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       ] as AgentExecutionResult['steps'],
     });
 
-    const replyingResult = agentResult({
+    const replyingResult = buildAgentExecutionResult({
       result: { response: 'Quote sent' },
       steps: [
         { content: [{ type: 'text', text: 'Quote sent' }] },
       ] as AgentExecutionResult['steps'],
     });
 
-    const mockAgent = () =>
-      jest
-        .spyOn(
-          getAppProviderByClassName<AgentAsyncExecutorService>(
-            'AgentAsyncExecutorService',
-          ),
-          'executeAgent',
-        )
-        .mockResolvedValueOnce(askingResult)
-        .mockResolvedValueOnce(replyingResult);
+    const mockAgent = () => mockAgentRunTurns(askingResult, replyingResult);
 
     const getToolCalls = async (threadId: string) => {
       const [thread] = await global.testDataSource.query(
@@ -1145,7 +975,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         [threadId],
       );
       const parts = await global.testDataSource.query(
-        `SELECT part."toolCallId", part."toolOutput" FROM "${schema}"."agentMessagePart" part JOIN "${schema}"."agentMessage" message ON message.id = part."messageId" WHERE message."threadId" = $1 AND part."toolName" = 'ask_questions' ORDER BY part."toolCallId"`,
+        `SELECT part."toolCallId", part."toolOutput" FROM "${schema}"."agentMessagePart" part JOIN "${schema}"."agentMessage" message ON message.id = part."messageId" WHERE message."threadId" = $1 AND part."toolName" = 'ask_question' ORDER BY part."toolCallId"`,
         [threadId],
       );
 
@@ -1158,7 +988,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
           }) => ({
             toolCallId: part.toolCallId,
             status: part.toolOutput.result.status,
-            answers: part.toolOutput.result.answers,
+            answer: part.toolOutput.result.answer,
           }),
         ),
       };
@@ -1183,8 +1013,8 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       // A run reads through its workspace workflow record, which a mirrorless fixture lacks.
       const fixture = await createFixture({ steps: [agent, finalStep] });
       const runId = await runFixture(fixture);
-      const run = await waitForStep(runId, agent.id, 'PENDING');
-      const threadId: string = run.state.stepInfos[agent.id].threadId;
+      const run = await waitForPausedAgentStep(runId, agent.id);
+      const threadId: string = run.stepLogs[agent.id].details.threadId;
 
       return { runId, agent, finalStep, threadId };
     };
@@ -1198,20 +1028,169 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     }) =>
       answerToolCall({
         toolCall: { threadId, toolCallId },
-        response: {
-          answers: [{ questionIndex: 0, selectedOptionIndices: [0] }],
-        },
+        response: { selectedOptionIndices: [0] },
       });
 
-    it('records no conversation for an agent that answers without asking', async () => {
+    const getInboxState = async (threadId: string) => {
+      const [state] = await global.testDataSource.query(
+        `SELECT thread."workspaceMemberId", thread."lastMessageText",
+           participant."archivedAt" IS NOT NULL AS "isArchived",
+           thread."lastActivityAt" > participant."archivedAt" AS "isBackInInbox"
+         FROM "${schema}"."agentChatThread" thread
+         LEFT JOIN "${schema}"."agentChatThreadParticipant" participant
+           ON participant."threadId" = thread.id AND participant."workspaceMemberId" = thread."workspaceMemberId"
+         WHERE thread.id = $1`,
+        [threadId],
+      );
+
+      return state;
+    };
+
+    // the run surfaces its waiting conversation just after its turn stops running
+    const waitForWaitingInboxState = async (threadId: string) => {
+      for (let attempt = 0; attempt < 50; attempt++) {
+        const state = await getInboxState(threadId);
+
+        if (isDefined(state?.lastMessageText)) {
+          return state;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      return getInboxState(threadId);
+    };
+
+    it('queues a message the recipient sends while the agent works, and sends it once the run ends', async () => {
+      let sentWhileWorking: Promise<request.Response> | undefined;
+      let threadId: string | undefined;
+
+      mockAgentRunTurns(replyingResult);
       jest
         .spyOn(
-          getAppProviderByClassName<AgentAsyncExecutorService>(
-            'AgentAsyncExecutorService',
-          ),
-          'executeAgent',
+          getAppProviderByClassName<AgentRunTurnService>('AgentRunTurnService'),
+          'completeTurn',
         )
-        .mockResolvedValueOnce(replyingResult);
+        .mockReset()
+        .mockImplementationOnce(async () => {
+          [{ threadId }] = await global.testDataSource.query(
+            `SELECT "threadId" FROM "${schema}"."agentTurn" WHERE "agentId" = $1 AND status = 'running'
+             ORDER BY "createdAt" DESC LIMIT 1`,
+            [agentId],
+          );
+
+          sentWhileWorking = request(`http://localhost:${APP_PORT}`)
+            .post('/metadata')
+            .set('Authorization', `Bearer ${APPLE_JANE_ADMIN_ACCESS_TOKEN}`)
+            .send({
+              query: `mutation SendChatMessage($threadId: UUID!, $text: String!, $messageId: UUID!) {
+                sendChatMessage(threadId: $threadId, text: $text, messageId: $messageId) { queued }
+              }`,
+              variables: {
+                threadId,
+                text: 'Any news?',
+                messageId: randomUUID(),
+              },
+            });
+
+          await sentWhileWorking;
+
+          return { ...replyingResult, structuredOutputSteps: [] };
+        });
+      jest
+        .spyOn(
+          getAppProviderByClassName<AiModelRegistryService>(
+            'AiModelRegistryService',
+          ),
+          'getAvailableModels',
+        )
+        .mockReturnValue([{ modelId: TEST_AI_MODEL_ID }] as never);
+      // the reply to the queued message is not under test
+      jest
+        .spyOn(
+          getAppProviderByClassName<ChatExecutionService>(
+            'ChatExecutionService',
+          ),
+          'streamChat',
+        )
+        .mockRejectedValue(new Error('No reply in this test'));
+
+      const finalStep = emptyStep();
+      const fixture = await createFixture({
+        steps: [agentStep([finalStep.id]), finalStep],
+      });
+
+      await waitForRun(await runFixture(fixture), 'COMPLETED');
+
+      expect((await sentWhileWorking)?.body.data.sendChatMessage).toEqual({
+        queued: true,
+      });
+
+      await expectEventually(async () => {
+        const [message] = await global.testDataSource.query(
+          `SELECT message.status FROM "${schema}"."agentMessage" message
+           JOIN "${schema}"."agentMessagePart" part ON part."messageId" = message.id
+           WHERE message."threadId" = $1 AND part."textContent" = 'Any news?'`,
+          [threadId],
+        );
+
+        expect(message?.status).toBe('sent');
+      });
+    });
+
+    it('records the conversation of an agent that answers without asking, filed under done', async () => {
+      mockAgentRunTurns(replyingResult);
+      const finalStep = emptyStep();
+      const agent = agentStep([finalStep.id]);
+      const fixture = await createFixture({ steps: [agent, finalStep] });
+      const runId = await runFixture(fixture);
+
+      const run = await waitForRun(runId, 'COMPLETED');
+      const threadId: string = run.stepLogs[agent.id].details.threadId;
+
+      expect(run.state.stepInfos[agent.id]).toMatchObject({
+        status: 'SUCCESS',
+        result: { response: 'Quote sent' },
+      });
+      expect(await getInboxState(threadId)).toMatchObject({
+        workspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.JANE,
+        isArchived: true,
+        isBackInInbox: false,
+      });
+      expect(
+        (await getConversation(threadId)).messages.map(
+          ({ role }: { role: string }) => role,
+        ),
+      ).toEqual(['user', 'assistant']);
+    });
+
+    it('keeps the usage and the conversation in the step log when its tool calls outgrow it', async () => {
+      const largeOutput = 'x'.repeat(64_000);
+      const toolCallIds = ['find-1', 'find-2', 'find-3', 'find-4', 'find-5'];
+
+      mockAgentRunTurns(
+        buildAgentExecutionResult({
+          result: { response: 'Quote sent' },
+          steps: [
+            {
+              content: toolCallIds.flatMap((toolCallId) => [
+                {
+                  type: 'tool-call',
+                  toolCallId,
+                  toolName: 'find_companies',
+                  input: {},
+                },
+                {
+                  type: 'tool-result',
+                  toolCallId,
+                  toolName: 'find_companies',
+                  input: {},
+                  output: { success: true, result: largeOutput },
+                },
+              ]),
+            },
+          ] as AgentExecutionResult['steps'],
+        }),
+      );
       const finalStep = emptyStep();
       const agent = agentStep([finalStep.id]);
       const fixture = await createFixture({ steps: [agent, finalStep] });
@@ -1219,23 +1198,226 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
 
       const run = await waitForRun(runId, 'COMPLETED');
 
-      expect(run.state.stepInfos[agent.id]).toMatchObject({
-        status: 'SUCCESS',
-        result: { response: 'Quote sent' },
+      expect(run.stepLogs[agent.id]).toMatchObject({
+        details: {
+          type: 'AI_AGENT',
+          usage: { totalTokens: 2 },
+          toolCalls: [],
+          threadId: expect.any(String),
+        },
+        truncated: { droppedEntries: toolCallIds.length },
       });
-      expect(run.state.stepInfos[agent.id].threadId).toBeUndefined();
-
-      const threads = await global.testDataSource.query(
-        `SELECT id FROM "${schema}"."agentChatThread" WHERE "workflowRunId" = $1`,
-        [runId],
-      );
-
-      expect(threads).toEqual([]);
     });
 
-    it('pauses the run on the question and resumes the same conversation with the answer', async () => {
-      const executeAgent = mockAgent();
+    it('continues the conversation its key names across runs', async () => {
+      const runTurn = mockAgentRunTurns(replyingResult, replyingResult);
+      const agent = {
+        ...agentStep([]),
+        settings: {
+          ...agentStep([]).settings,
+          input: {
+            ...agentStep([]).settings.input,
+            conversation: { scope: 'KEY', key: 'quotes' },
+          },
+        },
+      } as WorkflowAction;
+      const fixture = await createFixture({ steps: [agent] });
+
+      const firstRun = await waitForRun(await runFixture(fixture), 'COMPLETED');
+      const secondRun = await waitForRun(
+        await runFixture(fixture),
+        'COMPLETED',
+      );
+      const threadId: string = firstRun.stepLogs[agent.id].details.threadId;
+
+      expect(secondRun.stepLogs[agent.id].details.threadId).toBe(threadId);
+      expect(runTurn.mock.calls[0][0].priorMessages).toEqual([]);
+      expect(JSON.stringify(runTurn.mock.calls[1][0].priorMessages)).toContain(
+        'Quote sent',
+      );
+    });
+
+    it("routes the waiting conversation to the workflow creator's inbox when the step names no recipient", async () => {
+      mockAgent();
+      const [creator] = await global.testDataSource.query(
+        `SELECT membership.id AS "userWorkspaceId", member.id AS "workspaceMemberId"
+         FROM core."userWorkspace" membership
+         JOIN "${schema}"."workspaceMember" member ON member."userId" = membership."userId"
+         WHERE membership."workspaceId" = $1 AND membership."deletedAt" IS NULL AND member.id = $2`,
+        [workspaceId, WORKSPACE_MEMBER_DATA_SEED_IDS.JONY],
+      );
+      const agent = {
+        ...agentStep([]),
+        settings: {
+          ...agentStep([]).settings,
+          input: {
+            ...agentStep([]).settings.input,
+            workspaceMemberId: undefined,
+          },
+        },
+      } as WorkflowAction;
+      const fixture = await createFixture({ steps: [agent] });
+
+      await global.testDataSource.query(
+        `UPDATE core.workflow SET "createdByUserWorkspaceId" = $1 WHERE id = $2`,
+        [creator.userWorkspaceId, fixture.coreWorkflowId],
+      );
+
+      const runId = await runFixture(fixture);
+      const run = await waitForPausedAgentStep(runId, agent.id);
+      const threadId: string = run.stepLogs[agent.id].details.threadId;
+
+      expect(await waitForWaitingInboxState(threadId)).toMatchObject({
+        workspaceMemberId: creator.workspaceMemberId,
+        lastMessageText: QUESTION.question,
+        isArchived: true,
+        isBackInInbox: true,
+      });
+
+      const readByAnotherMember = await request(`http://localhost:${APP_PORT}`)
+        .post('/metadata')
+        .set('Authorization', `Bearer ${APPLE_JANE_ADMIN_ACCESS_TOKEN}`)
+        .send({
+          query: `query ReadRunConversation($threadId: UUID!) { chatMessages(threadId: $threadId) { role } }`,
+          variables: { threadId },
+        });
+
+      expect(readByAnotherMember.body.errors).toBeDefined();
+    });
+
+    it('keeps the conversation of a workflow without a member creator off every inbox', async () => {
+      mockAgent();
+      const agent = {
+        ...agentStep([]),
+        settings: {
+          ...agentStep([]).settings,
+          input: {
+            ...agentStep([]).settings.input,
+            workspaceMemberId: undefined,
+          },
+        },
+      } as WorkflowAction;
+      const fixture = await createFixture({ steps: [agent] });
+
+      await global.testDataSource.query(
+        `UPDATE core.workflow SET "createdByUserWorkspaceId" = NULL WHERE id = $1`,
+        [fixture.coreWorkflowId],
+      );
+
+      const runId = await runFixture(fixture);
+      const run = await waitForPausedAgentStep(runId, agent.id);
+      const threadId: string = run.stepLogs[agent.id].details.threadId;
+      const [conversation] = await global.testDataSource.query(
+        `SELECT "workspaceMemberId" FROM "${schema}"."agentChatThread" WHERE id = $1`,
+        [threadId],
+      );
+
+      expect(conversation.workspaceMemberId).toBeNull();
+    });
+
+    it('keeps a question waiting when it is answered before its step is marked as waiting', async () => {
+      mockAgent();
+      const { runId, agent, threadId } = await startAskingRun();
+      const setStepStatus = (status: string) =>
+        global.testDataSource.query(
+          `UPDATE "${schema}"."workflowRun" SET state = jsonb_set(state, ARRAY['stepInfos', $2::text, 'status'], to_jsonb($3::text)) WHERE id = $1`,
+          [runId, agent.id, status],
+        );
+
+      await setStepStatus('RUNNING');
+
+      const earlyAnswer = await answer({ threadId });
+
+      expect(JSON.stringify(earlyAnswer.body.errors)).toContain(
+        'TOOL_CALL_NOT_PENDING',
+      );
+      expect(await getToolCalls(threadId)).toEqual({
+        isWaiting: true,
+        calls: [{ toolCallId: 'ask-1', status: 'pending' }],
+      });
+
+      await setStepStatus('PENDING');
+
+      expect((await answer({ threadId })).body.errors).toBeUndefined();
+      await waitForRun(runId, 'COMPLETED');
+    });
+
+    it('retries a step whose agent failed after its answer in the same conversation, which holds the answer', async () => {
+      const runTurn = mockAgentRunTurns(
+        askingResult,
+        new Error('The model is overloaded'),
+        replyingResult,
+      );
+      const agent = {
+        ...agentStep([]),
+        settings: {
+          ...agentStep([]).settings,
+          errorHandlingOptions: {
+            retryOnFailure: { value: 1 },
+            continueOnFailure: { value: false },
+          },
+        },
+      } as WorkflowAction;
+      const fixture = await createFixture({ steps: [agent] });
+      const runId = await runFixture(fixture);
+      const pausedRun = await waitForPausedAgentStep(runId, agent.id);
+      const threadId: string = pausedRun.stepLogs[agent.id].details.threadId;
+
+      expect((await answer({ threadId })).body.errors).toBeUndefined();
+
+      const run = await waitForRun(runId, 'COMPLETED');
+
+      expect(run.state.stepInfos[agent.id]).toMatchObject({
+        status: 'SUCCESS',
+      });
+      expect(run.stepLogs[agent.id].details.threadId).toBe(threadId);
+      expect(runTurn).toHaveBeenCalledTimes(3);
+      expect(runTurn.mock.calls[2][0].messages).toEqual([
+        { role: 'user', content: 'Draft the quote' },
+      ]);
+      expect(JSON.stringify(runTurn.mock.calls[2][0].priorMessages)).toContain(
+        'Send it',
+      );
+      expect(await getToolCalls(threadId)).toMatchObject({
+        isWaiting: false,
+        calls: [{ toolCallId: 'ask-1', status: 'answered' }],
+      });
+    });
+
+    it('still waits on the question when its conversation cannot be surfaced in the inbox', async () => {
+      mockAgent();
+      const recordThreadActivity = jest
+        .spyOn(
+          getAppProviderByClassName<AgentChatThreadService>(
+            'AgentChatThreadService',
+          ),
+          'recordThreadActivity',
+        )
+        .mockRejectedValueOnce(new Error('Database unavailable'));
+
+      try {
+        const { runId, threadId } = await startAskingRun();
+
+        expect(await getToolCalls(threadId)).toMatchObject({
+          isWaiting: true,
+        });
+        expect((await answer({ threadId })).body.errors).toBeUndefined();
+        await waitForRun(runId, 'COMPLETED');
+      } finally {
+        recordThreadActivity.mockRestore();
+      }
+    });
+
+    it('pauses the run on the question and lets the engine continue the agent, without running the step again', async () => {
+      const runTurn = mockAgent();
       const { runId, agent, finalStep, threadId } = await startAskingRun();
+      const [{ activeStreamId }] = await global.testDataSource.query(
+        `SELECT "activeStreamId" FROM "${schema}"."agentChatThread" WHERE id = $1`,
+        [threadId],
+      );
+
+      // the step shows it waits only once its run let go of the conversation, so it can be answered
+      expect(activeStreamId).toBeNull();
 
       expect((await getRun(runId)).state.stepInfos[finalStep.id].status).toBe(
         'NOT_STARTED',
@@ -1255,16 +1437,17 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       expect(run.state.stepInfos[agent.id]).toMatchObject({
         status: 'SUCCESS',
         result: { response: 'Quote sent' },
+      });
+      expect(run.stepLogs[agent.id].details).toMatchObject({
         threadId,
+        usage: { totalTokens: 4 },
       });
       expect(run.state.stepInfos[finalStep.id].status).toBe('SUCCESS');
 
-      const resumedWith = executeAgent.mock.calls[1][0];
+      const resumedWith = runTurn.mock.calls[1][0];
 
       expect(resumedWith.messages).toEqual([]);
-      expect(JSON.stringify(resumedWith.priorModelMessages)).toContain(
-        'Send it',
-      );
+      expect(JSON.stringify(resumedWith.priorMessages)).toContain('Send it');
 
       const { messages, questionPart } = await getConversation(threadId);
 
@@ -1275,7 +1458,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
           {
             toolCallId: 'ask-1',
             status: 'answered',
-            answers: [{ questionIndex: 0, selectedOptionIndices: [0] }],
+            answer: { selectedOptionIndices: [0] },
           },
         ],
       });
@@ -1285,6 +1468,33 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         'user',
         'assistant',
       ]);
+    });
+
+    it('goes on with the agent when the recipient writes instead of answering, which skips the question', async () => {
+      const runTurn = mockAgent();
+      const { runId, agent, threadId } = await startAskingRun();
+
+      const response = await sendAsRecipient({
+        threadId,
+        text: 'Hold it until Monday',
+      });
+
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data.sendChatMessage.queued).toBe(true);
+
+      const run = await waitForRun(runId, 'COMPLETED');
+
+      expect(run.state.stepInfos[agent.id]).toMatchObject({
+        status: 'SUCCESS',
+        result: { response: 'Quote sent' },
+      });
+      expect(JSON.stringify(runTurn.mock.calls[1][0].priorMessages)).toContain(
+        'Hold it until Monday',
+      );
+      expect(await getToolCalls(threadId)).toEqual({
+        isWaiting: false,
+        calls: [{ toolCallId: 'ask-1', status: 'skipped' }],
+      });
     });
 
     it('refuses a second answer to the same question', async () => {
@@ -1304,42 +1514,187 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       ]);
     });
 
+    const sendAsRecipient = ({
+      threadId,
+      text,
+    }: {
+      threadId: string;
+      text: string;
+    }) => {
+      jest
+        .spyOn(
+          getAppProviderByClassName<AiModelRegistryService>(
+            'AiModelRegistryService',
+          ),
+          'getAvailableModels',
+        )
+        .mockReturnValue([{ modelId: TEST_AI_MODEL_ID }] as never);
+
+      return request(`http://localhost:${APP_PORT}`)
+        .post('/metadata')
+        .set('Authorization', `Bearer ${APPLE_JANE_ADMIN_ACCESS_TOKEN}`)
+        .send({
+          query: `mutation SendChatMessage($threadId: UUID!, $text: String!, $messageId: UUID!) {
+            sendChatMessage(threadId: $threadId, text: $text, messageId: $messageId) { queued }
+          }`,
+          variables: { threadId, text, messageId: randomUUID() },
+        });
+    };
+
+    it('continues an agent that paused on a wait once its wake-up resolves, without running the step again', async () => {
+      const resumeAt = new Date(Date.now() + 3_000).toISOString();
+      const runTurn = mockAgentRunTurns(
+        buildWaitingAgentExecutionResult({
+          toolName: 'wait_for_duration',
+          wait: { type: 'TIME', resumeAt },
+        }),
+        replyingResult,
+      );
+      const finalStep = emptyStep();
+      const agent = agentStep([finalStep.id]);
+      const fixture = await createFixture({ steps: [agent, finalStep] });
+      const runId = await runFixture(fixture);
+      const pausedRun = await waitForPausedAgentStep(runId, agent.id);
+      const threadId: string = pausedRun.stepLogs[agent.id].details.threadId;
+
+      expect(pausedRun.state.stepInfos[agent.id].wait).toEqual({
+        type: 'CALLBACK',
+      });
+      expect(
+        await global.testDataSource.query(
+          `SELECT "ownerType", condition->>'type' AS "conditionType" FROM core."pendingWakeUp" WHERE "ownerId" = $1`,
+          [threadId],
+        ),
+      ).toEqual([{ ownerType: 'AGENT_RUN', conditionType: 'TIME' }]);
+
+      const run = await waitForRun(runId, 'COMPLETED');
+
+      expect(run.state.stepInfos[agent.id]).toMatchObject({
+        status: 'SUCCESS',
+        result: { response: 'Quote sent' },
+      });
+      expect(runTurn).toHaveBeenCalledTimes(2);
+      expect(runTurn.mock.calls[1][0].messages).toEqual([]);
+      expect(JSON.stringify(runTurn.mock.calls[1][0].priorMessages)).toContain(
+        'The wait is over.',
+      );
+      expect(
+        await global.testDataSource.query(
+          `SELECT id FROM core."pendingWakeUp" WHERE "ownerId" = $1`,
+          [threadId],
+        ),
+      ).toEqual([]);
+    });
+
+    it('goes on with an agent waiting on an event as soon as the recipient writes to it', async () => {
+      // an event that never happens, so only the message wakes the run up
+      const runTurn = mockAgentRunTurns(
+        buildWaitingAgentExecutionResult({
+          toolName: 'wait_for_event',
+          wait: {
+            type: 'EVENT',
+            eventName: 'opportunity.deleted',
+            recordId: randomUUID(),
+          },
+        }),
+        replyingResult,
+      );
+      const finalStep = emptyStep();
+      const agent = agentStep([finalStep.id]);
+      const fixture = await createFixture({ steps: [agent, finalStep] });
+      const runId = await runFixture(fixture);
+      const pausedRun = await waitForPausedAgentStep(runId, agent.id);
+      const threadId: string = pausedRun.stepLogs[agent.id].details.threadId;
+
+      const response = await sendAsRecipient({
+        threadId,
+        text: 'No need to wait, send it now',
+      });
+
+      expect(response.body.errors).toBeUndefined();
+      expect(response.body.data.sendChatMessage.queued).toBe(true);
+
+      const run = await waitForRun(runId, 'COMPLETED');
+
+      expect(run.state.stepInfos[agent.id]).toMatchObject({
+        status: 'SUCCESS',
+        result: { response: 'Quote sent' },
+      });
+
+      const resumedWith = JSON.stringify(
+        runTurn.mock.calls[1][0].priorMessages,
+      );
+
+      expect(resumedWith).toContain('a member wrote in the conversation');
+      expect(resumedWith).toContain('No need to wait, send it now');
+      expect(
+        await global.testDataSource.query(
+          `SELECT id FROM core."pendingWakeUp" WHERE "ownerId" = $1`,
+          [threadId],
+        ),
+      ).toEqual([]);
+    });
+
+    it('continues an agent step paused on a question by 2.45 once the upgrade suspends it', async () => {
+      const runTurn = mockAgent();
+      const { runId, agent, threadId } = await startAskingRun();
+
+      // the shape a step paused by 2.45 left behind
+      await global.testDataSource.query(
+        `DELETE FROM core."pendingWakeUp" WHERE "ownerId" = $1`,
+        [threadId],
+      );
+      await global.testDataSource.query(
+        `UPDATE "${schema}"."workflowRun" SET state = jsonb_set(state, ARRAY['stepInfos', $2::text], (state->'stepInfos'->$2::text) - 'wait' || jsonb_build_object('threadId', $3::text)) WHERE id = $1`,
+        [runId, agent.id, threadId],
+      );
+
+      await getAppProviderByClassName<ProvisionedWorkspaceCommandRunner>(
+        'SuspendPausedAgentStepsCommand',
+      ).runOnWorkspace({ workspaceId, options: {}, index: 0, total: 1 });
+
+      expect((await answer({ threadId })).body.errors).toBeUndefined();
+
+      const run = await waitForRun(runId, 'COMPLETED');
+
+      expect(run.state.stepInfos[agent.id]).toMatchObject({
+        status: 'SUCCESS',
+        result: { response: 'Quote sent' },
+      });
+      expect(runTurn).toHaveBeenCalledTimes(2);
+      expect(runTurn.mock.calls[1][0].messages).toEqual([]);
+      expect(run.stepLogs[agent.id].details.usage.totalTokens).toBe(4);
+    });
+
     it('waits for every question asked at once and resumes once all are answered', async () => {
       const askCall = (toolCallId: string) => [
         {
           type: 'tool-call',
           toolCallId,
-          toolName: 'ask_questions',
-          input: { questions: QUESTIONS },
+          toolName: 'ask_question',
+          input: QUESTION,
         },
         {
           type: 'tool-result',
           toolCallId,
-          toolName: 'ask_questions',
-          input: { questions: QUESTIONS },
+          toolName: 'ask_question',
+          input: QUESTION,
           output: {
             success: true,
-            message: 'Questions presented to the user; awaiting their answer.',
-            result: { questions: QUESTIONS, status: 'pending' },
+            message: 'Question presented to the user; awaiting their answer.',
+            result: { question: QUESTION, status: 'pending' },
           },
         },
       ];
-      const executeAgent = jest
-        .spyOn(
-          getAppProviderByClassName<AgentAsyncExecutorService>(
-            'AgentAsyncExecutorService',
-          ),
-          'executeAgent',
-        )
-        .mockResolvedValueOnce(
-          agentResult({
-            isPaused: true,
-            steps: [
-              { content: [...askCall('ask-1'), ...askCall('ask-2')] },
-            ] as AgentExecutionResult['steps'],
-          }),
-        )
-        .mockResolvedValueOnce(replyingResult);
+      const runTurn = mockAgentRunTurns(
+        buildAgentExecutionResult({
+          isPaused: true,
+          steps: [
+            { content: [...askCall('ask-1'), ...askCall('ask-2')] },
+          ] as AgentExecutionResult['steps'],
+        }),
+        replyingResult,
+      );
       const { runId, agent, threadId } = await startAskingRun();
 
       expect(await getToolCalls(threadId)).toEqual({
@@ -1369,9 +1724,9 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         status: 'SUCCESS',
         result: { response: 'Quote sent' },
       });
-      expect(executeAgent).toHaveBeenCalledTimes(2);
+      expect(runTurn).toHaveBeenCalledTimes(2);
       expect(
-        JSON.stringify(executeAgent.mock.calls[1][0].priorModelMessages),
+        JSON.stringify(runTurn.mock.calls[1][0].priorMessages),
       ).not.toContain('"pending"');
     });
 
@@ -1401,8 +1756,8 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       );
     });
 
-    it('keeps the run alive while the resume is queued, even once a parallel branch has finished', async () => {
-      const executeAgent = mockAgent();
+    it('keeps the run alive while the agent continuation is queued, even once a parallel branch has finished', async () => {
+      const runTurn = mockAgent();
       const agent = agentStep([]);
       const parallelBranch = emptyStep();
       const fixture = await createFixture({
@@ -1410,27 +1765,35 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         triggerNextStepIds: [agent.id, parallelBranch.id],
       });
       const runId = await runFixture(fixture);
-      const pausedRun = await waitForStep(runId, agent.id, 'PENDING');
+      const pausedRun = await waitForPausedAgentStep(runId, agent.id);
 
       await waitForStep(runId, parallelBranch.id, 'SUCCESS');
 
-      const threadId: string = pausedRun.state.stepInfos[agent.id].threadId;
+      const threadId: string = pausedRun.stepLogs[agent.id].details.threadId;
       const queue = global.app.get<MessageQueueService>(
         getQueueToken(MessageQueue.workflowQueue),
       );
+      const aiQueue = global.app.get<MessageQueueService>(
+        getQueueToken(MessageQueue.aiQueue),
+      );
 
-      // Holds the resume back so the run's fate is decided while it is still queued.
-      const enqueue = jest.spyOn(queue, 'add').mockResolvedValueOnce(undefined);
+      // Holds the continuation back so the run's fate is decided while it is still queued.
+      const enqueue = jest
+        .spyOn(aiQueue, 'add')
+        .mockResolvedValueOnce(undefined);
 
       const response = await answer({ threadId });
-      const [[resumeJobName, resumeJobData, resumeJobOptions]] =
+      const [[continueJobName, continueJobData, continueJobOptions]] =
         enqueue.mock.calls;
 
       enqueue.mockRestore();
 
       expect(response.body.errors).toBeUndefined();
-      expect(resumeJobData).toMatchObject({
-        stepToResume: { stepId: agent.id, threadId },
+      expect(continueJobData).toMatchObject({
+        workspaceId,
+        threadId,
+        wakeUpId: expect.any(String),
+        outcome: { type: 'ANSWERED' },
       });
 
       // The decision a parallel branch finishing in that window takes.
@@ -1441,7 +1804,10 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
           workflowRunId: runId,
           lastExecutedStepId: parallelBranch.id,
         },
-        buildRunWorkflowJobOptions(runId),
+        buildRunWorkflowJobOptions({
+          workflowRunId: runId,
+          scope: { workspaceId, isWorkspaceJob: true },
+        }),
       );
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
@@ -1450,18 +1816,17 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       expect(queuedRun.status).toBe('RUNNING');
       expect(queuedRun.state.stepInfos[agent.id].status).toBe('PENDING');
 
-      // Delivered twice: the second finds the step already claimed.
-      await queue.add(resumeJobName, resumeJobData, resumeJobOptions);
-      await queue.add(resumeJobName, resumeJobData, resumeJobOptions);
+      // Delivered twice: the second finds the run already continued.
+      await aiQueue.add(continueJobName, continueJobData, continueJobOptions);
+      await aiQueue.add(continueJobName, continueJobData, continueJobOptions);
 
       const run = await waitForRun(runId, 'COMPLETED');
 
       expect(run.state.stepInfos[agent.id]).toMatchObject({
         status: 'SUCCESS',
         result: { response: 'Quote sent' },
-        threadId,
       });
-      expect(executeAgent).toHaveBeenCalledTimes(2);
+      expect(runTurn).toHaveBeenCalledTimes(2);
     });
 
     it('refuses the answer, leaving the question open, when it cannot be recorded', async () => {
@@ -1470,7 +1835,9 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
 
       const recordToolCallAnswer = jest
         .spyOn(
-          getAppProviderByClassName<AgentChatService>('AgentChatService'),
+          getAppProviderByClassName<ToolCallAnswerRecorderService>(
+            'ToolCallAnswerRecorderService',
+          ),
           'recordToolCallAnswer',
         )
         .mockRejectedValueOnce(new Error('Answer write failed'));
@@ -1482,7 +1849,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       expect(refused.body.errors).toBeDefined();
       expect((await getRun(runId)).state.stepInfos[agent.id]).toMatchObject({
         status: 'PENDING',
-        threadId,
       });
       expect((await getConversation(threadId)).messages).toHaveLength(2);
       expect(await getToolCalls(threadId)).toEqual({
@@ -1494,14 +1860,14 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       await waitForRun(runId, 'COMPLETED');
     });
 
-    it('keeps the answer and fails the run, so it can be retried, when the resume cannot be scheduled', async () => {
+    it('keeps the answer and fails the run, so it can be retried, when the agent continuation cannot be scheduled', async () => {
       mockAgent();
       const { runId, threadId } = await startAskingRun();
 
       const enqueue = jest
         .spyOn(
           global.app.get<MessageQueueService>(
-            getQueueToken(MessageQueue.workflowQueue),
+            getQueueToken(MessageQueue.aiQueue),
           ),
           'add',
         )
@@ -1586,102 +1952,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     expect(retried.state.stepInfos[failedStep.id].status).toBe('FAILED');
   });
 
-  it('relinks restored runs before retrying their captured snapshots', async () => {
-    const failedStep: WorkflowAction = {
-      ...emptyStep(),
-      type: WorkflowActionType.DELAY,
-      settings: {
-        ...settings,
-        input: {
-          delayType: 'SCHEDULED_DATE',
-          scheduledDateTime: '2000-01-01T00:00:00.000Z',
-        },
-      },
-    };
-    const fixture = await createFixture({ steps: [failedStep] });
-    const originalCoreWorkflowId = fixture.coreWorkflowId;
-    const runId = await runFixture(fixture);
-
-    await waitForRun(runId, 'FAILED');
-
-    const deleteResponse = await workflowGraphqlRequest(
-      'mutation Delete($id: UUID!) { deleteWorkflow(id: $id) { id } }',
-      { id: fixture.workflowId },
-    );
-
-    expect(deleteResponse.body.errors).toBeUndefined();
-
-    await global.testDataSource.query(
-      'DELETE FROM core.workflow WHERE id = $1',
-      [originalCoreWorkflowId],
-    );
-
-    const restoreResponse = await workflowGraphqlRequest(
-      'mutation Restore($id: UUID!) { restoreWorkflow(id: $id) { id } }',
-      { id: fixture.workflowId },
-    );
-
-    expect(restoreResponse.body.errors).toBeUndefined();
-
-    const [restoredMapping] = await global.testDataSource.query(
-      `SELECT w."coreWorkflowId", wv."coreWorkflowVersionId"
-       FROM "${schema}".workflow w
-       JOIN "${schema}"."workflowVersion" wv ON wv.id = $2
-       WHERE w.id = $1`,
-      [fixture.workflowId, fixture.workflowVersionId],
-    );
-    const restoredRun = await getRun(runId);
-
-    expect(restoredMapping.coreWorkflowId).not.toBe(originalCoreWorkflowId);
-    expect(restoredRun.coreWorkflowId).toBe(restoredMapping.coreWorkflowId);
-    expect(restoredRun.coreWorkflowVersionId).toBe(
-      restoredMapping.coreWorkflowVersionId,
-    );
-
-    fixture.coreWorkflowId = restoredMapping.coreWorkflowId;
-    fixture.coreWorkflowVersionId = restoredMapping.coreWorkflowVersionId;
-
-    const retryResponse = await workflowGraphqlRequest(
-      'mutation Retry($id: UUID!) { retryWorkflowRun(workflowRunId: $id) { id status } }',
-      { id: runId },
-    );
-
-    expect(retryResponse.body.errors).toBeUndefined();
-    await waitForRun(runId, 'FAILED');
-  });
-
-  it('restores historical versions that no longer validate against current metadata', async () => {
-    const historicalStep: WorkflowAction = {
-      ...emptyStep(),
-      type: WorkflowActionType.CREATE_RECORD,
-      settings: {
-        ...settings,
-        input: { objectName: 'unavailableObject', objectRecord: {} },
-      },
-    };
-    const fixture = await createFixture({ steps: [historicalStep] });
-    const deleteResponse = await workflowGraphqlRequest(
-      'mutation Delete($id: UUID!) { deleteWorkflow(id: $id) { id } }',
-      { id: fixture.workflowId },
-    );
-
-    expect(deleteResponse.body.errors).toBeUndefined();
-
-    const restoreResponse = await workflowGraphqlRequest(
-      'mutation Restore($id: UUID!) { restoreWorkflow(id: $id) { id } }',
-      { id: fixture.workflowId },
-    );
-
-    expect(restoreResponse.body.errors).toBeUndefined();
-
-    const [restoredVersion] = await global.testDataSource.query(
-      'SELECT steps FROM core."workflowVersion" WHERE id = $1',
-      [fixture.coreWorkflowVersionId],
-    );
-
-    expect(restoredVersion.steps).toEqual([historicalStep]);
-  });
-
   it('records hard-throttled runs with their requested id and snapshot', async () => {
     const fixture = await createFixture({ mirrorless: true });
     jest
@@ -1710,7 +1980,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     const capacity = jest
       .spyOn(
         global.workflowTestServices.throttling,
-        'getRemainingRunsToEnqueueCount',
+        'consumeRemainingRunsToEnqueueCount',
       )
       .mockResolvedValue(0);
     const runId = await runFixture(fixture);
@@ -1720,7 +1990,14 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     capacity.mockRestore();
     await global.app
       .get<MessageQueueService>(getQueueToken(MessageQueue.workflowQueue))
-      .add('WorkflowRunEnqueueJob', { workspaceId, isCacheMode: false });
+      .add(
+        'WorkflowRunEnqueueJob',
+        { workspaceId, isCacheMode: false },
+        {
+          workspaceId,
+          isWorkspaceJob: true,
+        },
+      );
     await waitForRun(runId, 'COMPLETED');
   });
 
@@ -1764,333 +2041,219 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     expect(run.state.stepInfos[step.id].status).toBe('FAILED');
   });
 
-  it('edits, activates and executes through both APIs across flag ON / OFF / ON', async () => {
-    const flags = global.workflowTestServices.flags;
-    const featureFlag = FeatureFlagKey.IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED;
-    const original = await flags.isFeatureEnabled(featureFlag, workspaceId);
+  it('edits, activates and executes a new draft through the core API', async () => {
     const fixture = await createFixture();
-    try {
-      for (const value of [true, false, true]) {
-        await flags.upsertWorkspaceFeatureFlag({
-          workspaceId,
-          featureFlag,
-          value,
-        });
-        const draftResponse = await workflowGraphqlRequest(
-          value
-            ? 'mutation Draft($input: CreateDraftFromCoreWorkflowVersionInput!) { createDraftFromCoreWorkflowVersion(input: $input) { id } }'
-            : 'mutation Draft($input: CreateDraftFromWorkflowVersionInput!) { createDraftFromWorkflowVersion(input: $input) { id } }',
-          {
-            input: value
-              ? {
-                  coreWorkflowId: fixture.coreWorkflowId,
-                  coreWorkflowVersionIdToCopy: fixture.coreWorkflowVersionId,
-                }
-              : {
-                  workflowId: fixture.workflowId,
-                  workflowVersionIdToCopy: fixture.workflowVersionId,
-                },
-          },
-        );
-        expect(draftResponse.body.errors).toBeUndefined();
-        const [draft] = await global.testDataSource.query(
-          `SELECT id, "workspaceWorkflowVersionId" FROM core."workflowVersion" WHERE "coreWorkflowId" = $1 AND status = 'DRAFT'`,
-          [fixture.coreWorkflowId],
-        );
-        fixture.coreWorkflowVersionId = draft.id;
-        fixture.workflowVersionId = draft.workspaceWorkflowVersionId;
-        const editedTrigger = {
-          ...fixture.trigger,
-          name: `B-Async flag ${value}`,
-        };
-        const editResponse = await workflowGraphqlRequest(
-          value
-            ? 'mutation Edit($input: UpdateCoreWorkflowVersionTriggerInput!) { updateCoreWorkflowVersionTrigger(input: $input) { trigger } }'
-            : 'mutation Edit($input: UpdateWorkflowVersionTriggerInput!) { updateWorkflowVersionTrigger(input: $input) { trigger } }',
-          {
-            input: {
-              ...(value
-                ? { coreWorkflowVersionId: draft.id }
-                : { workflowVersionId: draft.workspaceWorkflowVersionId }),
-              trigger: editedTrigger,
-            },
-          },
-        );
-        expect(editResponse.body.errors).toBeUndefined();
-        const activateResponse = await workflowGraphqlRequest(
-          value
-            ? 'mutation Activate($id: UUID!) { activateCoreWorkflowVersion(coreWorkflowVersionId: $id) }'
-            : 'mutation Activate($id: UUID!) { activateWorkflowVersion(workflowVersionId: $id) }',
-          { id: value ? draft.id : draft.workspaceWorkflowVersionId },
-        );
-        expect(activateResponse.body.errors).toBeUndefined();
-        for (const legacy of [false, true]) {
-          const run = await waitForRun(
-            await runFixture(fixture, legacy),
-            'COMPLETED',
-          );
-          expect(run.coreWorkflowVersionId).toBe(fixture.coreWorkflowVersionId);
-        }
-      }
-    } finally {
-      await flags.upsertWorkspaceFeatureFlag({
-        workspaceId,
-        featureFlag,
-        value: original,
-      });
-    }
-  });
-
-  it.each(['core', 'legacy'] as const)(
-    'keeps the published version executable when replacement activation fails through the %s API',
-    async (api) => {
-      const fixture = await createFixture({
-        triggerType: 'CRON',
-        triggerSettings: { type: 'CUSTOM', pattern: '* * * * *' },
-      });
-      const triggerService =
-        getAppProviderByClassName<AutomatedTriggerWorkspaceService>(
-          'AutomatedTriggerWorkspaceService',
-        );
-      await global.testDataSource.query(
-        `UPDATE core."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-        [fixture.coreWorkflowVersionId],
-      );
-      await global.testDataSource.query(
-        `UPDATE "${schema}"."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-        [fixture.workflowVersionId],
-      );
-      const activateQuery =
-        api === 'core'
-          ? 'mutation Activate($id: UUID!) { activateCoreWorkflowVersion(coreWorkflowVersionId: $id) }'
-          : 'mutation Activate($id: UUID!) { activateWorkflowVersion(workflowVersionId: $id) }';
-      const firstActivation = await workflowGraphqlRequest(activateQuery, {
-        id:
-          api === 'core'
-            ? fixture.coreWorkflowVersionId
-            : fixture.workflowVersionId,
-      });
-      expect(firstActivation.body.errors).toBeUndefined();
-      const cache = global.app.get<CacheStorageService>(
-        CacheStorageNamespace.ModuleWorkflow,
-      );
-      const cronCacheKey = WORKFLOW_CRON_TRIGGER_CACHE_KEY;
-      const originalCache = await cache.hashGetValues(cronCacheKey);
-      const draftResponse = await workflowGraphqlRequest(
-        'mutation Draft($input: CreateDraftFromCoreWorkflowVersionInput!) { createDraftFromCoreWorkflowVersion(input: $input) { id workspaceWorkflowVersionId } }',
-        {
+    const { createDraftFromCoreWorkflowVersion: draft } =
+      await coreWorkflowGraphqlRequest<{
+        createDraftFromCoreWorkflowVersion: { id: string };
+      }>({
+        query:
+          'mutation Draft($input: CreateDraftFromCoreWorkflowVersionInput!) { createDraftFromCoreWorkflowVersion(input: $input) { id } }',
+        variables: {
           input: {
             coreWorkflowId: fixture.coreWorkflowId,
             coreWorkflowVersionIdToCopy: fixture.coreWorkflowVersionId,
           },
         },
-      );
-      expect(draftResponse.body.errors).toBeUndefined();
-      const draft = draftResponse.body.data.createDraftFromCoreWorkflowVersion;
-      const failure = jest
-        .spyOn(triggerService, 'addAutomatedTrigger')
-        .mockRejectedValueOnce(new Error('Replacement trigger failure'));
-      const response = await workflowGraphqlRequest(activateQuery, {
-        id: api === 'core' ? draft.id : draft.workspaceWorkflowVersionId,
       });
-      expect(response.body.errors).toBeDefined();
-      expect(failure).toHaveBeenCalledTimes(1);
-      failure.mockRestore();
-      const [oldVersion] = await global.testDataSource.query(
-        'SELECT status FROM core."workflowVersion" WHERE id = $1',
-        [fixture.coreWorkflowVersionId],
-      );
-      const [newVersion] = await global.testDataSource.query(
-        'SELECT status FROM core."workflowVersion" WHERE id = $1',
-        [draft.id],
-      );
-      const [workflow] = await global.testDataSource.query(
-        'SELECT "lastPublishedCoreWorkflowVersionId" FROM core.workflow WHERE id = $1',
-        [fixture.coreWorkflowId],
-      );
-      const [oldMirror] = await global.testDataSource.query(
-        `SELECT status FROM "${schema}"."workflowVersion" WHERE id = $1`,
-        [fixture.workflowVersionId],
-      );
-      const triggers = await global.testDataSource.query(
-        `SELECT id FROM "${schema}"."workflowAutomatedTrigger" WHERE "workflowId" = $1`,
-        [fixture.workflowId],
-      );
-      expect(oldVersion.status).toBe('ACTIVE');
-      expect(oldMirror.status).toBe('ACTIVE');
-      expect(newVersion.status).toBe('DRAFT');
-      expect(workflow.lastPublishedCoreWorkflowVersionId).toBe(
-        fixture.coreWorkflowVersionId,
-      );
-      expect(triggers).toHaveLength(1);
-      expect(await cache.hashGetValues(cronCacheKey)).toEqual(originalCache);
-      await waitForRun(await runFixture(fixture), 'COMPLETED');
-      const retry = await workflowGraphqlRequest(activateQuery, {
-        id: api === 'core' ? draft.id : draft.workspaceWorkflowVersionId,
-      });
-      expect(retry.body.errors).toBeUndefined();
-      const versions = await global.testDataSource.query(
-        'SELECT id, status FROM core."workflowVersion" WHERE "coreWorkflowId" = $1',
-        [fixture.coreWorkflowId],
-      );
-      expect(versions).toEqual(
-        expect.arrayContaining([
-          { id: fixture.coreWorkflowVersionId, status: 'ARCHIVED' },
-          { id: draft.id, status: 'ACTIVE' },
-        ]),
-      );
-    },
-  );
 
-  it.each(['core', 'legacy'] as const)(
-    'rejects a draft edited while the %s API prepares activation',
-    async (api) => {
-      const fixture = await createFixture();
-      await global.testDataSource.query(
-        `UPDATE core."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-        [fixture.coreWorkflowVersionId],
-      );
-      await global.testDataSource.query(
-        `UPDATE "${schema}"."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-        [fixture.workflowVersionId],
-      );
-      const codeBuild = getAppProviderByClassName<CodeStepBuildService>(
-        'CodeStepBuildService',
-      );
-      let notifyPreparing: () => void = () => {};
-      let releasePreparation: () => void = () => {};
-      const preparing = new Promise<void>((resolve) => {
-        notifyPreparing = resolve;
-      });
-      const prepared = new Promise<void>((resolve) => {
-        releasePreparation = resolve;
-      });
-      const buildSpy = jest
-        .spyOn(codeBuild, 'switchCodeStepLogicFunctionsToPrebuilt')
-        .mockImplementationOnce(async () => {
-          notifyPreparing();
-          await prepared;
-        });
-      const activation = workflowGraphqlRequest(
-        api === 'core'
-          ? 'mutation Activate($id: UUID!) { activateCoreWorkflowVersion(coreWorkflowVersionId: $id) }'
-          : 'mutation Activate($id: UUID!) { activateWorkflowVersion(workflowVersionId: $id) }',
-        {
-          id:
-            api === 'core'
-              ? fixture.coreWorkflowVersionId
-              : fixture.workflowVersionId,
-        },
-      ).then((response) => response);
-      try {
-        await preparing;
-        const edit = await workflowGraphqlRequest(
-          'mutation Edit($input: UpdateCoreWorkflowVersionTriggerInput!) { updateCoreWorkflowVersionTrigger(input: $input) { trigger } }',
-          {
-            input: {
-              coreWorkflowVersionId: fixture.coreWorkflowVersionId,
-              trigger: { ...fixture.trigger, name: 'Edited during activation' },
-            },
-          },
-        );
-        expect(edit.body.errors).toBeUndefined();
-      } finally {
-        releasePreparation();
-        buildSpy.mockRestore();
-      }
-      expect(JSON.stringify((await activation).body.errors)).toContain(
-        'changed',
-      );
-      const [core] = await global.testDataSource.query(
-        'SELECT status, triggers FROM core."workflowVersion" WHERE id = $1',
-        [fixture.coreWorkflowVersionId],
-      );
-      expect(core.status).toBe('DRAFT');
-      expect(core.triggers[0].name).toBe('Edited during activation');
-    },
-  );
+    await updateCoreWorkflowVersionTrigger({
+      coreWorkflowVersionId: draft.id,
+      trigger: { ...fixture.trigger, name: 'B-Async edited' },
+    });
+    await activateCoreWorkflowVersion({ coreWorkflowVersionId: draft.id });
+    fixture.coreWorkflowVersionId = draft.id;
 
-  it.each(['core', 'legacy'] as const)(
-    'rebuilds cron dispatch after a cache publication failure through the %s API',
-    async (api) => {
-      const fixture = await createFixture({
-        triggerType: 'CRON',
-        triggerSettings: { type: 'CUSTOM', pattern: '* * * * *' },
-      });
-      await global.testDataSource.query(
-        `UPDATE core."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-        [fixture.coreWorkflowVersionId],
+    const run = await waitForRun(await runFixture(fixture), 'COMPLETED');
+
+    expect(run.coreWorkflowVersionId).toBe(draft.id);
+  });
+
+  it('keeps the published version executable when replacement activation fails', async () => {
+    const fixture = await createFixture({
+      triggerType: 'CRON',
+      triggerSettings: { type: 'CUSTOM', pattern: '* * * * *' },
+    });
+    const migrationRunner =
+      getAppProviderByClassName<WorkspaceMigrationValidateBuildAndRunService>(
+        'WorkspaceMigrationValidateBuildAndRunService',
       );
-      await global.testDataSource.query(
-        `UPDATE "${schema}"."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-        [fixture.workflowVersionId],
-      );
-      const cache = global.app.get<CacheStorageService>(
-        CacheStorageNamespace.ModuleWorkflow,
-      );
-      await cache.hashSet({
-        key: WORKFLOW_CRON_TRIGGER_CACHE_KEY,
-        field: 'b-async-rebuild-test',
-        value: '{}',
-      });
-      const publication = jest
-        .spyOn(cache, 'hashSetIfExists')
-        .mockRejectedValueOnce(new Error('Cron cache publication failure'));
-      const response = await workflowGraphqlRequest(
-        api === 'core'
-          ? 'mutation Activate($id: UUID!) { activateCoreWorkflowVersion(coreWorkflowVersionId: $id) }'
-          : 'mutation Activate($id: UUID!) { activateWorkflowVersion(workflowVersionId: $id) }',
-        {
-          id:
-            api === 'core'
-              ? fixture.coreWorkflowVersionId
-              : fixture.workflowVersionId,
+    await markFixtureVersionAsDraft(fixture);
+    const activateQuery =
+      'mutation Activate($id: UUID!) { activateCoreWorkflowVersion(coreWorkflowVersionId: $id) }';
+    const firstActivation = await workflowGraphqlRequest(activateQuery, {
+      id: fixture.coreWorkflowVersionId,
+    });
+    expect(firstActivation.body.errors).toBeUndefined();
+    const cache = global.app.get<CacheStorageService>(
+      CacheStorageNamespace.ModuleWorkflow,
+    );
+    const cronCacheKey = WORKFLOW_CRON_TRIGGER_CACHE_KEY;
+    const originalCache = await cache.hashGetValues(cronCacheKey);
+    const draftResponse = await workflowGraphqlRequest(
+      'mutation Draft($input: CreateDraftFromCoreWorkflowVersionInput!) { createDraftFromCoreWorkflowVersion(input: $input) { id } }',
+      {
+        input: {
+          coreWorkflowId: fixture.coreWorkflowId,
+          coreWorkflowVersionIdToCopy: fixture.coreWorkflowVersionId,
         },
+      },
+    );
+    expect(draftResponse.body.errors).toBeUndefined();
+    const draft = draftResponse.body.data.createDraftFromCoreWorkflowVersion;
+    const failure = jest
+      .spyOn(migrationRunner, 'validateBuildAndRunWorkspaceMigration')
+      .mockRejectedValueOnce(new Error('Replacement activation failure'));
+    const response = await workflowGraphqlRequest(activateQuery, {
+      id: draft.id,
+    });
+    expect(response.body.errors).toBeDefined();
+    expect(failure).toHaveBeenCalledTimes(1);
+    failure.mockRestore();
+    const [oldVersion] = await global.testDataSource.query(
+      'SELECT status FROM core."workflowVersion" WHERE id = $1',
+      [fixture.coreWorkflowVersionId],
+    );
+    const [newVersion] = await global.testDataSource.query(
+      'SELECT status FROM core."workflowVersion" WHERE id = $1',
+      [draft.id],
+    );
+    const [workflow] = await global.testDataSource.query(
+      'SELECT "lastPublishedCoreWorkflowVersionId" FROM core.workflow WHERE id = $1',
+      [fixture.coreWorkflowId],
+    );
+    expect(oldVersion.status).toBe('ACTIVE');
+    expect(newVersion.status).toBe('DRAFT');
+    expect(workflow.lastPublishedCoreWorkflowVersionId).toBe(
+      fixture.coreWorkflowVersionId,
+    );
+    expect(await cache.hashGetValues(cronCacheKey)).toEqual(originalCache);
+    await waitForRun(await runFixture(fixture), 'COMPLETED');
+    const retry = await workflowGraphqlRequest(activateQuery, {
+      id: draft.id,
+    });
+    expect(retry.body.errors).toBeUndefined();
+    const versions = await global.testDataSource.query(
+      'SELECT id, status FROM core."workflowVersion" WHERE "coreWorkflowId" = $1',
+      [fixture.coreWorkflowId],
+    );
+    expect(versions).toEqual(
+      expect.arrayContaining([
+        { id: fixture.coreWorkflowVersionId, status: 'ARCHIVED' },
+        { id: draft.id, status: 'ACTIVE' },
+      ]),
+    );
+  });
+
+  it('rejects a draft edited while activation is being prepared', async () => {
+    const fixture = await createFixture();
+    await markFixtureVersionAsDraft(fixture);
+    const workflowCommon =
+      getAppProviderByClassName<WorkflowCommonWorkspaceService>(
+        'WorkflowCommonWorkspaceService',
       );
-      expect(response.body.errors).toBeUndefined();
-      expect(publication).toHaveBeenCalledTimes(1);
-      publication.mockRestore();
-      expect(
-        await cache.hashGetValues(WORKFLOW_CRON_TRIGGER_CACHE_KEY),
-      ).toEqual([]);
-      await global.workflowTestServices.cron.handle();
-      const entries = await cache.hashGetValues(
-        WORKFLOW_CRON_TRIGGER_CACHE_KEY,
-      );
-      expect(entries.map((entry) => JSON.parse(entry))).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
+    const getFlatEntityMaps =
+      workflowCommon.getFlatEntityMaps.bind(workflowCommon);
+    let notifyPreparing: () => void = () => {};
+    let releasePreparation: () => void = () => {};
+    const preparing = new Promise<void>((resolve) => {
+      notifyPreparing = resolve;
+    });
+    const prepared = new Promise<void>((resolve) => {
+      releasePreparation = resolve;
+    });
+    const preparationSpy = jest
+      .spyOn(workflowCommon, 'getFlatEntityMaps')
+      .mockImplementationOnce(async (...args) => {
+        notifyPreparing();
+        await prepared;
+
+        return getFlatEntityMaps(...args);
+      });
+    const activation = workflowGraphqlRequest(
+      'mutation Activate($id: UUID!) { activateCoreWorkflowVersion(coreWorkflowVersionId: $id) }',
+      { id: fixture.coreWorkflowVersionId },
+    ).then((response) => response);
+    try {
+      await preparing;
+      const edit = await workflowGraphqlRequest(
+        'mutation Edit($input: UpdateCoreWorkflowVersionTriggerInput!) { updateCoreWorkflowVersionTrigger(input: $input) { trigger } }',
+        {
+          input: {
             coreWorkflowVersionId: fixture.coreWorkflowVersionId,
-          }),
-        ]),
+            trigger: { ...fixture.trigger, name: 'Edited during activation' },
+          },
+        },
       );
-      for (let attempt = 0; attempt < 100; attempt++) {
-        const runs = await global.testDataSource.query(
-          `SELECT id FROM "${schema}"."workflowRun" WHERE "coreWorkflowId" = $1`,
-          [fixture.coreWorkflowId],
-        );
-        if (runs.length > 0) {
-          await waitForRun(runs[0].id, 'COMPLETED');
-          return;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 100));
+      expect(edit.body.errors).toBeUndefined();
+    } finally {
+      releasePreparation();
+      preparationSpy.mockRestore();
+    }
+    expect(JSON.stringify((await activation).body.errors)).toContain('changed');
+    const [core] = await global.testDataSource.query(
+      'SELECT status, triggers FROM core."workflowVersion" WHERE id = $1',
+      [fixture.coreWorkflowVersionId],
+    );
+    expect(core.status).toBe('DRAFT');
+    expect(core.triggers[0].name).toBe('Edited during activation');
+  });
+
+  it('rebuilds cron dispatch after a cache publication failure', async () => {
+    const fixture = await createFixture({
+      triggerType: 'CRON',
+      triggerSettings: { type: 'CUSTOM', pattern: '* * * * *' },
+    });
+    await markFixtureVersionAsDraft(fixture);
+    const cache = global.app.get<CacheStorageService>(
+      CacheStorageNamespace.ModuleWorkflow,
+    );
+    await cache.hashSet({
+      key: WORKFLOW_CRON_TRIGGER_CACHE_KEY,
+      field: 'b-async-rebuild-test',
+      value: '{}',
+    });
+    const publication = jest
+      .spyOn(cache, 'hashSetIfExists')
+      .mockRejectedValueOnce(new Error('Cron cache publication failure'));
+    const response = await workflowGraphqlRequest(
+      'mutation Activate($id: UUID!) { activateCoreWorkflowVersion(coreWorkflowVersionId: $id) }',
+      { id: fixture.coreWorkflowVersionId },
+    );
+    expect(response.body.errors).toBeUndefined();
+    expect(publication).toHaveBeenCalledTimes(1);
+    publication.mockRestore();
+    expect(await cache.hashGetValues(WORKFLOW_CRON_TRIGGER_CACHE_KEY)).toEqual(
+      [],
+    );
+    await global.workflowTestServices.cron.handle();
+    const entries = await cache.hashGetValues(WORKFLOW_CRON_TRIGGER_CACHE_KEY);
+    expect(entries.map((entry) => JSON.parse(entry))).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          coreWorkflowVersionId: fixture.coreWorkflowVersionId,
+        }),
+      ]),
+    );
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const runs = await global.testDataSource.query(
+        `SELECT id FROM "${schema}"."workflowRun" WHERE "coreWorkflowId" = $1`,
+        [fixture.coreWorkflowId],
+      );
+      if (runs.length > 0) {
+        await waitForRun(runs[0].id, 'COMPLETED');
+        return;
       }
-      throw new Error(
-        'Rebuilt cron cache did not dispatch the activated workflow',
-      );
-    },
-  );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    throw new Error(
+      'Rebuilt cron cache did not dispatch the activated workflow',
+    );
+  });
 
   it('rejects an overlapping builder edit without losing the successful edit and accepts a fresh retry', async () => {
     const fixture = await createFixture();
-    await global.testDataSource.query(
-      `UPDATE core."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-      [fixture.coreWorkflowVersionId],
-    );
-    await global.testDataSource.query(
-      `UPDATE "${schema}"."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-      [fixture.workflowVersionId],
-    );
+    await markFixtureVersionAsDraft(fixture);
     const writer = getAppProviderByClassName<CoreWorkflowVersionWriteService>(
       'CoreWorkflowVersionWriteService',
     );
@@ -2149,102 +2312,9 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
       'SELECT triggers, steps FROM core."workflowVersion" WHERE id = $1',
       [fixture.coreWorkflowVersionId],
     );
-    const [mirror] = await global.testDataSource.query(
-      `SELECT trigger, steps FROM "${schema}"."workflowVersion" WHERE id = $1`,
-      [fixture.workflowVersionId],
-    );
     expect(core.triggers[0].name).toBe('Concurrent trigger edit');
     expect(core.steps[0].position).toEqual({ x: 321, y: 654 });
-    expect(mirror).toEqual({ trigger: core.triggers[0], steps: core.steps });
   });
-
-  it.each(['rename', 'activate', 'activate-version'] as const)(
-    'allows reconciliation to acquire core locks during a blocked %s',
-    async (operation) => {
-      const fixture = await createFixture();
-
-      if (operation !== 'rename') {
-        await global.testDataSource.query(
-          `UPDATE core."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-          [fixture.coreWorkflowVersionId],
-        );
-        await global.testDataSource.query(
-          `UPDATE "${schema}"."workflowVersion" SET status = 'DRAFT' WHERE id = $1`,
-          [fixture.workflowVersionId],
-        );
-        await global.testDataSource.query(
-          `UPDATE core.workflow SET "lastPublishedCoreWorkflowVersionId" = NULL, "lastPublishedVersionId" = NULL WHERE id = $1`,
-          [fixture.coreWorkflowId],
-        );
-        await global.testDataSource.query(
-          `UPDATE "${schema}".workflow SET "lastPublishedVersionId" = NULL WHERE id = $1`,
-          [fixture.workflowId],
-        );
-      }
-
-      const transaction = global.testDataSource.createQueryRunner();
-
-      await transaction.connect();
-      await transaction.startTransaction();
-      await transaction.query(
-        `SELECT id FROM "${schema}"."${operation === 'activate-version' ? 'workflowVersion' : 'workflow'}" WHERE id = $1 FOR UPDATE`,
-        [
-          operation === 'activate-version'
-            ? fixture.workflowVersionId
-            : fixture.workflowId,
-        ],
-      );
-      const [{ pid }] = await transaction.query(
-        'SELECT pg_backend_pid() AS pid',
-      );
-      const mutation = workflowGraphqlRequest(
-        operation === 'rename'
-          ? 'mutation Update($input: UpdateCoreWorkflowInput!) { updateCoreWorkflow(input: $input) { id name } }'
-          : 'mutation Activate($id: UUID!) { activateCoreWorkflowVersion(coreWorkflowVersionId: $id) }',
-        operation === 'rename'
-          ? {
-              input: {
-                coreWorkflowId: fixture.coreWorkflowId,
-                name: 'Concurrent rename',
-              },
-            }
-          : { id: fixture.coreWorkflowVersionId },
-      ).then((response) => response);
-
-      try {
-        let blocked = false;
-
-        for (let attempt = 0; attempt < 100; attempt++) {
-          const [activity] = await global.testDataSource.query(
-            `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE $1 = ANY(pg_blocking_pids(pid))) AS blocked`,
-            [pid],
-          );
-
-          if (activity.blocked) {
-            blocked = true;
-            break;
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, 20));
-        }
-
-        expect(blocked).toBe(true);
-        await transaction.query(
-          'SELECT id FROM core.workflow WHERE id = $1 FOR UPDATE NOWAIT',
-          [fixture.coreWorkflowId],
-        );
-        await transaction.commitTransaction();
-        expect((await mutation).body.errors).toBeUndefined();
-      } finally {
-        if (transaction.isTransactionActive) {
-          await transaction.rollbackTransaction();
-        }
-
-        await transaction.release();
-        await mutation;
-      }
-    },
-  );
 
   it('fires a mirrorless database-event workflow from a real record creation', async () => {
     const fixture = await createFixture({
@@ -2276,169 +2346,6 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         { id: companyId },
       );
       expect(cleanup.body.errors).toBeUndefined();
-    }
-  });
-
-  it('dry-runs and idempotently backfills every legacy run status', async () => {
-    const fixture = await createFixture();
-    const runIds: string[] = [];
-    try {
-      for (const status of [
-        'NOT_STARTED',
-        'ENQUEUED',
-        'RUNNING',
-        'FAILED',
-        'STOPPING',
-        'STOPPED',
-        'COMPLETED',
-      ]) {
-        const id = randomUUID();
-        runIds.push(id);
-        await global.testDataSource.query(
-          `INSERT INTO "${schema}"."workflowRun" (id, name, "workflowId", "workflowVersionId", status, position, state) VALUES ($1, 'B-Async migration', $2, $3, $4, 0, '{}')`,
-          [id, fixture.workflowId, fixture.workflowVersionId, status],
-        );
-      }
-      await backfill(true);
-      for (const id of runIds) {
-        expect((await getRun(id)).coreWorkflowVersionId).toBeNull();
-      }
-      await backfill();
-      await backfill();
-      for (const id of runIds) {
-        expect(await getRun(id)).toMatchObject({
-          coreWorkflowId: fixture.coreWorkflowId,
-          coreWorkflowVersionId: fixture.coreWorkflowVersionId,
-        });
-      }
-    } finally {
-      await global.testDataSource.query(
-        `DELETE FROM "${schema}"."workflowRun" WHERE id = ANY($1::uuid[])`,
-        [runIds],
-      );
-    }
-  });
-
-  it('rolls back mapping writes when a run has conflicting core ids', async () => {
-    const fixture = await createFixture();
-    const other = await createFixture({ mirrorless: true });
-    const id = randomUUID();
-    try {
-      await global.testDataSource.query(
-        `INSERT INTO "${schema}"."workflowRun" (id, name, "workflowId", "workflowVersionId", "coreWorkflowId", status, position, state) VALUES ($1, 'B-Async conflict', $2, $3, $4, 'ENQUEUED', 0, '{}')`,
-        [
-          id,
-          fixture.workflowId,
-          fixture.workflowVersionId,
-          other.coreWorkflowId,
-        ],
-      );
-      await expect(backfill()).rejects.toThrow(
-        'Conflicting workflow run core ids',
-      );
-      const [version] = await global.testDataSource.query(
-        'SELECT "workspaceWorkflowVersionId" FROM core."workflowVersion" WHERE id = $1',
-        [fixture.coreWorkflowVersionId],
-      );
-      expect(version.workspaceWorkflowVersionId).toBe(
-        fixture.workflowVersionId,
-      );
-      expect((await getRun(id)).coreWorkflowVersionId).toBeNull();
-    } finally {
-      await global.testDataSource.query(
-        `DELETE FROM "${schema}"."workflowRun" WHERE id = $1`,
-        [id],
-      );
-      await global.testDataSource.query(
-        'UPDATE core."workflowVersion" SET "workspaceWorkflowVersionId" = $2 WHERE id = $1',
-        [fixture.coreWorkflowVersionId, fixture.workflowVersionId],
-      );
-    }
-  });
-
-  it('re-derives run core ids whose core rows no longer exist', async () => {
-    const fixture = await createFixture();
-    const id = randomUUID();
-    try {
-      await global.testDataSource.query(
-        `INSERT INTO "${schema}"."workflowRun" (id, name, "workflowId", "workflowVersionId", "coreWorkflowId", "coreWorkflowVersionId", status, position, state) VALUES ($1, 'B-Async stale', $2, $3, $4, $5, 'COMPLETED', 0, '{}')`,
-        [
-          id,
-          fixture.workflowId,
-          fixture.workflowVersionId,
-          randomUUID(),
-          randomUUID(),
-        ],
-      );
-      await backfill();
-      expect(await getRun(id)).toMatchObject({
-        coreWorkflowId: fixture.coreWorkflowId,
-        coreWorkflowVersionId: fixture.coreWorkflowVersionId,
-      });
-    } finally {
-      await global.testDataSource.query(
-        `DELETE FROM "${schema}"."workflowRun" WHERE id = $1`,
-        [id],
-      );
-    }
-  });
-
-  it('creates the missing core version of a live unlinked workspace version', async () => {
-    const fixture = await createFixture();
-    await global.testDataSource.query(
-      'DELETE FROM core."workflowVersion" WHERE id = $1',
-      [fixture.coreWorkflowVersionId],
-    );
-    await global.testDataSource.query(
-      `UPDATE "${schema}"."workflowVersion" SET "coreWorkflowVersionId" = NULL WHERE id = $1`,
-      [fixture.workflowVersionId],
-    );
-    await global.testDataSource.query(
-      'UPDATE core.workflow SET "lastPublishedCoreWorkflowVersionId" = NULL WHERE id = $1',
-      [fixture.coreWorkflowId],
-    );
-
-    await backfill();
-
-    const [workspaceVersion] = await global.testDataSource.query(
-      `SELECT "coreWorkflowVersionId" FROM "${schema}"."workflowVersion" WHERE id = $1`,
-      [fixture.workflowVersionId],
-    );
-    const [coreVersion] = await global.testDataSource.query(
-      'SELECT "coreWorkflowId", "workspaceWorkflowVersionId", status, triggers, steps FROM core."workflowVersion" WHERE id = $1',
-      [workspaceVersion.coreWorkflowVersionId],
-    );
-    const [coreWorkflow] = await global.testDataSource.query(
-      'SELECT "lastPublishedCoreWorkflowVersionId" FROM core.workflow WHERE id = $1',
-      [fixture.coreWorkflowId],
-    );
-
-    expect(coreVersion).toEqual({
-      coreWorkflowId: fixture.coreWorkflowId,
-      workspaceWorkflowVersionId: fixture.workflowVersionId,
-      status: 'ACTIVE',
-      triggers: [fixture.trigger],
-      steps: fixture.steps,
-    });
-    expect(coreWorkflow.lastPublishedCoreWorkflowVersionId).toBe(
-      workspaceVersion.coreWorkflowVersionId,
-    );
-  });
-
-  it('leaves a pending run without a workspace version untouched', async () => {
-    const id = randomUUID();
-    try {
-      await global.testDataSource.query(
-        `INSERT INTO "${schema}"."workflowRun" (id, name, status, position, state) VALUES ($1, 'B-Async unmapped', 'RUNNING', 0, '{}')`,
-        [id],
-      );
-      await backfill();
-      expect((await getRun(id)).coreWorkflowId).toBeNull();
-    } finally {
-      await global.testDataSource.query(
-        `DELETE FROM "${schema}"."workflowRun" WHERE id = $1`,
-        [id],
-      );
     }
   });
 
@@ -2516,7 +2423,7 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
     }
   });
 
-  it('provisions a fresh workspace with synchronous parent and version mappings', async () => {
+  it('provisions a fresh workspace with core-only workflows and nullable run relations', async () => {
     const services = global.workflowTestServices;
     const freshWorkspaceId = randomUUID();
     const applicationId = randomUUID();
@@ -2566,32 +2473,33 @@ describe('core workflow execution and queue compatibility (e2e)', () => {
         },
         workspace,
       );
-      const versions = await global.testDataSource.query(
-        `SELECT wv.id, wv."coreWorkflowVersionId", cv."workspaceWorkflowVersionId", cv."coreWorkflowId", cw."workspaceWorkflowId", cw."lastPublishedCoreWorkflowVersionId", wv."workflowId"
-         FROM "${freshSchema}"."workflowVersion" wv
-         LEFT JOIN core."workflowVersion" cv ON cv.id = wv."coreWorkflowVersionId" AND cv."workspaceId" = $1
-         LEFT JOIN core.workflow cw ON cw.id = cv."coreWorkflowId" AND cw."workspaceId" = $1`,
+      const coreVersions = await global.testDataSource.query(
+        `SELECT cv.id, cv."workspaceWorkflowVersionId", cv."workflowId", cw."workspaceWorkflowId", cw."lastPublishedCoreWorkflowVersionId"
+         FROM core."workflowVersion" cv
+         JOIN core.workflow cw ON cw.id = cv."coreWorkflowId" AND cw."workspaceId" = $1
+         WHERE cv."workspaceId" = $1`,
         [freshWorkspaceId],
       );
-      expect(versions).toHaveLength(2);
-      for (const version of versions) {
-        expect(version.workspaceWorkflowVersionId).toBe(version.id);
-        expect(version.workspaceWorkflowId).toBe(version.workflowId);
-        expect(version.lastPublishedCoreWorkflowVersionId).toBe(
-          version.coreWorkflowVersionId,
-        );
-        expect(version.coreWorkflowId).toBeTruthy();
+      expect(coreVersions).toHaveLength(2);
+      for (const coreVersion of coreVersions) {
+        expect(coreVersion).toMatchObject({
+          workspaceWorkflowVersionId: null,
+          workflowId: null,
+          workspaceWorkflowId: null,
+          lastPublishedCoreWorkflowVersionId: coreVersion.id,
+        });
       }
+      const [{ workspaceWorkflowCount }] = await global.testDataSource.query(
+        `SELECT count(*)::int AS "workspaceWorkflowCount" FROM "${freshSchema}"."workflowVersion"`,
+      );
+      expect(workspaceWorkflowCount).toBe(0);
       const relationFields = await global.testDataSource.query(
         `SELECT f.name, f."isNullable" FROM core."fieldMetadata" f JOIN core."objectMetadata" o ON o.id = f."objectMetadataId" WHERE o."workspaceId" = $1 AND o."nameSingular" = 'workflowRun' AND f.name IN ('workflow', 'workflowVersion')`,
         [freshWorkspaceId],
       );
-      expect(relationFields).toHaveLength(2);
-      expect(
-        relationFields.every(
-          (field: { isNullable: boolean }) => field.isNullable,
-        ),
-      ).toBe(true);
+      expect(relationFields).toEqual([
+        { name: 'workflowVersion', isNullable: true },
+      ]);
     } finally {
       if (await workspaces.existsBy({ id: freshWorkspaceId })) {
         await services.workspace.deleteWorkspace(freshWorkspaceId);

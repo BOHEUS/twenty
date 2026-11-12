@@ -1,16 +1,16 @@
 import { SettingsCard } from '@/settings/components/SettingsCard';
-import { UndecoratedLink } from '@/ui/navigation/link/components/UndecoratedLink/UndecoratedLink';
 import { useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { IconPrompt } from 'twenty-ui/icon';
 import { useTheme } from 'twenty-ui/theme';
 import { GetAiSystemPromptPreviewDocument } from '~/generated-metadata/graphql';
-import { formatNumber } from '~/utils/format/formatNumber';
+import { formatNumber } from '@/localization/utils/formatNumber';
+import { useLingui } from '@lingui/react/macro';
 
 export const SettingsAiSystemPromptsSection = () => {
+  const { t } = useLingui();
   const theme = useTheme();
   const { data: previewData } = useQuery(GetAiSystemPromptPreviewDocument);
 
@@ -29,12 +29,11 @@ export const SettingsAiSystemPromptsSection = () => {
         title={t`System Prompt`}
         description={systemPromptDescription}
       />
-      <UndecoratedLink to={getSettingsPath(SettingsPath.AiPrompts)}>
-        <SettingsCard
-          Icon={<IconPrompt size={theme.icon.size.md} />}
-          title={t`Read system prompts`}
-        />
-      </UndecoratedLink>
+      <SettingsCard
+        to={getSettingsPath(SettingsPath.AiPrompts)}
+        Icon={<IconPrompt size={theme.icon.size.md} />}
+        title={t`Read system prompts`}
+      />
     </Section.Root>
   );
 };

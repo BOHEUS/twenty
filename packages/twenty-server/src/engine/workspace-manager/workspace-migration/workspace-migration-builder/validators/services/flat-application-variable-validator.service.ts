@@ -6,12 +6,14 @@ import { ALL_METADATA_NAME } from 'twenty-shared/metadata';
 import { isDefined } from 'twenty-shared/utils';
 
 import { ApplicationVariableEntityExceptionCode } from 'src/engine/core-modules/application/application-variable/application-variable.exception';
-import { ENGINE_INJECTED_ENV_VARIABLE_NAMES } from 'src/engine/core-modules/logic-function/logic-function-executor/constants/engine-injected-env-variable-names.constant';
+import { isReservedEnvVariableName } from 'src/engine/core-modules/logic-function/logic-function-executor/utils/is-reserved-env-variable-name.util';
 import { findFlatEntityByUniversalIdentifier } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier.util';
 import { type FailedFlatEntityValidation } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/types/failed-flat-entity-validation.type';
 import { getEmptyFlatEntityValidationError } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/utils/get-flat-entity-validation-error.util';
 import { type FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-update-validation-args.type';
 import { type UniversalFlatEntityValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-validation-args.type';
+import { validateApplicationVariableDefaultValue } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/validators/utils/validate-application-variable-default-value.util';
+import { validateApplicationVariableScope } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/validators/utils/validate-application-variable-scope.util';
 
 @Injectable()
 export class FlatApplicationVariableValidatorService {
@@ -40,7 +42,7 @@ export class FlatApplicationVariableValidatorService {
       });
     }
 
-    if (ENGINE_INJECTED_ENV_VARIABLE_NAMES.has(flatApplicationVariable.key)) {
+    if (isReservedEnvVariableName(flatApplicationVariable.key)) {
       const key = flatApplicationVariable.key;
 
       validationResult.errors.push({
@@ -67,6 +69,11 @@ export class FlatApplicationVariableValidatorService {
         userFriendlyMessage: msg`Application variable key must be unique`,
       });
     }
+
+    validationResult.errors.push(
+      ...validateApplicationVariableScope(flatApplicationVariable),
+      ...validateApplicationVariableDefaultValue(flatApplicationVariable),
+    );
 
     return validationResult;
   }
@@ -132,20 +139,37 @@ export class FlatApplicationVariableValidatorService {
         message: t`Application variable not found`,
         userFriendlyMessage: msg`Application variable not found`,
       });
+
+      return validationResult;
     }
 
     const keyUpdate = flatEntityUpdate.key;
 
-    if (
-      isDefined(keyUpdate) &&
-      ENGINE_INJECTED_ENV_VARIABLE_NAMES.has(keyUpdate)
-    ) {
+    if (isDefined(keyUpdate) && isReservedEnvVariableName(keyUpdate)) {
       validationResult.errors.push({
         code: ApplicationVariableEntityExceptionCode.INVALID_APPLICATION_VARIABLE_INPUT,
         message: t`Application variable key ${keyUpdate} is reserved`,
         userFriendlyMessage: msg`Application variable key ${keyUpdate} is reserved`,
       });
     }
+
+    if (
+      isDefined(flatEntityUpdate.scope) &&
+      flatEntityUpdate.scope !== fromFlatApplicationVariable.scope
+    ) {
+      validationResult.errors.push({
+        code: ApplicationVariableEntityExceptionCode.INVALID_APPLICATION_VARIABLE_INPUT,
+        message: t`Application variable scope cannot be changed after creation`,
+        userFriendlyMessage: msg`Application variable scope cannot be changed`,
+      });
+    }
+
+    validationResult.errors.push(
+      ...validateApplicationVariableDefaultValue({
+        ...fromFlatApplicationVariable,
+        ...flatEntityUpdate,
+      }),
+    );
 
     return validationResult;
   }

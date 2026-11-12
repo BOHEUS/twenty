@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { type Manifest } from 'twenty-shared/application';
 import { isDefined } from 'twenty-shared/utils';
 
+import { ApplicationGrantRoleService } from 'src/engine/core-modules/application/application-grant-role/services/application-grant-role.service';
 import { ApplicationSyncService } from 'src/engine/core-modules/application/application-manifest/application-sync.service';
 import { ApplicationRegistrationService } from 'src/engine/core-modules/application/application-registration/application-registration.service';
 import { ApplicationRegistrationSourceType } from 'src/engine/core-modules/application/application-registration/enums/application-registration-source-type.enum';
@@ -18,6 +19,7 @@ export class ApplicationManifestApplyService {
     private readonly applicationSyncService: ApplicationSyncService,
     private readonly sdkClientGenerationService: SdkClientGenerationService,
     private readonly applicationRegistrationService: ApplicationRegistrationService,
+    private readonly applicationGrantRoleService: ApplicationGrantRoleService,
   ) {}
 
   async applyManifestToWorkspace({
@@ -28,6 +30,7 @@ export class ApplicationManifestApplyService {
     forceSdkClientGeneration = false,
     inferDeletionFromMissingEntities = true,
     persistVersion,
+    shouldDeferActions,
   }: {
     workspaceId: string;
     manifest: Manifest;
@@ -42,6 +45,7 @@ export class ApplicationManifestApplyService {
     // avoid regenerating on every save.
     forceSdkClientGeneration?: boolean;
     persistVersion?: boolean;
+    shouldDeferActions?: boolean;
   }): Promise<{
     workspaceMigration: WorkspaceMigration;
     hasSchemaMetadataChanged: boolean;
@@ -58,7 +62,13 @@ export class ApplicationManifestApplyService {
         applicationRegistrationId,
         inferDeletionFromMissingEntities,
         persistVersion,
+        shouldDeferActions,
       });
+
+    await this.applicationGrantRoleService.upsertGrantRole({
+      workspaceId,
+      applicationId: application.id,
+    });
 
     if (forceSdkClientGeneration || isFirstApply || hasSchemaMetadataChanged) {
       await this.sdkClientGenerationService.generateSdkClientForApplication({

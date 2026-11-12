@@ -1,4 +1,3 @@
-import { AvatarOrIcon } from '@/ui/field/display/components/internal/AvatarOrIcon/AvatarOrIcon';
 import { isNonEmptyString } from '@sniptt/guards';
 import { type ReactNode } from 'react';
 import { AppPath, SettingsPath } from 'twenty-shared/types';
@@ -8,7 +7,9 @@ import {
   getSettingsPath,
   isDefined,
 } from 'twenty-shared/utils';
-import { IconApps, IconLock, useIcons } from 'twenty-ui/icon';
+import { IconApps, IconLock } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
+import { Avatar } from 'twenty-ui/primitives/data-display';
 import { useTheme } from 'twenty-ui/theme';
 
 import { CHAT_REFERENCE_PERMISSION_FLAG_BY_KIND } from '@/ai/constants/ChatReferencePermissionFlagByKind';
@@ -92,11 +93,13 @@ export const useChatReferenceTarget = (
         return {
           path: isNonEmptyString(recordPath) ? recordPath : undefined,
           leftComponent: (
-            <AvatarOrIcon
+            <Avatar
               name={reference.displayName}
               colorSeed={reference.recordId}
               shape="circle"
               src=""
+              size="sm"
+              imageProps={{ alt: '' }}
             />
           ),
         };

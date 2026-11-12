@@ -13,7 +13,7 @@ import { useOpenSpreadsheetImportDialog } from '@/spreadsheet-import/hooks/useOp
 import { spreadsheetImportCreatedRecordsProgressState } from '@/spreadsheet-import/states/spreadsheetImportCreatedRecordsProgressState';
 import { type SpreadsheetImportDialogOptions } from '@/spreadsheet-import/types';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 
 export const useOpenObjectRecordsSpreadsheetImportDialog = (
   objectNameSingular: string,
@@ -49,10 +49,7 @@ export const useOpenObjectRecordsSpreadsheetImportDialog = (
   });
 
   const openObjectRecordsSpreadsheetImportDialog = (
-    options?: Omit<
-      SpreadsheetImportDialogOptions,
-      'fields' | 'isOpen' | 'onClose'
-    >,
+    options?: Pick<SpreadsheetImportDialogOptions, 'uploadStepHook'>,
   ) => {
     const availableFieldMetadataItemsToImport =
       spreadsheetImportFilterAvailableFieldMetadataItems(
@@ -82,13 +79,15 @@ export const useOpenObjectRecordsSpreadsheetImportDialog = (
             recordsToCreate: createInputs,
             upsert: true,
           });
+        } catch (error) {
+          enqueueToast(getToastOptionsFromError({ error }));
+          throw error;
+        } finally {
           await apolloCoreClient.refetchQueries({
             updateCache: (cache) => {
               cache.evict({ fieldName: objectMetadataItem.namePlural });
             },
           });
-        } catch (error: any) {
-          enqueueToast(getToastOptionsFromError({ error }));
         }
       },
       spreadsheetImportFields,

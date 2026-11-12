@@ -1,4 +1,3 @@
-import { t } from '@lingui/core/macro';
 import { BubbleMenuIconButton } from '@/advanced-text-editor/components/BubbleMenuIconButton';
 import { EditLinkDropdown } from '@/advanced-text-editor/components/EditLinkDropdown';
 import { StyledBubbleMenuContainer } from '@/advanced-text-editor/components/StyledBubbleMenuContainer';
@@ -8,12 +7,15 @@ import { type Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { IconExternalLink, IconLinkOff } from 'twenty-ui/icon';
 import { getSafeUrl } from 'twenty-shared/utils';
+import { openUrlInNewTab } from '~/utils/openUrlInNewTab';
+import { useLingui } from '@lingui/react/macro';
 
 type LinkBubbleMenuProps = {
   editor: Editor;
 };
 
 export const LinkBubbleMenu = ({ editor }: LinkBubbleMenuProps) => {
+  const { t } = useLingui();
   const state = useLiveEditorState(editor, (currentEditor) => {
     return {
       linkHref: currentEditor.getAttributes('link').href || '',
@@ -32,7 +34,7 @@ export const LinkBubbleMenu = ({ editor }: LinkBubbleMenuProps) => {
         const safeHref = getSafeUrl(state.linkHref);
 
         if (safeHref) {
-          window.open(safeHref, '_blank', 'noopener,noreferrer');
+          openUrlInNewTab(safeHref);
         }
       },
     },

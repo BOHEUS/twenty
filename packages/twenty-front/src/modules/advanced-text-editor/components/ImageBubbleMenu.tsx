@@ -1,5 +1,5 @@
-import { t } from '@lingui/core/macro';
 import { BubbleMenuIconButton } from '@/advanced-text-editor/components/BubbleMenuIconButton';
+import { BubbleMenuSeparator } from '@/advanced-text-editor/components/BubbleMenuSeparator';
 import { StyledBubbleMenuContainer } from '@/advanced-text-editor/components/StyledBubbleMenuContainer';
 import { useLiveEditorState } from '@/advanced-text-editor/hooks/useLiveEditorState';
 import { type Editor } from '@tiptap/core';
@@ -10,12 +10,14 @@ import {
   IconAlignRight,
   IconTrash,
 } from 'twenty-ui/icon';
+import { useLingui } from '@lingui/react/macro';
 
 type ImageBubbleMenuProps = {
   editor: Editor;
 };
 
 export const ImageBubbleMenu = ({ editor }: ImageBubbleMenuProps) => {
+  const { t } = useLingui();
   const state = useLiveEditorState(editor, (currentEditor) => {
     return {
       align: currentEditor.getAttributes('image').align || 'left',
@@ -86,6 +88,7 @@ export const ImageBubbleMenu = ({ editor }: ImageBubbleMenuProps) => {
             isActive={isActive}
           />
         ))}
+        <BubbleMenuSeparator />
         <BubbleMenuIconButton
           key="image-delete"
           label={t`Delete image`}

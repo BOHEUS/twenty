@@ -2,13 +2,13 @@ import { FormFieldInputContainer } from '@/ui/input/components/FormFieldInputCon
 import { FormFieldInputInnerContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputInnerContainer';
 import { FormFieldInputRowContainer } from '@/object-record/record-field/ui/form-types/components/FormFieldInputRowContainer';
 import { VariableChipStandalone } from '@/object-record/record-field/ui/form-types/components/VariableChipStandalone';
-import { type VariablePickerComponent } from '@/object-record/record-field/ui/form-types/types/VariablePickerComponent';
+import { type VariablePickerComponent } from '@/ui/input/types/VariablePickerComponent';
 import { StyledTextInput } from '@/ui/field/input/components/TextInput';
 import { Field } from 'twenty-ui/primitives/input';
 import { isStandaloneVariableString } from 'twenty-shared/workflow';
-import { t } from '@lingui/core/macro';
 import { useId, useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { useLingui } from '@lingui/react/macro';
 
 type FormUuidFieldInputProps = {
   label?: string;
@@ -27,6 +27,7 @@ export const FormUuidFieldInput = ({
   readonly,
   VariablePicker,
 }: FormUuidFieldInputProps) => {
+  const { t } = useLingui();
   const instanceId = useId();
 
   const [draftValue, setDraftValue] = useState<

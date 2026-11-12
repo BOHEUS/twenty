@@ -10,8 +10,9 @@ import { useLingui } from '@lingui/react/macro';
 import React, { Fragment, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { isDefined } from 'twenty-shared/utils';
-import { LightIconButton } from 'twenty-ui/components';
-import { IconHeartOff, IconPlus, useIcons } from 'twenty-ui/icon';
+import { LightIconButton } from 'twenty-ui/components/input';
+import { IconHeartOff, IconPlus } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { themeCssVariables } from 'twenty-ui/theme';
 import { useIsMobile } from 'twenty-ui/utilities';
 import { type NavigationMenuItem } from '~/generated-metadata/graphql';
@@ -20,7 +21,7 @@ import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/st
 import { FOLDER_ICON_DEFAULT } from '@/navigation-menu-item/common/constants/FolderIconDefault';
 import { DEFAULT_NAVIGATION_MENU_ITEM_COLOR_FOLDER } from '@/navigation-menu-item/common/constants/NavigationMenuItemDefaultColorFolder';
 import { NAVIGATION_MENU_ITEM_SECTION_DROPPABLE_CONFIG } from '@/navigation-menu-item/common/constants/NavigationMenuItemSectionDroppableConfig';
-import { NavigationSections } from '@/navigation-menu-item/common/constants/NavigationSections.constants';
+import { NavigationSections } from '@/navigation-menu-item/common/constants/NavigationSections';
 import { NavigationDropTargetContext } from '@/navigation-menu-item/common/contexts/NavigationDropTargetContext';
 import { NavigationMenuItemDragContext } from '@/navigation-menu-item/common/contexts/NavigationMenuItemDragContext';
 import { SortableDropTargetRefContext } from '@/navigation-menu-item/common/contexts/SortableDropTargetRefContext';
@@ -37,7 +38,7 @@ import { NavigationMenuItemSortableItem } from '@/navigation-menu-item/display/d
 import { useIsDropDisabledForSection } from '@/navigation-menu-item/display/dnd/hooks/useIsDropDisabledForSection';
 import { NavigationMenuItemFolderLayout } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderLayout';
 import { NavigationMenuItemFolderNavigationDrawerItemDropdown } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderNavigationDrawerItemDropdown';
-import { NavigationMenuItemFolderSubItem } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderSubItem';
+import { NavigationMenuItemFolderSubItemDispatcher } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderSubItemDispatcher';
 import { useNavigationMenuItemFolderOpenState } from '@/navigation-menu-item/display/folder/hooks/useNavigationMenuItemFolderOpenState';
 import { useIsNavigationMenuItemEditHighlighted } from '@/navigation-menu-item/display/hooks/useIsNavigationMenuItemEditHighlighted';
 import type { NavigationMenuItemClickParams } from '@/navigation-menu-item/display/hooks/useNavigationMenuItemSectionItems';
@@ -362,7 +363,7 @@ export const NavigationMenuItemFolderDnd = ({
                       : dropDisabled
                   }
                 >
-                  <NavigationMenuItemFolderSubItem
+                  <NavigationMenuItemFolderSubItemDispatcher
                     navigationMenuItem={navigationMenuItem}
                     index={getIndexWithInsertionPreview(index)}
                     arrayLength={folderContentLength}

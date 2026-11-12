@@ -1,12 +1,14 @@
 import { MessageCampaignStatus } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 import { useCancelMessageCampaign } from '@/activities/emails/hooks/useCancelMessageCampaign';
 import { HeadlessConfirmationModalEngineCommandEffect } from '@/command-menu-item/engine-command/components/HeadlessConfirmationModalEngineCommandEffect';
 import { useHeadlessCommandContextApi } from '@/command-menu-item/engine-command/hooks/useHeadlessCommandContextApi';
-import { t } from '@lingui/core/macro';
+import { useLingui } from '@lingui/react/macro';
 
 export const CancelMessageCampaignSingleRecordCommand = () => {
+  const { t } = useLingui();
   const { selectedRecords } = useHeadlessCommandContextApi();
 
   const selectedRecord = selectedRecords[0];
@@ -14,7 +16,9 @@ export const CancelMessageCampaignSingleRecordCommand = () => {
   const { cancelMessageCampaign } = useCancelMessageCampaign();
 
   if (!isDefined(campaignId)) {
-    throw new Error('Record ID is required to cancel the campaign');
+    throw new Error(
+      doNotTranslate('Record ID is required to cancel the campaign'),
+    );
   }
 
   const campaignStatus: MessageCampaignStatus = selectedRecord.status;

@@ -1,3 +1,5 @@
+/* @license Enterprise */
+
 import gql from 'graphql-tag';
 import { makeMetadataApiRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
 
@@ -74,4 +76,24 @@ export const findValidationRules = async (objectMetadataId: string) => {
     errorFieldMetadataId: string | null;
     isActive: boolean;
   }[];
+};
+
+export const findValidationRulesReadingField = async (
+  fieldMetadataId: string,
+) => {
+  const response = await makeMetadataApiRequest({
+    query: gql`
+      query ValidationRulesReadingField($fieldMetadataId: UUID!) {
+        validationRulesReadingField(fieldMetadataId: $fieldMetadataId) {
+          ${VALIDATION_RULE_GQL_FIELDS}
+        }
+      }
+    `,
+    variables: { fieldMetadataId },
+  });
+
+  const validationRules: { name: string }[] =
+    response.body.data.validationRulesReadingField;
+
+  return validationRules;
 };

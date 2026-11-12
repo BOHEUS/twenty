@@ -1,16 +1,11 @@
-import { useIsWorkflowCoreEnabled } from '@/workflow/hooks/useIsWorkflowCoreEnabled';
-import {
-  RunCoreWorkflowVersionDocument,
-  type RunWorkflowVersionMutation,
-  type RunWorkflowVersionMutationVariables,
-} from '~/generated/graphql';
+import { RunCoreWorkflowVersionDocument } from '~/generated/graphql';
 import { triggerCreateRecordsOptimisticEffect } from '@/apollo/optimistic-effect/utils/triggerCreateRecordsOptimisticEffect';
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { useOpenRecordInSidePanel } from '@/side-panel/hooks/useOpenRecordInSidePanel';
 import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
 import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
 import { useCreateOneRecordInCache } from '@/object-record/cache/hooks/useCreateOneRecordInCache';
 import { useUpsertFindOneRecordQueryInCache } from '@/object-record/cache/hooks/useUpsertFindOneRecordQueryInCache';
 import { getObjectTypename } from '@/object-record/cache/utils/getObjectTypename';
@@ -22,19 +17,18 @@ import { recordStoreFamilyState } from '@/object-record/record-store/states/reco
 import { computeOptimisticCreateRecordBaseRecordInput } from '@/object-record/utils/computeOptimisticCreateRecordBaseRecordInput';
 import { computeOptimisticRecordFromInput } from '@/object-record/utils/computeOptimisticRecordFromInput';
 import { useChangeQueryListenState } from '@/sse-db-event/hooks/useChangeQueryListenState';
-import { RUN_WORKFLOW_VERSION } from '@/workflow/graphql/mutations/runWorkflowVersion';
 import { getWorkflowRunSseQueryId } from '@/workflow/utils/getWorkflowRunSseQueryId';
 import { type WorkflowRun } from '@/workflow/types/Workflow';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useCallback } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { v4 } from 'uuid';
 import { useStore } from 'jotai';
 
 export const useRunWorkflowVersion = () => {
   const store = useStore();
-  const isCore = useIsWorkflowCoreEnabled();
   const apolloCoreClient = useApolloCoreClient();
   const [mutateCore] = useMutation(RunCoreWorkflowVersionDocument, {
     client: apolloCoreClient,
@@ -42,7 +36,7 @@ export const useRunWorkflowVersion = () => {
   const { upsertRecordsInStore } = useUpsertRecordsInStore();
 
   const { objectMetadataItem } = useObjectMetadataItem({
-    objectNameSingular: CoreObjectNameSingular.WorkflowRun,
+    objectNameSingular: StandardObjectNameSingular.WorkflowRun,
   });
 
   const { objectMetadataItems } = useObjectMetadataItems();
@@ -52,15 +46,8 @@ export const useRunWorkflowVersion = () => {
   });
   const currentWorkspaceMember = useAtomStateValue(currentWorkspaceMemberState);
 
-  const [mutate] = useMutation<
-    RunWorkflowVersionMutation,
-    RunWorkflowVersionMutationVariables
-  >(RUN_WORKFLOW_VERSION, {
-    client: apolloCoreClient,
-  });
-
   const computedRecordGqlFields = useGenerateDepthRecordGqlFieldsFromObject({
-    objectNameSingular: CoreObjectNameSingular.WorkflowRun,
+    objectNameSingular: StandardObjectNameSingular.WorkflowRun,
     depth: 1,
   });
 
@@ -94,12 +81,8 @@ export const useRunWorkflowVersion = () => {
     const recordInput: Partial<WorkflowRun> = {
       name: '#0',
       status: 'NOT_STARTED',
-      ...(isCore
-        ? {
-            coreWorkflowVersionId: workflowVersionId,
-            coreWorkflowId: workflowId,
-          }
-        : { workflowVersionId, workflowId }),
+      coreWorkflowVersionId: workflowVersionId,
+      coreWorkflowId: workflowId,
       createdAt: new Date().toISOString(),
     };
 
@@ -130,7 +113,9 @@ export const useRunWorkflowVersion = () => {
     });
 
     if (!isDefined(recordNodeCreatedInCache)) {
-      throw new Error('The record should have been created in cache');
+      throw new Error(
+        doNotTranslate('The record should have been created in cache'),
+      );
     }
 
     upsertFindOneRecordQueryInCache({
@@ -152,7 +137,7 @@ export const useRunWorkflowVersion = () => {
 
     const sseQueryId = getWorkflowRunSseQueryId(workflowRunId);
     const sseOperationSignature = {
-      objectNameSingular: CoreObjectNameSingular.WorkflowRun,
+      objectNameSingular: StandardObjectNameSingular.WorkflowRun,
       variables: {
         filter: { id: { eq: workflowRunId } },
       },
@@ -161,28 +146,22 @@ export const useRunWorkflowVersion = () => {
     changeQueryIdListenState(true, sseQueryId, sseOperationSignature);
 
     try {
-      if (isCore) {
-        await mutateCore({
-          variables: {
-            input: {
-              coreWorkflowVersionId: workflowVersionId,
-              workflowRunId,
-              payload,
-            },
+      await mutateCore({
+        variables: {
+          input: {
+            coreWorkflowVersionId: workflowVersionId,
+            workflowRunId,
+            payload,
           },
-        });
-      } else {
-        await mutate({
-          variables: { input: { workflowVersionId, workflowRunId, payload } },
-        });
-      }
+        },
+      });
     } catch (error) {
       changeQueryIdListenState(false, sseQueryId, sseOperationSignature);
       throw error;
     }
 
     openRecordInSidePanel({
-      objectNameSingular: CoreObjectNameSingular.WorkflowRun,
+      objectNameSingular: StandardObjectNameSingular.WorkflowRun,
       recordId: workflowRunId,
     });
   };

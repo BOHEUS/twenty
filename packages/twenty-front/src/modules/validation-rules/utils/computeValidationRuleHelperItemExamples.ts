@@ -1,5 +1,7 @@
+import { VALIDATION_RULE_PREVIOUS_VARIABLE_NAME } from 'twenty-shared/constants';
 import { FieldMetadataType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 import { type ValidationRuleEditorField } from '@/validation-rules/types/ValidationRuleEditorField';
 import { type ValidationRuleHelperItem } from '@/validation-rules/types/ValidationRuleHelperItem';
@@ -32,34 +34,39 @@ const computeFieldExamples = ({
   const [firstOption, secondOption] = selectOptionValues;
 
   if (TEXT_TYPES.includes(type)) {
-    return [`isNonEmptyString(${path})`, `${path} != "N/A"`];
+    return [`isNonEmptyString(${path})`, doNotTranslate(`${path} != "N/A"`)];
   }
 
   if (NUMBER_TYPES.includes(type)) {
-    return [`${path} > 0`, `not isDefined(${path}) or ${path} <= 1000`];
+    return [
+      `${path} > 0`,
+      doNotTranslate(`not isDefined(${path}) or ${path} <= 1000`),
+    ];
   }
 
   if (DATE_TYPES.includes(type)) {
-    return [`${path} >= now`, `isDefined(${path})`];
+    return [doNotTranslate(`${path} >= now`), `isDefined(${path})`];
   }
 
   if (type === FieldMetadataType.BOOLEAN) {
-    return [`${path} == true`];
+    return [doNotTranslate(`${path} == true`)];
   }
 
   if (type === FieldMetadataType.SELECT && isDefined(firstOption)) {
     return [
       `${path} == ${quote(firstOption)}`,
-      `${path} in [${[firstOption, secondOption].filter(isDefined).map(quote).join(', ')}]`,
+      doNotTranslate(
+        `${path} in [${[firstOption, secondOption].filter(isDefined).map(quote).join(', ')}]`,
+      ),
     ];
   }
 
   if (LIST_TYPES.includes(type)) {
     return [
       ...(isDefined(firstOption)
-        ? [`includes(${path}, ${quote(firstOption)})`]
+        ? [doNotTranslate(`includes(${path}, ${quote(firstOption)})`)]
         : []),
-      `arrayLength(${path}) > 0`,
+      doNotTranslate(`arrayLength(${path}) > 0`),
     ];
   }
 
@@ -74,7 +81,11 @@ const computeFieldExamples = ({
     return [
       `isDefined(${path})`,
       ...(isDefined(member)
-        ? [`not isDefined(${path}) or isDefined(${member.path})`]
+        ? [
+            doNotTranslate(
+              `not isDefined(${path}) or isDefined(${member.path})`,
+            ),
+          ]
         : []),
     ];
   }
@@ -88,7 +99,7 @@ const computeFieldExamples = ({
     );
 
     return [
-      `not isEmpty(${path})`,
+      doNotTranslate(`not isEmpty(${path})`),
       ...(isDefined(member) ? [`isNonEmptyString(${member.path})`] : []),
     ];
   }
@@ -120,7 +131,9 @@ const computeFunctionExamples = ({
         findField(rootFields, (candidate) => candidate.hasMembers) ??
         findField(rootFields, () => true);
 
-      return isDefined(field) ? [`not isEmpty(${field.path})`] : [];
+      return isDefined(field)
+        ? [doNotTranslate(`not isEmpty(${field.path})`)]
+        : [];
     }
     case 'isNonEmptyString': {
       const field = findFieldOfTypes(fields, TEXT_TYPES);
@@ -139,17 +152,45 @@ const computeFunctionExamples = ({
 
       return [
         ...(isDefined(listField) && isDefined(firstOption)
-          ? [`includes(${listField.path}, ${quote(firstOption)})`]
+          ? [
+              doNotTranslate(
+                `includes(${listField.path}, ${quote(firstOption)})`,
+              ),
+            ]
           : []),
         ...(isDefined(textField)
-          ? [`not includes(${textField.path}, "test")`]
+          ? [doNotTranslate(`not includes(${textField.path}, "test")`)]
           : []),
       ];
     }
     case 'arrayLength': {
       const field = findFieldOfTypes(rootFields, LIST_TYPES);
 
-      return isDefined(field) ? [`arrayLength(${field.path}) > 0`] : [];
+      return isDefined(field)
+        ? [doNotTranslate(`arrayLength(${field.path}) > 0`)]
+        : [];
+    }
+    case 'daysSince': {
+      const field = findFieldOfTypes(rootFields, DATE_TYPES);
+
+      return isDefined(field)
+        ? [
+            doNotTranslate(
+              `daysSince(${field.path}) >= 0 and daysSince(${field.path}) <= 30`,
+            ),
+          ]
+        : [];
+    }
+    case 'isInRelativeDateRange': {
+      const field = findFieldOfTypes(rootFields, DATE_TYPES);
+
+      return isDefined(field)
+        ? [
+            doNotTranslate(
+              `isInRelativeDateRange(${field.path}, "PAST", 7, "DAY")`,
+            ),
+          ]
+        : [];
     }
     default:
       return [];
@@ -173,11 +214,15 @@ const computeKeywordExamples = ({
     case 'or':
       return isDefined(firstField) && isDefined(secondField)
         ? [
-            `isDefined(${firstField.path}) ${name} isDefined(${secondField.path})`,
+            doNotTranslate(
+              `isDefined(${firstField.path}) ${name} isDefined(${secondField.path})`,
+            ),
           ]
         : [];
     case 'not':
-      return isDefined(firstField) ? [`not isEmpty(${firstField.path})`] : [];
+      return isDefined(firstField)
+        ? [doNotTranslate(`not isEmpty(${firstField.path})`)]
+        : [];
     case 'in': {
       const field = findField(
         rootFields,
@@ -188,14 +233,37 @@ const computeKeywordExamples = ({
 
       return isDefined(field)
         ? [
-            `${field.path} in [${field.selectOptionValues.slice(0, 2).map(quote).join(', ')}]`,
+            doNotTranslate(
+              `${field.path} in [${field.selectOptionValues.slice(0, 2).map(quote).join(', ')}]`,
+            ),
           ]
         : [];
     }
     case 'now': {
       const field = findFieldOfTypes(rootFields, DATE_TYPES);
 
-      return isDefined(field) ? [`${field.path} >= now`] : [];
+      return isDefined(field) ? [doNotTranslate(`${field.path} >= now`)] : [];
+    }
+    case VALIDATION_RULE_PREVIOUS_VARIABLE_NAME: {
+      const field = findField(
+        rootFields,
+        (candidate) =>
+          candidate.type === FieldMetadataType.SELECT &&
+          candidate.selectOptionValues.length > 0,
+      );
+      const [firstOption] = field?.selectOptionValues ?? [];
+
+      if (!isDefined(field) || !isDefined(firstOption)) {
+        return [];
+      }
+
+      const previousPath = `${VALIDATION_RULE_PREVIOUS_VARIABLE_NAME}.${field.path}`;
+
+      return [
+        doNotTranslate(
+          `${field.path} == ${previousPath} or ${previousPath} != ${quote(firstOption)}`,
+        ),
+      ];
     }
     case 'true':
     case 'false': {

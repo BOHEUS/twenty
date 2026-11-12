@@ -1,9 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 import { QUERY_MAX_RECORDS } from 'twenty-shared/constants';
+import { isDefined } from 'twenty-shared/utils';
 
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
+import { MessageQueueException } from 'src/engine/core-modules/message-queue/message-queue.exception';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
 import { MetricsService } from 'src/engine/core-modules/metrics/metrics.service';
 import { MetricsKeys } from 'src/engine/core-modules/metrics/types/metrics-keys.type';
@@ -18,6 +20,9 @@ import { type RunWorkflowJobData } from 'src/modules/workflow/workflow-runner/ty
 import { buildRunWorkflowJobOptions } from 'src/modules/workflow/workflow-runner/utils/build-run-workflow-job-options.util';
 import { NOT_STARTED_RUNS_FIND_OPTIONS } from 'src/modules/workflow/workflow-runner/workflow-run-queue/constants/not-started-runs-find-options';
 import { WorkflowThrottlingWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run-queue/workspace-services/workflow-throttling.workspace-service';
+import { type RunWorkflowJobTarget } from 'src/modules/workflow/workflow-runner/types/run-workflow-job-target.type';
+import { WorkflowRunJobScopeWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run/workflow-run-job-scope.workspace-service';
+import { WorkflowRunWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run/workflow-run.workspace-service';
 
 @Injectable()
 export class WorkflowRunEnqueueWorkspaceService {
@@ -28,6 +33,8 @@ export class WorkflowRunEnqueueWorkspaceService {
     @InjectMessageQueue(MessageQueue.workflowQueue)
     private readonly messageQueueService: MessageQueueService,
     private readonly metricsService: MetricsService,
+    private readonly workflowRunJobScopeWorkspaceService: WorkflowRunJobScopeWorkspaceService,
+    private readonly workflowRunWorkspaceService: WorkflowRunWorkspaceService,
   ) {}
 
   async enqueueRunsForWorkspace({
@@ -37,12 +44,12 @@ export class WorkflowRunEnqueueWorkspaceService {
     workspaceId: string;
     isCacheMode: boolean;
   }) {
-    const lockAcquired =
-      await this.workflowThrottlingWorkspaceService.acquireWorkflowEnqueueLock(
+    const lockOwnerToken =
+      await this.workflowThrottlingWorkspaceService.acquireWorkflowEnqueueLock({
         workspaceId,
-      );
+      });
 
-    if (!lockAcquired) {
+    if (!isDefined(lockOwnerToken)) {
       return;
     }
 
@@ -50,10 +57,10 @@ export class WorkflowRunEnqueueWorkspaceService {
       const authContext = buildSystemAuthContext(workspaceId);
 
       await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
-        const workflowRunRepository = this.workspaceOrmManager.getRepository(
-          WorkflowRunWorkspaceEntity,
-          { shouldBypassPermissionChecks: true },
-        );
+        const workflowRunRepository =
+          this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+            WorkflowRunWorkspaceEntity,
+          );
 
         const notStartedRunsCount = isCacheMode
           ? await this.workflowThrottlingWorkspaceService.getNotStartedRunsCountFromCache(
@@ -71,35 +78,46 @@ export class WorkflowRunEnqueueWorkspaceService {
           return;
         }
 
-        let remainingWorkflowRunToEnqueueCount =
-          await this.workflowThrottlingWorkspaceService.getRemainingRunsToEnqueueCount(
+        const resolveJobScope =
+          await this.workflowRunJobScopeWorkspaceService.getCoreWorkflowJobScopeResolver(
             workspaceId,
           );
 
         let totalEnqueuedCount = 0;
+        let isSoftThrottled = false;
 
-        while (remainingWorkflowRunToEnqueueCount > 0) {
-          const batchSize = Math.min(
-            remainingWorkflowRunToEnqueueCount,
-            QUERY_MAX_RECORDS,
-          );
-
+        while (!isSoftThrottled) {
           const batchRuns = await workflowRunRepository.find({
             where: NOT_STARTED_RUNS_FIND_OPTIONS,
             select: {
               id: true,
+              coreWorkflowId: true,
             },
             order: {
               createdAt: 'ASC',
             },
-            take: batchSize,
+            take: QUERY_MAX_RECORDS,
           });
 
           if (batchRuns.length === 0) {
             break;
           }
 
-          const batchIds = batchRuns.map(
+          // Runs are fetched before consuming so the soft throttle is only charged for runs that exist
+          const admittedRunCount =
+            await this.workflowThrottlingWorkspaceService.consumeRemainingRunsToEnqueueCount(
+              workspaceId,
+              batchRuns.length,
+            );
+
+          if (admittedRunCount === 0) {
+            break;
+          }
+
+          isSoftThrottled = admittedRunCount < batchRuns.length;
+
+          const admittedRuns = batchRuns.slice(0, admittedRunCount);
+          const batchIds = admittedRuns.map(
             (workflowRun: WorkflowRunWorkspaceEntity) => workflowRun.id,
           );
 
@@ -108,19 +126,15 @@ export class WorkflowRunEnqueueWorkspaceService {
             status: WorkflowRunStatus.ENQUEUED,
           });
 
-          for (const workflowRunId of batchIds) {
-            await this.messageQueueService.add<RunWorkflowJobData>(
-              RunWorkflowJob.name,
-              {
-                workflowRunId,
-                workspaceId,
-              },
-              buildRunWorkflowJobOptions(workflowRunId),
-            );
+          for (const { id: workflowRunId, coreWorkflowId } of admittedRuns) {
+            await this.enqueueRunOrFailIt({
+              workspaceId,
+              workflowRunId,
+              scope: resolveJobScope(coreWorkflowId),
+            });
           }
 
-          totalEnqueuedCount += batchRuns.length;
-          remainingWorkflowRunToEnqueueCount -= batchRuns.length;
+          totalEnqueuedCount += batchIds.length;
         }
 
         if (totalEnqueuedCount === 0) {
@@ -132,11 +146,6 @@ export class WorkflowRunEnqueueWorkspaceService {
 
           return;
         }
-
-        await this.workflowThrottlingWorkspaceService.consumeRemainingRunsToEnqueueCount(
-          workspaceId,
-          totalEnqueuedCount,
-        );
 
         if (isCacheMode) {
           await this.workflowThrottlingWorkspaceService.decreaseWorkflowRunNotStartedCount(
@@ -166,7 +175,10 @@ export class WorkflowRunEnqueueWorkspaceService {
     } finally {
       try {
         await this.workflowThrottlingWorkspaceService.releaseWorkflowEnqueueLock(
-          workspaceId,
+          {
+            workspaceId,
+            lockOwnerToken,
+          },
         );
       } catch (releaseError) {
         this.logger.warn(
@@ -174,6 +186,35 @@ export class WorkflowRunEnqueueWorkspaceService {
           releaseError,
         );
       }
+    }
+  }
+
+  async enqueueRunOrFailIt({
+    workspaceId,
+    workflowRunId,
+    scope,
+  }: {
+    workspaceId: string;
+    workflowRunId: string;
+    scope: RunWorkflowJobTarget;
+  }): Promise<void> {
+    try {
+      await this.messageQueueService.add<RunWorkflowJobData>(
+        RunWorkflowJob.name,
+        { workflowRunId, workspaceId },
+        buildRunWorkflowJobOptions({ workflowRunId, scope }),
+      );
+    } catch (error) {
+      if (!(error instanceof MessageQueueException)) {
+        throw error;
+      }
+
+      await this.workflowRunWorkspaceService.endWorkflowRun({
+        workflowRunId,
+        workspaceId,
+        status: WorkflowRunStatus.FAILED,
+        error: error.message,
+      });
     }
   }
 }

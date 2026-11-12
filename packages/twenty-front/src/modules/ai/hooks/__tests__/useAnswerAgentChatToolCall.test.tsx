@@ -2,14 +2,13 @@ import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { act, renderHook } from '@testing-library/react';
 import { Provider as JotaiProvider } from 'jotai';
 import { type ReactNode } from 'react';
-import { type ExtendedUIMessage } from 'twenty-shared/ai';
+import { isToolUIPart } from 'ai';
 
-import { AGENT_CHAT_INSTANCE_ID } from '@/ai/constants/AgentChatInstanceId';
 import { AGENT_CHAT_REFETCH_MESSAGES_EVENT_NAME } from '@/ai/constants/AgentChatRefetchMessagesEventName';
 import { useAnswerAgentChatToolCall } from '@/ai/hooks/useAnswerAgentChatToolCall';
 import { agentChatDisplayedThreadState } from '@/ai/states/agentChatDisplayedThreadState';
-import { agentChatIsAwaitingFirstChunkComponentFamilyState } from '@/ai/states/agentChatIsAwaitingFirstChunkComponentFamilyState';
-import { agentChatMessagesComponentFamilyState } from '@/ai/states/agentChatMessagesComponentFamilyState';
+import { agentChatIsAwaitingFirstChunkFamilyState } from '@/ai/states/agentChatIsAwaitingFirstChunkFamilyState';
+import { agentChatMessagesFamilyState } from '@/ai/states/agentChatMessagesFamilyState';
 import {
   jotaiStore,
   resetJotaiStore,
@@ -20,30 +19,26 @@ jest.mock('@/object-metadata/hooks/useApolloCoreClient', () => ({
   useApolloCoreClient: () => ({ mutate }),
 }));
 const enqueueToast = jest.fn();
-jest.mock('twenty-ui/components', () => ({
+jest.mock('twenty-ui/components/feedback', () => ({
   useToast: () => ({ enqueueToast }),
 }));
 jest.mock('@/ai/hooks/useAgentChatModelId', () => ({
   useAgentChatModelId: () => ({ modelIdForRequest: 'model-id' }),
 }));
 
-const key = {
-  instanceId: AGENT_CHAT_INSTANCE_ID,
-  familyKey: { threadId: 'thread-id' },
-};
-const messagesAtom = agentChatMessagesComponentFamilyState.atomFamily(key);
+const key = { threadId: 'thread-id' };
+const messagesAtom = agentChatMessagesFamilyState.atomFamily(key);
 const isAwaitingFirstChunkAtom =
-  agentChatIsAwaitingFirstChunkComponentFamilyState.atomFamily(key);
+  agentChatIsAwaitingFirstChunkFamilyState.atomFamily(key);
 
 const PENDING_OUTPUT = { result: { questions: [], status: 'pending' } };
 const ANSWERED_OUTPUT = { result: { questions: [], status: 'answered' } };
 
-const readToolOutput = () =>
-  (
-    jotaiStore.get(messagesAtom)[0].parts[0] as unknown as {
-      output: unknown;
-    }
-  ).output;
+const readToolOutput = () => {
+  const part = jotaiStore.get(messagesAtom)[0].parts[0];
+
+  return isToolUIPart(part) ? part.output : undefined;
+};
 
 const Wrapper = ({ children }: { children: ReactNode }) => (
   <JotaiProvider store={jotaiStore}>{children}</JotaiProvider>
@@ -87,7 +82,7 @@ describe('useAnswerAgentChatToolCall', () => {
           },
         ],
       },
-    ] as unknown as ExtendedUIMessage[]);
+    ]);
   });
 
   it('answers the tool call and shows the answer in it right away', async () => {

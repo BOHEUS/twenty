@@ -1,3 +1,6 @@
+import { DraggableListRow } from '@/ui/layout/draggable-list/components/DraggableListRow';
+import { AppMenuItemIcon } from '@/applications/components/AppMenuItemIcon';
+import { ApplicationStackIcon } from '@/applications/components/ApplicationStackIcon';
 import { CommandMenuItemEditRecordSelectionDropdown } from '@/command-menu-item/edit/components/CommandMenuItemEditRecordSelectionDropdown';
 import { CommandMenuItemOptionsDropdown } from '@/command-menu-item/edit/components/CommandMenuItemOptionsDropdown';
 import { useEditableCommandMenuItems } from '@/command-menu-item/edit/hooks/useEditableCommandMenuItems';
@@ -21,21 +24,14 @@ import { useLingui } from '@lingui/react/macro';
 import { interpolateMessagePlaceholders } from 'twenty-shared/i18n';
 import { ContextStorePageType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import {
-  LightIconButton,
-  MenuItem,
-  MenuItemDraggable,
-} from 'twenty-ui/components';
-import {
-  IconDotsVertical,
-  IconPin,
-  IconPinnedOff,
-  useIcons,
-} from 'twenty-ui/icon';
+import { LightIconButton } from 'twenty-ui/components/input';
+import { ListItem } from 'twenty-ui/primitives/navigation';
+import { IconDotsVertical, IconPin, IconPinnedOff } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { ButtonGroup } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 import { type CommandMenuItemFieldsFragment } from '~/generated-metadata/graphql';
-import { normalizeSearchText } from '~/utils/normalizeSearchText';
+import { normalizeSearchText } from 'twenty-ui/utilities';
 
 const StyledContainer = styled.div`
   display: flex;
@@ -112,7 +108,13 @@ export const SidePanelCommandMenuItemEditPage = () => {
     ...displayedOtherItems.map((item) => item.id),
   ];
 
-  const handleTogglePin = (itemId: string, currentlyPinned: boolean) => {
+  const handleTogglePin = ({
+    itemId,
+    currentlyPinned,
+  }: {
+    itemId: string;
+    currentlyPinned: boolean;
+  }) => {
     if (currentlyPinned) {
       const nextOtherPosition =
         allOtherItems.length === 0
@@ -222,15 +224,24 @@ export const SidePanelCommandMenuItemEditPage = () => {
                     itemComponent={
                       <SelectableListItem
                         itemId={item.id}
-                        onEnter={() => handleTogglePin(item.id, true)}
+                        onEnter={() =>
+                          handleTogglePin({
+                            itemId: item.id,
+                            currentlyPinned: true,
+                          })
+                        }
                       >
-                        <MenuItemDraggable
-                          withIconContainer
-                          LeftIcon={ItemIcon}
-                          text={getDisplayLabel(item)}
-                          gripMode="onHover"
-                          isIconDisplayedOnHoverOnly={false}
-                          iconButtons={
+                        <DraggableListRow
+                          hasIconBackground
+                          startIcon={
+                            <ApplicationStackIcon
+                              Icon={ItemIcon}
+                              applicationId={item.applicationId}
+                            />
+                          }
+                          dragHandleVisibility="hover"
+                          actionsVisibility="always"
+                          actions={
                             <ButtonGroup
                               attached={false}
                               aria-label={t`Menu item actions`}
@@ -252,14 +263,19 @@ export const SidePanelCommandMenuItemEditPage = () => {
                                 aria-label={t`Unpin`}
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  handleTogglePin(item.id, true);
+                                  handleTogglePin({
+                                    itemId: item.id,
+                                    currentlyPinned: true,
+                                  });
                                 }}
                               >
                                 <IconPinnedOff />
                               </LightIconButton>
                             </ButtonGroup>
                           }
-                        />
+                        >
+                          {getDisplayLabel(item)}
+                        </DraggableListRow>
                       </SelectableListItem>
                     }
                   />
@@ -278,25 +294,34 @@ export const SidePanelCommandMenuItemEditPage = () => {
                 <SelectableListItem
                   key={item.id}
                   itemId={item.id}
-                  onEnter={() => handleTogglePin(item.id, false)}
+                  onEnter={() =>
+                    handleTogglePin({ itemId: item.id, currentlyPinned: false })
+                  }
                 >
-                  <MenuItem
-                    withIconContainer
-                    LeftIcon={ItemIcon}
-                    text={getDisplayLabel(item)}
-                    isIconDisplayedOnHoverOnly={false}
-                    iconButtons={
+                  <ListItem
+                    actionsVisibility="always"
+                    startIcon={
+                      <AppMenuItemIcon
+                        Icon={ItemIcon}
+                        applicationId={item.applicationId}
+                      />
+                    }
+                    actions={
                       <LightIconButton
                         aria-label={t`Pin`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          handleTogglePin(item.id, false);
-                        }}
+                        onClick={() =>
+                          handleTogglePin({
+                            itemId: item.id,
+                            currentlyPinned: false,
+                          })
+                        }
                       >
                         <IconPin />
                       </LightIconButton>
                     }
-                  />
+                  >
+                    {getDisplayLabel(item)}
+                  </ListItem>
                 </SelectableListItem>
               );
             })}

@@ -1,13 +1,12 @@
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
+import { type ReactNode } from 'react';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
+import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 import { IconRefresh } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 
 import { AiChatThreadList } from '@/ai/components/AiChatThreadList';
-import { AI_CHAT_THREAD_ACTIONS_SURFACE } from '@/ai/constants/AiChatThreadActionsSurface';
 import { type AgentChatThreadRecord } from '@/ai/types/AgentChatThreadRecord';
 import { SkeletonLoader } from '@/activities/components/SkeletonLoader';
 import { AnimatedPlaceholder } from '@/ui/feedback/empty-state/components/AnimatedPlaceholder/AnimatedPlaceholder';
@@ -18,14 +17,16 @@ import { isSidePanelOpenedState } from '@/side-panel/states/isSidePanelOpenedSta
 import { EmptyState } from '@/ui/feedback/empty-state/components/EmptyState';
 import { ErrorState } from '@/ui/feedback/empty-state/components/ErrorState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledThreadsContainer = styled.div`
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: ${themeCssVariables.spacing[2]};
   height: 100%;
+  min-width: 0;
   overflow: auto;
-  padding: ${themeCssVariables.spacing[2]};
 `;
 
 type ChatThreadsCardContentProps = {
@@ -34,6 +35,8 @@ type ChatThreadsCardContentProps = {
   onRetry: () => void;
   onDetachThread: (threadId: string) => void;
   threads: AgentChatThreadRecord[];
+  hasNextPage?: boolean;
+  pagination?: ReactNode;
 };
 
 export const ChatThreadsCardContent = ({
@@ -42,7 +45,10 @@ export const ChatThreadsCardContent = ({
   onRetry,
   onDetachThread,
   threads,
+  hasNextPage = false,
+  pagination,
 }: ChatThreadsCardContentProps) => {
+  const { t } = useLingui();
   const { openRecordInSidePanel } = useOpenRecordInSidePanel();
   const isSidePanelOpened = useAtomStateValue(isSidePanelOpenedState);
   const sidePanelRoutedPath = useCurrentSidePanelRoutedPath();
@@ -52,10 +58,10 @@ export const ChatThreadsCardContent = ({
   const sidePanelThreadId =
     isSidePanelOpened &&
     sidePanelRecord?.objectNameSingular ===
-      CoreObjectNameSingular.AgentChatThread
+      StandardObjectNameSingular.AgentChatThread
       ? sidePanelRecord.objectRecordId
       : undefined;
-  const isThreadsEmpty = threads.length === 0;
+  const isThreadsEmpty = !isNonEmptyArray(threads);
 
   if (loading && isThreadsEmpty) {
     return <SkeletonLoader />;
@@ -82,7 +88,7 @@ export const ChatThreadsCardContent = ({
     );
   }
 
-  if (isThreadsEmpty) {
+  if (isThreadsEmpty && !hasNextPage) {
     return (
       <EmptyState.Root>
         <AnimatedPlaceholder type="emptyInbox" />
@@ -100,16 +106,19 @@ export const ChatThreadsCardContent = ({
     <StyledThreadsContainer>
       <AiChatThreadList
         threads={threads}
-        surface={AI_CHAT_THREAD_ACTIONS_SURFACE.RECORD_PAGE}
-        selectedThreadId={sidePanelThreadId}
+        variant="compact"
+        selectedThreadIds={
+          isDefined(sidePanelThreadId) ? [sidePanelThreadId] : []
+        }
         onThreadClick={({ id }) =>
           openRecordInSidePanel({
             recordId: id,
-            objectNameSingular: CoreObjectNameSingular.AgentChatThread,
+            objectNameSingular: StandardObjectNameSingular.AgentChatThread,
           })
         }
         onDetachThread={onDetachThread}
       />
+      {pagination}
     </StyledThreadsContainer>
   );
 };

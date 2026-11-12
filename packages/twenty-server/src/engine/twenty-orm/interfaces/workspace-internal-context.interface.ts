@@ -1,3 +1,7 @@
+import { type RecordAccessGroupWriteService } from 'src/engine/permissions/record-access-group-write.service';
+import { type RecordFieldPermissionsReadService } from 'src/engine/permissions/record-field-permissions-read.service';
+import { type RecordPermissionsReadService } from 'src/engine/permissions/record-permissions-read.service';
+import { type PermissionsPrincipalsWithRolesContext } from 'src/engine/permissions/principal/types/permissions-principals-with-roles-context.type';
 import { type DataSource } from 'typeorm';
 import { type FeatureFlagKey } from 'twenty-shared/types';
 
@@ -8,26 +12,42 @@ import { type OrmFlatFieldMetadata } from 'src/engine/metadata-modules/flat-fiel
 import { type FlatIndexMetadata } from 'src/engine/metadata-modules/flat-index-metadata/types/flat-index-metadata.type';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 import { type FlatValidationRuleMaps } from 'src/engine/metadata-modules/flat-validation-rule/types/flat-validation-rule-maps.type';
-import { type UserWorkspaceRoleMap } from 'src/engine/metadata-modules/role-target/types/user-workspace-role-map.type';
-import { type FlatRowLevelPermissionPredicateGroupMaps } from 'src/engine/metadata-modules/row-level-permission-predicate/types/flat-row-level-permission-predicate-group-maps.type';
-import { type FlatRowLevelPermissionPredicateMaps } from 'src/engine/metadata-modules/row-level-permission-predicate/types/flat-row-level-permission-predicate-maps.type';
 import { type WorkspaceEventEmitter } from 'src/engine/workspace-event-emitter/workspace-event-emitter';
+import { type RecordReadRestrictions } from 'src/engine/permissions/types/record-read-restrictions.type';
 
 export interface WorkspaceInternalContext {
   workspaceId: string;
   flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>;
   flatFieldMetadataMaps: FlatEntityMaps<OrmFlatFieldMetadata>;
   flatIndexMaps: FlatEntityMaps<FlatIndexMetadata>;
-  flatRowLevelPermissionPredicateMaps: FlatRowLevelPermissionPredicateMaps;
-  flatRowLevelPermissionPredicateGroupMaps: FlatRowLevelPermissionPredicateGroupMaps;
   flatValidationRuleMaps?: FlatValidationRuleMaps;
   objectIdByNameSingular: Record<string, string>;
   featureFlagsMap: Record<FeatureFlagKey, boolean>;
   billingEntitlements: BillingEntitlements;
-  userWorkspaceRoleMap: UserWorkspaceRoleMap;
-  roleIdsWithAllRecordsAccess: string[];
-  apiKeyRoleMap: Record<string, string>;
   eventEmitterService: Pick<WorkspaceEventEmitter, 'emitDatabaseBatchEvent'>;
+  permissionsPrincipals: PermissionsPrincipalsWithRolesContext | undefined;
+  recordReadRestrictions: RecordReadRestrictions;
+  recordPermissions: Pick<
+    RecordPermissionsReadService,
+    | 'isReadDisabled'
+    | 'assertCanRunOperationOrThrow'
+    | 'buildReadRecordsAccessSQLCondition'
+    | 'buildWriteRecordsAccessSQLCondition'
+    | 'assertCreatedRecordsMatchRowLevelPermissionsOrThrow'
+    | 'assertUpdatesKeepRecordAccessOrThrow'
+  >;
+  recordFieldPermissions: Pick<
+    RecordFieldPermissionsReadService,
+    'findFieldsHiddenOnMatchingRecords'
+  >;
+  recordAccessGroupWrite: Pick<
+    RecordAccessGroupWriteService,
+    | 'isWriteTransactionRequired'
+    | 'isRecordsBeforeWriteRequired'
+    | 'findRelatedRecordsBeforeDelete'
+    | 'recomputeAfterWrite'
+  >;
+  recordAccessGroupQueue: Pick<RecordAccessGroupWriteService, 'queueRecompute'>;
   recordStock: Pick<
     WorkspaceRecordStockService,
     'assertRecordStockAvailable' | 'acquireRecordStock' | 'releaseRecordStock'

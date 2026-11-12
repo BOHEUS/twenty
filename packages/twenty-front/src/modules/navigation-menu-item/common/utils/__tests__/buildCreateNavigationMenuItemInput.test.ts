@@ -31,4 +31,56 @@ describe('buildCreateNavigationMenuItemInput', () => {
       position: 0,
     });
   });
+
+  it.each([
+    ['/workflows', '/workflows'],
+    ['twenty.com', 'https://twenty.com'],
+  ])('saves the link %s as %s', (link, expectedLink) => {
+    const input = buildCreateNavigationMenuItemInput(
+      {
+        id: 'navigation-item',
+        type: NavigationMenuItemType.LINK,
+        name: 'Link',
+        link,
+        position: 0,
+        createdAt: '',
+        updatedAt: '',
+      },
+      () => 'saved-folder',
+    );
+
+    expect(input.link).toBe(expectedLink);
+  });
+
+  it.each([
+    [
+      'a workflow',
+      NavigationMenuItemType.WORKFLOW,
+      { workflowId: 'workflow-id', name: 'Lead routing' },
+    ],
+    [
+      'an agent',
+      NavigationMenuItemType.AGENT,
+      { agentId: 'agent-id', name: 'Helper' },
+    ],
+  ])('saves %s', (_, type, target) => {
+    const input = buildCreateNavigationMenuItemInput(
+      {
+        id: 'navigation-item',
+        type,
+        ...target,
+        position: 0,
+        createdAt: '',
+        updatedAt: '',
+      },
+      () => 'saved-folder',
+    );
+
+    expect(input).toEqual({
+      id: 'navigation-item',
+      type,
+      position: 0,
+      ...target,
+    });
+  });
 });

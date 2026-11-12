@@ -10,13 +10,11 @@ import { getObjectSortDropdownId } from '@/object-record/object-sort-dropdown/ut
 import { visibleRecordFieldsComponentSelector } from '@/object-record/record-field/states/visibleRecordFieldsComponentSelector';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { useUpsertRecordSort } from '@/object-record/record-sort/hooks/useUpsertRecordSort';
-import { Dropdown } from 'twenty-ui/components';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { DropdownMenuInnerSelect } from '@/ui/layout/dropdown/components/DropdownMenuInnerSelect';
-import { StyledHeaderDropdownButton } from '@/ui/layout/dropdown/components/StyledHeaderDropdownButton';
 import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
-import { isDropdownOpenComponentState } from '@/ui/layout/dropdown/states/isDropdownOpenComponentState';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { useAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
@@ -24,7 +22,8 @@ import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/use
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { findByProperty, isNonEmptyArray } from 'twenty-shared/utils';
-import { useIcons } from 'twenty-ui/icon';
+import { LightButton } from 'twenty-ui/components/input';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { v4 } from 'uuid';
 import { ViewSortDirection } from '~/generated-metadata/graphql';
 
@@ -120,11 +119,6 @@ export const ObjectSortDropdownButton = () => {
   const [selectedRecordSortDirection, setSelectedRecordSortDirection] =
     useAtomComponentState(selectedRecordSortDirectionComponentState);
 
-  const isDropdownOpen = useAtomComponentStateValue(
-    isDropdownOpenComponentState,
-    dropdownId,
-  );
-
   const { t } = useLingui();
 
   const shouldShowHiddenFields = isNonEmptyArray(
@@ -140,9 +134,9 @@ export const ObjectSortDropdownButton = () => {
     >
       <Dropdown.Trigger
         render={
-          <StyledHeaderDropdownButton isUnfolded={isDropdownOpen}>
+          <LightButton>
             <Trans>Sort</Trans>
-          </StyledHeaderDropdownButton>
+          </LightButton>
         }
       />
       <DropdownContent
@@ -187,6 +181,9 @@ export const ObjectSortDropdownButton = () => {
           aria-label={t`Search fields`}
           onValueChange={setObjectSortDropdownSearchInput}
         />
+        {(shouldShowVisibleFields || shouldShowHiddenFields) && (
+          <Dropdown.Separator />
+        )}
         {shouldShowVisibleFields && (
           <Dropdown.Section label={t`Visible fields`}>
             {visibleFieldMetadataItems.map((fieldMetadataItem, index) => (

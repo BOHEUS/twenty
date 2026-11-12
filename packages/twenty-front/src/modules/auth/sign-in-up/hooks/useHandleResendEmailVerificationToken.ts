@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
 
+import { affiliatePartnerNameState } from '@/auth/states/affiliatePartnerNameState';
 import { useOrigin } from '@/domain-manager/hooks/useOrigin';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useMutation } from '@apollo/client/react';
 import { t } from '@lingui/core/macro';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import { ResendEmailVerificationTokenDocument } from '~/generated-metadata/graphql';
 
 export const useHandleResendEmailVerificationToken = () => {
@@ -13,12 +15,15 @@ export const useHandleResendEmailVerificationToken = () => {
     ResendEmailVerificationTokenDocument,
   );
   const { origin } = useOrigin();
+  const affiliatePartnerName = useAtomStateValue(
+    affiliatePartnerNameState,
+  )?.partner;
 
   const handleResendEmailVerificationToken = useCallback(
     (email: string | null) => {
       return async () => {
         if (!email) {
-          enqueueToast({ variant: 'error', children: t`Invalid email` });
+          enqueueToast({ status: 'error', children: t`Invalid email` });
           return;
         }
 
@@ -27,23 +32,24 @@ export const useHandleResendEmailVerificationToken = () => {
             variables: {
               email,
               origin,
+              affiliatePartnerName,
             },
           });
 
           if (data?.resendEmailVerificationToken?.success === true) {
             enqueueToast({
-              variant: 'success',
+              status: 'success',
               children: t`Email verification link resent!`,
             });
           } else {
-            enqueueToast({ variant: 'error', children: t`An error occurred.` });
+            enqueueToast({ status: 'error', children: t`An error occurred.` });
           }
         } catch (error) {
           enqueueToast(getToastOptionsFromError({ error }));
         }
       };
     },
-    [enqueueToast, resendEmailVerificationToken, origin],
+    [enqueueToast, resendEmailVerificationToken, origin, affiliatePartnerName],
   );
 
   return { handleResendEmailVerificationToken, loading };

@@ -1,5 +1,4 @@
-import { type MessageChannelVisibility } from 'twenty-shared/types';
-
+import { type MessageChannelVisibility } from '@/sdk/define/common/types/loose-shared-types.type';
 import { APP_MESSAGE_CHANNEL_SELECTION } from '@/sdk/logic-function/messaging/message-channel-fields.constant';
 import { type AppMessageChannel } from '@/sdk/logic-function/messaging/types/app-message-channel.type';
 import { postGraphqlRequest } from '@/sdk/logic-function/utils/post-graphql-request.util';
@@ -21,17 +20,31 @@ export type CreateMessageChannelInput = {
   // Required: decides whether one member's conversations are readable by the whole workspace, and only the app
   // knows how private its messages are ('METADATA' for personal inboxes, 'SHARE_EVERYTHING' for shared ones)
   visibility: MessageChannelVisibility;
+  // Person field to match participant handles against (handles are then stored in its canonical form); set once
+  participantHandleFieldUniversalIdentifier?: string;
+  messagingProvider?: { universalIdentifier: string };
 };
 
-export const createMessageChannel = async (
-  input: CreateMessageChannelInput,
-): Promise<AppMessageChannel> => {
+export const createMessageChannel = async ({
+  messagingProvider,
+  ...input
+}: CreateMessageChannelInput): Promise<AppMessageChannel> => {
   const { createAppMessageChannel } = await postGraphqlRequest<
-    { input: CreateMessageChannelInput },
+    {
+      input: Omit<CreateMessageChannelInput, 'messagingProvider'> & {
+        messagingProviderUniversalIdentifier?: string;
+      };
+    },
     { createAppMessageChannel: AppMessageChannel }
   >({
     query: CREATE_APP_MESSAGE_CHANNEL_MUTATION,
-    variables: { input },
+    variables: {
+      input: {
+        ...input,
+        messagingProviderUniversalIdentifier:
+          messagingProvider?.universalIdentifier,
+      },
+    },
     caller: 'createMessageChannel',
   });
 

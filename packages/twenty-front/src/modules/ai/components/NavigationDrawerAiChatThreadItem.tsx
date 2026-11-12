@@ -1,13 +1,13 @@
 import { IconMessage } from 'twenty-ui/icon';
-import { useIsNavigationDrawerContentExpanded } from '@/navigation/hooks/useIsNavigationDrawerContentExpanded';
+import { useIsNavigationDrawerContentExpanded } from '@/ui/navigation/navigation-drawer/hooks/useIsNavigationDrawerContentExpanded';
 import { useLingui } from '@lingui/react/macro';
+import { useId } from 'react';
 
 import { AiChatThreadActionsDropdown } from '@/ai/components/AiChatThreadActionsDropdown';
-import { AI_CHAT_THREAD_ACTIONS_SURFACE } from '@/ai/constants/AiChatThreadActionsSurface';
 import { useAiChatThreadRename } from '@/ai/hooks/useAiChatThreadRename';
-import { agentChatThreadInboxStatusFamilySelector } from '@/ai/states/selectors/agentChatThreadInboxStatusFamilySelector';
-import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
-import { getAiChatThreadItemMenuDropdownId } from '@/ai/utils/getAiChatThreadItemMenuDropdownId';
+import { useIsAgentChatThreadShownAsUnread } from '@/ai/hooks/useIsAgentChatThreadShownAsUnread';
+import { useAgentChatThreadDisplayLabel } from '@/ai/hooks/useAgentChatThreadDisplayLabel';
+import { getCommandMenuDropdownIdFromCommandMenuId } from '@/command-menu-item/utils/getCommandMenuDropdownIdFromCommandMenuId';
 import { isDropdownOpenComponentState } from '@/ui/layout/dropdown/states/isDropdownOpenComponentState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { NavigationDrawerInput } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerInput';
@@ -37,17 +37,15 @@ export const NavigationDrawerAiChatThreadItem = ({
   } = useAiChatThreadRename(thread);
 
   const isDeleted = Boolean(thread.deletedAt);
-  const { isUnread } = useAtomFamilySelectorValue(
-    agentChatThreadInboxStatusFamilySelector,
-    thread.id,
-  );
-  const displayLabel = thread.title || t`New chat`;
+  const isShownAsUnread = useIsAgentChatThreadShownAsUnread(thread);
+  const displayLabel = useAgentChatThreadDisplayLabel({
+    thread,
+    fallbackLabel: t`New chat`,
+  });
+  const actionsInstanceId = useId();
   const isDropdownOpen = useAtomComponentStateValue(
     isDropdownOpenComponentState,
-    getAiChatThreadItemMenuDropdownId({
-      threadId: thread.id,
-      surface: AI_CHAT_THREAD_ACTIONS_SURFACE.NAV_DRAWER,
-    }),
+    getCommandMenuDropdownIdFromCommandMenuId(actionsInstanceId),
   );
   if (isRenaming && isExpanded) {
     return (
@@ -69,12 +67,12 @@ export const NavigationDrawerAiChatThreadItem = ({
       active={isActive}
       onClick={() => onClick(thread)}
       variant={isDeleted ? 'tertiary' : 'default'}
-      isUnread={!isDeleted && isUnread}
+      isUnread={isShownAsUnread}
       isRightOptionsDropdownOpen={isDropdownOpen}
       rightOptions={
         <AiChatThreadActionsDropdown
           thread={thread}
-          surface={AI_CHAT_THREAD_ACTIONS_SURFACE.NAV_DRAWER}
+          instanceId={actionsInstanceId}
           onRenameRequested={startRename}
         />
       }

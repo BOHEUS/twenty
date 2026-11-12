@@ -8,13 +8,17 @@
  */
 
 export { CAPTURE_ALL_VARIABLE_TAG_INNER_REGEX } from './constants/CaptureAllVariableTagInnerRegex';
+export { CODE_STEP_SOURCE_MAX_LENGTH } from './constants/CodeStepSourceMaxLength';
 export { CONTENT_TYPE_VALUES_HTTP_REQUEST } from './constants/ContentTypeValuesHttpRequest';
-export { IF_ELSE_BRANCH_POSITION_OFFSETS } from './constants/IfElseBranchPositionOffsets';
 export { OBJECTS_BLOCKED_FROM_AUTOMATION } from './constants/ObjectsBlockedFromAutomation';
 export { OBJECTS_SYNCED_FROM_CONNECTED_ACCOUNTS } from './constants/ObjectsSyncedFromConnectedAccounts';
 export { STEP_RETRY_DELAYS_MS } from './constants/StepRetryDelaysMs';
 export { TRIGGER_STEP_ID } from './constants/TriggerStepId';
 export { WORKFLOW_ACTION_FEATURE_FLAGS } from './constants/WorkflowActionFeatureFlags';
+export { WORKFLOW_AI_AGENT_GENERATE_STEP_DEFAULT_NAME } from './constants/WorkflowAiAgentGenerateStepDefaultName';
+export type { WorkflowAiAgentStepConfigIssueCode } from './constants/WorkflowAiAgentStepConfigIssueMessages';
+export { WORKFLOW_AI_AGENT_STEP_CONFIG_ISSUE_MESSAGES } from './constants/WorkflowAiAgentStepConfigIssueMessages';
+export { WORKFLOW_TRIGGER_DEFAULT_NAMES } from './constants/WorkflowTriggerDefaultNames';
 export { WORKFLOW_TRIGGER_METADATA_KEY } from './constants/WorkflowTriggerMetadataKey';
 export { WORKFLOW_TRIGGER_METADATA_LABEL } from './constants/WorkflowTriggerMetadataLabel';
 export { WORKFLOW_TRIGGER_METADATA_WORKSPACE_MEMBER_ID_KEY } from './constants/WorkflowTriggerMetadataWorkspaceMemberIdKey';
@@ -31,8 +35,11 @@ export type {
   WorkflowLayoutOptions,
 } from './layout/utils/compute-workflow-layout.util';
 export { computeWorkflowLayout } from './layout/utils/compute-workflow-layout.util';
+export { agentResponseFormatSchema } from './schemas/agent-response-format-schema';
 export { workflowAiAgentActionSchema } from './schemas/ai-agent-action-schema';
 export { workflowAiAgentActionSettingsSchema } from './schemas/ai-agent-action-settings-schema';
+export { workflowAiAgentConversationConfigSchema } from './schemas/ai-agent-conversation-config-schema';
+export { workflowAiAgentInlineConfigSchema } from './schemas/ai-agent-inline-config-schema';
 export { baseTriggerSchema } from './schemas/base-trigger-schema';
 export { baseWorkflowActionSchema } from './schemas/base-workflow-action-schema';
 export { baseWorkflowActionSettingsSchema } from './schemas/base-workflow-action-settings-schema';
@@ -45,7 +52,10 @@ export {
   workflowClassifyActionSettingsSchema,
 } from './schemas/classify-action-settings-schema';
 export { workflowCodeActionSchema } from './schemas/code-action-schema';
-export { workflowCodeActionSettingsSchema } from './schemas/code-action-settings-schema';
+export {
+  workflowCodeActionInputSchema,
+  workflowCodeActionSettingsSchema,
+} from './schemas/code-action-settings-schema';
 export { workflowCreateCalendarEventActionSchema } from './schemas/create-calendar-event-action-schema';
 export { workflowCreateCalendarEventActionSettingsSchema } from './schemas/create-calendar-event-action-settings-schema';
 export { workflowCreateRecordActionSchema } from './schemas/create-record-action-schema';
@@ -85,6 +95,9 @@ export {
   workflowPickRecordStrategySchema,
   workflowPickRecordActionSettingsSchema,
 } from './schemas/pick-record-action-settings-schema';
+export { recordFilterGroupSchema } from './schemas/record-filter-group-schema';
+export { recordFilterSchema } from './schemas/record-filter-schema';
+export { recordSortSchema } from './schemas/record-sort-schema';
 export { workflowSendChatMessageActionSchema } from './schemas/send-chat-message-action-schema';
 export { workflowSendChatMessageActionSettingsSchema } from './schemas/send-chat-message-action-settings-schema';
 export { workflowSendEmailActionSchema } from './schemas/send-email-action-schema';
@@ -99,8 +112,14 @@ export { workflowUpdateRecordActionSchema } from './schemas/update-record-action
 export { workflowUpdateRecordActionSettingsSchema } from './schemas/update-record-action-settings-schema';
 export { workflowUpsertRecordActionSchema } from './schemas/upsert-record-action-schema';
 export { workflowUpsertRecordActionSettingsSchema } from './schemas/upsert-record-action-settings-schema';
+export { workflowWaitForEventActionSchema } from './schemas/wait-for-event-action-schema';
+export { workflowWaitForEventActionSettingsSchema } from './schemas/wait-for-event-action-settings-schema';
 export { workflowWebhookTriggerSchema } from './schemas/webhook-trigger-schema';
 export { workflowActionSchema } from './schemas/workflow-action-schema';
+export {
+  workflowConversationScopeSchema,
+  workflowConversationSchema,
+} from './schemas/workflow-conversation-schema';
 export { workflowDelayActionSchema } from './schemas/workflow-delay-action-schema';
 export { workflowDelayActionSettingsSchema } from './schemas/workflow-delay-action-settings-schema';
 export { workflowFileSchema } from './schemas/workflow-file-action-schema';
@@ -114,6 +133,7 @@ export {
   workflowRunStepLogsSchema,
 } from './schemas/workflow-run-step-log-schema';
 export { workflowRunStepStatusSchema } from './schemas/workflow-run-step-status-schema';
+export { workflowStepWaitSchema } from './schemas/workflow-step-wait-schema';
 export { workflowTriggerSchema } from './schemas/workflow-trigger-schema';
 export { workflowVariableReferenceSchema } from './schemas/workflow-variable-reference-schema';
 export type { EmailRecipients } from './types/EmailRecipients';
@@ -131,6 +151,10 @@ export type {
   WorkflowClassifyCriterion,
   WorkflowClassifyQuestion,
 } from './types/WorkflowClassifyQuestion';
+export type {
+  WorkflowConversation,
+  WorkflowConversationScope,
+} from './types/WorkflowConversation';
 export type { BodyType } from './types/WorkflowHttpRequestStep';
 export type {
   WorkflowRunStepInfo,
@@ -141,16 +165,19 @@ export type {
   WorkflowRunStepLog,
   WorkflowRunStepLogs,
   AiAgentStepLogDetails,
-  AiToolCallLog,
 } from './types/WorkflowRunStepLog';
+export type { WorkflowStepWait } from './types/WorkflowStepWait';
 export { canObjectBeManagedByAutomation } from './utils/canObjectBeManagedByAutomation';
 export { extractRawVariableNamePart } from './utils/extractRawVariableNameParts';
 export { getFunctionInputFromInputSchema } from './utils/getFunctionInputFromInputSchema';
+export { getWorkflowAiAgentStepConfigIssues } from './utils/getWorkflowAiAgentStepConfigIssues';
 export { getWorkflowRunContext } from './utils/getWorkflowRunContext';
+export { hasWorkflowAiAgentConfig } from './utils/hasWorkflowAiAgentConfig';
+export { isAgentRunnableAsWorkflowStep } from './utils/isAgentRunnableAsWorkflowStep';
 export { isObjectSyncedFromConnectedAccounts } from './utils/isObjectSyncedFromConnectedAccounts';
 export { isStandaloneVariableString } from './utils/isStandaloneVariableString';
+export { isWorkflowAiAgentGenerateStep } from './utils/isWorkflowAiAgentGenerateStep';
 export { parseBooleanFromStringValue } from './utils/parseBooleanFromStringValue';
-export { parseDataFromContentType } from './utils/parseDataFromContentType';
 export {
   needsEscaping,
   escapePathSegment,
@@ -204,9 +231,9 @@ export type {
   FindRecordsOutputSchema,
   IteratorOutputSchema,
   FormFieldLeaf,
+  FormSelectFieldLeaf,
   FormFieldNode,
   FormOutputSchema,
-  LinkOutputSchema,
   CodeOutputSchema,
   ManualTriggerOutputSchema,
   OutputSchemaV2,

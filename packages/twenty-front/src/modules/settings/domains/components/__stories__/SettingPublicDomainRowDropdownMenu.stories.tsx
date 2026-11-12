@@ -1,7 +1,7 @@
 import { type Meta, type StoryObj } from '@storybook/react-vite';
 import { graphql, HttpResponse } from 'msw';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
-import { Toaster } from 'twenty-ui/components';
+import { Toaster } from 'twenty-ui/components/feedback';
 import { ComponentDecorator } from 'twenty-ui/testing';
 
 import { SettingPublicDomainRowDropdownMenu } from '@/settings/domains/components/SettingPublicDomainRowDropdownMenu';
@@ -14,6 +14,7 @@ import { ToastDecorator } from '~/testing/decorators/ToastDecorator';
 import { mockedApolloClient } from '~/testing/mockedApolloClient';
 
 const publicDomain = {
+  __typename: 'PublicDomain' as const,
   id: 'public-domain',
   domain: 'crm.example.com',
   createdAt: '2026-09-23T00:00:00.000Z',

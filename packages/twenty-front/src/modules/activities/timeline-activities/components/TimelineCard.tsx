@@ -5,14 +5,13 @@ import { CustomResolverFetchMoreLoader } from '@/activities/components/CustomRes
 import { SkeletonLoader } from '@/activities/components/SkeletonLoader';
 import { EventList } from '@/activities/timeline-activities/components/EventList';
 import { useTimelineActivities } from '@/activities/timeline-activities/hooks/useTimelineActivities';
-import { RecordListUpsertRecordsInStoreEffect } from '@/object-record/record-list/components/RecordListUpsertRecordsInStoreEffect';
+import { UpsertRecordsInStoreEffect } from '@/object-record/record-store/components/UpsertRecordsInStoreEffect';
 import { AnimatedPlaceholder } from '@/ui/feedback/empty-state/components/AnimatedPlaceholder/AnimatedPlaceholder';
 import { StyledWidgetScrollContainer } from '@/ui/layout/components/WidgetContentContainer';
 import { useTargetRecord } from '@/ui/layout/contexts/useTargetRecord';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
-import { t } from '@lingui/core/macro';
-
 import { MOBILE_VIEWPORT, themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledMainContainer = styled(StyledWidgetScrollContainer)`
   align-items: flex-start;
@@ -33,6 +32,7 @@ const StyledSidePanelPlaceholderWrapper = styled.div`
 `;
 
 export const TimelineCard = () => {
+  const { t } = useLingui();
   const targetRecord = useTargetRecord();
   const isInSidePanel = useWorkspaceSurface().type === 'side-panel';
   const {
@@ -73,7 +73,7 @@ export const TimelineCard = () => {
 
   return (
     <>
-      <RecordListUpsertRecordsInStoreEffect records={linkedRecords} />
+      <UpsertRecordsInStoreEffect records={linkedRecords} />
       <StyledMainContainer>
         <EventList
           targetableObject={targetRecord}

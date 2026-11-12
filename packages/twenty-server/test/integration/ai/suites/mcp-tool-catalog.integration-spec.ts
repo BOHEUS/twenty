@@ -9,7 +9,11 @@ import { ToolCategory } from 'twenty-shared/ai';
 
 const baseUrl = `http://localhost:${APP_PORT}`;
 
-const postMcp = (body: object, bearer: string, path = '/mcp') =>
+const META_MODE_PATH = '/mcp?mode=meta';
+
+const DIRECT_MODE_PATH = '/mcp';
+
+const postMcp = (body: object, bearer: string, path = META_MODE_PATH) =>
   request(baseUrl)
     .post(path)
     .set('Authorization', `Bearer ${bearer}`)
@@ -21,7 +25,7 @@ const callMcpTool = async (
   bearer: string,
   toolName: string,
   toolArguments: object,
-  path = '/mcp',
+  path = META_MODE_PATH,
 ) => {
   const response = await postMcp(
     {
@@ -80,7 +84,17 @@ const EXPECTED_CATEGORIES_WITHOUT_READ_ONLY_TOOLS: string[] = [];
 const listMcpTools = async (
   bearer: string,
   path: string,
-): Promise<{ name: string; inputSchema: { type?: string } }[]> => {
+): Promise<
+  {
+    name: string;
+    inputSchema: { type?: string };
+    annotations?: {
+      readOnlyHint: boolean;
+      openWorldHint: boolean;
+      destructiveHint: boolean;
+    };
+  }[]
+> => {
   const response = await postMcp(
     { jsonrpc: '2.0', method: 'tools/list', id: '1' },
     bearer,
@@ -99,8 +113,6 @@ const META_MODE_TOOL_NAMES = [
   'load_skills',
   'search_help_center',
 ];
-
-const DIRECT_MODE_PATH = '/mcp?mode=direct';
 
 const createApiKeyToken = async (roleId: string): Promise<string> => {
   const createResponse = await makeMetadataApiRequest({
@@ -289,7 +301,7 @@ describe('MCP tool catalog (integration)', () => {
     });
   });
 
-  describe('direct mode', () => {
+  describe('direct mode (default)', () => {
     it('should list registry tools directly, without the meta-tools or MCP-excluded tools', async () => {
       const toolNames = (
         await listMcpTools(adminApiKeyToken, DIRECT_MODE_PATH)
@@ -346,10 +358,41 @@ describe('MCP tool catalog (integration)', () => {
       expect(isDispatchFailure(result)).toBe(true);
     });
 
-    it('should keep plain /mcp on the meta-tools', async () => {
-      const toolNames = (await listMcpTools(adminApiKeyToken, '/mcp')).map(
-        (tool) => tool.name,
+    it('should mark database read tools read-only and keep execute hints on writes', async () => {
+      const annotationsByToolName = Object.fromEntries(
+        (await listMcpTools(adminApiKeyToken, DIRECT_MODE_PATH)).map((tool) => [
+          tool.name,
+          tool.annotations,
+        ]),
       );
+
+      expect(annotationsByToolName.find_many_people).toEqual({
+        readOnlyHint: true,
+        openWorldHint: false,
+        destructiveHint: false,
+      });
+      expect(annotationsByToolName.create_one_person).toEqual({
+        readOnlyHint: false,
+        openWorldHint: true,
+        destructiveHint: false,
+      });
+    });
+
+    it('should keep accepting the explicit ?mode=direct', async () => {
+      const toolNames = (
+        await listMcpTools(adminApiKeyToken, '/mcp?mode=direct')
+      ).map((tool) => tool.name);
+
+      expect(toolNames).toEqual(
+        expect.arrayContaining(['find_many_companies']),
+      );
+      expect(toolNames).not.toContain('execute_tool');
+    });
+
+    it('should keep ?mode=meta on the meta-tools', async () => {
+      const toolNames = (
+        await listMcpTools(adminApiKeyToken, META_MODE_PATH)
+      ).map((tool) => tool.name);
 
       expect([...toolNames].sort()).toEqual(META_MODE_TOOL_NAMES);
 

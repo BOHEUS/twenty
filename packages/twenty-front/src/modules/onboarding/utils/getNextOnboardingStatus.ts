@@ -1,5 +1,6 @@
 import { type CurrentUser } from '@/auth/states/currentUserState';
 import { type CurrentWorkspace } from '@/auth/states/currentWorkspaceState';
+import { getIsInviteTeamOnboardingStepPending } from '@/onboarding/utils/getIsInviteTeamOnboardingStepPending';
 import { getIsPlanRequired } from '@/onboarding/utils/getIsPlanRequired';
 import { OnboardingStatus } from '~/generated-metadata/graphql';
 
@@ -35,18 +36,14 @@ export const getNextOnboardingStatus = ({
   }
 
   if (currentUser?.onboardingStatus === OnboardingStatus.SYNC_EMAIL) {
-    if (currentWorkspace?.workspaceMembersCount === 1) {
-      return OnboardingStatus.APPS_INSTALLATION;
-    }
-    return OnboardingStatus.PROFILE_CREATION;
-  }
-
-  if (currentUser?.onboardingStatus === OnboardingStatus.APPS_INSTALLATION) {
     return OnboardingStatus.PROFILE_CREATION;
   }
 
   if (currentUser?.onboardingStatus === OnboardingStatus.PROFILE_CREATION) {
-    if (currentWorkspace?.workspaceMembersCount === 1) {
+    if (
+      getIsInviteTeamOnboardingStepPending(currentUser) &&
+      currentWorkspace?.workspaceMembersCount === 1
+    ) {
       return OnboardingStatus.INVITE_TEAM;
     }
     return statusAfterInviteTeam;

@@ -2,6 +2,8 @@ import { type MessageDescriptor } from '@lingui/core';
 import { type MetadataRoute } from 'next';
 
 export type WebsiteRouteId =
+  | 'affiliatePartners'
+  | 'affiliatePartnersTerms'
   | 'apps'
   | 'comparePricingDynamics'
   | 'comparePricingHubspot'
@@ -20,6 +22,7 @@ export type WebsiteRouteId =
   | 'privacyPolicy'
   | 'product'
   | 'releases'
+  | 'support'
   | 'terms'
   | 'whyTwenty';
 

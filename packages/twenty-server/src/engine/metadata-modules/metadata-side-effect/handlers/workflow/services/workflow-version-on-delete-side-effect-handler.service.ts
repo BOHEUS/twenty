@@ -14,7 +14,7 @@ export class WorkflowVersionOnDeleteSideEffectHandlerService extends MetadataSid
     metadataName: 'workflow',
     name: 'workflowVersionOnDelete',
     description:
-      'Delete the managed version of an application workflow when the workflow is deleted.',
+      'Delete the versions of a deleted workflow, with their command menu items.',
   },
 ) {
   buildSideEffects(

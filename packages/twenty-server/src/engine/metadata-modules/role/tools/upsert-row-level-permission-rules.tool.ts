@@ -1,12 +1,16 @@
+import { ToolCategory } from 'twenty-shared/ai';
 import {
   RowLevelPermissionPredicateGroupLogicalOperator,
   RowLevelPermissionPredicateOperand,
 } from 'twenty-shared/types';
 import { z } from 'zod';
 
-import { type RoleToolContext } from 'src/engine/metadata-modules/role/tools/types/role-tool-context.type';
-import { type RoleToolDependencies } from 'src/engine/metadata-modules/role/tools/types/role-tool-dependencies.type';
-import { toRoleToolErrorMessage } from 'src/engine/metadata-modules/role/tools/utils/to-role-tool-error-message.util';
+import { DefineTool } from 'src/engine/core-modules/tool-provider/decorators/define-tool.decorator';
+import { BaseTool } from 'src/engine/core-modules/tool-provider/interfaces/base-tool.interface';
+import { type ToolExecuteArgs } from 'src/engine/core-modules/tool-provider/types/tool-execute-args.type';
+import { type ToolOutput } from 'src/engine/core-modules/tool/types/tool-output.type';
+import { ROLE_WRITE_ACCESS_POLICY } from 'src/engine/metadata-modules/role/constants/role-write-access-policy.constant';
+import { RowLevelPermissionPredicateService } from 'src/engine/metadata-modules/row-level-permission-predicate/services/row-level-permission-predicate.service';
 
 const predicateValueSchema = z
   .union([
@@ -91,7 +95,7 @@ const rowLevelPermissionPredicateGroupSchema = z.object({
     .describe('Position of this group within its parent'),
 });
 
-const upsertRowLevelPermissionRulesSchema = z.object({
+const upsertRowLevelPermissionRulesInputSchema = z.object({
   roleId: z.uuid().describe('Id of the role the rules apply to'),
   objectMetadataId: z.uuid().describe('Id of the object the rules restrict'),
   predicates: z
@@ -104,57 +108,92 @@ const upsertRowLevelPermissionRulesSchema = z.object({
     .describe(
       'The complete list of predicate groups to keep for this role and object. Existing groups omitted from the list are deleted.',
     ),
+  canReadRecords: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether members with this role can read the records the rules match',
+    ),
+  canCreateRecords: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether members with this role can create records the rules match',
+    ),
+  canUpdateRecords: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether members with this role can update the records the rules match',
+    ),
+  canSoftDeleteRecords: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether members with this role can soft delete the records the rules match',
+    ),
+  canDestroyRecords: z
+    .boolean()
+    .optional()
+    .describe(
+      'Whether members with this role can permanently delete the records the rules match',
+    ),
 });
 
-type UpsertRowLevelPermissionRulesParams = z.infer<
-  typeof upsertRowLevelPermissionRulesSchema
->;
-
-export const createUpsertRowLevelPermissionRulesTool = (
-  deps: Pick<RoleToolDependencies, 'rowLevelPermissionPredicateService'>,
-  context: RoleToolContext,
-) => ({
-  name: 'upsert_row_level_permission_rules' as const,
+@DefineTool({
+  name: 'upsert_row_level_permission_rules',
+  category: ToolCategory.ROLE,
+  accessPolicy: ROLE_WRITE_ACCESS_POLICY,
   description: `Set row-level permission rules restricting which records members with a role can see on a given object (enterprise feature).
 
 Example, "members with this role only see records where the owner field matches the current user": pass one predicate with fieldMetadataId = the owner field on the object, operand = IS, and workspaceMemberFieldMetadataId = the "id" field of the workspaceMember object (resolved to the current user at query time). Use metadata tools to look up field ids.
 The same works between relations: for "only records in my region", pass fieldMetadataId = a many-to-one relation on the object and workspaceMemberFieldMetadataId = a many-to-one relation on workspaceMember pointing at the same object, with operand IS.
 Combine several predicates with predicateGroups (AND / OR): give each new group a client-generated UUID and reference it from predicates via rowLevelPermissionPredicateGroupId.
+Grants: the rules only open access through canReadRecords, canUpdateRecords, etc. An object-level permission granting all records on this object wins over the rules, so turn it off for the operations the rules should restrict.
 IMPORTANT: this replaces the full rule set for the role + object. Predicates or groups omitted from the lists are deleted; empty lists clear all rules. System-managed roles (like Admin) cannot be changed.`,
-  inputSchema: upsertRowLevelPermissionRulesSchema,
-  execute: async (parameters: UpsertRowLevelPermissionRulesParams) => {
-    try {
-      const { predicates, predicateGroups } =
-        await deps.rowLevelPermissionPredicateService.upsertRowLevelPermissionPredicates(
-          {
-            workspaceId: context.workspaceId,
-            input: {
-              roleId: parameters.roleId,
-              objectMetadataId: parameters.objectMetadataId,
-              predicates: parameters.predicates,
-              predicateGroups: parameters.predicateGroups.map(
-                (predicateGroup) => ({
-                  ...predicateGroup,
-                  objectMetadataId: parameters.objectMetadataId,
-                }),
-              ),
-            },
+})
+export class UpsertRowLevelPermissionRulesTool extends BaseTool<
+  typeof upsertRowLevelPermissionRulesInputSchema
+> {
+  readonly inputSchema = upsertRowLevelPermissionRulesInputSchema;
+
+  constructor(
+    private readonly rowLevelPermissionPredicateService: RowLevelPermissionPredicateService,
+  ) {
+    super();
+  }
+
+  async execute({
+    input,
+    context: { workspaceId },
+  }: ToolExecuteArgs<
+    typeof upsertRowLevelPermissionRulesInputSchema
+  >): Promise<ToolOutput> {
+    const { predicates, predicateGroups } =
+      await this.rowLevelPermissionPredicateService.upsertRowLevelPermissionPredicates(
+        {
+          workspaceId,
+          input: {
+            roleId: input.roleId,
+            objectMetadataId: input.objectMetadataId,
+            predicates: input.predicates,
+            predicateGroups: input.predicateGroups.map((predicateGroup) => ({
+              ...predicateGroup,
+              objectMetadataId: input.objectMetadataId,
+            })),
+            canCreateRecords: input.canCreateRecords,
+            canReadRecords: input.canReadRecords,
+            canUpdateRecords: input.canUpdateRecords,
+            canSoftDeleteRecords: input.canSoftDeleteRecords,
+            canDestroyRecords: input.canDestroyRecords,
           },
-        );
+        },
+      );
 
-      return {
-        success: true,
-        message: `Row-level permission rules updated (${predicates.length} predicate${predicates.length === 1 ? '' : 's'}, ${predicateGroups.length} group${predicateGroups.length === 1 ? '' : 's'})`,
-        result: { predicates, predicateGroups },
-      };
-    } catch (error) {
-      const message = toRoleToolErrorMessage(error);
-
-      return {
-        success: false,
-        message: `Failed to upsert row-level permission rules: ${message}`,
-        error: message,
-      };
-    }
-  },
-});
+    return {
+      success: true,
+      message: `Row-level permission rules updated (${predicates.length} predicate${predicates.length === 1 ? '' : 's'}, ${predicateGroups.length} group${predicateGroups.length === 1 ? '' : 's'})`,
+      result: { predicates, predicateGroups },
+    };
+  }
+}

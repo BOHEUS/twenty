@@ -3,6 +3,7 @@ import { isNonEmptyString } from '@sniptt/guards';
 import react from '@vitejs/plugin-react-swc';
 import wyw from '@wyw-in-js/vite';
 import fs from 'fs';
+import { createRequire } from 'module';
 import { Features } from 'lightningcss';
 import path from 'path';
 import { visualizer } from 'rollup-plugin-visualizer';
@@ -14,12 +15,61 @@ import {
 } from 'vite';
 import svgr from 'vite-plugin-svgr';
 
-import { createWywProfilingPlugin } from 'twenty-shared/vite';
+import {
+  createWywProfilingPlugin,
+  getTwentySharedOptimizeDepsInclude,
+} from 'twenty-shared/vite';
 
 import {
   API_PROXY_PATHS,
   buildApiProxyMatcher,
 } from './src/config/apiProxyPrefixes';
+
+const twentySharedPackageJson = JSON.parse(
+  fs.readFileSync(
+    path.resolve(__dirname, '../twenty-shared/package.json'),
+    'utf8',
+  ),
+);
+
+const EMOJIBASE_DATA_FILE_NAMES = ['data.json', 'messages.json'];
+
+// The emoji picker fetches Emojibase data at runtime; serving it ourselves
+// keeps it working where its default CDN is unreachable
+const emojibaseDataPlugin = (): PluginOption => {
+  const emojibaseDataDirectory = path.dirname(
+    createRequire(import.meta.url).resolve('emojibase-data/en/data.json'),
+  );
+
+  return {
+    name: 'emojibase-data',
+    configureServer: (server) => {
+      server.middlewares.use('/emojibase/en', (request, response, next) => {
+        const fileName = (request.url ?? '').replace(/^\//, '');
+
+        if (!EMOJIBASE_DATA_FILE_NAMES.includes(fileName)) {
+          next();
+
+          return;
+        }
+
+        response.setHeader('Content-Type', 'application/json');
+        response.end(
+          fs.readFileSync(path.join(emojibaseDataDirectory, fileName)),
+        );
+      });
+    },
+    generateBundle() {
+      for (const fileName of EMOJIBASE_DATA_FILE_NAMES) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `emojibase/en/${fileName}`,
+          source: fs.readFileSync(path.join(emojibaseDataDirectory, fileName)),
+        });
+      }
+    },
+  };
+};
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, __dirname, '');
@@ -81,10 +131,7 @@ export default defineConfig(({ mode }) => {
             protocol: 'http',
           }),
       fs: {
-        allow: [
-          searchForWorkspaceRoot(process.cwd()),
-          '**/@blocknote/core/src/fonts/**',
-        ],
+        allow: [searchForWorkspaceRoot(process.cwd())],
       },
     },
 
@@ -93,6 +140,7 @@ export default defineConfig(({ mode }) => {
         plugins: [['@lingui/swc-plugin', {}]],
       }),
       svgr(),
+      emojibaseDataPlugin(),
       lingui({
         configPath: path.resolve(__dirname, './lingui.config.ts'),
       }),
@@ -163,12 +211,24 @@ export default defineConfig(({ mode }) => {
         'react-dom/client',
         'react/jsx-runtime',
         'react/jsx-dev-runtime',
+        '@tiptap/extension-code',
+        '@tiptap/extension-code-block',
+        '@tiptap/extension-drag-handle-react',
+        '@tiptap/extension-file-handler',
+        '@tiptap/extension-image',
+        '@tiptap/extension-table',
+        '@tiptap/extension-text-align',
+        '@tiptap/extension-text-style',
         '@nivo/core',
         '@nivo/pie',
         '@nivo/line',
         '@nivo/arcs',
         '@react-spring/web',
         'd3-shape',
+        '@tiptap/pm/tables',
+        '@calcom/embed-react',
+        // Linked packages aren't pre-bundled, and twenty-shared ships one file per module.
+        ...getTwentySharedOptimizeDepsInclude(twentySharedPackageJson.exports),
       ],
     },
 

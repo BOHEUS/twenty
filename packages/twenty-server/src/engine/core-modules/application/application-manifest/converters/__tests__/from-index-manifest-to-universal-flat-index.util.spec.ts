@@ -28,7 +28,7 @@ describe('fromIndexManifestToUniversalFlatIndex', () => {
   const baseManifest = {
     universalIdentifier: 'idx-uuid-1',
     objectUniversalIdentifier: 'obj-uuid-1',
-    indexType: 'BTREE' as const,
+    indexType: IndexType.BTREE,
   };
 
   it('builds a flat index from a scalar field', () => {
@@ -55,7 +55,6 @@ describe('fromIndexManifestToUniversalFlatIndex', () => {
     expect(result.indexType).toBe(IndexType.BTREE);
     expect(result.isUnique).toBe(false);
     expect(result.indexWhereClause).toBeNull();
-    expect(result.isCustom).toBe(false);
     expect(result.universalFlatIndexFieldMetadatas).toHaveLength(1);
     expect(result.universalFlatIndexFieldMetadatas[0]).toMatchObject({
       order: 0,
@@ -221,7 +220,7 @@ describe('fromIndexManifestToUniversalFlatIndex', () => {
       fromIndexManifestToUniversalFlatIndex({
         indexManifest: {
           ...baseManifest,
-          indexType: 'GIN',
+          indexType: IndexType.GIN,
           fields: [
             {
               universalIdentifier: 'field-entry-1',
@@ -247,7 +246,7 @@ describe('fromIndexManifestToUniversalFlatIndex', () => {
     const result = fromIndexManifestToUniversalFlatIndex({
       indexManifest: {
         ...baseManifest,
-        indexType: 'GIN',
+        indexType: IndexType.GIN,
         fields: [
           {
             universalIdentifier: 'field-entry-1',

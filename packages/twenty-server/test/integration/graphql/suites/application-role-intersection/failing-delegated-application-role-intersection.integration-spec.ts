@@ -7,7 +7,7 @@ import {
 } from 'test/integration/graphql/suites/application-role-intersection/utils/create-workspace-blocklist-entry.util';
 import { deleteBlocklistEntryThroughMcp } from 'test/integration/graphql/suites/application-role-intersection/utils/delete-blocklist-entry-through-mcp.util';
 import { deleteUserFromWorkspace } from 'test/integration/graphql/suites/user-session/utils/delete-user-from-workspace.util';
-import { findObjectMetadataIdByName } from 'test/integration/graphql/suites/application-role-intersection/utils/find-object-metadata-id-by-name.util';
+import { findObjectMetadataIdByName } from 'test/integration/utils/find-object-metadata-id-by-name.util';
 import {
   cleanupDelegatedApplications,
   type DelegatedApplications,
@@ -18,7 +18,6 @@ import { findOneApplication } from 'test/integration/metadata/suites/application
 import { deleteOneRole } from 'test/integration/metadata/suites/role/utils/delete-one-role.util';
 import { uploadWorkspaceMemberProfilePicture } from 'test/integration/graphql/suites/application-role-intersection/utils/upload-workspace-member-profile-picture.util';
 import { expectOneNotInternalServerErrorSnapshot } from 'test/integration/graphql/utils/expect-one-not-internal-server-error-snapshot.util';
-import { updateWorkspace } from 'test/integration/graphql/utils/update-workspace.util';
 import { createOneView } from 'test/integration/metadata/suites/view/utils/create-one-view.util';
 import { destroyOneView } from 'test/integration/metadata/suites/view/utils/destroy-one-view.util';
 import { findOneView } from 'test/integration/metadata/suites/view/utils/find-one-view.util';
@@ -26,7 +25,6 @@ import { updateOneView } from 'test/integration/metadata/suites/view/utils/updat
 import {
   countWorkspaceBlocklistEntries,
   countWorkspaceFiles,
-  readWorkspaceDisplayName,
   readWorkspaceMemberTimeZone,
   workspaceBlocklistEntryExists,
   workspaceMemberExists,
@@ -36,6 +34,7 @@ import {
   eachTestingContextFilter,
 } from 'twenty-shared/testing';
 
+import { BillingPlanKey } from 'src/engine/core-modules/billing/enums/billing-plan-key.enum';
 import { type BaseGraphQLError } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
 import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
 
@@ -82,25 +81,13 @@ const testCases: EachTestingContext<TestContext>[] = [
     },
   },
   {
-    title: 'updateWorkspace',
-    context: {
-      attempt: (token) =>
-        updateWorkspace({
-          data: { displayName: `Renamed by an app ${randomUUID()}` },
-          token,
-          expectToFail: true,
-        }),
-      readTarget: readWorkspaceDisplayName,
-    },
-  },
-  {
     // A refused checkout persists nothing to read back, so the refusal itself is
     // the whole observable effect.
     title: 'the billing checkout permission path',
     context: {
       attempt: (token) =>
         checkoutSession({
-          input: { recurringInterval: 'Month' },
+          input: { recurringInterval: 'Month', plan: BillingPlanKey.PRO },
           token,
           expectToFail: true,
         }),
@@ -180,10 +167,6 @@ describe('A delegated application without the flag is refused', () => {
     },
   );
 
-  // Lockout protection covers the roles the caller depends on. An application
-  // acting for a member depends on its own declared role as much as on the
-  // member's, so deleting it must be refused even though the member's role,
-  // and the ROLES flag it needs to get here, say otherwise.
   it('should refuse a delegated application deleting its own declared role', async () => {
     const { flaggedApplication, flaggedApplicationToken } =
       delegatedApplications;

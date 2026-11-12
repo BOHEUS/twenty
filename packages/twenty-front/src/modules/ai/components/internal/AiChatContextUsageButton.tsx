@@ -1,67 +1,34 @@
-import { getAiChatUsageLabel } from '@/ai/utils/getAiChatUsageLabel';
 import { formatAiChatTokens } from '@/ai/utils/formatAiChatTokens';
-import {
-  FloatingPortal,
-  autoUpdate,
-  flip,
-  offset,
-  safePolygon,
-  shift,
-  useClick,
-  useDismiss,
-  useFloating,
-  useFocus,
-  useHover,
-  useInteractions,
-  useRole,
-  useTransitionStyles,
-} from '@floating-ui/react';
+import { FloatingPortal, useTransitionStyles } from '@floating-ui/react';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { isDefined } from 'twenty-shared/utils';
-import { MetricRow } from 'twenty-ui/components';
+import { MetricRow } from 'twenty-ui/components/data-display';
+import { LightIconButton } from 'twenty-ui/components/input';
 import { ProgressRing } from 'twenty-ui/primitives/feedback';
 import { Button } from 'twenty-ui/primitives/input';
-import { IconWindow, IconGauge } from 'twenty-ui/icon';
-import { HorizontalSeparator } from 'twenty-ui/primitives/layout';
-import { themeCssVariables } from 'twenty-ui/theme';
+import { IconWindow, IconGauge, IconUser } from 'twenty-ui/icon';
+import { Separator } from 'twenty-ui/primitives/layout';
+import { themeCssVariables, useTheme } from 'twenty-ui/theme';
 
 import { AiChatContextUsageDetails } from '@/ai/components/internal/AiChatContextUsageDetails';
+import { AiChatUsageMetricRow } from '@/ai/components/internal/AiChatUsageMetricRow';
+import { useAiChatHoverCard } from '@/ai/hooks/useAiChatHoverCard';
 import { useAiChatUsage } from '@/ai/hooks/useAiChatUsage';
+import { useAiChatUserCreditsUsage } from '@/ai/hooks/useAiChatUserCreditsUsage';
 import { useAiModelTiers } from '@/ai/hooks/useAiModelTiers';
 import { useWorkspaceAiModelTiers } from '@/ai/hooks/useWorkspaceAiModelTiers';
 import { useIsWorkspaceSetupChat } from '@/ai/hooks/useIsWorkspaceSetupChat';
-import { agentChatUsageComponentFamilyState } from '@/ai/states/agentChatUsageComponentFamilyState';
+import { agentChatUsageFamilyState } from '@/ai/states/agentChatUsageFamilyState';
 import { agentChatUserSelectedModelTierState } from '@/ai/states/agentChatUserSelectedModelTierState';
 import { currentAiChatThreadState } from '@/ai/states/currentAiChatThreadState';
 import { getUsageLimitRingColor } from '@/settings/billing/utils/getUsageLimitRingColor';
-import { computeUsageLimitProgress } from '@/settings/billing/utils/computeUsageLimitProgress';
 import { StyledInformationCard } from '@/ui/layout/information-card/components/StyledInformationCard';
-import { useAtomComponentFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentFamilyStateValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { formatNumber } from '~/utils/format/formatNumber';
-
-const StyledTrigger = styled.button`
-  align-items: center;
-  background: transparent;
-  border: none;
-  border-radius: ${themeCssVariables.border.radius.md};
-  cursor: pointer;
-  display: flex;
-  height: 24px;
-  justify-content: center;
-  padding: 0;
-  width: 24px;
-
-  &:hover {
-    background: ${themeCssVariables.background.transparent.light};
-  }
-  &:focus-visible {
-    outline: 2px solid ${themeCssVariables.color.blue};
-  }
-`;
+import { formatNumber } from '@/localization/utils/formatNumber';
+import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
 
 const StyledFooter = styled.div`
   display: flex;
@@ -71,19 +38,30 @@ const StyledFooter = styled.div`
 
 export const AiChatContextUsageButton = () => {
   const { t } = useLingui();
+  const theme = useTheme();
 
   const shouldReduceMotion = useReducedMotion();
 
-  const [isOpen, setIsOpen] = useState(false);
-
   const [showDetails, setShowDetails] = useState(false);
+
+  const {
+    isOpen,
+    context,
+    refs,
+    floatingStyles,
+    getReferenceProps,
+    getFloatingProps,
+  } = useAiChatHoverCard({
+    placement: 'top-start',
+    role: 'dialog',
+    onOpen: () => setShowDetails(false),
+  });
 
   const currentAiChatThread = useAtomStateValue(currentAiChatThreadState);
 
-  const agentChatUsage = useAtomComponentFamilyStateValue(
-    agentChatUsageComponentFamilyState,
-    { threadId: currentAiChatThread },
-  );
+  const agentChatUsage = useAtomFamilyStateValue(agentChatUsageFamilyState, {
+    threadId: currentAiChatThread,
+  });
 
   const tiers = useAiModelTiers();
 
@@ -131,74 +109,27 @@ export const AiChatContextUsageButton = () => {
     fetchPolicy: 'network-only',
   });
 
-  const limitValue = creditUsage?.limitValue ?? null;
-
-  const progress = isDefined(limitValue)
-    ? computeUsageLimitProgress({
-        limitValue,
-        consumedValue: creditUsage?.consumedValue ?? null,
-      })
-    : null;
-
-  const creditPercentage =
-    limitValue === 0 ? 100 : (progress?.consumedPercentage ?? null);
-
-  const daysUntilReset = isDefined(creditUsage?.periodEnd)
-    ? Math.max(
-        0,
-        Math.ceil(
-          (new Date(creditUsage.periodEnd).getTime() - Date.now()) / 86400000,
-        ),
-      )
-    : null;
-
-  const usageLabelInput = {
-    loading,
-    hasError: isDefined(error),
-    hasUsage: isDefined(creditUsage),
-    daysUntilReset,
-    creditPercentage,
-  };
-
-  const { refs, floatingStyles, context } = useFloating({
-    open: isOpen,
-    onOpenChange: (open) => {
-      setIsOpen(open);
-      if (open) {
-        setShowDetails(false);
-      }
-    },
-    placement: 'top-start',
-    middleware: [offset(8), flip(), shift({ padding: 8 })],
-    whileElementsMounted: autoUpdate,
+  const { userCreditsUsage } = useAiChatUserCreditsUsage({
+    skip: !isOpen || isWorkspaceSetupChat,
   });
+
+  const isPaidByWorkspaceCredits =
+    !isDefined(userCreditsUsage) ||
+    (userCreditsUsage.isExhausted &&
+      userCreditsUsage.isFallingBackToWorkspaceCredits);
+
+  const isAiLimitCharged =
+    creditUsage?.kind === 'limit' && !userCreditsUsage?.isExhausted;
 
   const { isMounted, styles: transitionStyles } = useTransitionStyles(context, {
     duration: shouldReduceMotion ? 0 : { open: 150, close: 100 },
     initial: { opacity: 0 },
   });
 
-  const hover = useHover(context, { handleClose: safePolygon() });
-
-  const focus = useFocus(context);
-
-  const click = useClick(context);
-
-  const dismiss = useDismiss(context);
-
-  const role = useRole(context, { role: 'dialog' });
-
-  const { getReferenceProps, getFloatingProps } = useInteractions([
-    hover,
-    focus,
-    click,
-    dismiss,
-    role,
-  ]);
-
   return (
     <>
-      <StyledTrigger
+      <LightIconButton
+        size="sm"
         ref={refs.setReference}
         type="button"
         aria-label={
@@ -215,7 +146,7 @@ export const AiChatContextUsageButton = () => {
           barColor={contextWindowRingColor}
           render={<span />}
         />
-      </StyledTrigger>
+      </LightIconButton>
       {isMounted && (
         <FloatingPortal>
           <StyledInformationCard
@@ -226,7 +157,7 @@ export const AiChatContextUsageButton = () => {
             {...getFloatingProps()}
           >
             <MetricRow
-              startIcon={IconWindow}
+              startIcon={<IconWindow size={theme.icon.size.sm} />}
               progress={percentage}
               value={
                 contextWindow > 0
@@ -242,29 +173,28 @@ export const AiChatContextUsageButton = () => {
             >
               {t`Context window`}
             </MetricRow>
-            {!isWorkspaceSetupChat && (
-              <MetricRow
-                startIcon={IconGauge}
-                progress={
-                  loading || isDefined(error) ? 0 : (creditPercentage ?? 0)
-                }
-                value={getAiChatUsageLabel(usageLabelInput)}
-                progressValueText={getAiChatUsageLabel({
-                  ...usageLabelInput,
-                  unavailableConsumptionLabel: t`Not available`,
-                })}
-                progressColor={getUsageLimitRingColor({
-                  consumedPercentage: creditPercentage ?? 0,
-                  isExhausted: creditPercentage === 100,
-                })}
-              >
-                {t`Usage`}
-              </MetricRow>
+            {!isPaidByWorkspaceCredits && (
+              <AiChatUsageMetricRow
+                Icon={IconUser}
+                label={t`Personal usage`}
+                tooltip={t`Your own AI usage, separate from the workspace credits`}
+                usage={userCreditsUsage}
+              />
             )}
+            {!isWorkspaceSetupChat &&
+              (isPaidByWorkspaceCredits || isAiLimitCharged) && (
+                <AiChatUsageMetricRow
+                  Icon={IconGauge}
+                  label={t`Usage`}
+                  usage={creditUsage}
+                  isLoading={loading}
+                  hasError={isDefined(error)}
+                />
+              )}
             {showDetails && <AiChatContextUsageDetails />}
             {isDefined(agentChatUsage) && (
               <>
-                <HorizontalSeparator noMargin />
+                <Separator />
                 <StyledFooter>
                   <Button
                     size="sm"

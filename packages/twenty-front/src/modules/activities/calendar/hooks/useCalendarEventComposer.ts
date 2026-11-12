@@ -25,9 +25,10 @@ import { useStore } from 'jotai';
 import { useCallback, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { MAX_EMAIL_RECIPIENTS } from 'twenty-shared/constants';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { useToast } from 'twenty-ui/components/feedback';
 import { type SelectOption } from 'twenty-ui/primitives/input';
 
 export const useCalendarEventComposer = ({
@@ -53,7 +54,9 @@ export const useCalendarEventComposer = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [timeZone, setTimeZone] = useState(initialValues?.timeZone ?? 'UTC');
+  const [timeZone, setTimeZone] = useState(
+    initialValues?.timeZone ?? doNotTranslate('UTC'),
+  );
   const [isFullDay, setIsFullDay] = useState(false);
   const [attendees, setAttendees] = useState<EmailRecipient[]>(() =>
     parseEmailRecipients(initialValues?.defaultAttendees ?? '').map(
@@ -74,7 +77,7 @@ export const useCalendarEventComposer = ({
   const [dates, setDates] = useState(() =>
     getCalendarEventComposerDefaultDates({
       now: Temporal.Now.instant(),
-      timeZone: initialValues?.timeZone ?? 'UTC',
+      timeZone: initialValues?.timeZone ?? doNotTranslate('UTC'),
     }),
   );
 
@@ -108,7 +111,7 @@ export const useCalendarEventComposer = ({
       // Fallback for records the junction can't target: the query is skipped but needs a resolvable object.
       objectNameSingular:
         contextObjectMetadataItem?.nameSingular ??
-        CoreObjectNameSingular.Person,
+        StandardObjectNameSingular.Person,
       objectRecordId: initialValues?.contextRecord.recordId,
       skip: !isDefined(contextObjectMetadataItem),
     });
@@ -274,7 +277,7 @@ export const useCalendarEventComposer = ({
           await refetchTimelineCalendarEvents();
         } else {
           enqueueToast({
-            variant: 'error',
+            status: 'error',
             children: t`Failed to link the related records to this event`,
           });
         }

@@ -1,19 +1,19 @@
 import { ToastOnQueryErrorEffect } from '@/apollo/components/ToastOnQueryErrorEffect';
 import { type CurrentWorkspace } from '@/auth/states/currentWorkspaceState';
 import { useRedirect } from '@/domain-manager/hooks/useRedirect';
+import { BILLING_PLAN_LABELS } from '@/settings/billing/constants/BillingPlanLabels';
 import { getSubscriptionPlanKey } from '@/settings/billing/utils/getSubscriptionPlanKey';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { InlineBanner } from 'twenty-ui/components';
+import { InlineBanner } from 'twenty-ui/components/feedback';
 import {
-  BillingPlanKey,
   BillingPortalSessionDocument,
   PermissionFlagType,
 } from '~/generated-metadata/graphql';
 import { formatDate } from '~/utils/date-utils';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsBillingTrialNoPaymentMethodBannerProps = {
   currentBillingSubscription: NonNullable<
@@ -24,6 +24,7 @@ type SettingsBillingTrialNoPaymentMethodBannerProps = {
 export const SettingsBillingTrialNoPaymentMethodBanner = ({
   currentBillingSubscription,
 }: SettingsBillingTrialNoPaymentMethodBannerProps) => {
+  const { t } = useLingui();
   const { redirect } = useRedirect();
 
   const hasPermissionToManageBilling = useHasPermissionFlag(
@@ -44,10 +45,13 @@ export const SettingsBillingTrialNoPaymentMethodBanner = ({
     }
   };
 
-  const planName =
-    getSubscriptionPlanKey(currentBillingSubscription) === BillingPlanKey.PRO
-      ? t`pro plan`
-      : t`organization plan`;
+  const planKey = getSubscriptionPlanKey(currentBillingSubscription);
+  const billingPlanLabel = isDefined(planKey)
+    ? t(BILLING_PLAN_LABELS[planKey])
+    : undefined;
+  const planName = isDefined(billingPlanLabel)
+    ? t`${billingPlanLabel} plan`
+    : t`current plan`;
 
   const trialEndDate = isDefined(currentBillingSubscription.currentPeriodEnd)
     ? formatDate(currentBillingSubscription.currentPeriodEnd, 'MMM dd')
@@ -65,14 +69,17 @@ export const SettingsBillingTrialNoPaymentMethodBanner = ({
     <>
       <ToastOnQueryErrorEffect error={error} />
       <InlineBanner
-        color="blue"
-        message={message}
-        button={{
-          title: t`Add card`,
-          hidden: !hasPermissionToManageBilling,
-          onClick: openPaymentMethodUpdate,
-        }}
-      />
+        status="info"
+        action={
+          hasPermissionToManageBilling && (
+            <InlineBanner.Action
+              onClick={openPaymentMethodUpdate}
+            >{t`Add card`}</InlineBanner.Action>
+          )
+        }
+      >
+        {message}
+      </InlineBanner>
     </>
   );
 };

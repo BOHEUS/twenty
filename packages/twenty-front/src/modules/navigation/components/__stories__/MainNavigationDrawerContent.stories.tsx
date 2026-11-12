@@ -5,8 +5,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { expect, userEvent, within } from 'storybook/test';
 import { ComponentDecorator } from 'twenty-ui/testing';
 
-import { AGENT_CHAT_INSTANCE_ID } from '@/ai/constants/AgentChatInstanceId';
-import { AgentChatComponentInstanceContext } from '@/ai/contexts/AgentChatComponentInstanceContext';
 import { setAgentChatThreadList } from '@/ai/testing/setAgentChatThreadList';
 import { setAgentChatThreadPermissions } from '@/ai/testing/setAgentChatThreadPermissions';
 import { currentUserWorkspaceState } from '@/auth/states/currentUserWorkspaceState';
@@ -54,7 +52,7 @@ const AiNavigationContent = () => {
     initialStore.set(isNavigationDrawerExpandedState.atom, true);
     initialStore.set(currentUserWorkspaceState.atom, {
       permissionFlags: [PermissionFlagType.AI],
-      objectsPermissions: [],
+      objectRecordsPermissions: [],
       isImpersonating: false,
       twoFactorAuthenticationMethodSummary: null,
     });
@@ -64,17 +62,17 @@ const AiNavigationContent = () => {
 
   // Persisted auth atoms must hydrate before capturing the permission snapshot.
   useEffect(() => {
-    setAgentChatThreadPermissions(store, THREAD.id, THREAD_PERMISSIONS);
+    setAgentChatThreadPermissions({
+      store,
+      threadId: THREAD.id,
+      permissions: THREAD_PERMISSIONS,
+    });
   }, [store]);
 
   return (
     <Provider store={store}>
       <MemoryRouter initialEntries={['/chat']}>
-        <AgentChatComponentInstanceContext.Provider
-          value={{ instanceId: AGENT_CHAT_INSTANCE_ID }}
-        >
-          <ContentWithCollapseControl />
-        </AgentChatComponentInstanceContext.Provider>
+        <ContentWithCollapseControl />
       </MemoryRouter>
     </Provider>
   );

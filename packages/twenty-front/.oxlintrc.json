@@ -11,7 +11,6 @@
     "src/generated-metadata",
     "src/generated-admin",
     "src/locales/generated",
-    "src/modules/onboarding/components/WelcomeOverlay/welcomeHalftoneDots.ts",
     "src/testing/mock-data",
     "**/__mocks__/**",
     "**/*.stories.ts",
@@ -21,6 +20,8 @@
     "storybook-static"
   ],
   "rules": {
+    "curly": "error",
+    "prefer-const": ["error", { "ignoreReadBeforeAssign": true }],
     "func-style": ["error", "declaration", { "allowArrowFunctions": true }],
     "no-console": [
       "warn",
@@ -29,6 +30,7 @@
     "no-script-url": "error",
     "no-control-regex": "off",
     "no-debugger": "error",
+    "no-else-return": "error",
     "no-duplicate-imports": "error",
     "no-undef": "off",
     "no-unused-vars": "off",
@@ -124,6 +126,8 @@
     "twenty/no-state-useref": "error",
     "twenty/component-props-naming": "error",
     "twenty/no-navigate-prefer-link": "error",
+    "twenty/no-window-open": "error",
+    "twenty/no-twenty-ui-override": "warn",
     "twenty/no-jotai-store-in-selector": "error",
     "twenty/no-direct-atom-family-in-selector": "error",
     "twenty/folder-structure": "error",
@@ -151,6 +155,15 @@
       ],
       "rules": {
         "react/jsx-props-no-spreading": "off"
+      }
+    },
+    {
+      "files": [
+        "src/utils/openUrlInNewTab.ts",
+        "src/modules/domain-manager/hooks/useRedirect.ts"
+      ],
+      "rules": {
+        "twenty/no-window-open": "off"
       }
     },
     {

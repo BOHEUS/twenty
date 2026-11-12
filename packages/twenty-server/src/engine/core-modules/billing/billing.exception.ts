@@ -4,12 +4,14 @@ import { type MessageDescriptor } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import { assertUnreachable } from 'twenty-shared/utils';
 
+import { BILLING_SEAT_LIMIT_REACHED_MESSAGE } from 'src/engine/core-modules/billing/constants/billing-seat-limit-reached-message.constant';
 import { getBillingExceptionStatusCode } from 'src/engine/core-modules/billing/utils/get-billing-exception-status-code.util';
 import { CustomException } from 'src/utils/custom-exception';
 
 export enum BillingExceptionCode {
   BILLING_CUSTOMER_NOT_FOUND = 'BILLING_CUSTOMER_NOT_FOUND',
   BILLING_PLAN_NOT_FOUND = 'BILLING_PLAN_NOT_FOUND',
+  BILLING_PLAN_NOT_ALLOWED = 'BILLING_PLAN_NOT_ALLOWED',
   BILLING_PRODUCT_NOT_FOUND = 'BILLING_PRODUCT_NOT_FOUND',
   BILLING_PRICE_NOT_FOUND = 'BILLING_PRICE_NOT_FOUND',
   BILLING_SUBSCRIPTION_NOT_FOUND = 'BILLING_SUBSCRIPTION_NOT_FOUND',
@@ -36,6 +38,12 @@ export enum BillingExceptionCode {
   BILLING_CREDIT_GRANT_TYPE_NOT_GRANTABLE = 'BILLING_CREDIT_GRANT_TYPE_NOT_GRANTABLE',
   BILLING_UPGRADE_INVOICE_PAYMENT_FAILED = 'BILLING_UPGRADE_INVOICE_PAYMENT_FAILED',
   BILLING_UPGRADE_INVOICE_VOID_FAILED = 'BILLING_UPGRADE_INVOICE_VOID_FAILED',
+  BILLING_CREDIT_TOP_UP_NOT_GRANTED = 'BILLING_CREDIT_TOP_UP_NOT_GRANTED',
+  BILLING_SEAT_LIMIT_REACHED = 'BILLING_SEAT_LIMIT_REACHED',
+  BILLING_ARRANGEMENT_INVALID = 'BILLING_ARRANGEMENT_INVALID',
+  BILLING_PARTNER_CODE_INVALID = 'BILLING_PARTNER_CODE_INVALID',
+  BILLING_PARTNER_CODE_LOCKED = 'BILLING_PARTNER_CODE_LOCKED',
+  BILLING_PARTNER_CODE_NOT_ELIGIBLE = 'BILLING_PARTNER_CODE_NOT_ELIGIBLE',
 }
 
 const getBillingExceptionUserFriendlyMessage = (code: BillingExceptionCode) => {
@@ -44,6 +52,8 @@ const getBillingExceptionUserFriendlyMessage = (code: BillingExceptionCode) => {
       return msg`Billing customer not found.`;
     case BillingExceptionCode.BILLING_PLAN_NOT_FOUND:
       return msg`Billing plan not found.`;
+    case BillingExceptionCode.BILLING_PLAN_NOT_ALLOWED:
+      return msg`This plan is not available.`;
     case BillingExceptionCode.BILLING_PRODUCT_NOT_FOUND:
       return msg`Billing product not found.`;
     case BillingExceptionCode.BILLING_PRICE_NOT_FOUND:
@@ -95,7 +105,18 @@ const getBillingExceptionUserFriendlyMessage = (code: BillingExceptionCode) => {
     case BillingExceptionCode.BILLING_UPGRADE_INVOICE_PAYMENT_FAILED:
       return msg`Your payment method was declined. Please update it and try again.`;
     case BillingExceptionCode.BILLING_UPGRADE_INVOICE_VOID_FAILED:
+    case BillingExceptionCode.BILLING_ARRANGEMENT_INVALID:
       return msg`An unexpected billing error occurred. Please contact support.`;
+    case BillingExceptionCode.BILLING_CREDIT_TOP_UP_NOT_GRANTED:
+      return msg`Your purchased credits could not be added. Please contact support.`;
+    case BillingExceptionCode.BILLING_PARTNER_CODE_INVALID:
+      return msg`This partner code is not valid.`;
+    case BillingExceptionCode.BILLING_PARTNER_CODE_LOCKED:
+      return msg`The partner code can no longer be added or changed. Please contact support.`;
+    case BillingExceptionCode.BILLING_PARTNER_CODE_NOT_ELIGIBLE:
+      return msg`Partner codes only apply to new Twenty customers.`;
+    case BillingExceptionCode.BILLING_SEAT_LIMIT_REACHED:
+      return BILLING_SEAT_LIMIT_REACHED_MESSAGE;
     default:
       assertUnreachable(code);
   }

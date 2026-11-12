@@ -8,7 +8,6 @@ import { plural } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyArray } from 'twenty-shared/utils';
 import {
-  IconApps,
   IconAt,
   IconCoins,
   type IconComponent,
@@ -22,17 +21,9 @@ import {
   IconVideo,
   IconWand,
 } from 'twenty-ui/icon';
-import { MetricRow } from 'twenty-ui/components';
-import { HorizontalSeparator } from 'twenty-ui/primitives/layout';
+import { MetricRow } from 'twenty-ui/components/data-display';
+import { Separator } from 'twenty-ui/primitives/layout';
 import { themeCssVariables, useTheme } from 'twenty-ui/theme';
-
-const StyledContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: ${themeCssVariables.spacing[1]};
-  max-width: 100%;
-  width: 284px;
-`;
 
 const StyledSection = styled.div`
   display: flex;
@@ -76,7 +67,6 @@ export const OnboardingFreeCreditsPopoverContent = ({
     { Icon: IconComponent; label: string }
   > = {
     importContacts: { Icon: IconAt, label: t`Import contacts` },
-    installApps: { Icon: IconApps, label: t`Install apps` },
     createProfile: { Icon: IconUserCircle, label: t`Create profile` },
     inviteTeam: { Icon: IconUserPlus, label: t`Invite your team` },
     upgradeTrial: { Icon: IconCreditCard, label: t`Upgrade your trial` },
@@ -99,11 +89,11 @@ export const OnboardingFreeCreditsPopoverContent = ({
   });
 
   return (
-    <StyledContent>
+    <>
       <StyledSection>
         <StyledSectionTitle>{t`Free credits`}</StyledSectionTitle>
         <MetricRow
-          startIcon={IconCoins}
+          startIcon={<IconCoins size={theme.icon.size.sm} />}
           value={plural(earnedCredits, {
             one: `${formattedEarnedCredits} credit`,
             other: `${formattedEarnedCredits} credits`,
@@ -114,46 +104,56 @@ export const OnboardingFreeCreditsPopoverContent = ({
       </StyledSection>
       {isNonEmptyArray(earnedCreditsByStep) && (
         <>
-          <HorizontalSeparator noMargin />
+          <Separator />
           <StyledSection>
             <StyledSectionTitle>{t`Breakdown`}</StyledSectionTitle>
-            {earnedCreditsByStep.map(({ step, credits, rewardCredits }) => (
-              <MetricRow
-                key={step}
-                startIcon={creditsSteps[step].Icon}
-                value={
-                  credits < rewardCredits
-                    ? `${formatOnboardingCredits(credits, numberFormat)}/${formatOnboardingCredits(rewardCredits, numberFormat)}`
-                    : formatOnboardingCredits(credits, numberFormat)
-                }
-              >
-                {creditsSteps[step].label}
-              </MetricRow>
-            ))}
+            {earnedCreditsByStep.map(({ step, credits, rewardCredits }) => {
+              const { Icon } = creditsSteps[step];
+
+              return (
+                <MetricRow
+                  key={step}
+                  startIcon={<Icon size={theme.icon.size.sm} />}
+                  value={
+                    credits < rewardCredits
+                      ? `${formatOnboardingCredits(credits, numberFormat)}/${formatOnboardingCredits(rewardCredits, numberFormat)}`
+                      : formatOnboardingCredits(credits, numberFormat)
+                  }
+                >
+                  {creditsSteps[step].label}
+                </MetricRow>
+              );
+            })}
           </StyledSection>
         </>
       )}
-      <HorizontalSeparator noMargin />
+      <Separator />
       <StyledSection>
         <StyledSectionTitle>
           {earnedCredits > 0
             ? t`Enough for one of these on average`
             : t`1 credit is enough for one of these on average`}
         </StyledSectionTitle>
-        <MetricRow startIcon={IconSparkles} value={formatNumber(aiActions)}>
+        <MetricRow
+          startIcon={<IconSparkles size={theme.icon.size.sm} />}
+          value={formatNumber(aiActions)}
+        >
           {t`AI actions`}
         </MetricRow>
         <MetricRow
-          startIcon={IconSettingsAutomation}
+          startIcon={<IconSettingsAutomation size={theme.icon.size.sm} />}
           value={formatNumber(workflowSteps)}
         >
           {t`Workflow steps`}
         </MetricRow>
-        <MetricRow startIcon={IconWand} value={formatNumber(enrichments)}>
+        <MetricRow
+          startIcon={<IconWand size={theme.icon.size.sm} />}
+          value={formatNumber(enrichments)}
+        >
           {t`Enrichments`}
         </MetricRow>
         <MetricRow
-          startIcon={IconVideo}
+          startIcon={<IconVideo size={theme.icon.size.sm} />}
           value={plural(callRecordingHours, {
             one: `${formattedCallRecordingHours} hour`,
             other: `${formattedCallRecordingHours} hours`,
@@ -161,15 +161,18 @@ export const OnboardingFreeCreditsPopoverContent = ({
         >
           {t`Call recording`}
         </MetricRow>
-        <MetricRow startIcon={IconMail} value={formatNumber(emailsSent)}>
+        <MetricRow
+          startIcon={<IconMail size={theme.icon.size.sm} />}
+          value={formatNumber(emailsSent)}
+        >
           {t`Shared inbox emails`}
         </MetricRow>
       </StyledSection>
-      <HorizontalSeparator noMargin />
+      <Separator />
       <StyledFooter>
         <IconInfoCircle size={theme.icon.size.sm} />
         {t`Stacks on top of your plan and never expires`}
       </StyledFooter>
-    </StyledContent>
+    </>
   );
 };

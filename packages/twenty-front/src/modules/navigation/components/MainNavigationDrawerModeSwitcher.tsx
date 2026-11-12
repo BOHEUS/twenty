@@ -2,18 +2,27 @@ import { NAVIGATION_DRAWER_COLLAPSED_BUTTON_SIZE } from '@/ui/navigation/navigat
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { motion, useReducedMotion } from 'framer-motion';
+import { Badge } from 'twenty-ui/primitives/data-display';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 
+import { useAgentChatOpenThreadsSummary } from '@/ai/hooks/useAgentChatOpenThreadsSummary';
 import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/states/isLayoutCustomizationModeEnabledState';
 import { useActiveNavigationDrawerMode } from '@/navigation/hooks/useActiveNavigationDrawerMode';
-import { useIsNavigationDrawerContentExpanded } from '@/navigation/hooks/useIsNavigationDrawerContentExpanded';
+import { useIsNavigationDrawerContentExpanded } from '@/ui/navigation/navigation-drawer/hooks/useIsNavigationDrawerContentExpanded';
 import { useNavigationDrawerModes } from '@/navigation/hooks/useNavigationDrawerModes';
 import { useSwitchNavigationDrawerMode } from '@/navigation/hooks/useSwitchNavigationDrawerMode';
 import { TooltipDelay } from '@/ui/layout/tooltip/constants/TooltipDelay';
-import { NAVIGATION_DRAWER_TABS } from '@/ui/navigation/states/navigationDrawerTabs';
+import {
+  type NavigationDrawerActiveTab,
+  NAVIGATION_DRAWER_TABS,
+} from '@/ui/navigation/states/navigationDrawerTabs';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
+import { FeatureFlagKey } from '~/generated-metadata/graphql';
 import { useIsMobile } from 'twenty-ui/utilities';
+
+const MAX_DISPLAYED_UNREAD_COUNT = 99;
 
 // Expanded, the row matches the page card header so their borders read as one line.
 const StyledSwitcher = styled.div<{ isExpanded: boolean }>`
@@ -84,6 +93,11 @@ const StyledMode = styled.button<{ isActive: boolean; isExpanded: boolean }>`
         : themeCssVariables.background.transparent.lighter};
     color: ${themeCssVariables.font.color.primary};
   }
+
+  &:focus-visible {
+    outline: 2px solid ${themeCssVariables.color.blue};
+    outline-offset: 1px;
+  }
 `;
 
 const StyledModeIcon = styled.span`
@@ -92,6 +106,7 @@ const StyledModeIcon = styled.span`
   flex-shrink: 0;
   height: ${themeCssVariables.spacing[4]};
   justify-content: center;
+  position: relative;
   width: ${themeCssVariables.spacing[4]};
 `;
 
@@ -104,6 +119,13 @@ const StyledModeLabelBase = styled.span`
 `;
 
 const StyledModeLabel = motion.create(StyledModeLabelBase);
+
+const StyledUnreadBadge = styled.span`
+  pointer-events: none;
+  position: absolute;
+  right: calc(-1 * ${themeCssVariables.spacing['1.5']});
+  top: calc(-1 * ${themeCssVariables.spacing['1.5']});
+`;
 
 export const MainNavigationDrawerModeSwitcher = () => {
   const { t } = useLingui();
@@ -118,6 +140,20 @@ export const MainNavigationDrawerModeSwitcher = () => {
   const activeNavigationDrawerMode = useActiveNavigationDrawerMode();
   const { switchNavigationDrawerMode } = useSwitchNavigationDrawerMode();
   const shouldReduceMotion = useReducedMotion();
+  const { unreadOpenThreadCount } = useAgentChatOpenThreadsSummary();
+  const isAiChatInboxEnabled = useIsFeatureEnabled(
+    FeatureFlagKey.IS_AI_CHAT_INBOX_ENABLED,
+  );
+
+  const getDisabledModeTooltip = (mode: NavigationDrawerActiveTab) => {
+    if (mode === NAVIGATION_DRAWER_TABS.SETTINGS) {
+      return t`Finish editing the layout to open Settings`;
+    }
+
+    return isAiChatInboxEnabled
+      ? t`Finish editing the layout to open Inbox`
+      : t`Finish editing the layout to open AI`;
+  };
 
   if (modes.length === 0) {
     return null;
@@ -133,6 +169,12 @@ export const MainNavigationDrawerModeSwitcher = () => {
     >
       {modes.map(({ Icon, label, mode }) => {
         const isActive = mode === activeNavigationDrawerMode;
+        // Inside the inbox, its Open item already shows what is unread
+        const isUnread =
+          isAiChatInboxEnabled &&
+          mode === NAVIGATION_DRAWER_TABS.AI_CHAT_HISTORY &&
+          unreadOpenThreadCount > 0 &&
+          !isActive;
         const isDisabled =
           mode !== NAVIGATION_DRAWER_TABS.NAVIGATION_MENU &&
           isLayoutCustomizationModeEnabled;
@@ -140,13 +182,7 @@ export const MainNavigationDrawerModeSwitcher = () => {
         return (
           <Tooltip
             key={mode}
-            content={
-              isDisabled
-                ? mode === NAVIGATION_DRAWER_TABS.SETTINGS
-                  ? t`Finish editing the layout to open Settings`
-                  : t`Finish editing the layout to open Inbox`
-                : label
-            }
+            content={isDisabled ? getDisabledModeTooltip(mode) : label}
             disabled={!shouldShowTooltips && !isDisabled}
             delay={TooltipDelay.noDelay}
             side={isExpanded ? 'bottom' : 'right'}
@@ -156,8 +192,10 @@ export const MainNavigationDrawerModeSwitcher = () => {
               type="button"
               isActive={isActive}
               isExpanded={isExpanded}
-              aria-label={label}
-              aria-current={isActive}
+              aria-label={
+                isUnread ? t`${label}, ${unreadOpenThreadCount} unread` : label
+              }
+              aria-current={isActive || undefined}
               aria-disabled={isDisabled}
               onClick={() => {
                 if (isDisabled) {
@@ -169,6 +207,19 @@ export const MainNavigationDrawerModeSwitcher = () => {
             >
               <StyledModeIcon>
                 <Icon size={theme.icon.size.md} />
+                {isUnread && (
+                  <Badge
+                    render={<StyledUnreadBadge />}
+                    aria-hidden="true"
+                    size="xs"
+                    color="red"
+                    shape={unreadOpenThreadCount < 10 ? 'circle' : 'pill'}
+                  >
+                    {unreadOpenThreadCount > MAX_DISPLAYED_UNREAD_COUNT
+                      ? `${MAX_DISPLAYED_UNREAD_COUNT}+`
+                      : unreadOpenThreadCount}
+                  </Badge>
+                )}
               </StyledModeIcon>
               <StyledModeLabel
                 initial={false}

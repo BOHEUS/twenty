@@ -8,6 +8,7 @@ import {
   RelationType,
 } from 'twenty-shared/types';
 
+import { createStandardMorphRelationHeadFlatMetadata } from 'src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/create-standard-morph-relation-head-flat-metadata.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { type AllStandardObjectFieldName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-field-name.type';
 import {
@@ -485,6 +486,14 @@ export const buildAttachmentStandardFlatFieldMetadatas = ({
     twentyStandardApplicationId,
     now,
   }),
+  target: createStandardMorphRelationHeadFlatMetadata({
+    objectName,
+    workspaceId,
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
   targetPerson: createStandardRelationFieldFlatMetadata({
     objectName,
     workspaceId,
@@ -617,39 +626,6 @@ export const buildAttachmentStandardFlatFieldMetadatas = ({
     twentyStandardApplicationId,
     now,
   }),
-  targetWorkflow: createStandardRelationFieldFlatMetadata({
-    objectName,
-    workspaceId,
-    context: {
-      type: FieldMetadataType.MORPH_RELATION,
-      morphId: STANDARD_OBJECTS.attachment.morphIds.targetMorphId.morphId,
-      fieldName: 'targetWorkflow',
-      label: i18nLabel(
-        msg({ message: `Attached to`, context: 'fieldMetadata.label' }),
-      ),
-      description: i18nLabel(
-        msg({
-          message: `Attachment target`,
-          context: 'fieldMetadata.description',
-        }),
-      ),
-      icon: 'IconFileImport',
-      isNullable: true,
-      isUIEditable: false,
-      isSystemSideEffect: true,
-      targetObjectName: 'workflow',
-      targetFieldName: 'attachments',
-      settings: {
-        relationType: RelationType.MANY_TO_ONE,
-        onDelete: RelationOnDeleteAction.CASCADE,
-        joinColumnName: 'targetWorkflowId',
-      },
-    },
-    standardObjectMetadataRelatedEntityIds,
-    dependencyFlatEntityMaps,
-    twentyStandardApplicationId,
-    now,
-  }),
   targetAgentChatThread: createStandardRelationFieldFlatMetadata({
     objectName,
     workspaceId,
@@ -676,6 +652,39 @@ export const buildAttachmentStandardFlatFieldMetadatas = ({
         relationType: RelationType.MANY_TO_ONE,
         onDelete: RelationOnDeleteAction.CASCADE,
         joinColumnName: 'targetAgentChatThreadId',
+      },
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
+  targetMessage: createStandardRelationFieldFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      type: FieldMetadataType.MORPH_RELATION,
+      morphId: STANDARD_OBJECTS.attachment.morphIds.targetMorphId.morphId,
+      fieldName: 'targetMessage',
+      label: i18nLabel(
+        msg({ message: `Attached to`, context: 'fieldMetadata.label' }),
+      ),
+      description: i18nLabel(
+        msg({
+          message: `Attachment target`,
+          context: 'fieldMetadata.description',
+        }),
+      ),
+      icon: 'IconFileImport',
+      isNullable: true,
+      isUIEditable: false,
+      isSystemSideEffect: true,
+      targetObjectName: 'message',
+      targetFieldName: 'attachments',
+      settings: {
+        relationType: RelationType.MANY_TO_ONE,
+        onDelete: RelationOnDeleteAction.CASCADE,
+        joinColumnName: 'targetMessageId',
       },
     },
     standardObjectMetadataRelatedEntityIds,

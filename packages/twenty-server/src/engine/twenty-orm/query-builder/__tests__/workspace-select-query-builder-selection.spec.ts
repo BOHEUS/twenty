@@ -1,3 +1,5 @@
+import { types } from 'pg';
+
 import { WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/query-builder/workspace-select-query-builder';
 import {
   SCHEMA_NAME,
@@ -8,8 +10,35 @@ import {
 } from 'src/engine/twenty-orm/query-builder/__tests__/workspace-select-query-builder-test-shapes.util';
 import { buildColumnResultAlias } from 'src/engine/twenty-orm/sql/utils/build-column-result-alias.util';
 import { TwentyOrmException } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
+import { NO_RECORD_READ_RESTRICTIONS } from 'src/engine/permissions/constants/no-record-read-restrictions.constant';
 
 describe('WorkspaceSelectQueryBuilder selection', () => {
+  it('should preserve raw dates only for pagination without global parser setup', async () => {
+    const { queryBuilder, executedStatements } = buildQueryBuilder();
+    const timestamp = '2026-01-01 00:00:00.1239+00';
+
+    await queryBuilder.getRawAndEntities();
+
+    const parsers = executedStatements[0].types;
+
+    expect(parsers?.getTypeParser(types.builtins.TIMESTAMPTZ)(timestamp)).toBe(
+      timestamp,
+    );
+    expect(parsers?.getTypeParser(types.builtins.DATE)('2026-01-01')).toBe(
+      '2026-01-01',
+    );
+    expect(
+      types.getTypeParser(types.builtins.TIMESTAMPTZ)(timestamp),
+    ).toBeInstanceOf(Date);
+    expect(
+      types.getTypeParser(types.builtins.DATE)('2026-01-01'),
+    ).toBeInstanceOf(Date);
+
+    await queryBuilder.getMany();
+
+    expect(executedStatements[1].types).toBeUndefined();
+  });
+
   it('should select the requested columns with alias-prefixed output names', () => {
     const { queryBuilder } = buildQueryBuilder();
 
@@ -190,6 +219,29 @@ describe('WorkspaceSelectQueryBuilder selection', () => {
     expect(executedStatements[0].values).toEqual(['Ada']);
   });
 
+  it('should lock only the main table rows, after the limit, when locked for update', () => {
+    const { queryBuilder } = buildQueryBuilder();
+
+    queryBuilder
+      .setFindOptions({ select: { id: true } })
+      .leftJoin('person.company', 'company')
+      .take(1)
+      .forUpdate();
+
+    expect(queryBuilder.getQuery()).toMatch(
+      /LIMIT :\w+ FOR UPDATE OF "person"$/,
+    );
+    expect(queryBuilder.clone().getQuery()).toContain('FOR UPDATE OF "person"');
+  });
+
+  it('should not lock rows by default', () => {
+    const { queryBuilder } = buildQueryBuilder();
+
+    queryBuilder.setFindOptions({ select: { id: true } });
+
+    expect(queryBuilder.getQuery()).not.toContain('FOR UPDATE');
+  });
+
   it('should map take and skip to LIMIT and OFFSET parameters', () => {
     const { queryBuilder } = buildQueryBuilder();
 
@@ -246,7 +298,7 @@ describe('WorkspaceSelectQueryBuilder selection', () => {
           throw new Error('connection lost');
         },
       },
-      objectRecordsPermissions: {},
+      recordReadRestrictions: NO_RECORD_READ_RESTRICTIONS,
       tableShapeByObjectMetadataId: () => companyTableShape,
       onBeforeExecute: () => undefined,
       formatResult: (records) => records as never,

@@ -1,3 +1,4 @@
+import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import { InjectAgentHistoryRepository } from 'src/engine/metadata-modules/ai/ai-history/repositories/inject-agent-history-repository.decorator';
 import { AgentHistoryRepository } from 'src/engine/metadata-modules/ai/ai-history/repositories/agent-history-repository';
 import { Injectable } from '@nestjs/common';
@@ -20,7 +21,7 @@ export class AiWorkspaceStatsService {
 
   async computeStats(
     workspaceId: string,
-    roleId: string,
+    authContext: WorkspaceAuthContext,
   ): Promise<WorkspaceAiStatsDTO> {
     const [conversationsCount, flatMaps, toolIndex] = await Promise.all([
       this.threadRepository.count(workspaceId),
@@ -29,7 +30,9 @@ export class AiWorkspaceStatsService {
         flatMapsKeys: ['flatSkillMaps'],
       }),
       // the full role-scoped catalog, to match the Tools tab
-      this.toolRegistryService.buildToolIndex(workspaceId, roleId),
+      this.toolRegistryService.buildToolIndex(workspaceId, {
+        authContext,
+      }),
     ]);
 
     const skillsCount = Object.values(

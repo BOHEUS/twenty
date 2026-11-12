@@ -9,7 +9,7 @@ import { useMutation } from '@apollo/client/react';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import { UpdateWorkspaceDocument } from '~/generated-metadata/graphql';
 
 export const SUBDOMAIN_CHANGE_CONFIRMATION_MODAL_ID =
@@ -81,10 +81,10 @@ export const useSettingsSubdomain = () => {
         ).hostname.replace(currentWorkspace.subdomain, subdomain);
 
         setCurrentWorkspace({ ...currentWorkspace, subdomain });
-        enqueueToast({ variant: 'success', children: t`Subdomain updated` });
+        enqueueToast({ status: 'success', children: t`Subdomain updated` });
         setIsSubmitting(false);
 
-        await redirectToWorkspaceDomain(currentUrl.toString());
+        await redirectToWorkspaceDomain({ baseUrl: currentUrl.toString() });
       },
     });
   };
