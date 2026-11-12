@@ -187,16 +187,6 @@ export class ConnectedAccountMetadataService {
     return this.repository.findOne({ where: { id, workspaceId } });
   }
 
-  async findWorkspaceConnectedAccounts({
-    workspaceId,
-  }: {
-    workspaceId: string;
-  }): Promise<ConnectedAccountEntity[]> {
-    return this.repository.find({
-      where: { workspaceId: workspaceId, visibility: 'workspace' },
-    });
-  }
-
   async findByIdAndUserWorkspaceId({
     id,
     userWorkspaceId,
@@ -394,6 +384,7 @@ export class ConnectedAccountMetadataService {
       workspaceId: string;
       handle: string;
       provider: string;
+      userWorkspaceId: string;
     },
   ): Promise<ConnectedAccountEntity> {
     const entity = this.repository.create(data);

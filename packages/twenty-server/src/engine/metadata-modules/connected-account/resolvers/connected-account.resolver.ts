@@ -1,4 +1,4 @@
-import { Body, UseGuards, UseInterceptors, UseFilters } from '@nestjs/common';
+import { UseGuards, UseInterceptors, UseFilters } from '@nestjs/common';
 import { Args, Mutation, Query } from '@nestjs/graphql';
 
 import { PermissionFlagType } from 'twenty-shared/constants';
@@ -103,50 +103,6 @@ export class ConnectedAccountResolver {
       ...buildPublicConnectedAccount(account),
       isOwnedByCurrentUser: account.userWorkspaceId === userWorkspaceId,
     }));
-  }
-
-  @Query(() => [ConnectedAccountDTO])
-  @UseGuards(NoPermissionGuard)
-  async getWorkspaceConnectedAccounts(
-    @AuthWorkspace() workspace: WorkspaceEntity,
-  ): Promise<ConnectedAccountDTO[]> {
-    return await this.connectedAccountMetadataService.findWorkspaceConnectedAccounts(
-      {
-        workspaceId: workspace.id,
-      },
-    );
-  }
-
-  @Mutation(() => ConnectedAccountDTO)
-  @UseGuards(NoPermissionGuard)
-  async createWorkspaceConnectedAccount(
-    @Args('applicationId', {type: () => UUIDScalarType}) applicationId: string,
-    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-    @Body() input: CreateWorkspaceConnectedAccountInput
-  ) {
-    return await this.connectedAccountMetadataService.create({
-      workspaceId,
-      handle: input.handle,
-      provider: ConnectedAccountProvider.APP,
-      handleAliases: input.aliases,
-      applicationId,
-    })
-  }
-
-  @Mutation(() => ConnectedAccountDTO)
-  @UseGuards(NoPermissionGuard)
-  async updateWorkspaceConnectedAccount(
-    @Args('id', { type: () => UUIDScalarType }) id: string,
-    @AuthWorkspace() workspace: WorkspaceEntity,
-    @Body() input: UpdateWorkspaceConnectedAccountInput,
-  ): Promise<ConnectedAccountDTO> {
-    return await this.connectedAccountMetadataService.update({
-      id: id,
-      workspaceId: workspace.id,
-      data: {
-        handleAliases: input.aliases,
-      }
-    });
   }
 
   @Mutation(() => ConnectedAccountPublicDTO)

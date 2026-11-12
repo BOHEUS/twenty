@@ -82,9 +82,9 @@ export class ConnectedAccountDTO {
   oidcTokenClaims: Record<string, unknown> | null;
 
   @IsUUID()
-  @IsOptional()
-  @Field(() => UUIDScalarType, { nullable: true })
-  userWorkspaceId: string | null;
+  @IsNotEmpty()
+  @Field(() => UUIDScalarType)
+  userWorkspaceId: string;
 
   @IsUUID()
   @IsOptional()
