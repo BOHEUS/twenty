@@ -337,12 +337,16 @@ describe('Slack agent tools', () => {
           providerName: 'slack',
           name: 'Twenty Test workspace',
           handle: 'twenty-test',
+          externalAccountId: null,
+          scope: 'WORKSPACE',
           visibility: 'workspace',
           userWorkspaceId: 'user-workspace-1',
           workspaceMemberId: null,
+          providerType: 'oauth',
           accessToken: 'xoxb-revoked-token',
           scopes: [],
           authFailedAt: null,
+          authFailedReason: null,
         },
       ]);
 

@@ -2,13 +2,14 @@ import { SidePanelFooterWidthContext } from '@/ui/layout/side-panel/contexts/Sid
 import { NodeDimension } from '@/ui/utilities/dimensions/components/NodeDimension';
 import { styled } from '@linaria/react';
 import { Fragment, useCallback, useState } from 'react';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledContainer = styled.div`
   background: ${themeCssVariables.background.secondary};
   border-top: 1px solid ${themeCssVariables.border.color.light};
   bottom: 0;
   box-sizing: border-box;
+  flex-shrink: 0;
   padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
   width: 100%;
 `;

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, HttpAdapterHost } from '@nestjs/core';
 import { EventEmitter2, EventEmitterModule } from '@nestjs/event-emitter';
 
+import { WorkspaceResolverNameMapCacheModule } from 'src/engine/api/graphql/direct-execution/workspace-resolver-name-map-cache.module';
 import { WorkspaceQueryRunnerModule } from 'src/engine/api/graphql/workspace-query-runner/workspace-query-runner.module';
 import { ActorModule } from 'src/engine/core-modules/actor/actor.module';
 import { AdminPanelModule } from 'src/engine/core-modules/admin-panel/admin-panel.module';
@@ -10,6 +11,7 @@ import { ApplicationAuthorizationModule } from 'src/engine/core-modules/applicat
 import { ApplicationDevelopmentModule } from 'src/engine/core-modules/application/application-development/application-development.module';
 import { FrontComponentSharedDependenciesModule } from 'src/engine/core-modules/application/front-component-shared-dependencies/front-component-shared-dependencies.module';
 import { ApplicationInstallModule } from 'src/engine/core-modules/application/application-install/application-install.module';
+import { ApplicationMonitoringModule } from 'src/engine/core-modules/application/application-monitoring/application-monitoring.module';
 import { MarketplaceModule } from 'src/engine/core-modules/application/application-marketplace/marketplace.module';
 import { ApplicationOAuthModule } from 'src/engine/core-modules/application/application-oauth/application-oauth.module';
 import { ApplicationRegistrationModule } from 'src/engine/core-modules/application/application-registration/application-registration.module';
@@ -22,7 +24,7 @@ import { BillingWebhookModule } from 'src/engine/core-modules/billing-webhook/bi
 import { AppBillingModule } from 'src/engine/core-modules/billing/app-billing/app-billing.module';
 import { BillingModule } from 'src/engine/core-modules/billing/billing.module';
 import { BillingGraphqlApiExceptionFilter } from 'src/engine/core-modules/billing/filters/billing-graphql-api-exception.filter';
-import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/metadata-modules/permissions/utils/permissions-graphql-api-exception.filter';
+import { PermissionsGraphqlApiExceptionFilter } from 'src/engine/permissions/utils/permissions-graphql-api-exception.filter';
 import { CacheStorageModule } from 'src/engine/core-modules/cache-storage/cache-storage.module';
 import { TimelineCalendarEventModule } from 'src/engine/core-modules/calendar/timeline-calendar-event.module';
 import { CaptchaModule } from 'src/engine/core-modules/captcha/captcha.module';
@@ -32,14 +34,17 @@ import { DnsManagerModule } from 'src/engine/core-modules/dns-manager/dns-manage
 import { DpaModule } from 'src/engine/core-modules/dpa/dpa.module';
 import { EmailModule } from 'src/engine/core-modules/email/email.module';
 import { EmailingDomainModule } from 'src/engine/core-modules/emailing-domain/emailing-domain.module';
-import { EmailingModule } from 'src/modules/emailing/emailing.module';
 import { EnvironmentModule } from 'src/engine/core-modules/environment/environment.module';
 import { ExceptionHandlerModule } from 'src/engine/core-modules/exception-handler/exception-handler.module';
 import { exceptionHandlerModuleFactory } from 'src/engine/core-modules/exception-handler/exception-handler.module-factory';
 import { FeatureFlagModule } from 'src/engine/core-modules/feature-flag/feature-flag.module';
+import { AccessPolicyModule } from 'src/engine/guards/access-policy/access-policy.module';
 import { FileStorageModule } from 'src/engine/core-modules/file-storage/file-storage.module';
 import { GeoMapModule } from 'src/engine/core-modules/geo-map/geo-map-module';
+import { GettingStartedWorkflowModule } from 'src/engine/core-modules/getting-started/getting-started-workflow.module';
+import { GettingStartedModule } from 'src/engine/core-modules/getting-started/getting-started.module';
 import { HealthModule } from 'src/engine/core-modules/health/health.module';
+import { I18nModule } from 'src/engine/core-modules/i18n/i18n.module';
 import { ImapSmtpCaldavModule } from 'src/engine/core-modules/imap-smtp-caldav-connection/imap-smtp-caldav-connection.module';
 import { ImpersonationModule } from 'src/engine/core-modules/impersonation/impersonation.module';
 import { LabModule } from 'src/engine/core-modules/lab/lab.module';
@@ -49,8 +54,6 @@ import { LogicFunctionModule } from 'src/engine/core-modules/logic-function/logi
 import { MessageQueueModule } from 'src/engine/core-modules/message-queue/message-queue.module';
 import { messageQueueModuleFactory } from 'src/engine/core-modules/message-queue/message-queue.module-factory';
 import { TimelineMessagingModule } from 'src/engine/core-modules/messaging/timeline-messaging.module';
-import { MessagingWebhooksModule } from 'src/modules/messaging-webhooks/messaging-webhooks.module';
-import { ConnectedAccountSyncWebhooksModule } from 'src/modules/connected-account-sync-webhooks/connected-account-sync-webhooks.module';
 import { MetricsModule } from 'src/engine/core-modules/metrics/metrics.module';
 import { MetricsService } from 'src/engine/core-modules/metrics/metrics.service';
 import { OpenApiModule } from 'src/engine/core-modules/open-api/open-api.module';
@@ -59,6 +62,7 @@ import { RedisClientModule } from 'src/engine/core-modules/redis-client/redis-cl
 import { RedisClientService } from 'src/engine/core-modules/redis-client/redis-client.service';
 import { SearchModule } from 'src/engine/core-modules/search/search.module';
 import { WorkspaceSsoModule } from 'src/engine/core-modules/sso/sso.module';
+import { WebPushModule } from 'src/engine/core-modules/web-push/web-push.module';
 import { WellKnownModule } from 'src/engine/core-modules/well-known/well-known.module';
 import { TelemetryModule } from 'src/engine/core-modules/telemetry/telemetry.module';
 import { TwentyConfigModule } from 'src/engine/core-modules/twenty-config/twenty-config.module';
@@ -73,19 +77,15 @@ import { AiModelsModule } from 'src/engine/metadata-modules/ai/ai-models/ai-mode
 import { PageLayoutModule } from 'src/engine/metadata-modules/page-layout/page-layout.module';
 import { RoleModule } from 'src/engine/metadata-modules/role/role.module';
 import { RowLevelPermissionModule } from 'src/engine/metadata-modules/row-level-permission-predicate/row-level-permission.module';
-import { RecordShareModule } from 'src/engine/record-share/record-share.module';
+import { RecordShareModule } from 'src/engine/permissions/record-share/record-share.module';
 import { SubscriptionsModule } from 'src/engine/subscriptions/subscriptions.module';
 import { CodeInterpreterSessionCleanupModule } from 'src/engine/core-modules/code-interpreter/crons/code-interpreter-session-cleanup.module';
 import { TrashCleanupModule } from 'src/engine/trash-cleanup/trash-cleanup.module';
 import { WorkspaceEventEmitterModule } from 'src/engine/workspace-event-emitter/workspace-event-emitter.module';
-import { ChannelSyncModule } from 'src/modules/connected-account/channel-sync/channel-sync.module';
-import { CreateCalendarEventModule } from 'src/modules/calendar/calendar-event-creation-manager/create-calendar-event.module';
-import { CallRecordingModule } from 'src/modules/call-recording/call-recording.module';
-import { DashboardModule } from 'src/modules/dashboard/dashboard.module';
-import { SendEmailModule } from 'src/modules/messaging/message-outbound-manager/send-email.module';
+import { AiToolCallAnswerModule } from 'src/engine/metadata-modules/ai/ai-tool-call-answer/ai-tool-call-answer.module';
 import { ClientConfigModule } from './client-config/client-config.module';
 import { EventLogsViewerModule } from './event-logs/event-logs-viewer.module';
-import { FileModule } from './file/file.module';
+import { FileApiModule } from './file/file-api.module';
 
 @Module({
   imports: [
@@ -95,17 +95,18 @@ import { FileModule } from './file/file.module';
     AuthModule,
     BillingModule,
     BillingWebhookModule,
-    MessagingWebhooksModule,
-    ConnectedAccountSyncWebhooksModule,
     UsageModule,
     ClientConfigModule,
     FeatureFlagModule,
-    FileModule,
+    AccessPolicyModule,
+    FileApiModule,
     RecordShareModule,
     RowLevelPermissionModule,
     OpenApiModule,
+    WebPushModule,
     WellKnownModule,
     ApplicationRegistrationModule,
+    ApplicationMonitoringModule,
     ApplicationOAuthModule,
     ApplicationAuthorizationModule,
     ApplicationModule,
@@ -122,11 +123,13 @@ import { FileModule } from './file/file.module';
     WorkspaceSsoModule,
     ApprovedAccessDomainModule,
     EmailingDomainModule,
-    EmailingModule,
     PublicDomainModule,
     CloudflareModule,
     DnsManagerModule,
     WorkflowApiModule,
+    GettingStartedModule,
+    GettingStartedWorkflowModule,
+    AiToolCallAnswerModule,
     WorkspaceEventEmitterModule,
     ActorModule,
     TelemetryModule,
@@ -135,13 +138,10 @@ import { FileModule } from './file/file.module';
     RoleModule,
     RedisClientModule,
     WorkspaceQueryRunnerModule,
+    WorkspaceResolverNameMapCacheModule,
     GeoMapModule,
     SubscriptionsModule,
     ImapSmtpCaldavModule,
-    ChannelSyncModule,
-    SendEmailModule,
-    CreateCalendarEventModule,
-    CallRecordingModule,
     FileStorageModule.forRoot(),
     LoggerModule.forRootAsync({
       useFactory: loggerModuleFactory,
@@ -167,6 +167,7 @@ import { FileModule } from './file/file.module';
       wildcard: true,
     }),
     CacheStorageModule,
+    I18nModule,
     AiModelsModule,
     AiBillingModule,
     LogicFunctionModule.forRoot(),
@@ -178,7 +179,6 @@ import { FileModule } from './file/file.module';
     ImpersonationModule,
     TrashCleanupModule,
     CodeInterpreterSessionCleanupModule,
-    DashboardModule,
     EventLogsViewerModule,
     PreInstalledAppsModule,
     AppBillingModule,
@@ -197,8 +197,6 @@ import { FileModule } from './file/file.module';
     EventLogsViewerModule,
     AuthModule,
     FeatureFlagModule,
-    TimelineMessagingModule,
-    TimelineCalendarEventModule,
     UserModule,
     WorkspaceModule,
     WorkspaceInvitationModule,

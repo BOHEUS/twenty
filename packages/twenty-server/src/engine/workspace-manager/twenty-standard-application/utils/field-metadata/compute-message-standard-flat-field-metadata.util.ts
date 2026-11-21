@@ -9,6 +9,7 @@ import {
 } from 'twenty-shared/types';
 
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
+import { STANDARD_RELATION_FIELD_PROPERTIES_BY_RELATION_OBJECT } from 'src/engine/metadata-modules/object-metadata/constants/standard-relation-field-properties.constant';
 import { type AllStandardObjectFieldName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-field-name.type';
 import {
   type CreateStandardFieldArgs,
@@ -32,9 +33,9 @@ export const buildMessageStandardFlatFieldMetadatas = ({
     context: {
       fieldName: 'id',
       type: FieldMetadataType.UUID,
-      label: i18nLabel(msg({ message: `Id`, context: 'fieldMetadata.label' })),
+      label: i18nLabel(msg({ message: `ID`, context: 'fieldMetadata.label' })),
       description: i18nLabel(
-        msg({ message: `Id`, context: 'fieldMetadata.description' }),
+        msg({ message: `ID`, context: 'fieldMetadata.description' }),
       ),
       icon: 'Icon123',
       isSystem: true,
@@ -240,7 +241,7 @@ export const buildMessageStandardFlatFieldMetadatas = ({
       fieldName: 'headerMessageId',
       type: FieldMetadataType.TEXT,
       label: i18nLabel(
-        msg({ message: `Header message Id`, context: 'fieldMetadata.label' }),
+        msg({ message: `Header message ID`, context: 'fieldMetadata.label' }),
       ),
       description: i18nLabel(
         msg({
@@ -293,6 +294,8 @@ export const buildMessageStandardFlatFieldMetadatas = ({
       icon: 'IconMessage',
       isNullable: true,
       isUIEditable: false,
+      // An email body is prose, so it needs multi-line display like calendarEvent.description
+      settings: { displayedMaxRows: 99 },
     },
     standardObjectMetadataRelatedEntityIds,
     dependencyFlatEntityMaps,
@@ -331,11 +334,11 @@ export const buildMessageStandardFlatFieldMetadatas = ({
       morphId: null,
       fieldName: 'messageThread',
       label: i18nLabel(
-        msg({ message: `Message Thread Id`, context: 'fieldMetadata.label' }),
+        msg({ message: `Message Thread ID`, context: 'fieldMetadata.label' }),
       ),
       description: i18nLabel(
         msg({
-          message: `Message Thread Id`,
+          message: `Message Thread ID`,
           context: 'fieldMetadata.description',
         }),
       ),
@@ -474,6 +477,38 @@ export const buildMessageStandardFlatFieldMetadatas = ({
       isNullable: false,
       isUIEditable: false,
       defaultValue: false,
+    },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
+  attachments: createStandardRelationFieldFlatMetadata({
+    objectName,
+    workspaceId,
+    context: {
+      type: FieldMetadataType.RELATION,
+      morphId: null,
+      fieldName: 'attachments',
+      isSystemSideEffect: true,
+      label: i18nLabel(
+        STANDARD_RELATION_FIELD_PROPERTIES_BY_RELATION_OBJECT.attachment.label,
+      ),
+      description: i18nLabel(
+        msg({
+          message: `Files attached to the message`,
+          context: 'fieldMetadata.description',
+        }),
+      ),
+      icon: STANDARD_RELATION_FIELD_PROPERTIES_BY_RELATION_OBJECT.attachment
+        .icon,
+      isNullable: true,
+      isUIEditable: false,
+      targetObjectName: 'attachment',
+      targetFieldName: 'targetMessage',
+      settings: {
+        relationType: RelationType.ONE_TO_MANY,
+      },
     },
     standardObjectMetadataRelatedEntityIds,
     dependencyFlatEntityMaps,

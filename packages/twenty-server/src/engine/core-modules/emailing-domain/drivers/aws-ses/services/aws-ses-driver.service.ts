@@ -12,6 +12,7 @@ import {
   GetEmailIdentityCommand,
   NotFoundException,
   PutEmailIdentityDkimAttributesCommand,
+  PutEmailIdentityDkimSigningAttributesCommand,
 } from '@aws-sdk/client-sesv2';
 
 import { type AwsSesDriverConfig } from 'src/engine/core-modules/emailing-domain/drivers/interfaces/driver-config.interface';
@@ -28,6 +29,7 @@ import { getUnsubscribeBaseUrl } from 'src/engine/core-modules/emailing-domain/d
 import { type UnsubscribeContentService } from 'src/engine/core-modules/emailing-domain/services/unsubscribe-content.service';
 
 import { AWS_SES_RESOURCE_NAME_PREFIX } from 'src/engine/core-modules/emailing-domain/drivers/aws-ses/constants/aws-ses-resource-name-prefix.constant';
+import { AWS_SES_TENANT_TAG_KEY } from 'src/engine/core-modules/emailing-domain/drivers/aws-ses/constants/aws-ses-tenant-tag-key.constant';
 import { buildAwsSesVerificationRecords } from 'src/engine/core-modules/emailing-domain/drivers/aws-ses/utils/build-aws-ses-verification-records.util';
 import { type AwsSesClientProvider } from 'src/engine/core-modules/emailing-domain/drivers/aws-ses/providers/aws-ses-client.provider';
 import { type AwsSesAccountService } from 'src/engine/core-modules/emailing-domain/drivers/aws-ses/services/aws-ses-account.service';
@@ -39,7 +41,7 @@ import {
   EmailingDomainDriverExceptionCode,
 } from 'src/engine/core-modules/emailing-domain/drivers/exceptions/emailing-domain-driver.exception';
 import { EmailingDomainStatus } from 'src/engine/core-modules/emailing-domain/drivers/types/emailing-domain-status.type';
-import { type VerificationRecord } from 'src/engine/core-modules/emailing-domain/drivers/types/verifications-record';
+import { type VerificationRecord } from 'src/engine/core-modules/emailing-domain/drivers/types/verifications-record.type';
 
 export class AwsSesDriver implements EmailingDomainDriverInterface {
   private readonly logger = new Logger(AwsSesDriver.name);
@@ -105,6 +107,7 @@ export class AwsSesDriver implements EmailingDomainDriverInterface {
       const verificationRecords = buildAwsSesVerificationRecords({
         domain: input.domain,
         dkimTokens: identityResponse.DkimAttributes?.Tokens ?? [],
+        mailFromDomain: identityResponse.MailFromAttributes?.MailFromDomain,
         region: this.config.region,
       });
 
@@ -153,10 +156,35 @@ export class AwsSesDriver implements EmailingDomainDriverInterface {
     await this.awsSesRegisterDomainService.registerDomain(input.domain);
   }
 
+  async retryVerification(input: EmailingDomainResourceInput): Promise<void> {
+    try {
+      await this.awsSesClientProvider.getSESClient().send(
+        new PutEmailIdentityDkimSigningAttributesCommand({
+          EmailIdentity: input.domain,
+          SigningAttributesOrigin: 'AWS_SES',
+        }),
+      );
+
+      this.logger.log(`Retried DKIM verification for domain: ${input.domain}`);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        return;
+      }
+
+      this.awsSesHandleErrorService.handleAwsSesError(
+        error,
+        'retryVerification',
+      );
+    }
+  }
+
   async sendEmail(
     input: EmailingDomainSendEmailRequest,
   ): Promise<EmailingDomainSendEmailResult> {
-    const unsubscribeBaseUrl = getUnsubscribeBaseUrl(input.emailingDomain);
+    const unsubscribeBaseUrl = getUnsubscribeBaseUrl(
+      input.emailingDomain,
+      input.sendKind,
+    );
     const emailToSend = this.unsubscribeContentService.addTo(
       input,
       unsubscribeBaseUrl,
@@ -171,7 +199,10 @@ export class AwsSesDriver implements EmailingDomainDriverInterface {
   async sendEmailBatch(
     input: EmailingDomainSendEmailBatchRequest,
   ): Promise<EmailingDomainSendEmailBatchResult> {
-    const unsubscribeBaseUrl = getUnsubscribeBaseUrl(input.emailingDomain);
+    const unsubscribeBaseUrl = getUnsubscribeBaseUrl(
+      input.emailingDomain,
+      input.sendKind,
+    );
     const batchToSend = this.unsubscribeContentService.addToBatch(
       input,
       unsubscribeBaseUrl,
@@ -196,13 +227,40 @@ export class AwsSesDriver implements EmailingDomainDriverInterface {
         }),
       )
       .catch((error) => {
-        if (!(error instanceof NotFoundException)) throw error;
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
       });
+
+    const identity = await sesClient
+      .send(new GetEmailIdentityCommand({ EmailIdentity: input.domain }))
+      .catch((error) => {
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
+
+        return null;
+      });
+
+    const isCreatedForTenant =
+      identity?.Tags?.some(
+        (tag) => tag.Key === AWS_SES_TENANT_TAG_KEY && tag.Value === tenantName,
+      ) ?? false;
+
+    if (!isCreatedForTenant) {
+      this.logger.log(
+        `Keeping SES identity ${input.domain}: it was not created for tenant ${tenantName}`,
+      );
+
+      return;
+    }
 
     await sesClient
       .send(new DeleteEmailIdentityCommand({ EmailIdentity: input.domain }))
       .catch((error) => {
-        if (!(error instanceof NotFoundException)) throw error;
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
       });
   }
 
@@ -220,7 +278,9 @@ export class AwsSesDriver implements EmailingDomainDriverInterface {
         }),
       )
       .catch((error) => {
-        if (!(error instanceof NotFoundException)) throw error;
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
       });
 
     await sesClient
@@ -230,13 +290,17 @@ export class AwsSesDriver implements EmailingDomainDriverInterface {
         }),
       )
       .catch((error) => {
-        if (!(error instanceof NotFoundException)) throw error;
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
       });
 
     await sesClient
       .send(new DeleteTenantCommand({ TenantName: tenantName }))
       .catch((error) => {
-        if (!(error instanceof NotFoundException)) throw error;
+        if (!(error instanceof NotFoundException)) {
+          throw error;
+        }
       });
   }
 
@@ -285,6 +349,7 @@ export class AwsSesDriver implements EmailingDomainDriverInterface {
       const verificationRecords = buildAwsSesVerificationRecords({
         domain,
         dkimTokens: existingIdentity.DkimAttributes?.Tokens ?? [],
+        mailFromDomain: existingIdentity.MailFromAttributes?.MailFromDomain,
         region: this.config.region,
       });
 
@@ -311,7 +376,7 @@ export class AwsSesDriver implements EmailingDomainDriverInterface {
 
     const createCommand = new CreateEmailIdentityCommand({
       EmailIdentity: domain,
-      Tags: [{ Key: 'Tenant', Value: tenantName }],
+      Tags: [{ Key: AWS_SES_TENANT_TAG_KEY, Value: tenantName }],
     });
 
     const createResponse = await sesClient.send(createCommand);

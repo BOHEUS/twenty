@@ -1,3 +1,6 @@
+import { ListItemButton } from 'twenty-ui/components/navigation';
+import { SelectOptionIcon } from '@/ui/input/components/SelectOptionIcon';
+import { isDefined } from 'twenty-shared/utils';
 import { isUndefined } from '@sniptt/guards';
 import { Key } from 'ts-key-enum';
 
@@ -21,9 +24,7 @@ import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/com
 import { useAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomComponentFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentFamilyStateValue';
-import { useWorkspaceSurfaceScopedComponentInstanceId } from '@/ui/layout/hooks/useWorkspaceSurfaceScopedComponentInstanceId';
 import { type IconComponent } from 'twenty-ui/icon';
-import { MenuItemSelect } from 'twenty-ui/navigation';
 
 export type SingleRecordPickerMenuItemsProps = {
   EmptyIcon?: IconComponent;
@@ -48,9 +49,7 @@ export const SingleRecordPickerMenuItems = ({
     );
 
   const selectableListComponentInstanceId =
-    useWorkspaceSurfaceScopedComponentInstanceId(
-      getSingleRecordPickerSelectableListId(recordPickerComponentInstanceId),
-    );
+    getSingleRecordPickerSelectableListId(recordPickerComponentInstanceId);
 
   const { resetSelectedItem } = useSelectableList(
     selectableListComponentInstanceId,
@@ -93,11 +92,16 @@ export const SingleRecordPickerMenuItems = ({
 
   const searchHasNoResults = itemsMatchingSearchFilter.length === 0;
 
+  const shouldShowInitialLoading =
+    singleRecordPickerShouldShowInitialLoading && searchHasNoResults;
+
   return (
     <SelectableList
       selectableListInstanceId={selectableListComponentInstanceId}
       selectableItemIdArray={selectableItemIds}
       focusId={focusId}
+      // The empty option leads, so preselecting it would make Enter detach the relation.
+      shouldPreselectFirstItem={!isDefined(emptyLabel)}
     >
       {emptyLabel && (
         <SelectableListItem
@@ -108,19 +112,23 @@ export const SingleRecordPickerMenuItems = ({
             onMorphItemSelected();
           }}
         >
-          <MenuItemSelect
+          <ListItemButton
             onClick={() => {
               setSingleRecordPickerSelectedId(undefined);
               onMorphItemSelected();
             }}
-            LeftIcon={EmptyIcon}
-            text={emptyLabel}
-            selected={isUndefined(singleRecordPickerSelectedId)}
             focused={isSelectedItemId}
-          />
+            role="option"
+            aria-selected={isUndefined(singleRecordPickerSelectedId)}
+            selected={isUndefined(singleRecordPickerSelectedId)}
+            indicator="check"
+            startIcon={<SelectOptionIcon Icon={EmptyIcon} />}
+          >
+            {emptyLabel}
+          </ListItemButton>
         </SelectableListItem>
       )}
-      {singleRecordPickerShouldShowInitialLoading ? (
+      {shouldShowInitialLoading ? (
         <RecordPickerInitialLoadingEmptyContainer />
       ) : singleRecordPickerShouldShowSkeleton ? (
         <RecordPickerLoadingSkeletonList />

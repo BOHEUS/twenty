@@ -3,28 +3,16 @@ import { STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS } from '@/metadata/constants/stan
 import { buildStandardObjectIndexView } from '@/metadata/utils/internal/build-standard-object-index-view.util';
 import { buildStandardObjectRecordPageFieldsView } from '@/metadata/utils/internal/build-standard-object-record-page-fields-view.util';
 
-// Important notice:
-// - Never ever mutate an existing universal identifier
-// - Deleting an existing universal identifier should be very rare
-// - Field universal identifiers live in STANDARD_OBJECT_FIELDS (see
-//   standard-object-fields.constant.ts), so both an object's `fields` and its
-//   INDEX view can read the same values.
-// - INDEX view universal identifiers (the "All {objectLabelPlural}" table view
-//   keyed on ViewKey.INDEX) and their view-field universal identifiers are
-//   deterministically derived by buildStandardObjectIndexView
-//   (getSystemViewUniversalIdentifier for the view,
-//   getSystemViewFieldUniversalIdentifier for each view field).
-// - FIELDS_WIDGET record-page view universal identifiers (keyed on
-//   SYSTEM_VIEW_KEYS.FIELDS_WIDGET), their view fields and their view field groups are
-//   deterministically derived by buildStandardObjectRecordPageFieldsView; the group
-//   names passed there MUST match the ones the server standard view-field-group
-//   builders assign.
+// Never mutate an existing universal identifier, and delete one only rarely.
+// Group names passed to buildStandardObjectRecordPageFieldsView MUST match the server's standard view-field-group builders.
 export const STANDARD_OBJECTS = {
   attachment: {
     universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.attachment,
     fields: STANDARD_OBJECT_FIELDS.attachment,
     morphIds: {
-      targetMorphId: { morphId: '20202020-f634-435d-ab8d-e1168b375c69' },
+      targetMorphId: {
+        morphId: STANDARD_OBJECT_FIELDS.attachment.target.universalIdentifier,
+      },
     },
     indexes: {
       taskIdIndex: {
@@ -45,8 +33,11 @@ export const STANDARD_OBJECTS = {
       dashboardIdIndex: {
         universalIdentifier: 'c10eba2d-ff1a-4eab-9285-50481c12a003',
       },
-      workflowIdIndex: {
-        universalIdentifier: 'fadeab4b-79ee-4173-af79-72c51fbad888',
+      agentChatThreadIdIndex: {
+        universalIdentifier: '69857371-6ff9-48fa-a9de-db4f71593431',
+      },
+      messageIdIndex: {
+        universalIdentifier: '83c77988-2dc4-4575-bac5-f0f50c05568e',
       },
     },
     views: {
@@ -65,8 +56,14 @@ export const STANDARD_OBJECTS = {
           'targetTask',
           'targetNote',
           'targetDashboard',
-          'targetWorkflow',
         ],
+      }),
+      attachmentRecordPageFields: buildStandardObjectRecordPageFieldsView({
+        objectUniversalIdentifier:
+          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.attachment,
+        fields: STANDARD_OBJECT_FIELDS.attachment,
+        viewFieldNames: ['createdBy', 'createdAt'],
+        viewFieldGroupNames: {},
       }),
     },
   },
@@ -107,6 +104,9 @@ export const STANDARD_OBJECTS = {
       },
       calendarEventIdIndex: {
         universalIdentifier: '47a3c8d2-9f14-4b6e-8c5d-1a2b3f4e5c69',
+      },
+      eventExternalIdIndex: {
+        universalIdentifier: 'b14d63d0-c1ab-470f-927d-9c0c05277caa',
       },
     },
     views: {
@@ -197,7 +197,11 @@ export const STANDARD_OBJECTS = {
   calendarEvent: {
     universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.calendarEvent,
     fields: STANDARD_OBJECT_FIELDS.calendarEvent,
-    indexes: {},
+    indexes: {
+      iCalUidIndex: {
+        universalIdentifier: 'e38d1418-f994-4f0d-b0cd-41d4da240ea0',
+      },
+    },
     views: {
       allCalendarEvents: buildStandardObjectIndexView({
         objectUniversalIdentifier:
@@ -245,7 +249,10 @@ export const STANDARD_OBJECTS = {
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.calendarEventTarget,
     fields: STANDARD_OBJECT_FIELDS.calendarEventTarget,
     morphIds: {
-      targetMorphId: { morphId: '676e9f68-7b5c-41e6-b46d-2fb9527b7051' },
+      targetMorphId: {
+        morphId:
+          STANDARD_OBJECT_FIELDS.calendarEventTarget.target.universalIdentifier,
+      },
     },
     indexes: {
       calendarEventIdIndex: {
@@ -414,23 +421,51 @@ export const STANDARD_OBJECTS = {
           'status',
           'list',
           'fromAddress',
+          'scheduledAt',
           'sentAt',
-          'sentCount',
-          'deliveredCount',
-          'failedCount',
-          'skippedCount',
-          'bouncedCount',
-          'complainedCount',
           'recipients',
           'createdAt',
         ],
       }),
+      messageCampaignList: {
+        universalIdentifier: '99ca5417-e5e0-4fd4-8e64-67acd7b21e25',
+        viewFields: {
+          name: {
+            universalIdentifier: 'fcda0c3b-7ee3-40dd-b280-da3ff4da5452',
+          },
+          subject: {
+            universalIdentifier: '700087d2-bd10-4ab9-b8a9-b0710146927c',
+          },
+          status: {
+            universalIdentifier: 'ff29b192-5a52-42a1-8a1e-1a03d26f5464',
+          },
+          list: {
+            universalIdentifier: '8e28bc70-eaa0-4768-bb13-606571e65ac8',
+          },
+          fromAddress: {
+            universalIdentifier: 'b9798ecc-de06-4717-8b42-057181437dbc',
+          },
+          scheduledAt: {
+            universalIdentifier: 'caba5417-964d-416c-a5a9-b64ef71e5964',
+          },
+          sentAt: {
+            universalIdentifier: '9d546249-b029-4b01-8389-65a88ae583c8',
+          },
+          recipients: {
+            universalIdentifier: 'e065a2d1-1352-4869-b527-58e3c37557c0',
+          },
+          createdAt: {
+            universalIdentifier: '27548f0a-5ed4-4412-b23a-718b99eb697e',
+          },
+        },
+      },
       messageCampaignRecordPageFields: buildStandardObjectRecordPageFieldsView({
         objectUniversalIdentifier:
           STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.messageCampaign,
         fields: STANDARD_OBJECT_FIELDS.messageCampaign,
         viewFieldNames: [
           'status',
+          'scheduledAt',
           'sentAt',
           'sentCount',
           'deliveredCount',
@@ -438,6 +473,10 @@ export const STANDARD_OBJECTS = {
           'skippedCount',
           'bouncedCount',
           'complainedCount',
+          'uniqueClickCount',
+          'clickRate',
+          'uniqueOpenCount',
+          'openRate',
         ],
         viewFieldGroupNames: {
           stats: 'Stats',
@@ -657,7 +696,10 @@ export const STANDARD_OBJECTS = {
       STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.messageThreadTarget,
     fields: STANDARD_OBJECT_FIELDS.messageThreadTarget,
     morphIds: {
-      targetMorphId: { morphId: 'e85e853d-c26e-41b3-bec0-7afc4bdbc2f7' },
+      targetMorphId: {
+        morphId:
+          STANDARD_OBJECT_FIELDS.messageThreadTarget.target.universalIdentifier,
+      },
     },
     indexes: {
       messageThreadIdIndex: {
@@ -713,6 +755,24 @@ export const STANDARD_OBJECTS = {
           'createdAt',
         ],
       }),
+      messageRecordPageFields: buildStandardObjectRecordPageFieldsView({
+        objectUniversalIdentifier:
+          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.message,
+        fields: STANDARD_OBJECT_FIELDS.message,
+        viewFieldNames: [
+          'messageThread',
+          'messageParticipants',
+          'receivedAt',
+          'text',
+          'headerMessageId',
+          'createdAt',
+          'createdBy',
+        ],
+        viewFieldGroupNames: {
+          general: 'General',
+          system: 'System',
+        },
+      }),
     },
   },
   note: {
@@ -749,7 +809,9 @@ export const STANDARD_OBJECTS = {
     universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.noteTarget,
     fields: STANDARD_OBJECT_FIELDS.noteTarget,
     morphIds: {
-      targetMorphId: { morphId: '20202020-f635-435d-ab8d-e1168b375c70' },
+      targetMorphId: {
+        morphId: STANDARD_OBJECT_FIELDS.noteTarget.target.universalIdentifier,
+      },
     },
     indexes: {
       noteIdIndex: {
@@ -968,6 +1030,22 @@ export const STANDARD_OBJECTS = {
       },
     },
   },
+  accessGroup: {
+    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.accessGroup,
+    fields: STANDARD_OBJECT_FIELDS.accessGroup,
+    indexes: {
+      roleIdIndex: {
+        universalIdentifier: '933f2eee-0856-46fd-b144-ffd4bad7e9c8',
+      },
+      groupHashUniqueIndex: {
+        universalIdentifier: 'dcb0d254-43ae-442e-9223-8ac052eddb28',
+      },
+      objectMetadataIdIndex: {
+        universalIdentifier: '60e48c2a-a3db-4f11-b25b-49c7e8a385bc',
+      },
+    },
+    views: {},
+  },
   recordShare: {
     universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.recordShare,
     fields: STANDARD_OBJECT_FIELDS.recordShare,
@@ -980,6 +1058,16 @@ export const STANDARD_OBJECTS = {
       },
       sourceIdIndex: {
         universalIdentifier: '21b84593-c647-40ce-bdf4-a8b4ac658f57',
+      },
+    },
+    views: {},
+  },
+  shortLink: {
+    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.shortLink,
+    fields: STANDARD_OBJECT_FIELDS.shortLink,
+    indexes: {
+      templateAndResolvedUrlHashUniqueIndex: {
+        universalIdentifier: 'b1330e3c-bd74-4bd1-a9dc-1ecefe41f199',
       },
     },
     views: {},
@@ -1107,7 +1195,9 @@ export const STANDARD_OBJECTS = {
     universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.taskTarget,
     fields: STANDARD_OBJECT_FIELDS.taskTarget,
     morphIds: {
-      targetMorphId: { morphId: '20202020-f636-435d-ab8d-e1168b375c71' },
+      targetMorphId: {
+        morphId: STANDARD_OBJECT_FIELDS.taskTarget.target.universalIdentifier,
+      },
     },
     indexes: {
       taskIdIndex: {
@@ -1151,7 +1241,10 @@ export const STANDARD_OBJECTS = {
     universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.timelineActivity,
     fields: STANDARD_OBJECT_FIELDS.timelineActivity,
     morphIds: {
-      targetMorphId: { morphId: '20202020-9a2b-4c3d-a4e5-f6a7b8c9d0e1' },
+      targetMorphId: {
+        morphId:
+          STANDARD_OBJECT_FIELDS.timelineActivity.target.universalIdentifier,
+      },
     },
     indexes: {
       workspaceMemberIdIndex: {
@@ -1172,17 +1265,20 @@ export const STANDARD_OBJECTS = {
       taskIdIndex: {
         universalIdentifier: '609cf622-86ef-48d1-812b-e1cab610a46c',
       },
-      workflowIdIndex: {
-        universalIdentifier: 'd6059ec2-92b0-4cfc-9fd8-78050f03108f',
-      },
-      workflowVersionIdIndex: {
-        universalIdentifier: 'd94329b3-5dc8-4141-ae28-31afe28f7135',
-      },
       workflowRunIdIndex: {
         universalIdentifier: '1a2bd046-7c23-4e0a-9f8a-c3ca3a16d3b9',
       },
       dashboardIdIndex: {
         universalIdentifier: 'e8821da9-728d-470a-bf5b-5a981fff7880',
+      },
+      messageListIdIndex: {
+        universalIdentifier: 'a251f71a-c698-4526-8817-0e7c803c158e',
+      },
+      messageCampaignIdIndex: {
+        universalIdentifier: 'e808e721-91cc-4b9b-b24b-806d64b4d5e2',
+      },
+      linkedRecordIdIndex: {
+        universalIdentifier: '00e9bf50-0e98-4105-8cb7-31c94995ff55',
       },
     },
     views: {
@@ -1199,76 +1295,18 @@ export const STANDARD_OBJECTS = {
           'targetOpportunity',
           'targetTask',
           'targetNote',
-          'targetWorkflow',
-          'targetWorkflowVersion',
           'targetWorkflowRun',
           'targetDashboard',
         ],
       }),
     },
   },
-  workflow: {
-    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflow,
-    fields: STANDARD_OBJECT_FIELDS.workflow,
-    indexes: {
-      searchVectorGinIndex: {
-        universalIdentifier: 'c7e64c55-eb0c-4b93-b076-5cfcf2e2e042',
-      },
-    },
-    views: {
-      allWorkflows: buildStandardObjectIndexView({
-        objectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflow,
-        fields: STANDARD_OBJECT_FIELDS.workflow,
-        viewFieldNames: [
-          'name',
-          'statuses',
-          'updatedAt',
-          'createdBy',
-          'versions',
-          'runs',
-        ],
-      }),
-    },
-  },
-  workflowAutomatedTrigger: {
-    universalIdentifier:
-      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowAutomatedTrigger,
-    fields: STANDARD_OBJECT_FIELDS.workflowAutomatedTrigger,
-    indexes: {
-      workflowIdIndex: {
-        universalIdentifier: '7331ff89-a3f9-4ac0-9fa9-0de5663ae7b2',
-      },
-    },
-    views: {
-      allWorkflowAutomatedTriggers: buildStandardObjectIndexView({
-        objectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowAutomatedTrigger,
-        fields: STANDARD_OBJECT_FIELDS.workflowAutomatedTrigger,
-        viewFieldNames: ['type', 'workflow', 'createdAt'],
-      }),
-      workflowAutomatedTriggerRecordPageFields:
-        buildStandardObjectRecordPageFieldsView({
-          objectUniversalIdentifier:
-            STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowAutomatedTrigger,
-          fields: STANDARD_OBJECT_FIELDS.workflowAutomatedTrigger,
-          viewFieldNames: ['type', 'workflow', 'createdAt', 'createdBy'],
-          viewFieldGroupNames: {
-            general: 'General',
-            system: 'System',
-          },
-        }),
-    },
-  },
   workflowRun: {
     universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowRun,
     fields: STANDARD_OBJECT_FIELDS.workflowRun,
     indexes: {
-      workflowVersionIdIndex: {
-        universalIdentifier: '8183c8d2-9114-4b6e-8c5d-12a3b14a5a14',
-      },
-      workflowIdIndex: {
-        universalIdentifier: '9294d9e3-0225-4c7f-9d6e-23b4c25b6b25',
+      coreWorkflowIdCreatedAtIndex: {
+        universalIdentifier: '5f16fa40-7dd4-4a30-8331-9ad4a106f6be',
       },
       searchVectorGinIndex: {
         universalIdentifier: 'e0ac5ad2-d0c8-4f72-b710-8e53b9dc18d9',
@@ -1279,7 +1317,7 @@ export const STANDARD_OBJECTS = {
         objectUniversalIdentifier:
           STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowRun,
         fields: STANDARD_OBJECT_FIELDS.workflowRun,
-        viewFieldNames: ['name', 'workflow', 'status'],
+        viewFieldNames: ['name', 'coreWorkflowId', 'status'],
       }),
       workflowRunRecordPageFields: buildStandardObjectRecordPageFieldsView({
         objectUniversalIdentifier:
@@ -1287,8 +1325,7 @@ export const STANDARD_OBJECTS = {
         fields: STANDARD_OBJECT_FIELDS.workflowRun,
         viewFieldNames: [
           'status',
-          'workflow',
-          'workflowVersion',
+          'coreWorkflowId',
           'startedAt',
           'endedAt',
           'createdAt',
@@ -1297,47 +1334,6 @@ export const STANDARD_OBJECTS = {
           'state',
           'updatedAt',
           'updatedBy',
-          'timelineActivities',
-        ],
-        viewFieldGroupNames: {
-          general: 'General',
-          system: 'System',
-        },
-      }),
-    },
-  },
-  workflowVersion: {
-    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowVersion,
-    fields: STANDARD_OBJECT_FIELDS.workflowVersion,
-    indexes: {
-      workflowIdIndex: {
-        universalIdentifier: '8138c3b3-0b14-4ee1-be0e-debdde6b3219',
-      },
-      searchVectorGinIndex: {
-        universalIdentifier: '6f3a65eb-2aee-4108-b8a0-c62da419d1dc',
-      },
-    },
-    views: {
-      allWorkflowVersions: buildStandardObjectIndexView({
-        objectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowVersion,
-        fields: STANDARD_OBJECT_FIELDS.workflowVersion,
-        viewFieldNames: ['name', 'workflow', 'status', 'updatedAt', 'runs'],
-      }),
-      workflowVersionRecordPageFields: buildStandardObjectRecordPageFieldsView({
-        objectUniversalIdentifier:
-          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workflowVersion,
-        fields: STANDARD_OBJECT_FIELDS.workflowVersion,
-        viewFieldNames: [
-          'status',
-          'workflow',
-          'trigger',
-          'createdAt',
-          'steps',
-          'createdBy',
-          'updatedAt',
-          'updatedBy',
-          'runs',
           'timelineActivities',
         ],
         viewFieldGroupNames: {
@@ -1359,6 +1355,25 @@ export const STANDARD_OBJECTS = {
       },
     },
     views: {
+      workspaceMemberRecordPageFields: buildStandardObjectRecordPageFieldsView({
+        objectUniversalIdentifier:
+          STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workspaceMember,
+        fields: STANDARD_OBJECT_FIELDS.workspaceMember,
+        viewFieldNames: [
+          'userEmail',
+          'jobTitle',
+          'createdAt',
+          'updatedAt',
+          'assignedTasks',
+          'accountOwnerForCompanies',
+          'ownedOpportunities',
+        ],
+        viewFieldGroupNames: {
+          general: 'General',
+          system: 'System',
+          relations: 'Relations',
+        },
+      }),
       allWorkspaceMembers: buildStandardObjectIndexView({
         objectUniversalIdentifier:
           STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.workspaceMember,
@@ -1370,6 +1385,159 @@ export const STANDARD_OBJECTS = {
           'assignedTasks',
         ],
       }),
+    },
+  },
+  agentChatThread: {
+    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThread,
+    fields: STANDARD_OBJECT_FIELDS.agentChatThread,
+    indexes: {
+      directMessagePairUniqueIndex: {
+        universalIdentifier: '365c5b24-cd52-4ebc-98d2-23c5684216d5',
+      },
+      workspaceMemberIndex: {
+        universalIdentifier: '079f2dd7-6c11-4eae-be8a-cce2d1bee0fb',
+      },
+      assigneeIndex: {
+        universalIdentifier: 'a65524f8-c999-448b-b9f4-c9ecce15fd13',
+      },
+      channelLastActivityIndex: {
+        universalIdentifier: 'bd129bd1-db66-4c74-a64e-819d2edd3062',
+      },
+    },
+  },
+  agentChatThreadParticipant: {
+    universalIdentifier:
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThreadParticipant,
+    fields: STANDARD_OBJECT_FIELDS.agentChatThreadParticipant,
+    indexes: {
+      threadWorkspaceMemberUniqueIndex: {
+        universalIdentifier: 'e5bbe244-cf74-49a3-938a-e6fff7a8710b',
+      },
+      workspaceMemberIndex: {
+        universalIdentifier: '73d8bb5d-18eb-47bb-89e6-12d8f89aecf6',
+      },
+    },
+  },
+  agentChatThreadTarget: {
+    universalIdentifier:
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentChatThreadTarget,
+    fields: STANDARD_OBJECT_FIELDS.agentChatThreadTarget,
+    morphIds: {
+      targetMorphId: {
+        morphId:
+          STANDARD_OBJECT_FIELDS.agentChatThreadTarget.target
+            .universalIdentifier,
+      },
+    },
+    indexes: {
+      threadIdIndex: {
+        universalIdentifier: '19291d2c-15ab-43a0-91f7-1694b34813dd',
+      },
+      personIdIndex: {
+        universalIdentifier: 'fe9c48d0-5b2a-4a51-bd47-f9205ea0c09d',
+      },
+      companyIdIndex: {
+        universalIdentifier: 'ab45593a-3614-41c8-aab1-20aa91f1095c',
+      },
+      opportunityIdIndex: {
+        universalIdentifier: 'b68e2031-73c6-4bc4-b062-5f795539e452',
+      },
+      threadPersonUniqueIndex: {
+        universalIdentifier: '5a12050f-4de2-4076-aecc-959b863e14b2',
+      },
+      threadCompanyUniqueIndex: {
+        universalIdentifier: 'd9067628-fd16-4843-955b-5fd47fea52a9',
+      },
+      threadOpportunityUniqueIndex: {
+        universalIdentifier: '1b9bec10-2788-40be-9435-44937b9f7018',
+      },
+    },
+    views: {},
+  },
+  agentTurn: {
+    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentTurn,
+    fields: STANDARD_OBJECT_FIELDS.agentTurn,
+    indexes: {
+      agentIndex: {
+        universalIdentifier: '606e8ba3-f322-426b-bef8-2208f67a541a',
+      },
+      agentIdCreatedAtIndex: {
+        universalIdentifier: '39fbc85e-22ec-4279-8c67-f3f0850b68c9',
+      },
+      threadIndex: {
+        universalIdentifier: '7d351559-4546-4307-ba28-de9fc4c40ef4',
+      },
+    },
+  },
+  agentMessage: {
+    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentMessage,
+    fields: STANDARD_OBJECT_FIELDS.agentMessage,
+    indexes: {
+      agentIndex: {
+        universalIdentifier: '465b20e1-d4cd-4d80-a85b-78bd1f0e70ad',
+      },
+      threadIndex: {
+        universalIdentifier: '2054f1a5-554f-42ac-a41a-b8ccd6ba72ec',
+      },
+      turnIndex: {
+        universalIdentifier: 'dc46f804-a55f-4283-884e-9cb938741da3',
+      },
+      senderWorkspaceMemberIndex: {
+        universalIdentifier: '8ecdac01-7bbe-411e-8461-6ff265c90759',
+      },
+    },
+  },
+  agentMessageReaction: {
+    universalIdentifier:
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentMessageReaction,
+    fields: STANDARD_OBJECT_FIELDS.agentMessageReaction,
+    indexes: {
+      messageWorkspaceMemberEmojiUniqueIndex: {
+        universalIdentifier: '4089a239-e2d0-4e3e-83e8-e9b555a8a31d',
+      },
+      workspaceMemberIndex: {
+        universalIdentifier: '565d89ab-2c11-4ebe-aaaf-8dbc4d79a9e5',
+      },
+    },
+  },
+  agentMessagePart: {
+    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.agentMessagePart,
+    fields: STANDARD_OBJECT_FIELDS.agentMessagePart,
+    indexes: {
+      messageOrderIndex: {
+        universalIdentifier: 'f5a08f6f-cf91-4996-9c21-2af64a17ca83',
+      },
+    },
+  },
+  campaignDelivery: {
+    universalIdentifier: STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.campaignDelivery,
+    fields: STANDARD_OBJECT_FIELDS.campaignDelivery,
+    indexes: {
+      campaignPersonUniqueIndex: {
+        universalIdentifier: '8d719548-d34f-4891-bbc9-e0e09f0e363b',
+      },
+      expiredClaimIndex: {
+        universalIdentifier: 'a4d7e8ed-0008-4f6a-a20c-a2b821487481',
+      },
+      countsIndex: {
+        universalIdentifier: '1ea1ae7a-158f-436a-95a0-e9c998ad94f7',
+      },
+      claimTokenIndex: {
+        universalIdentifier: '91640dcd-3f6b-4378-b284-bb02cc8b81ec',
+      },
+      providerMessageIdUniqueIndex: {
+        universalIdentifier: '4de6f73d-ef3a-4c80-b71a-88739213f1c0',
+      },
+    },
+  },
+  messageSuppression: {
+    universalIdentifier:
+      STANDARD_OBJECT_UNIVERSAL_IDENTIFIERS.messageSuppression,
+    fields: STANDARD_OBJECT_FIELDS.messageSuppression,
+    indexes: {
+      emailAddressTopicUniqueIndex: {
+        universalIdentifier: 'a6c1f4dc-d925-49f9-8205-3e7f95545966',
+      },
     },
   },
 } as const satisfies Record<

@@ -9,21 +9,37 @@ import type Stripe from 'stripe';
 
 import { EventLogEmitterService } from 'src/engine/core-modules/event-logs/emit/event-log-emitter.service';
 import { PAYMENT_RECEIVED_EVENT } from 'src/engine/core-modules/event-logs/emit/events/workspace-event/billing/payment-received';
+import { getCustomerIdFromInvoice } from 'src/engine/core-modules/billing-webhook/utils/get-customer-id-from-invoice.util';
 import { getSubscriptionIdFromInvoice } from 'src/engine/core-modules/billing-webhook/utils/get-subscription-id-from-invoice.util';
 import {
   BillingException,
   BillingExceptionCode,
 } from 'src/engine/core-modules/billing/billing.exception';
+import { UPDATE_SUBSCRIPTION_QUANTITY_JOB_RETRY_OPTIONS } from 'src/engine/core-modules/billing/constants/update-subscription-quantity-job-retry-options.constant';
 import { BillingCustomerEntity } from 'src/engine/core-modules/billing/entities/billing-customer.entity';
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { BillingWebhookEvent } from 'src/engine/core-modules/billing/enums/billing-webhook-events.enum';
+import {
+  UpdateSubscriptionQuantityJob,
+  type UpdateSubscriptionQuantityJobData,
+} from 'src/engine/core-modules/billing/jobs/update-subscription-quantity.job';
 import { BillingCreditGrantService } from 'src/engine/core-modules/billing/services/billing-credit-grant.service';
 import { BillingCreditRolloverService } from 'src/engine/core-modules/billing/services/billing-credit-rollover.service';
+import { BillingCreditOneTimeTopUpService } from 'src/engine/core-modules/billing/services/billing-credit-one-time-top-up.service';
+import { BillingSeatService } from 'src/engine/core-modules/billing/services/billing-seat.service';
 import { BillingSubscriptionService } from 'src/engine/core-modules/billing/services/billing-subscription.service';
 import { BillingUsageService } from 'src/engine/core-modules/billing/services/billing-usage.service';
+import { BillingWorkspaceCreditAllowanceService } from 'src/engine/core-modules/billing/services/billing-workspace-credit-allowance.service';
 import { ResourceCreditService } from 'src/engine/core-modules/billing/services/resource-credit.service';
 import { StripeInvoiceService } from 'src/engine/core-modules/billing/stripe/services/stripe-invoice.service';
+import { computeRolloverClosingAllowances } from 'src/engine/core-modules/billing/utils/compute-rollover-closing-allowances.util';
 import { deriveBillingPeriodTransition } from 'src/engine/core-modules/billing/utils/derive-billing-period-transition.util';
+import { findActiveWorkspaceCreditAllowanceMicro } from 'src/engine/core-modules/billing/utils/find-active-workspace-credit-allowance-micro.util';
+import { isCreditTopUpInvoice } from 'src/engine/core-modules/billing/utils/is-credit-top-up-invoice.util';
+import { getRenewalDate } from 'src/engine/core-modules/billing/utils/get-renewal-date.util';
+import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
+import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
+import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 
 const SUBSCRIPTION_CYCLE_BILLING_REASON = 'subscription_cycle';
@@ -42,10 +58,15 @@ export class BillingWebhookInvoiceService {
     private readonly billingSubscriptionService: BillingSubscriptionService,
     private readonly billingCreditGrantService: BillingCreditGrantService,
     private readonly billingCreditRolloverService: BillingCreditRolloverService,
+    private readonly billingCreditOneTimeTopUpService: BillingCreditOneTimeTopUpService,
     private readonly billingUsageService: BillingUsageService,
+    private readonly billingWorkspaceCreditAllowanceService: BillingWorkspaceCreditAllowanceService,
     private readonly resourceCreditService: ResourceCreditService,
     private readonly stripeInvoiceService: StripeInvoiceService,
     private readonly eventLogEmitterService: EventLogEmitterService,
+    private readonly billingSeatService: BillingSeatService,
+    @InjectMessageQueue(MessageQueue.billingQueue)
+    private readonly billingMessageQueueService: MessageQueueService,
   ) {}
 
   async processStripeEvent(
@@ -69,13 +90,11 @@ export class BillingWebhookInvoiceService {
   ) {
     const {
       billing_reason: billingReason,
-      customer,
-      period_start: periodStart,
-      period_end: periodEnd,
+      created: invoiceCreatedAtInSeconds,
     } = data.object;
 
     const stripeSubscriptionId = getSubscriptionIdFromInvoice(data.object);
-    const stripeCustomerId = customer as string | undefined;
+    const stripeCustomerId = getCustomerIdFromInvoice(data.object);
 
     if (
       !isDefined(stripeSubscriptionId) ||
@@ -84,7 +103,7 @@ export class BillingWebhookInvoiceService {
       return;
     }
 
-    if (!isDefined(stripeCustomerId) || !periodEnd || !periodStart) {
+    if (!isDefined(stripeCustomerId)) {
       return;
     }
 
@@ -97,34 +116,51 @@ export class BillingWebhookInvoiceService {
       return;
     }
 
-    const trialEnd = isDefined(subscription.trialEnd)
-      ? Math.floor(subscription.trialEnd.getTime() / 1000)
-      : undefined;
-
-    const TRIAL_END_TOLERANCE_SECONDS = 60;
-
-    const isFirstPeriodAfterTrial =
-      isDefined(trialEnd) &&
-      Math.abs(periodStart - trialEnd) <= TRIAL_END_TOLERANCE_SECONDS;
-
-    await this.processRollover({
-      subscription,
-      invoicePeriodStart: new Date(periodStart * 1000),
-      invoicePeriodEnd: new Date(periodEnd * 1000),
-      isFirstPeriodAfterTrial,
+    const renewalDate = getRenewalDate({
+      invoiceCreatedAt: new Date(invoiceCreatedAtInSeconds * 1000),
+      subscriptionCurrentPeriodStart: subscription.currentPeriodStart,
+      subscriptionCurrentPeriodEnd: subscription.currentPeriodEnd,
     });
+
+    await this.processRollover({ subscription, boundary: renewalDate });
+
+    await this.enqueueSeatSyncForSeatArrangements({
+      workspaceId: subscription.workspaceId,
+      renewalDate,
+    });
+  }
+
+  private async enqueueSeatSyncForSeatArrangements({
+    workspaceId,
+    renewalDate,
+  }: {
+    workspaceId: string;
+    renewalDate: Date;
+  }) {
+    const seatArrangements =
+      await this.billingSeatService.findSeatArrangements(workspaceId);
+
+    if (seatArrangements.length === 0) {
+      return;
+    }
+
+    await this.billingMessageQueueService.add<UpdateSubscriptionQuantityJobData>(
+      UpdateSubscriptionQuantityJob.name,
+      { workspaceId, renewalDateMs: renewalDate.getTime() },
+      {
+        ...UPDATE_SUBSCRIPTION_QUANTITY_JOB_RETRY_OPTIONS,
+        workspaceId,
+        isWorkspaceJob: true,
+      },
+    );
   }
 
   private async processRollover({
     subscription,
-    invoicePeriodStart,
-    invoicePeriodEnd,
-    isFirstPeriodAfterTrial,
+    boundary,
   }: {
     subscription: BillingSubscriptionEntity;
-    invoicePeriodStart: Date;
-    invoicePeriodEnd: Date;
-    isFirstPeriodAfterTrial: boolean;
+    boundary: Date;
   }): Promise<void> {
     const workspaceExists = await this.workspaceRepository.exists({
       where: { id: subscription.workspaceId },
@@ -135,62 +171,84 @@ export class BillingWebhookInvoiceService {
       return;
     }
 
-    const params =
-      await this.resourceCreditService.getResourceCreditRolloverParameters(
-        subscription.workspaceId,
-        subscription.id,
-      );
-
-    if (!isDefined(params)) {
-      return;
-    }
-
-    // Only needed while subscriptions that predate previousPeriodStart are
-    // still transitioning for the first time.
+    // Only needed while subscriptions predating previousPeriodStart transition for the first time
     const ledgerPeriodStart =
       await this.billingCreditGrantService.findPeriodStartBefore({
         workspaceId: subscription.workspaceId,
-        boundary: invoicePeriodStart,
+        boundary,
       });
 
     const {
       closingPeriodStart,
       closingPeriodEnd,
+      closingPeriodInterval,
       nextPeriodStart,
-      nextPeriodEnd,
+      isFirstPeriodAfterTrial,
     } = deriveBillingPeriodTransition({
-      invoicePeriodStart,
-      invoicePeriodEnd,
+      boundary,
       subscriptionCurrentPeriodStart: subscription.currentPeriodStart,
-      subscriptionCurrentPeriodEnd: subscription.currentPeriodEnd,
       subscriptionInterval: subscription.interval,
       trialStart: subscription.trialStart,
-      isFirstPeriodAfterTrial,
+      trialEnd: subscription.trialEnd,
       subscriptionPreviousPeriodStart: subscription.previousPeriodStart,
       ledgerPeriodStart,
     });
 
-    // Credits earned during the trial follow the workspace into its first paid
-    // period, so the trial closes like any other period. Its allowance comes
-    // from config rather than the price, which only applies once paid.
-    const closingAllowanceMicro = isFirstPeriodAfterTrial
-      ? this.billingUsageService.getTrialResourceUsageCap(subscription)
-      : params.tierQuantity;
+    const [resourceCreditRolloverParameters, workspaceCreditAllowances] =
+      await Promise.all([
+        this.resourceCreditService.getResourceCreditRolloverParameters({
+          workspaceId: subscription.workspaceId,
+          subscriptionId: subscription.id,
+          boundary,
+          interval: closingPeriodInterval,
+        }),
+        this.billingWorkspaceCreditAllowanceService.findAllWorkspaceCreditAllowances(
+          subscription.workspaceId,
+        ),
+      ]);
+
+    const workspaceCreditAllowanceMicro =
+      findActiveWorkspaceCreditAllowanceMicro({
+        workspaceCreditAllowances,
+        nowMs: closingPeriodEnd.getTime() - 1,
+        interval: closingPeriodInterval,
+        isTrialing: isFirstPeriodAfterTrial,
+      });
+
+    const closingAllowances = computeRolloverClosingAllowances({
+      planWorkspaceCredits: resourceCreditRolloverParameters,
+      trialAllowanceMicro:
+        this.billingUsageService.getTrialResourceUsageCap(subscription),
+      isFirstPeriodAfterTrial,
+      workspaceCreditAllowanceMicro,
+    });
+
+    if (!isDefined(closingAllowances)) {
+      this.logger.error(
+        `Skipping credit rollover for workspace ${subscription.workspaceId}: subscription ${subscription.id} gives no workspace credits from a credit pack, seats or a workspace credit allowance`,
+      );
+
+      return;
+    }
 
     await this.billingCreditRolloverService.processRolloverOnPeriodTransition({
       workspaceId: subscription.workspaceId,
       closingPeriodStart,
       closingPeriodEnd,
-      closingAllowanceMicro,
+      ...closingAllowances,
       nextPeriodStart,
-      nextPeriodEnd,
-      nextAllowanceMicro: params.tierQuantity,
+      nextAllowanceMicro:
+        resourceCreditRolloverParameters?.workspaceCreditsForPackMicro ?? 0,
     });
   }
 
   private async processInvoicePaid(data: Stripe.InvoicePaidEvent.Data) {
+    if (isCreditTopUpInvoice(data.object)) {
+      return this.processCreditTopUpInvoicePaid(data.object);
+    }
+
     const stripeSubscriptionId = getSubscriptionIdFromInvoice(data.object);
-    const stripeCustomerId = data.object.customer as string | undefined;
+    const stripeCustomerId = getCustomerIdFromInvoice(data.object);
     const paidInvoicePeriodEnd = data.object.period_end;
 
     if (
@@ -204,9 +262,7 @@ export class BillingWebhookInvoiceService {
       );
     }
 
-    // Paying a past-due invoice won't reactivate the subscription if Stripe
-    // already generated a draft for the next period. Finalize it so Stripe
-    // can collect payment and resume the subscription.
+    // Stripe won't reactivate on a paid past-due invoice while a next-period draft exists
     await this.finalizePastDueDraftInvoicesAfterPaidInvoice(
       stripeSubscriptionId,
       paidInvoicePeriodEnd,
@@ -227,6 +283,23 @@ export class BillingWebhookInvoiceService {
     }
 
     return { stripeSubscriptionId };
+  }
+
+  private async processCreditTopUpInvoicePaid(invoice: Stripe.Invoice) {
+    const workspaceId =
+      await this.billingCreditOneTimeTopUpService.grantPurchasedCreditsForPaidInvoice(
+        invoice,
+      );
+
+    if (isDefined(workspaceId)) {
+      void this.eventLogEmitterService
+        .createContext({ workspaceId })
+        .insertWorkspaceEvent(PAYMENT_RECEIVED_EVENT, {
+          amountPaid: invoice.amount_paid,
+        });
+    }
+
+    return { stripeInvoiceId: invoice.id };
   }
 
   private async finalizePastDueDraftInvoicesAfterPaidInvoice(

@@ -1,35 +1,32 @@
-import { CommandMenuItem } from '@/command-menu/components/CommandMenuItem';
-import { CommandMenuItemDropdown } from '@/command-menu/components/CommandMenuItemDropdown';
+import { CommandMenuItemDropdownTrigger } from '@/command-menu/components/CommandMenuItemDropdownTrigger';
 import { CommandMenuItemNumberInput } from '@/command-menu/components/CommandMenuItemNumberInput';
-import { CommandMenuItemToggle } from '@/command-menu/components/CommandMenuItemToggle';
+import { CommandMenuItemSwitch } from '@/command-menu/components/CommandMenuItemSwitch';
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { pageLayoutDraftComponentState } from '@/page-layout/states/pageLayoutDraftComponentState';
 import { useRecordTableWidgetFieldCallbacks } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetFieldCallbacks';
 import { useRecordTableWidgetLayoutCallbacks } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetLayoutCallbacks';
-import { useRecordTableWidgetViewForDisplay } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetViewForDisplay';
 import { getRecordTableWidgetIsUIEditable } from '@/page-layout/widgets/record-table/utils/getRecordTableWidgetIsUIEditable';
 import {
   getRecordTableWidgetLayoutViewType,
   isRecordTableWidgetContentEditingSupported,
-  RECORD_TABLE_WIDGET_LAYOUT_OPTIONS,
 } from '@/page-layout/widgets/record-table/types/RecordTableWidgetLayoutViewType';
 import { WidgetComponentInstanceContext } from '@/page-layout/widgets/states/contexts/WidgetComponentInstanceContext';
 import { SidePanelGroup } from '@/side-panel/components/SidePanelGroup';
 import { SidePanelList } from '@/side-panel/components/SidePanelList';
-import { useSidePanelSubPageHistory } from '@/side-panel/hooks/useSidePanelSubPageHistory';
 import { RecordTableDataSourceDropdownContent } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableDataSourceDropdownContent';
 import { RecordTableFieldsDropdownContent } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableFieldsDropdownContent';
 import { RecordTableGroupByDropdownContent } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableGroupByDropdownContent';
 import { RecordTableCalendarFieldDropdownContent } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableCalendarFieldDropdownContent';
 import { RecordTableCalendarLayoutDropdownContent } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableCalendarLayoutDropdownContent';
-import { RecordTableLayoutDropdownContent } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableLayoutDropdownContent';
+import { RecordTableLayoutSelectionSection } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableLayoutSelectionSection';
+import { RecordTableSettingsFilterAndSortRows } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableSettingsFilterAndSortRows';
 import { WidgetSettingsFooter } from '@/side-panel/pages/page-layout/components/WidgetSettingsFooter';
-import { usePageLayoutIdFromContextStore } from '@/side-panel/pages/page-layout/hooks/usePageLayoutIdFromContextStore';
 import { useRecordTableSettingsDescriptions } from '@/side-panel/pages/page-layout/hooks/useRecordTableSettingsDescriptions';
+import { useRecordTableWidgetInEditModeView } from '@/side-panel/pages/page-layout/hooks/useRecordTableWidgetInEditModeView';
 import { useUpdateCurrentWidgetConfig } from '@/side-panel/pages/page-layout/hooks/useUpdateCurrentWidgetConfig';
-import { useWidgetInEditMode } from '@/side-panel/pages/page-layout/hooks/useWidgetInEditMode';
-import { SidePanelSubPages } from '@/side-panel/types/SidePanelSubPages';
+import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
+import { useOpenDropdown } from '@/ui/layout/dropdown/hooks/useOpenDropdown';
 import { SelectableListItem } from '@/ui/layout/selectable-list/components/SelectableListItem';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { styled } from '@linaria/react';
@@ -37,12 +34,10 @@ import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
 import {
   IconArrowBarToDownDashed,
-  IconArrowsSort,
   IconBox,
   IconCalendar,
   IconCalendarEvent,
   IconEyeOff,
-  IconFilter,
   IconLayoutList,
   IconListDetails,
   IconPencil,
@@ -68,26 +63,22 @@ const StyledSettingsContainer = styled.div`
 
 export const SidePanelDashboardRecordTableSettings = () => {
   const { t } = useLingui();
+  const { openDropdown } = useOpenDropdown();
 
-  const { pageLayoutId } = usePageLayoutIdFromContextStore();
+  const {
+    pageLayoutId,
+    widgetInEditMode,
+    viewId,
+    view: widgetView,
+  } = useRecordTableWidgetInEditModeView();
   const pageLayoutDraft = useAtomComponentStateValue(
     pageLayoutDraftComponentState,
     pageLayoutId,
   );
-  const { widgetInEditMode } = useWidgetInEditMode(pageLayoutId);
-  const { navigateToSidePanelSubPage } = useSidePanelSubPageHistory();
 
   const configuration = widgetInEditMode?.configuration;
   const isRecordTableConfiguration =
     configuration?.configurationType === WidgetConfigurationType.RECORD_TABLE;
-
-  const viewId =
-    isRecordTableConfiguration &&
-    isDefined(configuration) &&
-    'viewId' in configuration &&
-    isDefined(configuration.viewId)
-      ? (configuration.viewId as string)
-      : null;
 
   const limit =
     isRecordTableConfiguration &&
@@ -101,16 +92,6 @@ export const SidePanelDashboardRecordTableSettings = () => {
     configuration,
     pageLayoutDraft.type,
   );
-
-  const {
-    sourceDescription,
-    fieldsDescription,
-    filterDescription,
-    sortDescription,
-  } = useRecordTableSettingsDescriptions({
-    objectMetadataId: widgetInEditMode?.objectMetadataId,
-    viewId,
-  });
 
   const { updateCurrentWidgetConfig } =
     useUpdateCurrentWidgetConfig(pageLayoutId);
@@ -145,11 +126,11 @@ export const SidePanelDashboardRecordTableSettings = () => {
       widgetId: widgetInEditMode?.id ?? '',
     });
 
-  const { view: widgetView } = useRecordTableWidgetViewForDisplay({
-    viewId: viewId ?? '',
-    widgetId: widgetInEditMode?.id ?? '',
-    pageLayoutId,
-  });
+  const { sourceDescription, fieldsDescription } =
+    useRecordTableSettingsDescriptions({
+      sourceObjectMetadataId: widgetInEditMode?.objectMetadataId,
+      view: widgetView,
+    });
 
   const mainGroupByFieldMetadataId =
     widgetView?.mainGroupByFieldMetadataId ?? null;
@@ -161,8 +142,6 @@ export const SidePanelDashboardRecordTableSettings = () => {
   const isKanbanLayout = currentLayoutViewType === ViewType.KANBAN_WIDGET;
   const isCalendarLayout = currentLayoutViewType === ViewType.CALENDAR_WIDGET;
 
-  const { Icon: CurrentLayoutIcon, label: currentLayoutLabel } =
-    RECORD_TABLE_WIDGET_LAYOUT_OPTIONS[currentLayoutViewType];
   const isWidgetContentEditingSupported =
     isRecordTableWidgetContentEditingSupported(widgetView?.type);
 
@@ -225,14 +204,6 @@ export const SidePanelDashboardRecordTableSettings = () => {
       : []),
   ];
 
-  const handleFilterClick = () => {
-    navigateToSidePanelSubPage(SidePanelSubPages.PageLayoutRecordTableFilter);
-  };
-
-  const handleSortClick = () => {
-    navigateToSidePanelSubPage(SidePanelSubPages.PageLayoutRecordTableSort);
-  };
-
   return (
     <StyledContainer>
       <WidgetComponentInstanceContext.Provider
@@ -240,189 +211,198 @@ export const SidePanelDashboardRecordTableSettings = () => {
       >
         <StyledSettingsContainer>
           <SidePanelList selectableItemIds={selectableItemIds}>
+            {hasViewId && (
+              <RecordTableLayoutSelectionSection
+                pageLayoutId={pageLayoutId}
+                widgetId={widgetInEditMode.id}
+                objectMetadataId={widgetInEditMode.objectMetadataId!}
+                currentLayoutViewType={currentLayoutViewType}
+              />
+            )}
             <SidePanelGroup heading={t`Settings`}>
-              <SelectableListItem itemId="record-table-source">
-                <CommandMenuItemDropdown
-                  Icon={IconBox}
-                  label={t`Source`}
-                  id="record-table-source"
-                  dropdownId="record-table-source"
-                  dropdownComponents={
-                    <DropdownContent>
-                      <RecordTableDataSourceDropdownContent />
-                    </DropdownContent>
-                  }
-                  dropdownPlacement="bottom-end"
-                  hasSubMenu
-                  description={sourceDescription}
-                  contextualTextPosition="right"
-                />
-              </SelectableListItem>
-              <SelectableListItem itemId="object-view-layout">
-                <CommandMenuItemDropdown
-                  Icon={CurrentLayoutIcon}
-                  label={t`Layout`}
-                  id="object-view-layout"
-                  dropdownId="object-view-layout"
-                  dropdownComponents={
-                    hasViewId ? (
-                      <DropdownContent>
-                        <RecordTableLayoutDropdownContent
-                          pageLayoutId={pageLayoutId}
-                          widgetId={widgetInEditMode.id}
-                          objectMetadataId={widgetInEditMode.objectMetadataId!}
-                          currentLayoutViewType={currentLayoutViewType}
-                        />
-                      </DropdownContent>
-                    ) : (
-                      <></>
-                    )
-                  }
-                  dropdownPlacement="bottom-end"
-                  hasSubMenu={hasViewId}
-                  description={t(currentLayoutLabel)}
-                  disabled={!hasViewId}
-                  contextualTextPosition="right"
-                />
+              <SelectableListItem
+                itemId="record-table-source"
+                onEnter={() =>
+                  openDropdown({
+                    dropdownComponentInstanceIdFromProps: 'record-table-source',
+                  })
+                }
+              >
+                <DropdownRoot dropdownId="record-table-source" type="picker">
+                  <CommandMenuItemDropdownTrigger
+                    Icon={IconBox}
+                    label={t`Source`}
+                    id="record-table-source"
+                    description={sourceDescription}
+                    contextualTextPosition="right"
+                  />
+                  <DropdownContent
+                    side="bottom"
+                    align="end"
+                    collisionPadding={{ left: 0, right: 0 }}
+                  >
+                    <RecordTableDataSourceDropdownContent />
+                  </DropdownContent>
+                </DropdownRoot>
               </SelectableListItem>
               {hasViewId && (
                 <>
-                  <SelectableListItem itemId="record-table-fields">
-                    <CommandMenuItemDropdown
-                      Icon={IconListDetails}
-                      label={t`Fields`}
-                      id="record-table-fields"
-                      dropdownId="record-table-fields"
-                      dropdownComponents={
+                  <SelectableListItem
+                    itemId="record-table-fields"
+                    onEnter={() =>
+                      openDropdown({
+                        dropdownComponentInstanceIdFromProps:
+                          'record-table-fields',
+                      })
+                    }
+                  >
+                    <DropdownRoot dropdownId="record-table-fields" type="panel">
+                      <CommandMenuItemDropdownTrigger
+                        Icon={IconListDetails}
+                        label={t`Fields`}
+                        id="record-table-fields"
+                        description={fieldsDescription}
+                        contextualTextPosition="right"
+                      />
+                      <DropdownContent
+                        side="bottom"
+                        align="end"
+                        collisionPadding={{ left: 0, right: 0 }}
+                      >
                         <RecordTableFieldsDropdownContent
                           viewId={viewId}
                           objectMetadataId={widgetInEditMode.objectMetadataId!}
                           onFieldUpdated={handleFieldUpdated}
                           onFieldCreated={handleFieldCreated}
                         />
-                      }
-                      dropdownPlacement="bottom-end"
-                      hasSubMenu
-                      description={fieldsDescription}
-                      contextualTextPosition="right"
-                    />
+                      </DropdownContent>
+                    </DropdownRoot>
                   </SelectableListItem>
-                  <SelectableListItem
-                    itemId="record-table-filter"
-                    onEnter={handleFilterClick}
-                  >
-                    <CommandMenuItem
-                      id="record-table-filter"
-                      label={t`Filter`}
-                      Icon={IconFilter}
-                      hasSubMenu
-                      onClick={handleFilterClick}
-                      description={filterDescription}
-                      contextualTextPosition="right"
-                    />
-                  </SelectableListItem>
-                  <SelectableListItem
-                    itemId="record-table-sort"
-                    onEnter={handleSortClick}
-                  >
-                    <CommandMenuItem
-                      id="record-table-sort"
-                      label={t`Sort`}
-                      Icon={IconArrowsSort}
-                      hasSubMenu
-                      onClick={handleSortClick}
-                      description={sortDescription}
-                      contextualTextPosition="right"
-                    />
-                  </SelectableListItem>
+                  <RecordTableSettingsFilterAndSortRows view={widgetView} />
                   {isCalendarLayout && (
-                    <SelectableListItem itemId="record-table-calendar-field">
-                      <CommandMenuItemDropdown
-                        Icon={IconCalendarEvent}
-                        label={t`Date field`}
-                        id="record-table-calendar-field"
+                    <SelectableListItem
+                      itemId="record-table-calendar-field"
+                      onEnter={() =>
+                        openDropdown({
+                          dropdownComponentInstanceIdFromProps:
+                            'record-table-calendar-field',
+                        })
+                      }
+                    >
+                      <DropdownRoot
                         dropdownId="record-table-calendar-field"
-                        dropdownComponents={
-                          <DropdownContent>
-                            <RecordTableCalendarFieldDropdownContent
-                              pageLayoutId={pageLayoutId}
-                              widgetId={widgetInEditMode.id}
-                              objectMetadataId={
-                                widgetInEditMode.objectMetadataId!
-                              }
-                              currentCalendarFieldMetadataId={
-                                calendarFieldMetadataId
-                              }
-                            />
-                          </DropdownContent>
-                        }
-                        dropdownPlacement="bottom-end"
-                        hasSubMenu
-                        description={calendarFieldLabel}
-                        contextualTextPosition="right"
-                      />
+                        type="picker"
+                      >
+                        <CommandMenuItemDropdownTrigger
+                          Icon={IconCalendarEvent}
+                          label={t`Date field`}
+                          id="record-table-calendar-field"
+                          description={calendarFieldLabel}
+                          contextualTextPosition="right"
+                        />
+                        <DropdownContent
+                          side="bottom"
+                          align="end"
+                          collisionPadding={{ left: 0, right: 0 }}
+                        >
+                          <RecordTableCalendarFieldDropdownContent
+                            pageLayoutId={pageLayoutId}
+                            widgetId={widgetInEditMode.id}
+                            objectMetadataId={
+                              widgetInEditMode.objectMetadataId!
+                            }
+                            currentCalendarFieldMetadataId={
+                              calendarFieldMetadataId
+                            }
+                          />
+                        </DropdownContent>
+                      </DropdownRoot>
                     </SelectableListItem>
                   )}
                   {isCalendarLayout && (
-                    <SelectableListItem itemId="record-table-calendar-layout">
-                      <CommandMenuItemDropdown
-                        Icon={IconCalendar}
-                        label={t`Calendar view`}
-                        id="record-table-calendar-layout"
+                    <SelectableListItem
+                      itemId="record-table-calendar-layout"
+                      onEnter={() =>
+                        openDropdown({
+                          dropdownComponentInstanceIdFromProps:
+                            'record-table-calendar-layout',
+                        })
+                      }
+                    >
+                      <DropdownRoot
                         dropdownId="record-table-calendar-layout"
-                        dropdownComponents={
-                          <DropdownContent>
-                            <RecordTableCalendarLayoutDropdownContent
-                              pageLayoutId={pageLayoutId}
-                              widgetId={widgetInEditMode.id}
-                              currentCalendarLayout={currentCalendarLayout}
-                            />
-                          </DropdownContent>
-                        }
-                        dropdownPlacement="bottom-end"
-                        hasSubMenu
-                        description={calendarLayoutLabel}
-                        contextualTextPosition="right"
-                      />
+                        type="picker"
+                      >
+                        <CommandMenuItemDropdownTrigger
+                          Icon={IconCalendar}
+                          label={t`Calendar view`}
+                          id="record-table-calendar-layout"
+                          description={calendarLayoutLabel}
+                          contextualTextPosition="right"
+                        />
+                        <DropdownContent
+                          side="bottom"
+                          align="end"
+                          collisionPadding={{ left: 0, right: 0 }}
+                        >
+                          <RecordTableCalendarLayoutDropdownContent
+                            pageLayoutId={pageLayoutId}
+                            widgetId={widgetInEditMode.id}
+                            currentCalendarLayout={currentCalendarLayout}
+                          />
+                        </DropdownContent>
+                      </DropdownRoot>
                     </SelectableListItem>
                   )}
                   {!isCalendarLayout && (
-                    <SelectableListItem itemId="record-table-group-by">
-                      <CommandMenuItemDropdown
-                        Icon={IconLayoutList}
-                        label={t`Group by`}
-                        id="record-table-group-by"
+                    <SelectableListItem
+                      itemId="record-table-group-by"
+                      onEnter={() =>
+                        openDropdown({
+                          dropdownComponentInstanceIdFromProps:
+                            'record-table-group-by',
+                        })
+                      }
+                    >
+                      <DropdownRoot
                         dropdownId="record-table-group-by"
-                        dropdownComponents={
-                          <DropdownContent>
-                            <RecordTableGroupByDropdownContent
-                              pageLayoutId={pageLayoutId}
-                              widgetId={widgetInEditMode.id}
-                              objectMetadataId={
-                                widgetInEditMode.objectMetadataId!
-                              }
-                              currentMainGroupByFieldMetadataId={
-                                mainGroupByFieldMetadataId
-                              }
-                              isClearable={!isKanbanLayout}
-                            />
-                          </DropdownContent>
-                        }
-                        dropdownPlacement="bottom-end"
-                        hasSubMenu
-                        description={mainGroupByFieldLabel}
-                        contextualTextPosition="right"
-                      />
+                        type="picker"
+                      >
+                        <CommandMenuItemDropdownTrigger
+                          Icon={IconLayoutList}
+                          label={t`Group by`}
+                          id="record-table-group-by"
+                          description={mainGroupByFieldLabel}
+                          contextualTextPosition="right"
+                        />
+                        <DropdownContent
+                          side="bottom"
+                          align="end"
+                          collisionPadding={{ left: 0, right: 0 }}
+                        >
+                          <RecordTableGroupByDropdownContent
+                            pageLayoutId={pageLayoutId}
+                            widgetId={widgetInEditMode.id}
+                            objectMetadataId={
+                              widgetInEditMode.objectMetadataId!
+                            }
+                            currentMainGroupByFieldMetadataId={
+                              mainGroupByFieldMetadataId
+                            }
+                            isClearable={!isKanbanLayout}
+                          />
+                        </DropdownContent>
+                      </DropdownRoot>
                     </SelectableListItem>
                   )}
                   {!isCalendarLayout && hasGroupBy && (
                     <SelectableListItem itemId="record-table-hide-empty-groups">
-                      <CommandMenuItemToggle
+                      <CommandMenuItemSwitch
                         LeftIcon={IconEyeOff}
                         text={t`Hide empty groups`}
                         id="record-table-hide-empty-groups"
-                        toggled={shouldHideEmptyGroups}
-                        onToggleChange={handleShouldHideEmptyGroupsChange}
+                        checked={shouldHideEmptyGroups}
+                        onCheckedChange={handleShouldHideEmptyGroupsChange}
                       />
                     </SelectableListItem>
                   )}
@@ -440,12 +420,12 @@ export const SidePanelDashboardRecordTableSettings = () => {
                   )}
                   {isWidgetContentEditingSupported && (
                     <SelectableListItem itemId="record-table-allow-editing">
-                      <CommandMenuItemToggle
+                      <CommandMenuItemSwitch
                         LeftIcon={IconPencil}
                         text={t`Allow editing`}
                         id="record-table-allow-editing"
-                        toggled={isUIEditable}
-                        onToggleChange={handleIsUIEditableChange}
+                        checked={isUIEditable}
+                        onCheckedChange={handleIsUIEditableChange}
                       />
                     </SelectableListItem>
                   )}

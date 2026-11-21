@@ -28,6 +28,7 @@ describe('slackConnectionStatusHandler', () => {
     vi.mocked(getSlackClient).mockResolvedValue({
       success: true,
       client: {} as WebClient,
+      connectionId: 'connected-account-1',
     });
     vi.mocked(resolveSlackConnectionHealth).mockResolvedValue({
       connectionHealth: 'ok',
@@ -49,6 +50,7 @@ describe('slackConnectionStatusHandler', () => {
     vi.mocked(getSlackClient).mockResolvedValue({
       success: false,
       error: 'Slack is not connected.',
+      isConnectionMissing: true,
     });
 
     await expect(slackConnectionStatusHandler()).resolves.toEqual({

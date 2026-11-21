@@ -1,11 +1,7 @@
 import { msg } from '@lingui/core/macro';
 import { getSystemNavigationCommandMenuItemUniversalIdentifier } from 'twenty-shared/application';
 import { getMetadataLabelPlaceholder } from 'twenty-shared/i18n';
-import { STANDARD_OBJECTS } from 'twenty-shared/metadata';
-import {
-  CommandMenuItemAvailabilityType,
-  FeatureFlagKey,
-} from 'twenty-shared/types';
+import { CommandMenuItemAvailabilityType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
 import { EngineComponentKey } from 'src/engine/metadata-modules/command-menu-item/enums/engine-component-key.enum';
@@ -25,47 +21,12 @@ export const NAVIGATION_INTERPOLATED_SHORT_LABEL =
 export const NAVIGATION_INTERPOLATED_ICON =
   getMetadataLabelPlaceholder('objectIcon');
 
-const NAVIGATION_FEATURE_FLAG_GATE_BY_OBJECT_UNIVERSAL_IDENTIFIER: Partial<
-  Record<string, FeatureFlagKey>
-> = {
-  [STANDARD_OBJECTS.messageCampaign.universalIdentifier]:
-    FeatureFlagKey.IS_EMAIL_GROUP_ENABLED,
-  [STANDARD_OBJECTS.messageList.universalIdentifier]:
-    FeatureFlagKey.IS_EMAIL_GROUP_ENABLED,
-};
-
-const NAVIGATION_HIDING_FEATURE_FLAG_BY_OBJECT_UNIVERSAL_IDENTIFIER: Partial<
-  Record<string, FeatureFlagKey>
-> = {
-  [STANDARD_OBJECTS.workflowVersion.universalIdentifier]:
-    FeatureFlagKey.IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED,
-};
-
 export const buildNavigationConditionalAvailabilityExpression = ({
-  universalIdentifier,
   nameSingular,
 }: {
   universalIdentifier: string;
   nameSingular: string;
-}): string => {
-  const targetObjectReadPermissionExpression = `targetObjectReadPermissions.${nameSingular}`;
-  const featureFlagGate =
-    NAVIGATION_FEATURE_FLAG_GATE_BY_OBJECT_UNIVERSAL_IDENTIFIER[
-      universalIdentifier
-    ];
-  const hidingFeatureFlagGate =
-    NAVIGATION_HIDING_FEATURE_FLAG_BY_OBJECT_UNIVERSAL_IDENTIFIER[
-      universalIdentifier
-    ];
-
-  if (isDefined(hidingFeatureFlagGate)) {
-    return `not featureFlags.${hidingFeatureFlagGate} and ${targetObjectReadPermissionExpression}`;
-  }
-
-  return isDefined(featureFlagGate)
-    ? `featureFlags.${featureFlagGate} and ${targetObjectReadPermissionExpression}`
-    : targetObjectReadPermissionExpression;
-};
+}): string => `targetObjectReadPermissions.${nameSingular}`;
 
 export const buildObjectNavigationUniversalFlatCommandMenuItem = ({
   objectMetadata,
@@ -117,7 +78,9 @@ export const buildObjectNavigationUniversalFlatCommandMenuItem = ({
       ? ['G', objectMetadata.shortcut]
       : null,
     workflowVersionId: null,
+    coreWorkflowVersionId: null,
     availabilityObjectMetadataUniversalIdentifier: null,
+    availabilityCoreObjectName: null,
     pageLayoutUniversalIdentifier: null,
     isActive: objectMetadata.isActive,
     isSystemSideEffect: true,

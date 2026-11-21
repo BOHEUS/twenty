@@ -1,5 +1,7 @@
-import { type ObjectManifest } from 'twenty-shared/application';
-import { MetadataReadability, MetadataWritability } from 'twenty-shared/types';
+import {
+  type ObjectManifest,
+  type ObjectPermissionAction,
+} from 'twenty-shared/application';
 
 import { fromObjectManifestToUniversalFlatObjectMetadata } from 'src/engine/core-modules/application/application-manifest/converters/from-object-manifest-to-universal-flat-object-metadata.util';
 
@@ -61,51 +63,47 @@ describe('fromObjectManifestToUniversalFlatObjectMetadata', () => {
     });
   });
 
-  describe('writability', () => {
-    it('defaults to OPEN when omitted from the manifest', () => {
+  describe('disabledObjectPermissionActions', () => {
+    it.each<[ObjectPermissionAction[]]>([[[]], [['canDestroyObjectRecords']]])(
+      'keeps an explicit value %j',
+      (disabledObjectPermissionActions) => {
+        const result = fromObjectManifestToUniversalFlatObjectMetadata({
+          objectManifest: buildObjectManifest({
+            disabledObjectPermissionActions,
+          }),
+          applicationUniversalIdentifier: APP_UID,
+          now: NOW,
+        });
+
+        expect(result.disabledObjectPermissionActions).toEqual(
+          disabledObjectPermissionActions,
+        );
+      },
+    );
+
+    it('disables create along with update', () => {
+      const result = fromObjectManifestToUniversalFlatObjectMetadata({
+        objectManifest: buildObjectManifest({
+          disabledObjectPermissionActions: ['canUpdateObjectRecords'],
+        }),
+        applicationUniversalIdentifier: APP_UID,
+        now: NOW,
+      });
+
+      expect(result.disabledObjectPermissionActions).toEqual([
+        'canUpdateObjectRecords',
+        'canCreateObjectRecords',
+      ]);
+    });
+
+    it('is null when omitted', () => {
       const result = fromObjectManifestToUniversalFlatObjectMetadata({
         objectManifest: buildObjectManifest({}),
         applicationUniversalIdentifier: APP_UID,
         now: NOW,
       });
 
-      expect(result.writability).toBe(MetadataWritability.OPEN);
-    });
-
-    it('carries the manifest value through', () => {
-      const result = fromObjectManifestToUniversalFlatObjectMetadata({
-        objectManifest: buildObjectManifest({
-          writability: MetadataWritability.APPLICATION,
-        }),
-        applicationUniversalIdentifier: APP_UID,
-        now: NOW,
-      });
-
-      expect(result.writability).toBe(MetadataWritability.APPLICATION);
-    });
-  });
-
-  describe('readability', () => {
-    it('defaults to OPEN when omitted from the manifest', () => {
-      const result = fromObjectManifestToUniversalFlatObjectMetadata({
-        objectManifest: buildObjectManifest({}),
-        applicationUniversalIdentifier: APP_UID,
-        now: NOW,
-      });
-
-      expect(result.readability).toBe(MetadataReadability.OPEN);
-    });
-
-    it('carries the manifest value through', () => {
-      const result = fromObjectManifestToUniversalFlatObjectMetadata({
-        objectManifest: buildObjectManifest({
-          readability: MetadataReadability.PRIVATE,
-        }),
-        applicationUniversalIdentifier: APP_UID,
-        now: NOW,
-      });
-
-      expect(result.readability).toBe(MetadataReadability.PRIVATE);
+      expect(result.disabledObjectPermissionActions).toBeNull();
     });
   });
 

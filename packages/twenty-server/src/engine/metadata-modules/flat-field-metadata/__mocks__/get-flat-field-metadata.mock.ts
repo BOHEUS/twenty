@@ -1,8 +1,5 @@
 import { faker } from '@faker-js/faker';
-import {
-  MetadataWritability,
-  type FieldMetadataType,
-} from 'twenty-shared/types';
+import { type FieldMetadataType } from 'twenty-shared/types';
 
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 
@@ -29,7 +26,7 @@ export const getFlatFieldMetadataMock = <T extends FieldMetadataType>(
     mainGroupByFieldMetadataViewIds: [],
     updatedAt: createdAt,
     defaultValue: null,
-    writability: MetadataWritability.OPEN,
+    disabledFieldPermissionActions: null,
     options: null,
     morphId: null,
     settings: null,
@@ -43,6 +40,7 @@ export const getFlatFieldMetadataMock = <T extends FieldMetadataType>(
     isNullable: true,
     isUnique: false,
     isSearchable: false,
+    isAuditLogged: true,
     isUIEditable: true,
     isLabelSyncedWithName: false,
     isSystem: false,
@@ -66,6 +64,14 @@ export const getFlatFieldMetadataMock = <T extends FieldMetadataType>(
     viewSortUniversalIdentifiers: [],
     searchFieldMetadataIds: [],
     searchFieldMetadataUniversalIdentifiers: [],
+    fieldMetadataOptionIds: [],
+    rowLevelPermissionPredicateIds: [],
+    relationRowLevelPermissionPredicateIds: [],
+    workspaceMemberRowLevelPermissionPredicateIds: [],
+    fieldMetadataOptionUniversalIdentifiers: [],
+    rowLevelPermissionPredicateUniversalIdentifiers: [],
+    relationRowLevelPermissionPredicateUniversalIdentifiers: [],
+    workspaceMemberRowLevelPermissionPredicateUniversalIdentifiers: [],
     universalSettings: null,
     ...overrides,
   };

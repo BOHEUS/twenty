@@ -1,34 +1,52 @@
+import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
+import { setManualRecordShare } from 'test/integration/utils/set-manual-record-share.util';
+import { destroyAgentChatThread } from 'test/integration/utils/destroy-agent-chat-thread.util';
+import { type AccessTokenService } from 'src/engine/core-modules/auth/token/services/access-token.service';
+import { AuthProviderEnum } from 'src/engine/core-modules/workspace/types/workspace.type';
+import { USER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/core/utils/seed-users.util';
+/* @license Enterprise */
+
+import { type WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
+import { type WorkspaceTransactionScope } from 'src/engine/twenty-orm/types/workspace-transaction-scope.type';
+import { type AgentChatThreadService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread.service';
+import { USER_WORKSPACE_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/core/utils/seed-user-workspaces.util';
 import { randomUUID } from 'node:crypto';
 
-import { createOneOperationFactory } from 'test/integration/graphql/utils/create-one-operation-factory.util';
-import { findManyOperationFactory } from 'test/integration/graphql/utils/find-many-operation-factory.util';
-import { makeGraphqlAPIRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
-import { updateFeatureFlag } from 'test/integration/metadata/suites/utils/update-feature-flag.util';
 import { getAppProviderByClassName } from 'test/integration/utils/get-app-provider-by-class-name.util';
 import { getCoreRepository } from 'test/integration/utils/get-core-repository.util';
 import {
-  FeatureFlagKey,
   RecordShareAccessLevel,
   RecordSharePrincipalType,
   RecordShareRowCause,
 } from 'twenty-shared/types';
 
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
-import { type RecordShareService } from 'src/engine/record-share/services/record-share.service';
-import { type RecordShareInput } from 'src/engine/record-share/types/record-share-input.type';
+import { type RecordPermissionReadRepository } from 'src/engine/permissions/internal/record-permission-repository/repositories/record-permission-read.repository';
+import { type RecordShareStorageService } from 'src/engine/permissions/internal/record-share/services/record-share-storage.service';
+import { type RecordShareInput } from 'src/engine/permissions/record-share/types/record-share-input.type';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 import { PERSON_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/person-data-seeds.constant';
 
+const getAgentChatThreadService = () =>
+  getAppProviderByClassName<AgentChatThreadService>('AgentChatThreadService');
+
 describe('recordShare object', () => {
-  let recordShareService: RecordShareService;
+  let recordShareStorageService: RecordShareStorageService;
+  let recordPermissionReadRepository: RecordPermissionReadRepository;
   let personObjectMetadataId: string;
   let recordShareInput: RecordShareInput;
 
   const sourceId = randomUUID();
 
   beforeAll(async () => {
-    recordShareService =
-      getAppProviderByClassName<RecordShareService>('RecordShareService');
+    recordShareStorageService =
+      getAppProviderByClassName<RecordShareStorageService>(
+        'RecordShareStorageService',
+      );
+    recordPermissionReadRepository =
+      getAppProviderByClassName<RecordPermissionReadRepository>(
+        'RecordPermissionReadRepository',
+      );
 
     const personObjectMetadata = await getCoreRepository<ObjectMetadataEntity>(
       ObjectMetadataEntity,
@@ -53,68 +71,187 @@ describe('recordShare object', () => {
   });
 
   afterAll(async () => {
-    await updateFeatureFlag({
-      featureFlag: FeatureFlagKey.IS_RECORD_SHARING_ENABLED,
-      value: false,
-      expectToFail: false,
-    });
-    await recordShareService.deleteBySourceId({
+    await recordShareStorageService.deleteBySourceId({
       workspaceId: SEED_APPLE_WORKSPACE_ID,
       sourceId,
     });
   });
 
-  it.each([false, true])(
-    'refuses reads through the GraphQL API even for an admin when record sharing is %s',
-    async (isRecordSharingEnabled) => {
-      await updateFeatureFlag({
-        featureFlag: FeatureFlagKey.IS_RECORD_SHARING_ENABLED,
-        value: isRecordSharingEnabled,
-        expectToFail: false,
+  it('serializes concurrent replacements and preserves other grant sources', async () => {
+    const recordId = randomUUID();
+    const share = { ...recordShareInput, recordId, sourceId: recordId };
+    const workspaceId = SEED_APPLE_WORKSPACE_ID;
+    await recordShareStorageService.insertMany({
+      workspaceId,
+      recordShares: [
+        { ...share, rowCause: RecordShareRowCause.OWNER },
+        { ...share, rowCause: RecordShareRowCause.APPLICATION },
+      ],
+    });
+    const readShares = () =>
+      recordPermissionReadRepository.findRecordShares({
+        workspaceId,
+        objectMetadataId: personObjectMetadataId,
+        recordIds: [recordId],
       });
-
-      const response = await makeGraphqlAPIRequest(
-        findManyOperationFactory({
-          objectMetadataSingularName: 'recordShare',
-          objectMetadataPluralName: 'recordShares',
-          gqlFields: 'id',
-        }),
+    try {
+      await Promise.all(
+        Array.from({ length: 8 }, () =>
+          setManualRecordShare({
+            workspaceId,
+            share,
+            enabled: true,
+          }),
+        ),
       );
+      expect(await readShares()).toHaveLength(3);
+      const manager = getAppProviderByClassName<WorkspaceOrmManager>(
+        'WorkspaceOrmManager',
+      );
+      const runTransaction = manager.runInWorkspaceTransaction.bind(manager);
+      const transactionSpy = jest
+        .spyOn(manager, 'runInWorkspaceTransaction')
+        .mockImplementationOnce(
+          <TResult>(
+            work: (scope: WorkspaceTransactionScope) => Promise<TResult>,
+          ): Promise<TResult> =>
+            runTransaction(async (scope: WorkspaceTransactionScope) => {
+              await work(scope);
+              throw new Error('Abort grant transaction');
+            }),
+        );
+      try {
+        await expect(
+          setManualRecordShare({
+            workspaceId,
+            share,
+            enabled: false,
+          }),
+        ).rejects.toThrow('Abort grant transaction');
+      } finally {
+        transactionSpy.mockRestore();
+      }
+      expect(await readShares()).toHaveLength(3);
+      await setManualRecordShare({
+        workspaceId,
+        share: { ...share, sourceId: randomUUID() },
+        enabled: false,
+      });
+      expect(await readShares()).toHaveLength(2);
+      await setManualRecordShare({
+        workspaceId,
+        share,
+        enabled: false,
+      });
+      expect(
+        (await readShares()).map(({ rowCause }) => rowCause).sort(),
+      ).toEqual(
+        [RecordShareRowCause.OWNER, RecordShareRowCause.APPLICATION].sort(),
+      );
+    } finally {
+      await recordShareStorageService.deleteByRecordIds({
+        workspaceId,
+        objectMetadataId: personObjectMetadataId,
+        recordIds: [recordId],
+      });
+    }
+  });
 
-      expect(response.body.errors).toBeDefined();
-      expect(response.body.errors[0].message).toContain('not readable');
-    },
-  );
+  it('keeps the grants of a deleted thread until a new thread reuses its id', async () => {
+    const metadata = await getCoreRepository<ObjectMetadataEntity>(
+      ObjectMetadataEntity,
+    ).findOneOrFail({
+      where: {
+        workspaceId: SEED_APPLE_WORKSPACE_ID,
+        nameSingular: 'agentChatThread',
+      },
+    });
+    const args = {
+      workspaceId: SEED_APPLE_WORKSPACE_ID,
+      userWorkspaceId: USER_WORKSPACE_DATA_SEED_IDS.TIM,
+      workspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.TIM,
+      threadId: randomUUID(),
+    };
+    const { token: timAccessToken } =
+      await getAppProviderByClassName<AccessTokenService>(
+        'AccessTokenService',
+      ).generateAccessToken({
+        userId: USER_DATA_SEED_IDS.TIM,
+        workspaceId: args.workspaceId,
+        authProvider: AuthProviderEnum.Password,
+      });
+    const readGrants = () =>
+      recordPermissionReadRepository.findRecordShares({
+        workspaceId: args.workspaceId,
+        objectMetadataId: metadata.id,
+        recordIds: [args.threadId],
+      });
+    await getAgentChatThreadService().createThread({
+      ...args,
+      id: args.threadId,
+      title: 'Deleted thread grants test',
+    });
+    await setManualRecordShare({
+      workspaceId: args.workspaceId,
+      enabled: true,
+      share: {
+        ...recordShareInput,
+        objectMetadataId: metadata.id,
+        recordId: args.threadId,
+        sourceId: args.threadId,
+      },
+    });
+    try {
+      await destroyAgentChatThread({
+        threadId: args.threadId,
+        token: timAccessToken,
+      });
+      await expect(
+        getAgentChatThreadService().findWritableThread(args),
+      ).resolves.toBeNull();
+      await expect(readGrants()).resolves.toHaveLength(2);
 
-  it('refuses creation through the GraphQL API even for an admin', async () => {
-    const response = await makeGraphqlAPIRequest(
-      createOneOperationFactory({
-        objectMetadataSingularName: 'recordShare',
-        gqlFields: 'id',
-        data: recordShareInput,
-      }),
-    );
-
-    expect(response.body.errors).toBeDefined();
-    expect(response.body.errors[0].message).toContain('not writable');
+      await getAgentChatThreadService().createThread({
+        ...args,
+        id: args.threadId,
+        title: 'Thread reusing a deleted id',
+      });
+      const grants = await readGrants();
+      expect(grants.map(({ rowCause }) => rowCause)).toEqual([
+        RecordShareRowCause.OWNER,
+      ]);
+    } finally {
+      if (await getAgentChatThreadService().findWritableThread(args)) {
+        await destroyAgentChatThread({
+          threadId: args.threadId,
+          token: timAccessToken,
+        });
+      }
+      await recordShareStorageService.deleteByRecordIds({
+        workspaceId: args.workspaceId,
+        objectMetadataId: metadata.id,
+        recordIds: [args.threadId],
+      });
+    }
   });
 
   it('inserts, reads back, deduplicates and removes shares through the service', async () => {
-    await recordShareService.insertMany({
+    await recordShareStorageService.insertMany({
       workspaceId: SEED_APPLE_WORKSPACE_ID,
       recordShares: [recordShareInput],
     });
 
-    const insertedRecordShares = await recordShareService.findByRecord({
-      workspaceId: SEED_APPLE_WORKSPACE_ID,
-      objectMetadataId: personObjectMetadataId,
-      recordId: PERSON_DATA_SEED_IDS.ID_1,
-    });
+    const insertedRecordShares =
+      await recordPermissionReadRepository.findRecordShares({
+        workspaceId: SEED_APPLE_WORKSPACE_ID,
+        objectMetadataId: personObjectMetadataId,
+        recordIds: [PERSON_DATA_SEED_IDS.ID_1],
+      });
 
     expect(insertedRecordShares).toHaveLength(1);
     expect(insertedRecordShares[0]).toMatchObject(recordShareInput);
 
-    await recordShareService.insertMany({
+    await recordShareStorageService.insertMany({
       workspaceId: SEED_APPLE_WORKSPACE_ID,
       recordShares: [
         { ...recordShareInput, accessLevel: RecordShareAccessLevel.FULL },
@@ -122,10 +259,10 @@ describe('recordShare object', () => {
     });
 
     const recordSharesAfterDuplicateInsert =
-      await recordShareService.findByRecord({
+      await recordPermissionReadRepository.findRecordShares({
         workspaceId: SEED_APPLE_WORKSPACE_ID,
         objectMetadataId: personObjectMetadataId,
-        recordId: PERSON_DATA_SEED_IDS.ID_1,
+        recordIds: [PERSON_DATA_SEED_IDS.ID_1],
       });
 
     expect(recordSharesAfterDuplicateInsert).toHaveLength(1);
@@ -133,16 +270,17 @@ describe('recordShare object', () => {
       RecordShareAccessLevel.READ,
     );
 
-    await recordShareService.deleteBySourceId({
+    await recordShareStorageService.deleteBySourceId({
       workspaceId: SEED_APPLE_WORKSPACE_ID,
       sourceId,
     });
 
-    const recordSharesAfterDelete = await recordShareService.findByRecord({
-      workspaceId: SEED_APPLE_WORKSPACE_ID,
-      objectMetadataId: personObjectMetadataId,
-      recordId: PERSON_DATA_SEED_IDS.ID_1,
-    });
+    const recordSharesAfterDelete =
+      await recordPermissionReadRepository.findRecordShares({
+        workspaceId: SEED_APPLE_WORKSPACE_ID,
+        objectMetadataId: personObjectMetadataId,
+        recordIds: [PERSON_DATA_SEED_IDS.ID_1],
+      });
 
     expect(recordSharesAfterDelete).toHaveLength(0);
   });

@@ -1,24 +1,25 @@
-import { useCallback, useState } from 'react';
-import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { t } from '@lingui/core/macro';
 import { useStore } from 'jotai';
+import { useCallback, useState } from 'react';
 import { v4 } from 'uuid';
 
-import { getObjectTypename } from '@/object-record/cache/utils/getObjectTypename';
+import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
+import { getObjectTypename } from '@/object-record/cache/utils/getObjectTypename';
 import { useBuildRecordInputFromRLSPredicates } from '@/object-record/hooks/useBuildRecordInputFromRLSPredicates';
 import { useCreateOneRecord } from '@/object-record/hooks/useCreateOneRecord';
-import { upsertJunctionRecordInSourceRecordStore } from '@/object-record/record-field/ui/utils/junction/upsertJunctionRecordInSourceRecordStore';
-import { type ValidJunctionConfig } from '@/object-record/record-field/ui/utils/junction/types/ValidJunctionConfig';
 import { findTargetFieldInfo } from '@/object-record/record-field/ui/utils/junction/findTargetFieldInfo';
 import { getSourceJoinColumnName } from '@/object-record/record-field/ui/utils/junction/getSourceJoinColumnName';
+import { type ValidJunctionConfig } from '@/object-record/record-field/ui/utils/junction/types/ValidJunctionConfig';
+import { upsertJunctionRecordInSourceRecordStore } from '@/object-record/record-field/ui/utils/junction/upsertJunctionRecordInSourceRecordStore';
+import { useRecordCreationForm } from '@/object-record/record-form/hooks/useRecordCreationForm';
 import { type RecordPickerPickableMorphItem } from '@/object-record/record-picker/types/RecordPickerPickableMorphItem';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { buildRecordLabelPayload } from '@/object-record/utils/buildRecordLabelPayload';
 import { sanitizeRecordInput } from '@/object-record/utils/sanitizeRecordInput';
-import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
 
 type UseCreateJunctionRecordWithNestedTargetArgs = {
   sourceRecordId: string;
@@ -34,9 +35,10 @@ export const useCreateJunctionRecordWithNestedTarget = ({
   junctionConfig,
 }: UseCreateJunctionRecordWithNestedTargetArgs) => {
   const store = useStore();
-  const [loading, setLoading] = useState(false);
+  const [isCreatePending, setIsCreatePending] = useState(false);
   const { objectMetadataItems } = useObjectMetadataItems();
-  const { enqueueErrorSnackBar } = useSnackBar();
+  const { enqueueToast } = useToast();
+  const { requestRecordCreation } = useRecordCreationForm();
   const { buildRecordInputFromRLSPredicates } =
     useBuildRecordInputFromRLSPredicates();
   const { createOneRecord: createJunctionRecord } = useCreateOneRecord({
@@ -75,31 +77,20 @@ export const useCreateJunctionRecordWithNestedTarget = ({
         !isDefined(targetFieldInfo) ||
         !isDefined(sourceJoinColumnName)
       ) {
-        enqueueErrorSnackBar({
-          message: t`The relation configuration could not be resolved.`,
+        enqueueToast({
+          status: 'error',
+          children: t`The relation configuration could not be resolved.`,
         });
         return undefined;
       }
 
-      setLoading(true);
-
-      try {
-        const targetRecordId = v4();
+      const createRecord = async (draftRecord: Partial<ObjectRecord>) => {
         const targetRecordInput = {
           ...sanitizeRecordInput({
             objectMetadataItem: targetObjectMetadataItem,
-            recordInput: {
-              ...buildRecordInputFromRLSPredicates({
-                objectMetadataItem: targetObjectMetadataItem,
-              }),
-              ...buildRecordLabelPayload({
-                id: targetRecordId,
-                searchInput,
-                objectMetadataItem: targetObjectMetadataItem,
-              }),
-            },
+            recordInput: draftRecord,
           }),
-          id: targetRecordId,
+          id: v4(),
         };
 
         const createdJunctionRecord = await createJunctionRecord({
@@ -108,51 +99,64 @@ export const useCreateJunctionRecordWithNestedTarget = ({
           [targetFieldInfo.fieldName]: { create: targetRecordInput },
         });
 
-        const createdTargetRecord = createdJunctionRecord[
-          targetFieldInfo.fieldName
-        ] as ObjectRecord | undefined;
         const targetRecord = {
           ...targetRecordInput,
-          ...(createdTargetRecord ?? {}),
-          __typename:
-            createdTargetRecord?.__typename ??
-            getObjectTypename(targetObjectMetadataItem.nameSingular),
-        };
-        const junctionRecordForStore = {
-          ...createdJunctionRecord,
-          [targetFieldInfo.fieldName]: targetRecord,
+          __typename: getObjectTypename(targetObjectMetadataItem.nameSingular),
+          ...createdJunctionRecord[targetFieldInfo.fieldName],
         };
 
         upsertJunctionRecordInSourceRecordStore({
           store,
           sourceRecordId,
           sourceFieldName,
-          junctionRecord: junctionRecordForStore,
+          junctionRecord: {
+            ...createdJunctionRecord,
+            [targetFieldInfo.fieldName]: targetRecord,
+          },
         });
 
+        return targetRecord;
+      };
+
+      setIsCreatePending(true);
+
+      try {
+        const targetRecord = await requestRecordCreation({
+          objectMetadataItem: targetObjectMetadataItem,
+          initialDraftRecord: {
+            ...buildRecordInputFromRLSPredicates({
+              objectMetadataItem: targetObjectMetadataItem,
+            }),
+            ...buildRecordLabelPayload({
+              searchInput,
+              objectMetadataItem: targetObjectMetadataItem,
+            }),
+          },
+          createRecord,
+        });
+
+        if (!isDefined(targetRecord)) {
+          return undefined;
+        }
+
         return {
-          recordId: targetRecordId,
+          recordId: targetRecord.id,
           objectMetadataId: targetObjectMetadataItem.id,
           isSelected: true,
           isMatchingSearchFilter: true,
         };
       } catch (error) {
-        enqueueErrorSnackBar(
-          CombinedGraphQLErrors.is(error)
-            ? { apolloError: error }
-            : error instanceof Error
-              ? { message: error.message }
-              : {},
-        );
+        enqueueToast(getToastOptionsFromError({ error }));
         return undefined;
       } finally {
-        setLoading(false);
+        setIsCreatePending(false);
       }
     },
     [
       buildRecordInputFromRLSPredicates,
       createJunctionRecord,
-      enqueueErrorSnackBar,
+      requestRecordCreation,
+      enqueueToast,
       junctionConfig,
       objectMetadataItems,
       sourceObjectMetadataItem,
@@ -162,5 +166,5 @@ export const useCreateJunctionRecordWithNestedTarget = ({
     ],
   );
 
-  return { createJunctionRecordWithNestedTarget, loading };
+  return { createJunctionRecordWithNestedTarget, isCreatePending };
 };

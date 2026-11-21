@@ -1,3 +1,5 @@
+import { AppToaster } from '@/ui/feedback/toast/components/AppToaster';
+import { ThemeProvider } from 'twenty-ui/theme';
 import { i18n } from '@lingui/core';
 import { I18nProvider } from '@lingui/react';
 import { render, screen } from '@testing-library/react';
@@ -14,6 +16,9 @@ const buildSession = (id: string, isCurrent: boolean) => ({
   isImpersonating: false,
   userAgent: 'Mozilla/5.0 (Macintosh) Chrome/128.0',
   ipAddress: '127.0.0.1',
+  country: 'FR',
+  region: 'Île-de-France',
+  city: 'Paris',
   lastActiveAt: new Date().toISOString(),
 });
 
@@ -34,6 +39,49 @@ const Wrapper = getJestMetadataAndApolloMocksWrapper({
 });
 
 describe('SettingsProfileDevicesSection', () => {
+  it('displays a query error when no device sessions are available', async () => {
+    const ErrorWrapper = getJestMetadataAndApolloMocksWrapper({
+      apolloMocks: [
+        {
+          request: { query: CurrentUserSessionsDocument },
+          error: new Error('Could not load devices'),
+        },
+      ],
+    });
+
+    render(
+      <I18nProvider i18n={i18n}>
+        <ThemeProvider colorScheme="light">
+          <MemoryRouter>
+            <SettingsProfileDevicesSection />
+            <AppToaster />
+          </MemoryRouter>
+        </ThemeProvider>
+      </I18nProvider>,
+      { wrapper: ErrorWrapper },
+    );
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Could not load devices',
+    );
+    expect(screen.queryByText('Devices')).not.toBeInTheDocument();
+  });
+
+  it('shows where each device was signed in from', async () => {
+    render(
+      <I18nProvider i18n={i18n}>
+        <MemoryRouter>
+          <SettingsProfileDevicesSection />
+        </MemoryRouter>
+      </I18nProvider>,
+      { wrapper: Wrapper },
+    );
+
+    expect(
+      await screen.findAllByText(/Paris, France · 127\.0\.0\.1/),
+    ).toHaveLength(2);
+  });
+
   it('keeps a session row mounted across a re-render of the section', async () => {
     const tree = (
       <I18nProvider i18n={i18n}>

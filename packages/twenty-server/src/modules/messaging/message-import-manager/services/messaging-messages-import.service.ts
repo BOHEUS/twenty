@@ -9,7 +9,7 @@ import { CacheStorageService } from 'src/engine/core-modules/cache-storage/servi
 import { CacheStorageNamespace } from 'src/engine/core-modules/cache-storage/types/cache-storage-namespace.enum';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
-import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { WorkspaceInternalImportService } from 'src/engine/core-modules/workspace/services/workspace-internal-import.service';
 import { type ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
 import { MessageChannelEntity } from 'src/engine/metadata-modules/message-channel/entities/message-channel.entity';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
@@ -51,8 +51,7 @@ export class MessagingMessagesImportService {
     private readonly messageImportErrorHandlerService: MessageImportExceptionHandlerService,
     @InjectRepository(UserWorkspaceEntity)
     private readonly userWorkspaceRepository: Repository<UserWorkspaceEntity>,
-    @InjectRepository(WorkspaceEntity)
-    private readonly workspaceRepository: Repository<WorkspaceEntity>,
+    private readonly workspaceInternalImportService: WorkspaceInternalImportService,
     private readonly twentyConfigService: TwentyConfigService,
   ) {}
 
@@ -152,9 +151,8 @@ export class MessagingMessagesImportService {
           });
 
           const workspaceMemberRepository =
-            this.workspaceOrmManager.getRepository<WorkspaceMemberWorkspaceEntity>(
+            this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<WorkspaceMemberWorkspaceEntity>(
               'workspaceMember',
-              { shouldBypassPermissionChecks: true },
             );
 
           const workspaceMember = userWorkspace
@@ -163,12 +161,13 @@ export class MessagingMessagesImportService {
               })
             : null;
 
-          const blocklist = workspaceMember
-            ? await this.blocklistRepository.getByWorkspaceMemberId(
-                workspaceMember.id,
+          const blocklist =
+            await this.blocklistRepository.getEntriesApplicableToWorkspaceMember(
+              {
+                workspaceMemberId: workspaceMember?.id ?? null,
                 workspaceId,
-              )
-            : [];
+              },
+            );
 
           if (!isDefined(messageChannel.handle)) {
             throw new MessageImportDriverException(
@@ -184,10 +183,10 @@ export class MessagingMessagesImportService {
             );
           }
 
-          const workspace = await this.workspaceRepository.findOne({
-            where: { id: workspaceId },
-            select: ['id', 'isInternalMessagesImportEnabled'],
-          });
+          const isInternalImportEnabled =
+            await this.workspaceInternalImportService.isInternalImportEnabled({
+              workspaceId,
+            });
 
           const messagesToSave = filterEmails(
             messageChannel.handle,
@@ -197,19 +196,24 @@ export class MessagingMessagesImportService {
               .map((blocklistItem) => blocklistItem.handle)
               .filter(isDefined),
             messageChannel.excludeGroupEmails,
-            workspace?.isInternalMessagesImportEnabled ?? false,
+            isInternalImportEnabled,
           );
 
           if (messagesToSave.length > 0) {
             await this.saveMessagesAndEnqueueContactCreationService.saveMessagesAndEnqueueContactCreation(
-              messagesToSave,
-              messageChannel,
-              connectedAccount,
-              workspaceId,
+              {
+                messagesToSave,
+                messageChannel,
+                connectedAccount,
+                workspaceId,
+                folderLinkUpdate: 'replace',
+              },
             );
           }
 
-          if (messageIdsToFetch.length < messagesGetBatchSize) {
+          const isLastBatch = messageIdsToFetch.length < messagesGetBatchSize;
+
+          if (isLastBatch) {
             await this.messageChannelSyncStatusService.markAsMessageSyncCompleted(
               [messageChannel.id],
               workspaceId,
@@ -229,6 +233,13 @@ export class MessagingMessagesImportService {
               syncStageStartedAt: null,
             },
           );
+
+          if (!isLastBatch) {
+            await this.cacheStorage.incrBy(
+              `messages-imported:${workspaceId}:${messageChannel.id}`,
+              messageIdsToFetch.length,
+            );
+          }
 
           return await this.trackMessageImportCompleted(
             messageChannel,

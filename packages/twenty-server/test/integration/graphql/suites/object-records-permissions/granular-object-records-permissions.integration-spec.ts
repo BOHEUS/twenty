@@ -2,11 +2,11 @@ import { default as request } from 'supertest';
 import { createCustomRoleWithObjectPermissions } from 'test/integration/graphql/utils/create-custom-role-with-object-permissions.util';
 import { deleteRole } from 'test/integration/graphql/utils/delete-one-role.util';
 import { findOneOperationFactory } from 'test/integration/graphql/utils/find-one-operation-factory.util';
-import { makeGraphqlAPIRequestWithMemberRole as makeGraphqlAPIRequestWithJony } from 'test/integration/graphql/utils/make-graphql-api-request-with-member-role.util';
+import { makeGraphqlApiRequestWithMemberRole as makeGraphqlApiRequestWithJony } from 'test/integration/graphql/utils/make-graphql-api-request-with-member-role.util';
 import { updateWorkspaceMemberRole } from 'test/integration/graphql/utils/update-workspace-member-role.util';
 
 import { ErrorCode } from 'src/engine/core-modules/graphql/utils/graphql-errors.util';
-import { PermissionsExceptionMessage } from 'src/engine/metadata-modules/permissions/permissions.exception';
+import { PermissionsExceptionMessage } from 'src/engine/permissions/permissions.exception';
 import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
 
 const client = request(`http://localhost:${APP_PORT}`);
@@ -95,9 +95,9 @@ describe('granularObjectRecordsPermissions', () => {
       });
 
       const personResponse =
-        await makeGraphqlAPIRequestWithJony(graphqlOperation);
+        await makeGraphqlApiRequestWithJony(graphqlOperation);
 
-      const companyResponse = await makeGraphqlAPIRequestWithJony(
+      const companyResponse = await makeGraphqlApiRequestWithJony(
         companyGraphqlOperation,
       );
 
@@ -146,9 +146,9 @@ describe('granularObjectRecordsPermissions', () => {
       });
 
       const personResponse =
-        await makeGraphqlAPIRequestWithJony(graphqlOperation);
+        await makeGraphqlApiRequestWithJony(graphqlOperation);
 
-      const companyResponse = await makeGraphqlAPIRequestWithJony(
+      const companyResponse = await makeGraphqlApiRequestWithJony(
         companyGraphqlOperation,
       );
 

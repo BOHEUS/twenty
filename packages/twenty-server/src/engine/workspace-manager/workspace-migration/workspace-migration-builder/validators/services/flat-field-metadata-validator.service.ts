@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { msg } from '@lingui/core/macro';
 import { ALL_METADATA_NAME } from 'twenty-shared/metadata';
 import { isFieldMetadataTypeWithDefaultValue } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
+import { isDefined, isMorphRelationHead } from 'twenty-shared/utils';
 
 import { FieldMetadataExceptionCode } from 'src/engine/metadata-modules/field-metadata/field-metadata.exception';
 import { createEmptyFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-flat-entity-maps.constant';
@@ -13,6 +13,7 @@ import { FlatFieldMetadataTypeValidatorService } from 'src/engine/metadata-modul
 import { FlatFieldMetadataRelationPropertiesToCompare } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata-relation-properties-to-compare.type';
 import { isFlatFieldMetadataNameSyncedWithLabel } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-flat-field-metadata-name-synced-with-label.util';
 import { isMorphOrRelationUniversalFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-morph-or-relation-flat-field-metadata.util';
+import { validateFlatFieldMetadataDisabledFieldPermissionActions } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-flat-field-metadata-disabled-field-permission-actions.util';
 import { validateFlatFieldMetadataNameAvailability } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-flat-field-metadata-name-availability.util';
 import { validateFlatFieldMetadataName } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-flat-field-metadata-name.util';
 import { validateSearchableFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-searchable-flat-field-metadata.util';
@@ -21,6 +22,8 @@ import { FailedFlatEntityValidation } from 'src/engine/workspace-manager/workspa
 import { getEmptyFlatEntityValidationError } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/builders/utils/get-flat-entity-validation-error.util';
 import { FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-update-validation-args.type';
 import { UniversalFlatEntityValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-validation-args.type';
+import { resolveEffectiveFlatEntityProperty } from 'src/engine/metadata-modules/overrides/utils/resolve-effective-flat-entity-property.util';
+import { readAuthoredOverrideEntry } from 'src/engine/metadata-modules/overrides/utils/read-authored-override-entry.util';
 
 @Injectable()
 export class FlatFieldMetadataValidatorService {
@@ -86,12 +89,35 @@ export class FlatFieldMetadataValidatorService {
       !buildOptions.isSystemBuild &&
       existingFlatFieldMetadataToUpdate.isSystem
     ) {
-      const disallowedProperties = Object.keys(flatEntityUpdate).filter(
+      const { overrides: updatedOverrides, ...columnUpdate } = flatEntityUpdate;
+
+      const disallowedColumnProperties = Object.keys(columnUpdate).filter(
         (property) =>
           !SYSTEM_FIELD_ALLOWED_UPDATE_PROPERTIES.includes(
             property as (typeof SYSTEM_FIELD_ALLOWED_UPDATE_PROPERTIES)[number],
           ),
       );
+
+      const callerEntry = isDefined(updatedOverrides)
+        ? readAuthoredOverrideEntry<Record<string, unknown>>({
+            metadataName: 'fieldMetadata',
+            overrides: updatedOverrides,
+            authorUniversalIdentifier:
+              buildOptions.applicationUniversalIdentifier,
+            workspaceCustomApplicationUniversalIdentifier:
+              buildOptions.applicationUniversalIdentifier,
+          })
+        : undefined;
+      const disallowedOverriddenProperties = Object.keys(
+        callerEntry ?? {},
+      ).filter((property) => property !== 'isActive');
+
+      const disallowedProperties = [
+        ...new Set([
+          ...disallowedColumnProperties,
+          ...disallowedOverriddenProperties,
+        ]),
+      ];
 
       if (disallowedProperties.length > 0) {
         validationResult.errors.push({
@@ -131,8 +157,13 @@ export class FlatFieldMetadataValidatorService {
     } else if (
       flatObjectMetadata.labelIdentifierFieldMetadataUniversalIdentifier ===
         flatFieldMetadataToValidate.universalIdentifier &&
-      isDefined(flatEntityUpdate.isActive) &&
-      flatFieldMetadataToValidate.isActive === false
+      (isDefined(flatEntityUpdate.isActive) ||
+        isDefined(flatEntityUpdate.overrides)) &&
+      resolveEffectiveFlatEntityProperty({
+        metadataName: 'fieldMetadata',
+        flatEntity: flatFieldMetadataToValidate,
+        property: 'isActive',
+      }) === false
     ) {
       validationResult.errors.push({
         code: FieldMetadataExceptionCode.LABEL_IDENTIFIER_FIELD_METADATA_ID_NOT_FOUND,
@@ -213,6 +244,12 @@ export class FlatFieldMetadataValidatorService {
       });
     }
 
+    validationResult.errors.push(
+      ...validateFlatFieldMetadataDisabledFieldPermissionActions(
+        flatFieldMetadataToValidate,
+      ),
+    );
+
     const fieldMetadataTypeValidationErrors =
       this.flatFieldMetadataTypeValidatorService.validateFlatFieldMetadataTypeSpecificities(
         {
@@ -237,6 +274,7 @@ export class FlatFieldMetadataValidatorService {
   }
 
   validateFlatFieldMetadataDeletion({
+    remainingFlatEntityMapsToValidate,
     flatEntityToValidate: { universalIdentifier },
     optimisticFlatEntityMapsAndRelatedFlatEntityMaps: {
       flatFieldMetadataMaps: optimisticFlatFieldMetadataMaps,
@@ -285,6 +323,34 @@ export class FlatFieldMetadataValidatorService {
     const parentObjectMetadataHasBeenDeleted = !isDefined(
       relatedFlatObjectMetadata,
     );
+
+    if (
+      !buildOptions.isSystemBuild &&
+      isDefined(relatedFlatObjectMetadata) &&
+      isMorphRelationHead(flatFieldMetadataToDelete)
+    ) {
+      const hasRemainingTargets =
+        relatedFlatObjectMetadata.fieldUniversalIdentifiers.some(
+          (fieldUniversalIdentifier) =>
+            fieldUniversalIdentifier !== universalIdentifier &&
+            optimisticFlatFieldMetadataMaps.byUniversalIdentifier[
+              fieldUniversalIdentifier
+            ]?.morphId === flatFieldMetadataToDelete.morphId &&
+            !isDefined(
+              remainingFlatEntityMapsToValidate.byUniversalIdentifier[
+                fieldUniversalIdentifier
+              ],
+            ),
+        );
+
+      if (hasRemainingTargets) {
+        validationResult.errors.push({
+          code: FieldMetadataExceptionCode.FIELD_MUTATION_NOT_ALLOWED,
+          message: 'Delete the morph field together with its targets',
+          userFriendlyMessage: msg`Delete the relation field together with its targets`,
+        });
+      }
+    }
 
     if (
       !buildOptions.isSystemBuild &&
@@ -422,6 +488,9 @@ export class FlatFieldMetadataValidatorService {
         name: flatFieldMetadataToValidate.name,
         buildOptions,
       }),
+      ...validateFlatFieldMetadataDisabledFieldPermissionActions(
+        flatFieldMetadataToValidate,
+      ),
     );
 
     validationResult.errors.push(

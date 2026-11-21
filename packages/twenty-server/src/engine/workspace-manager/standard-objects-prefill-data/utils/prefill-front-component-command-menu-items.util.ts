@@ -74,6 +74,7 @@ export const prefillFrontComponentCommandMenuItems = async ({
           frontComponent.applicationUniversalIdentifier,
         workspaceId,
         workflowVersionId: null,
+        coreWorkflowVersionId: null,
         frontComponentId: definition.frontComponentId,
         frontComponentUniversalIdentifier:
           definitionFrontComponent?.universalIdentifier ?? null,
@@ -86,6 +87,7 @@ export const prefillFrontComponentCommandMenuItems = async ({
         availabilityType: CommandMenuItemAvailabilityType.GLOBAL,
         conditionalAvailabilityExpression: null,
         conditionalPinnedExpression: null,
+        availabilityCoreObjectName: null,
         availabilityObjectMetadataId: null,
         availabilityObjectMetadataUniversalIdentifier: null,
         navigationTargetObjectMetadataId: null,

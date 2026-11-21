@@ -2,15 +2,11 @@ import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { FeatureFlagEntity } from 'src/engine/core-modules/feature-flag/feature-flag.entity';
-import { FeatureFlagModule } from 'src/engine/core-modules/feature-flag/feature-flag.module';
 import { SecureHttpClientModule } from 'src/engine/core-modules/secure-http-client/secure-http-client.module';
 import { ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
 import { ConnectedAccountTokenEncryptionModule } from 'src/engine/metadata-modules/connected-account/services/connected-account-token-encryption.module';
-import { WorkspaceDataSourceModule } from 'src/engine/workspace-datasource/workspace-datasource.module';
-import { EmailAliasManagerModule } from 'src/modules/connected-account/email-alias-manager/email-alias-manager.module';
-import { MessagingCommonModule } from 'src/modules/messaging/common/messaging-common.module';
 import { ImapClientProvider } from 'src/modules/messaging/message-import-manager/drivers/imap/providers/imap-client.provider';
+import { ImapFetchMessageAttachmentService } from 'src/modules/messaging/message-import-manager/drivers/imap/services/imap-fetch-message-attachment.service';
 import { ImapFindDraftsFolderService } from 'src/modules/messaging/message-import-manager/drivers/imap/services/imap-find-drafts-folder.service';
 import { ImapFindSentFolderService } from 'src/modules/messaging/message-import-manager/drivers/imap/services/imap-find-sent-folder.service';
 import { ImapGetMessageListService } from 'src/modules/messaging/message-import-manager/drivers/imap/services/imap-get-message-list.service';
@@ -19,19 +15,13 @@ import { ImapMessageListFetchErrorHandler } from 'src/modules/messaging/message-
 import { ImapMessageParserService } from 'src/modules/messaging/message-import-manager/drivers/imap/services/imap-message-parser.service';
 import { ImapMessagesImportErrorHandler } from 'src/modules/messaging/message-import-manager/drivers/imap/services/imap-messages-import-error-handler.service';
 import { ImapSyncService } from 'src/modules/messaging/message-import-manager/drivers/imap/services/imap-sync.service';
-import { MessageParticipantManagerModule } from 'src/modules/messaging/message-participant-manager/message-participant-manager.module';
 
 @Module({
   imports: [
     HttpModule,
-    MessagingCommonModule,
-    TypeOrmModule.forFeature([FeatureFlagEntity, ConnectedAccountEntity]),
-    EmailAliasManagerModule,
-    FeatureFlagModule,
+    TypeOrmModule.forFeature([ConnectedAccountEntity]),
     SecureHttpClientModule,
     ConnectedAccountTokenEncryptionModule,
-    WorkspaceDataSourceModule,
-    MessageParticipantManagerModule,
   ],
   providers: [
     ImapClientProvider,
@@ -43,6 +33,7 @@ import { MessageParticipantManagerModule } from 'src/modules/messaging/message-p
     ImapMessageParserService,
     ImapFindDraftsFolderService,
     ImapFindSentFolderService,
+    ImapFetchMessageAttachmentService,
   ],
   exports: [
     ImapGetMessagesService,
@@ -50,6 +41,7 @@ import { MessageParticipantManagerModule } from 'src/modules/messaging/message-p
     ImapClientProvider,
     ImapFindDraftsFolderService,
     ImapFindSentFolderService,
+    ImapFetchMessageAttachmentService,
   ],
 })
 export class MessagingIMAPDriverModule {}

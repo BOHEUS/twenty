@@ -17,8 +17,12 @@ import {
   IsUUID,
 } from 'class-validator';
 
+import { type AuthoredOverrides } from 'src/engine/metadata-modules/overrides/types/authored-overrides.type';
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
-import { CommandMenuItemAvailabilityType } from 'twenty-shared/types';
+import {
+  CommandMenuItemAvailabilityType,
+  type CommandMenuCoreObjectName,
+} from 'twenty-shared/types';
 import { type CommandMenuItemOverrides } from 'src/engine/metadata-modules/command-menu-item/entities/command-menu-item.entity';
 import { CommandMenuItemPayloadUnion } from 'src/engine/metadata-modules/command-menu-item/dtos/command-menu-item-payload.union';
 import { type PathCommandMenuItemPayload } from 'src/engine/metadata-modules/command-menu-item/dtos/types/path-command-menu-item-payload.type';
@@ -40,6 +44,11 @@ export class CommandMenuItemDTO {
   @IsOptional()
   @Field(() => UUIDScalarType, { nullable: true })
   workflowVersionId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  @Field(() => UUIDScalarType, { nullable: true })
+  coreWorkflowVersionId?: string;
 
   @IsUUID()
   @IsOptional()
@@ -105,6 +114,10 @@ export class CommandMenuItemDTO {
   @Field(() => UUIDScalarType, { nullable: true })
   availabilityObjectMetadataId?: string;
 
+  @IsOptional()
+  @Field(() => String, { nullable: true })
+  availabilityCoreObjectName?: CommandMenuCoreObjectName | null;
+
   @IsUUID()
   @IsOptional()
   @Field(() => UUIDScalarType, { nullable: true })
@@ -118,11 +131,9 @@ export class CommandMenuItemDTO {
   @HideField()
   workspaceId: string;
 
-  // Kept out of the schema but needed by the field resolvers: without it they
-  // cannot tell a standard label from one a workspace renamed, and would match
-  // the workspace's own copy against the standard catalog.
+  // field resolvers need it to tell a standard label from a workspace-renamed one
   @HideField()
-  overrides?: CommandMenuItemOverrides | null;
+  overrides?: AuthoredOverrides<CommandMenuItemOverrides> | null;
 
   @Field(() => UUIDScalarType, { nullable: true })
   universalIdentifier?: string;

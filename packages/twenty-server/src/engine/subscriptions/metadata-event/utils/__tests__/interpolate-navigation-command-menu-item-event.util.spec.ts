@@ -1,4 +1,4 @@
-import { type EffectiveEntityI18nContext } from 'src/engine/metadata-modules/utils/effective-entity-i18n-context.type';
+import { type EffectiveEntityI18nContext } from 'src/engine/metadata-modules/overrides/types/effective-entity-i18n-context.type';
 import { SOURCE_LOCALE } from 'twenty-shared/translations';
 
 import { EngineComponentKey } from 'src/engine/metadata-modules/command-menu-item/enums/engine-component-key.enum';
@@ -8,6 +8,7 @@ import {
   NAVIGATION_INTERPOLATED_LABEL,
   NAVIGATION_INTERPOLATED_SHORT_LABEL,
 } from 'src/engine/metadata-modules/flat-command-menu-item/utils/build-object-navigation-universal-flat-command-menu-item.util';
+import { getFlatObjectMetadataMock } from 'src/engine/metadata-modules/flat-object-metadata/__mocks__/get-flat-object-metadata.mock';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
 import { interpolateNavigationCommandMenuItemEvent } from 'src/engine/subscriptions/metadata-event/utils/interpolate-navigation-command-menu-item-event.util';
 import { TWENTY_STANDARD_APPLICATION } from 'src/engine/workspace-manager/twenty-standard-application/constants/twenty-standard-applications';
@@ -21,7 +22,7 @@ const OBJECT_METADATA_ID = 'obj-id-1';
 const makeFlatObjectMetadata = (
   overrides?: Partial<FlatObjectMetadata>,
 ): FlatObjectMetadata =>
-  ({
+  getFlatObjectMetadataMock({
     id: OBJECT_METADATA_ID,
     universalIdentifier: 'obj-uid-1',
     workspaceId: 'ws-1',
@@ -33,7 +34,7 @@ const makeFlatObjectMetadata = (
     icon: 'IconUser',
     overrides: null,
     ...overrides,
-  }) as unknown as FlatObjectMetadata;
+  });
 
 const makeFlatObjectMetadataMaps = (
   flatObjectMetadata: FlatObjectMetadata,
@@ -67,6 +68,10 @@ const buildStandardI18nContext = (): EffectiveEntityI18nContext => ({
   i18nInstance: mockI18nInstance,
   isStandardApp: true,
   applicationCatalog: undefined,
+  workspaceCustomApplicationUniversalIdentifier:
+    'workspace-custom-application-universal-identifier',
+  ownerApplicationUniversalIdentifier:
+    TWENTY_STANDARD_APPLICATION.universalIdentifier,
 });
 
 describe('interpolateNavigationCommandMenuItemEvent', () => {
@@ -153,9 +158,11 @@ describe('interpolateNavigationCommandMenuItemEvent', () => {
       labelPlural: 'People',
       icon: 'IconUser',
       overrides: {
-        labelPlural: 'Contacts',
-        icon: 'IconContacts',
-      } as unknown as FlatObjectMetadata['overrides'],
+        'workspace-custom-application-universal-identifier': {
+          labelPlural: 'Contacts',
+          icon: 'IconContacts',
+        },
+      },
     });
     const flatObjectMetadataMaps =
       makeFlatObjectMetadataMaps(flatObjectMetadata);

@@ -2,6 +2,7 @@ import { type WebClient } from '@slack/web-api';
 import { isNonEmptyString } from '@sniptt/guards';
 import { CoreApiClient } from 'twenty-client-sdk/core';
 
+import { SLACK_ROSTER_RATE_LIMIT_RETRY_BUDGET_MS } from 'src/logic-functions/constants/slack-roster-rate-limit-retry-budget-ms';
 import { listLinkedSlackUserIds } from 'src/logic-functions/data/list-linked-slack-user-ids';
 import { findWorkspaceMemberIdsByEmails } from 'src/logic-functions/data/find-workspace-member-ids-by-emails';
 import { type SlackRosterMatchSummary } from 'src/logic-functions/types/slack-roster-match.type';
@@ -16,14 +17,17 @@ const runSlackRosterMatch = async ({
   slackClient,
   slackTeamId,
 }: {
-  slackClient: WebClient;
+  slackClient: { users: Pick<WebClient['users'], 'list'> };
   slackTeamId: string;
 }): Promise<SlackRosterMatchSummary> => {
   const client = new CoreApiClient({ runAs: 'application' });
 
   const [linkedSlackUserIds, roster] = await Promise.all([
     listLinkedSlackUserIds(client, { slackTeamId }),
-    collectSlackRosterMembers({ slackClient }),
+    collectSlackRosterMembers({
+      slackClient,
+      rateLimitRetryBudgetMs: SLACK_ROSTER_RATE_LIMIT_RETRY_BUDGET_MS,
+    }),
   ]);
 
   const vouchedRosterEmails = roster.members
@@ -67,7 +71,7 @@ export const matchSlackRosterByEmail = async ({
   slackClient,
   slackTeamId,
 }: {
-  slackClient: WebClient;
+  slackClient: { users: Pick<WebClient['users'], 'list'> };
   slackTeamId: string;
 }): Promise<SlackRosterMatchSummary> => {
   try {

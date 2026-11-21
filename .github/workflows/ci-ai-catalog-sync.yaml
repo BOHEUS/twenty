@@ -7,14 +7,17 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   sync-catalog:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      changed: ${{ steps.changes.outputs.changed }}
+      body: ${{ steps.body.outputs.body }}
     env:
       NODE_OPTIONS: '--max-old-space-size=4096'
+      CATALOG_DIR: packages/twenty-server/src/engine/metadata-modules/ai/ai-models
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
@@ -28,51 +31,68 @@ jobs:
         run: npx nx build twenty-shared
 
       - name: Run catalog sync
-        run: npx nx run twenty-server:ts-node-no-deps-transpile-only -- ./scripts/ai-sync-models-dev.ts
+        env:
+          ARTIFICIAL_ANALYSIS_API_KEY: ${{ secrets.ARTIFICIAL_ANALYSIS_API_KEY }}
+        run: |
+          npx nx run twenty-server:ts-node-no-deps-transpile-only -- \
+            ./scripts/ai-catalog-sync/index.ts --report "${RUNNER_TEMP}/coverage.md"
 
       - name: Check for changes
         id: changes
         run: |
-          if git diff --quiet packages/twenty-server/src/engine/metadata-modules/ai/ai-models/ai-providers.json; then
+          if git diff --quiet "$CATALOG_DIR"; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Create pull request
+      - name: Compose pull request body
+        id: body
         if: steps.changes.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'chore: sync AI model catalog from models.dev'
-          title: 'chore: sync AI model catalog from models.dev'
-          body: |
-            Automated daily sync of `ai-providers.json` from [models.dev](https://models.dev).
-
-            This PR updates pricing, context windows, and model availability based on the latest data.
-            New models meeting inclusion criteria (tool calling, pricing data, context limits) are added automatically.
-            Deprecated models are detected based on cost-efficiency within the same model family.
-
-            **Please review before merging** — verify no critical models were incorrectly deprecated.
-          branch: chore/ai-catalog-sync
-          base: main
-          labels: ai, automated
-          delete-branch: true
-
-      - name: Mint twenty-infra dispatch token
-        id: app-token
-        if: steps.changes.outputs.changed == 'true'
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          client-id: ${{ vars.TWENTY_WORKFLOW_DISPATCHER_CLIENT_ID }}
-          private-key: ${{ secrets.TWENTY_WORKFLOW_DISPATCHER_PRIVATE_KEY }}
-          owner: twentyhq
-          repositories: twenty-infra
-          permission-actions: write
-
-      - name: Trigger automerge
-        if: steps.changes.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          gh workflow run automerge-i18n.yaml --repo twentyhq/twenty-infra --ref main
+          cat > "${RUNNER_TEMP}/pr-body.md" <<'PREAMBLE'
+          Automated daily sync of the AI model catalog.
+
+          - Model identity, pricing, context windows and availability come from [models.dev](https://models.dev).
+          - Intelligence, speed and cost per task come from [Artificial Analysis](https://artificialanalysis.ai/),
+            which requires `ARTIFICIAL_ANALYSIS_API_KEY`.
+
+          New models meeting inclusion criteria (tool calling, pricing data, context limits) are added
+          automatically. Benchmark data is best-effort: a model Artificial Analysis has not rated keeps
+          every other field and simply carries no `benchmark` entry.
+
+          **Please review before merging** and check the coverage summary below for models that silently
+          stopped matching.
+
+          PREAMBLE
+          cat "${RUNNER_TEMP}/coverage.md" >> "${RUNNER_TEMP}/pr-body.md"
+          delimiter="EOF_$(openssl rand -hex 8)"
+          {
+            echo "body<<$delimiter"
+            cat "${RUNNER_TEMP}/pr-body.md"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+      # The branch is regenerated from main on every run, so it is force-pushed
+      - name: Push catalog branch
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name 'github-actions'
+          git config user.email 'github-actions@twenty.com'
+          git switch -c chore/ai-catalog-sync
+          git add "$CATALOG_DIR"
+          git commit -m 'chore: sync AI model catalog'
+          git push --force origin chore/ai-catalog-sync
+
+  open-pull-request:
+    needs: sync-catalog
+    if: needs.sync-catalog.outputs.changed == 'true'
+    permissions: {}
+    uses: ./.github/workflows/open-pull-request.yaml
+    with:
+      branch: chore/ai-catalog-sync
+      title: 'chore: sync AI model catalog'
+      body: ${{ needs.sync-catalog.outputs.body }}
+    secrets:
+      TWENTY_PR_PRIVATE_KEY: ${{ secrets.TWENTY_PR_PRIVATE_KEY }}
+      TWENTY_WORKFLOW_DISPATCHER_PRIVATE_KEY: ${{ secrets.TWENTY_WORKFLOW_DISPATCHER_PRIVATE_KEY }}

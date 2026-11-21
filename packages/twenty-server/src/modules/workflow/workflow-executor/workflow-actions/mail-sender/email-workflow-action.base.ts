@@ -1,12 +1,20 @@
+import { isNonEmptyString } from '@sniptt/guards';
+import { type EmailOperation } from 'twenty-shared/types';
 import { type WorkflowRunStepLog } from 'twenty-shared/workflow';
 
 import {
+  canConnectedAccountPerformEmailOperation,
+  type EmailDocument,
+  EMPTY_EMAIL_DOCUMENT,
   isDefined,
   isValidUuid,
+  parseJson,
   resolveInput as resolveWorkflowInput,
 } from 'twenty-shared/utils';
 import { IsNull, type Repository } from 'typeorm';
 
+import { type ToolExecutionContext } from 'src/engine/core-modules/tool/types/tool-execution-context.type';
+import { type ToolInput } from 'src/engine/core-modules/tool/types/tool-input.type';
 import { type ToolOutput } from 'src/engine/core-modules/tool/types/tool-output.type';
 import { type UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { type ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
@@ -16,11 +24,12 @@ import {
   WorkflowStepExecutorException,
   WorkflowStepExecutorExceptionCode,
 } from 'src/modules/workflow/workflow-executor/exceptions/workflow-step-executor.exception';
+import { WorkflowExecutionContextService } from 'src/modules/workflow/workflow-executor/services/workflow-execution-context.service';
+import { type WorkflowRunInfo } from 'src/modules/workflow/workflow-executor/types/workflow-action-input.type';
+import { buildWorkflowActorMetadata } from 'src/modules/workflow/workflow-executor/utils/build-workflow-actor-metadata.util';
+import { getUserFromAuthContext } from 'src/modules/workflow/workflow-executor/utils/get-user-from-auth-context.util';
 import { type WorkflowSendEmailActionInput } from 'src/modules/workflow/workflow-executor/workflow-actions/mail-sender/types/workflow-send-email-action-input.type';
-import {
-  buildEmailStepLog,
-  type EmailStepLogMode,
-} from 'src/modules/workflow/workflow-executor/workflow-actions/mail-sender/utils/build-email-step-log.util';
+import { buildEmailStepLog } from 'src/modules/workflow/workflow-executor/workflow-actions/mail-sender/utils/build-email-step-log.util';
 import { resolveEmailBody } from 'src/modules/workflow/workflow-executor/workflow-actions/mail-sender/utils/resolve-email-body.util';
 import { resolveEmailFiles } from 'src/modules/workflow/workflow-executor/workflow-actions/mail-sender/utils/resolve-email-files.util';
 import { ToolBackedWorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/tool-backed/tool-backed.workflow-action';
@@ -34,25 +43,30 @@ export abstract class EmailWorkflowActionBase extends ToolBackedWorkflowAction<W
     private readonly workspaceOrmManager: WorkspaceOrmManager,
     private readonly connectedAccountRepository: Repository<ConnectedAccountEntity>,
     private readonly userWorkspaceRepository: Repository<UserWorkspaceEntity>,
+    private readonly workflowExecutionContextService: WorkflowExecutionContextService,
   ) {
     super(loggerName, workflowRunStepLogService);
   }
 
-  protected abstract getMode(): EmailStepLogMode;
+  protected abstract getMode(): EmailOperation;
 
   protected override async preprocessInput(
     rawInput: WorkflowSendEmailActionInput,
     context: Record<string, unknown>,
   ): Promise<WorkflowSendEmailActionInput> {
-    const files = resolveEmailFiles(rawInput.files, context);
-
-    const body = isDefined(rawInput.body)
-      ? await resolveEmailBody(rawInput.body, context)
-      : rawInput.body;
-
-    return { ...rawInput, body, files };
+    return { ...rawInput, files: resolveEmailFiles(rawInput.files, context) };
   }
 
+  protected override async toToolInput(
+    resolvedInput: WorkflowSendEmailActionInput,
+  ): Promise<ToolInput> {
+    return {
+      ...resolvedInput,
+      body: parseJson<EmailDocument>(resolvedInput.body),
+    };
+  }
+
+  // The body is resolved inside its document so variables are escaped per string context
   protected override resolveInput(
     input: WorkflowSendEmailActionInput,
     context: Record<string, unknown>,
@@ -64,7 +78,25 @@ export abstract class EmailWorkflowActionBase extends ToolBackedWorkflowAction<W
         inputWithoutBody,
         context,
       ) as typeof inputWithoutBody),
-      body,
+      // Blank bodies stay valid until the 2-59 backfill reaches them, and in runs that snapshot their steps
+      body: JSON.stringify(
+        isNonEmptyString(body?.trim())
+          ? resolveEmailBody({ body: body, context: context })
+          : EMPTY_EMAIL_DOCUMENT,
+      ),
+    };
+  }
+
+  protected override async buildToolExecutionContext(
+    runInfo: WorkflowRunInfo,
+  ): Promise<ToolExecutionContext> {
+    const executionContext =
+      await this.workflowExecutionContextService.getExecutionContext(runInfo);
+
+    return {
+      workspaceId: runInfo.workspaceId,
+      actorMetadata: buildWorkflowActorMetadata(executionContext),
+      ...getUserFromAuthContext(executionContext.authContext),
     };
   }
 
@@ -84,11 +116,8 @@ export abstract class EmailWorkflowActionBase extends ToolBackedWorkflowAction<W
     return { ...resolvedInput, connectedAccountId };
   }
 
-  // The sender configured on an email step is either a connected account id
-  // (static pick) or a workspace member id (from a resolved workflow variable).
-  // When it is a workspace member id, resolve that member's first connected
-  // account; otherwise return it unchanged so the regular connected account
-  // flow applies. Only meaningful inside workflow email actions.
+  // The sender is a connected account id or, from a workflow variable, a workspace member id; a member id resolves
+  // to that member's first connected account, anything else is returned unchanged
   protected async resolveSenderConnectedAccountId(
     senderId: string,
     workspaceId: string,
@@ -114,7 +143,7 @@ export abstract class EmailWorkflowActionBase extends ToolBackedWorkflowAction<W
 
       if (!isDefined(connectedAccountId)) {
         throw new WorkflowStepExecutorException(
-          `No connected account found for workspace member '${senderId}'`,
+          `Workspace member '${senderId}' has no connected account that can ${this.getMode().toLowerCase()} email`,
           WorkflowStepExecutorExceptionCode.INVALID_STEP_INPUT,
         );
       }
@@ -127,9 +156,8 @@ export abstract class EmailWorkflowActionBase extends ToolBackedWorkflowAction<W
     workspaceMemberId: string,
   ): Promise<WorkspaceMemberWorkspaceEntity | null> {
     const workspaceMemberRepository =
-      this.workspaceOrmManager.getRepository<WorkspaceMemberWorkspaceEntity>(
+      this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<WorkspaceMemberWorkspaceEntity>(
         'workspaceMember',
-        { shouldBypassPermissionChecks: true },
       );
 
     return workspaceMemberRepository.findOne({
@@ -149,16 +177,22 @@ export abstract class EmailWorkflowActionBase extends ToolBackedWorkflowAction<W
       return null;
     }
 
-    const connectedAccount = await this.connectedAccountRepository.findOne({
+    const connectedAccounts = await this.connectedAccountRepository.find({
       where: {
         userWorkspaceId: userWorkspace.id,
         workspaceId,
         archivedAt: IsNull(),
       },
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'ASC', id: 'ASC' },
     });
 
-    return connectedAccount?.id ?? null;
+    const operation = this.getMode();
+
+    const emailCapableAccount = connectedAccounts.find((connectedAccount) =>
+      canConnectedAccountPerformEmailOperation({ connectedAccount, operation }),
+    );
+
+    return emailCapableAccount?.id ?? null;
   }
 
   protected buildStepLog({

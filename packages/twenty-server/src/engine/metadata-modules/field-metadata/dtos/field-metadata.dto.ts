@@ -17,17 +17,18 @@ import {
 } from 'class-validator';
 import { GraphQLJSON } from 'graphql-type-json';
 import {
+  type FieldMetadataDefaultOption,
   type FieldMetadataOptions,
   type FieldMetadataSettings,
   FieldMetadataType,
   type FieldMetadataDefaultValue,
-  MetadataWritability,
 } from 'twenty-shared/types';
+import { type FieldPermissionAction } from 'twenty-shared/application';
 
+import { type AuthoredOverrides } from 'src/engine/metadata-modules/overrides/types/authored-overrides.type';
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 import { IsValidMetadataName } from 'src/engine/decorators/metadata/is-valid-metadata-name.decorator';
 import { type FieldMetadataOverrides } from 'src/engine/metadata-modules/field-metadata/types/field-metadata-overrides.type';
-import { type FieldMetadataDefaultOption } from 'src/engine/metadata-modules/field-metadata/dtos/options.input';
 import { transformEnumValue } from 'src/engine/utils/transform-enum-value';
 
 registerEnumType(FieldMetadataType, {
@@ -74,7 +75,7 @@ export class FieldMetadataDTO<T extends FieldMetadataType = FieldMetadataType> {
   icon?: string;
 
   @HideField()
-  overrides?: FieldMetadataOverrides | null;
+  overrides?: AuthoredOverrides<FieldMetadataOverrides> | null;
 
   @IsBoolean()
   @IsOptional()
@@ -91,13 +92,15 @@ export class FieldMetadataDTO<T extends FieldMetadataType = FieldMetadataType> {
   @Field({ nullable: true })
   isUIEditable?: boolean;
 
-  @IsEnum(MetadataWritability)
+  @IsBoolean()
   @IsOptional()
-  @Field(() => MetadataWritability, { nullable: true })
-  writability?: MetadataWritability;
+  @Field({ nullable: true })
+  isSystemSideEffect?: boolean;
 
-  // Deprecated alias kept for one release: stays exposed (and filterable via
-  // FieldFilter) so external API consumers are not broken.
+  @Field(() => [String], { nullable: true })
+  disabledFieldPermissionActions?: FieldPermissionAction[] | null;
+
+  // deprecated alias kept for one release so external API consumers do not break
   @IsBoolean()
   @IsOptional()
   @Field({
@@ -120,6 +123,11 @@ export class FieldMetadataDTO<T extends FieldMetadataType = FieldMetadataType> {
   @IsOptional()
   @Field({ nullable: true })
   isSearchable?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  @Field({ nullable: true })
+  isAuditLogged?: boolean;
 
   @IsOptional()
   @Field(() => GraphQLJSON, { nullable: true })

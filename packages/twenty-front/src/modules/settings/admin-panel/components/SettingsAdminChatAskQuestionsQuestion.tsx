@@ -1,14 +1,14 @@
-import { t } from '@lingui/core/macro';
 import { styled } from '@linaria/react';
 
 import { isNonEmptyString } from '@sniptt/guards';
 import { type AskQuestionAnswer, type AskQuestionItem } from 'twenty-shared/ai';
 import { isDefined } from 'twenty-shared/utils';
-import { Tag } from 'twenty-ui/data-display';
+import { Tag } from 'twenty-ui/primitives/data-display';
 import { IconCheck } from 'twenty-ui/icon';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables, useTheme } from 'twenty-ui/theme';
 
-import { TextWithChatReferences } from '@/ai/components/TextWithChatReferences';
+import { TextWithChatReferences } from '@/ai-chat/message-content/components/TextWithChatReferences';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsAdminChatAskQuestionsQuestionProps = {
   question: AskQuestionItem;
@@ -68,11 +68,6 @@ const StyledOptionLabelRow = styled.div`
   gap: ${themeCssVariables.spacing[1]};
   line-height: 1.4;
   overflow-wrap: anywhere;
-
-  svg {
-    color: ${themeCssVariables.color.blue};
-    flex-shrink: 0;
-  }
 `;
 
 const StyledRecommended = styled.span`
@@ -91,6 +86,8 @@ export const SettingsAdminChatAskQuestionsQuestion = ({
   question,
   answer,
 }: SettingsAdminChatAskQuestionsQuestionProps) => {
+  const { t } = useLingui();
+  const theme = useTheme();
   const selectedOptionIndices = new Set(answer?.selectedOptionIndices ?? []);
   const freeText = answer?.freeText ?? '';
 
@@ -98,7 +95,9 @@ export const SettingsAdminChatAskQuestionsQuestion = ({
     <StyledContainer>
       <StyledHeaderRow>
         {isNonEmptyString(question.header) && (
-          <Tag color="transparent" text={question.header} variant="border" />
+          <Tag color="transparent" variant="outline">
+            {question.header}
+          </Tag>
         )}
         {question.allowMultiSelect === true && (
           <StyledMultiSelectHint>{t`Multiple answers`}</StyledMultiSelectHint>
@@ -114,7 +113,7 @@ export const SettingsAdminChatAskQuestionsQuestion = ({
           return (
             <StyledOptionRow key={optionIndex} isSelected={isSelected}>
               <StyledOptionLabelRow>
-                {isSelected && <IconCheck size={14} />}
+                {isSelected && <IconCheck size={14} color={theme.color.blue} />}
                 <TextWithChatReferences text={option.label} />
                 {option.isRecommended === true && (
                   <StyledRecommended>· {t`Recommended`}</StyledRecommended>
@@ -131,7 +130,7 @@ export const SettingsAdminChatAskQuestionsQuestion = ({
         {isNonEmptyString(freeText) && (
           <StyledOptionRow isSelected>
             <StyledOptionLabelRow>
-              <IconCheck size={14} />
+              <IconCheck size={14} color={theme.color.blue} />
               {t`Other`}
             </StyledOptionLabelRow>
             <StyledOptionDescription>

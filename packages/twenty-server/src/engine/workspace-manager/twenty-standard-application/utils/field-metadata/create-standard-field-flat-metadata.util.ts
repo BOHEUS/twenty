@@ -1,5 +1,4 @@
 import {
-  MetadataWritability,
   type FieldMetadataComplexOption,
   type FieldMetadataDefaultOption,
   type FieldMetadataDefaultValue,
@@ -12,6 +11,7 @@ import { SEARCH_FIELDS_BY_STANDARD_OBJECT_NAME } from 'src/engine/workspace-mana
 import { TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER } from 'twenty-shared/application';
 
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
+import { isAuditLoggableFieldType } from 'src/engine/metadata-modules/field-metadata/utils/is-audit-loggable-field-type.util';
 import { PARTIAL_SYSTEM_FLAT_FIELD_METADATAS } from 'src/engine/metadata-modules/object-metadata/constants/partial-system-flat-field-metadatas.constant';
 import { type AllStandardObjectFieldName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-field-name.type';
 import { type AllStandardObjectName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-name.type';
@@ -42,6 +42,11 @@ export type CreateStandardFieldArgs<
       | null;
   };
 };
+
+const isPartialSystemFieldName = (
+  name: string,
+): name is keyof typeof PARTIAL_SYSTEM_FLAT_FIELD_METADATAS =>
+  name in PARTIAL_SYSTEM_FLAT_FIELD_METADATAS;
 
 export const createStandardFieldFlatMetadata = <
   O extends AllStandardObjectName,
@@ -74,6 +79,9 @@ export const createStandardFieldFlatMetadata = <
   const name = fieldName.toString();
   const searchFields: ReadonlyArray<{ name: string }> =
     SEARCH_FIELDS_BY_STANDARD_OBJECT_NAME[objectName];
+  const partialSystemFlatFieldMetadata = isPartialSystemFieldName(name)
+    ? PARTIAL_SYSTEM_FLAT_FIELD_METADATAS[name]
+    : undefined;
 
   return {
     id: fieldIds[fieldName].id,
@@ -88,17 +96,14 @@ export const createStandardFieldFlatMetadata = <
     icon,
     isActive: true,
     isSystem,
-    isSystemSideEffect: name in PARTIAL_SYSTEM_FLAT_FIELD_METADATAS,
+    isSystemSideEffect: isPartialSystemFieldName(name),
     isNullable,
     isUnique,
     isSearchable: searchFields.some((searchField) => searchField.name === name),
+    isAuditLogged: isAuditLoggableFieldType(type),
     isUIEditable,
-    writability:
-      name in PARTIAL_SYSTEM_FLAT_FIELD_METADATAS
-        ? PARTIAL_SYSTEM_FLAT_FIELD_METADATAS[
-            name as keyof typeof PARTIAL_SYSTEM_FLAT_FIELD_METADATAS
-          ].writability
-        : MetadataWritability.OPEN,
+    disabledFieldPermissionActions:
+      partialSystemFlatFieldMetadata?.disabledFieldPermissionActions ?? null,
     isLabelSyncedWithName: false,
     overrides: null,
     defaultValue: defaultValue ?? null,
@@ -133,6 +138,14 @@ export const createStandardFieldFlatMetadata = <
     viewSortUniversalIdentifiers: [],
     searchFieldMetadataIds: [],
     searchFieldMetadataUniversalIdentifiers: [],
+    fieldMetadataOptionIds: [],
+    rowLevelPermissionPredicateIds: [],
+    relationRowLevelPermissionPredicateIds: [],
+    workspaceMemberRowLevelPermissionPredicateIds: [],
+    fieldMetadataOptionUniversalIdentifiers: [],
+    rowLevelPermissionPredicateUniversalIdentifiers: [],
+    relationRowLevelPermissionPredicateUniversalIdentifiers: [],
+    workspaceMemberRowLevelPermissionPredicateUniversalIdentifiers: [],
     universalSettings: settings ?? null,
   };
 };

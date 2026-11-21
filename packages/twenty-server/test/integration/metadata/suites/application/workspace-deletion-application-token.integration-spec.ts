@@ -7,8 +7,9 @@ import { findManyApplications } from 'test/integration/graphql/utils/find-many-a
 import { getAuthTokensFromLoginToken } from 'test/integration/graphql/utils/get-auth-tokens-from-login-token.util';
 import { signUpInNewWorkspace } from 'test/integration/graphql/utils/sign-up-in-new-workspace.util';
 import { signUp } from 'test/integration/graphql/utils/sign-up.util';
-import { generateApplicationToken } from 'test/integration/metadata/suites/application/utils/generate-application-token.util';
-import { makeMetadataAPIRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
+import { generateApplicationTokenPair } from 'test/integration/utils/generate-application-token-pair.util';
+import { makeGraphqlApiRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
+import { makeMetadataApiRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
 import { getAppProviderByClassName } from 'test/integration/utils/get-app-provider-by-class-name.util';
 import { isDefined } from 'twenty-shared/utils';
 
@@ -31,6 +32,18 @@ const IS_APPLICATION_STOPPED = gql`
   }
 `;
 
+const FIND_ONE_COMPANY = gql`
+  query FindOneCompany {
+    companies(first: 1) {
+      edges {
+        node {
+          id
+        }
+      }
+    }
+  }
+`;
+
 describe('Workspace deletion application token', () => {
   let applicationAccessToken: string;
   let applicationId: string;
@@ -40,7 +53,7 @@ describe('Workspace deletion application token', () => {
   let workspaceService: WorkspaceService;
 
   const queryApplicationStoppedState = (token: string) =>
-    makeMetadataAPIRequest(
+    makeMetadataApiRequest(
       {
         query: IS_APPLICATION_STOPPED,
         variables: {
@@ -171,15 +184,12 @@ describe('Workspace deletion application token', () => {
 
     applicationId = standardApplication.id;
 
-    const { data: applicationTokenData } = await generateApplicationToken({
+    const applicationTokenPair = await generateApplicationTokenPair({
+      workspaceId,
       applicationId,
-      expectToFail: false,
-      token: workspaceAccessToken,
     });
 
-    applicationAccessToken =
-      applicationTokenData.generateApplicationToken.applicationAccessToken
-        .token;
+    applicationAccessToken = applicationTokenPair.applicationAccessToken.token;
   }, 120000);
 
   afterEach(async () => {
@@ -241,6 +251,19 @@ describe('Workspace deletion application token', () => {
     expect(currentDeletionTokenResponse.body.data.isApplicationStopped).toBe(
       false,
     );
+  }, 120000);
+
+  it('reads records with a token scoped to the current deletion request', async () => {
+    const { deletionToken } =
+      await softDeleteWorkspaceAndGenerateDeletionToken();
+
+    const response = await makeGraphqlApiRequest(
+      { query: FIND_ONE_COMPANY },
+      deletionToken.token,
+    );
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.companies.edges).toBeDefined();
   }, 120000);
 
   it('rejects a deletion token after the deletion request changes', async () => {

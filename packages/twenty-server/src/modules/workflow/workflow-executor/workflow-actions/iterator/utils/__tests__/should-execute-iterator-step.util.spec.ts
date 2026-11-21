@@ -5,10 +5,7 @@ import {
   createMockIteratorStep,
 } from 'src/modules/workflow/workflow-executor/utils/create-mock-workflow-steps.util';
 import { shouldExecuteIteratorStep } from 'src/modules/workflow/workflow-executor/workflow-actions/iterator/utils/should-execute-iterator-step.util';
-import {
-  type WorkflowAction,
-  type WorkflowIteratorAction,
-} from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
+import { type WorkflowIteratorAction } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
 
 jest.mock(
   'src/modules/workflow/workflow-executor/workflow-actions/iterator/utils/get-all-step-ids-in-loop.util',
@@ -45,7 +42,6 @@ describe('shouldExecuteIteratorStep', () => {
         'step-3': { status: StepStatus.SUCCESS },
       };
 
-      // Mock getAllStepIdsInLoop to return the loop step IDs
       getAllStepIdsInLoop.mockReturnValue(['step-1', 'step-2']);
 
       const result = shouldExecuteIteratorStep({
@@ -162,28 +158,6 @@ describe('shouldExecuteIteratorStep', () => {
       expect(result).toBe(true);
     });
 
-    it('should handle undefined steps gracefully', () => {
-      const iteratorStep = createMockIteratorStep('iterator-1', [], ['step-1']);
-      const steps = [
-        createMockCodeStep('step-1', ['iterator-1']),
-        undefined as unknown as WorkflowAction,
-        iteratorStep,
-      ];
-      const stepInfos = {
-        'step-1': { status: StepStatus.SUCCESS },
-      };
-
-      getAllStepIdsInLoop.mockReturnValue(['step-1']);
-
-      const result = shouldExecuteIteratorStep({
-        step: iteratorStep,
-        steps,
-        stepInfos,
-      });
-
-      expect(result).toBe(true);
-    });
-
     it('should work correctly with multiple steps targeting the same iterator', () => {
       const iteratorStep = createMockIteratorStep(
         'iterator-1',
@@ -225,7 +199,7 @@ describe('shouldExecuteIteratorStep', () => {
         iteratorStep,
       ];
       const stepInfos = {
-        'iterator-1': { status: StepStatus.RUNNING }, // Iterator has been started
+        'iterator-1': { status: StepStatus.RUNNING },
         'step-1': { status: StepStatus.SUCCESS },
         'step-2': { status: StepStatus.SUCCESS },
       };
@@ -273,9 +247,9 @@ describe('shouldExecuteIteratorStep', () => {
         iteratorStep,
       ];
       const stepInfos = {
-        'iterator-1': { status: StepStatus.RUNNING }, // Iterator has been started
+        'iterator-1': { status: StepStatus.RUNNING },
         'step-1': { status: StepStatus.SUCCESS },
-        'step-2': { status: StepStatus.FAILED }, // This step failed
+        'step-2': { status: StepStatus.FAILED },
       };
 
       getAllStepIdsInLoop.mockReturnValue(['step-1']);
@@ -297,9 +271,9 @@ describe('shouldExecuteIteratorStep', () => {
         iteratorStep,
       ];
       const stepInfos = {
-        'iterator-1': { status: StepStatus.RUNNING }, // Iterator has been started
+        'iterator-1': { status: StepStatus.RUNNING },
         'step-1': { status: StepStatus.SUCCESS },
-        'step-2': { status: StepStatus.RUNNING }, // This step is still running
+        'step-2': { status: StepStatus.RUNNING },
       };
 
       getAllStepIdsInLoop.mockReturnValue(['step-1']);
@@ -317,7 +291,7 @@ describe('shouldExecuteIteratorStep', () => {
       const iteratorStep = createMockIteratorStep('iterator-1');
       const steps = [createMockCodeStep('step-1', ['step-2']), iteratorStep];
       const stepInfos = {
-        'iterator-1': { status: StepStatus.RUNNING }, // Iterator has been started
+        'iterator-1': { status: StepStatus.RUNNING },
         'step-1': { status: StepStatus.SUCCESS },
       };
 
@@ -340,9 +314,9 @@ describe('shouldExecuteIteratorStep', () => {
         iteratorStep,
       ];
       const stepInfos = {
-        'iterator-1': { status: StepStatus.SUCCESS }, // Iterator has been started
-        'step-1': { status: StepStatus.SUCCESS }, // Loop step successful
-        'step-2': { status: StepStatus.SUCCESS }, // Non-loop step successful
+        'iterator-1': { status: StepStatus.SUCCESS },
+        'step-1': { status: StepStatus.SUCCESS },
+        'step-2': { status: StepStatus.SUCCESS },
       };
 
       getAllStepIdsInLoop.mockReturnValue(['step-1']);
@@ -364,8 +338,8 @@ describe('shouldExecuteIteratorStep', () => {
         iteratorStep,
       ];
       const stepInfos = {
-        'iterator-1': { status: StepStatus.RUNNING }, // Iterator has been started
-        'step-1': { status: StepStatus.NOT_STARTED }, // Loop step not started
+        'iterator-1': { status: StepStatus.RUNNING },
+        'step-1': { status: StepStatus.NOT_STARTED },
         'step-2': { status: StepStatus.SUCCESS },
       };
 

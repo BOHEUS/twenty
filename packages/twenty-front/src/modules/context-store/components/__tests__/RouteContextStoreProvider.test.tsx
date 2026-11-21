@@ -1,26 +1,11 @@
+import { WorkspaceRouteObjectsContext } from '@/app/routing/components/WorkspaceRouteObjectsProvider';
+import { type WorkspaceRouteObject } from '@/app/routing/types/WorkspaceRouteObject';
+import { getWorkspaceRouteObjectsForSurface } from '@/app/routing/utils/getWorkspaceRouteObjectsForSurface';
 import { RouteContextStoreProvider } from '@/context-store/components/RouteContextStoreProvider';
 import { render, screen } from '@testing-library/react';
-
-let mockViewIdQueryParam = 'company-view';
-
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useLocation: () => ({
-    pathname: '/objects/companies',
-    search: `?viewId=${mockViewIdQueryParam}`,
-    hash: '',
-    state: null,
-    key: 'test',
-  }),
-  useParams: () => ({ objectNamePlural: 'companies' }),
-  useSearchParams: () => [
-    new URLSearchParams(`viewId=${mockViewIdQueryParam}`),
-  ],
-}));
-
-jest.mock('@/navigation/hooks/useIsSettingsPage', () => ({
-  useIsSettingsPage: () => false,
-}));
+import { type ReactNode } from 'react';
+import { MemoryRouter, Outlet, useRoutes } from 'react-router-dom';
+import { AppPath, SettingsPath } from 'twenty-shared/types';
 
 jest.mock('@/navigation/hooks/useLastVisitedView', () => ({
   useLastVisitedView: () => ({
@@ -44,6 +29,21 @@ jest.mock('@/ui/utilities/state/jotai/hooks/useAtomStateValue', () => ({
             id: 'company-object',
             namePlural: 'companies',
             nameSingular: 'company',
+          },
+          {
+            id: 'person-object',
+            namePlural: 'people',
+            nameSingular: 'person',
+          },
+          {
+            id: 'new-object',
+            namePlural: 'new',
+            nameSingular: 'new',
+          },
+          {
+            id: 'chat-object',
+            namePlural: 'agentChatThreads',
+            nameSingular: 'agentChatThread',
           },
         ]
       : [
@@ -71,33 +71,252 @@ jest.mock('@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue', () => ({
 }));
 
 jest.mock('@/context-store/components/RouteContextStoreProviderEffect', () => ({
-  RouteContextStoreProviderEffect: ({ viewId }: { viewId?: string }) => (
-    <div data-testid="context-view" data-view-id={viewId} />
+  RouteContextStoreProviderEffect: ({
+    viewId,
+    objectMetadataItem,
+    isRecordIndexPage,
+    isRecordShowPage,
+  }: {
+    viewId?: string;
+    objectMetadataItem?: { id: string };
+    isRecordIndexPage: boolean;
+    isRecordShowPage: boolean;
+  }) => (
+    <div
+      data-testid="route-context-store"
+      data-view-id={viewId}
+      data-object-metadata-id={objectMetadataItem?.id}
+      data-is-record-index-page={isRecordIndexPage}
+      data-is-record-show-page={isRecordShowPage}
+    />
   ),
 }));
 
-describe('RouteContextStoreProvider view selection', () => {
-  beforeEach(() => {
-    mockViewIdQueryParam = 'company-view';
-  });
+jest.mock(
+  '@/context-store/components/RouteContextStoreCoreObjectNameEffect',
+  () => ({
+    RouteContextStoreCoreObjectNameEffect: ({
+      coreObjectName,
+    }: {
+      coreObjectName: string | null;
+    }) => (
+      <div
+        data-testid="route-context-store-core-object-name"
+        data-core-object-name={coreObjectName ?? 'none'}
+      />
+    ),
+  }),
+);
 
+const MAIN_AND_SIDE_PANEL = ['main', 'side-panel'] as const;
+
+const routeObjects: WorkspaceRouteObject[] = [
+  {
+    path: AppPath.RecordIndexPage,
+    element: null,
+    handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
+  },
+  {
+    path: AppPath.RecordShowPage,
+    element: null,
+    handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
+  },
+  {
+    path: AppPath.WorkflowIndexPage,
+    element: null,
+    handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
+  },
+  {
+    path: AppPath.WorkflowCoreShowPage,
+    element: null,
+    handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
+  },
+  {
+    path: AppPath.AiChat,
+    element: null,
+    handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
+  },
+  {
+    path: AppPath.AgentIndexPage,
+    element: null,
+    handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
+  },
+  {
+    path: AppPath.AgentShowPage,
+    element: null,
+    handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
+  },
+  {
+    path: `/${AppPath.Settings}`,
+    element: <Outlet />,
+    children: [
+      { path: SettingsPath.NewObject, element: null },
+      { path: SettingsPath.ObjectNewFieldSelect, element: null },
+    ],
+  },
+];
+
+const mainSurfaceRouteObjects = getWorkspaceRouteObjectsForSurface(
+  routeObjects,
+  'main',
+);
+
+const sidePanelRouteObjects = getWorkspaceRouteObjectsForSurface(
+  routeObjects,
+  'side-panel',
+);
+
+const MainSurfaceLayout = () => (
+  <>
+    <RouteContextStoreProvider />
+    <Outlet />
+  </>
+);
+
+const MainSurfaceRoutes = () =>
+  useRoutes([
+    { element: <MainSurfaceLayout />, children: mainSurfaceRouteObjects },
+  ]);
+
+const SidePanelHostLayout = () => (
+  <>
+    <Outlet />
+    {useRoutes(sidePanelRouteObjects, '/object/person/record-1')}
+  </>
+);
+
+const SidePanelHostRoutes = () =>
+  useRoutes([
+    { element: <SidePanelHostLayout />, children: mainSurfaceRouteObjects },
+  ]);
+
+const renderAt = (initialEntry: string, children: ReactNode) =>
+  render(
+    <WorkspaceRouteObjectsContext.Provider value={routeObjects}>
+      <MemoryRouter initialEntries={[initialEntry]}>{children}</MemoryRouter>
+    </WorkspaceRouteObjectsContext.Provider>,
+  );
+
+describe('RouteContextStoreProvider', () => {
   it('accepts a query-param view owned by the route object', () => {
-    render(<RouteContextStoreProvider />);
+    renderAt('/objects/companies?viewId=company-view', <MainSurfaceRoutes />);
 
-    expect(screen.getByTestId('context-view')).toHaveAttribute(
+    expect(screen.getByTestId('route-context-store')).toHaveAttribute(
       'data-view-id',
       'company-view',
     );
   });
 
   it('falls back when the query-param view belongs to another object', () => {
-    mockViewIdQueryParam = 'person-view';
+    renderAt('/objects/companies?viewId=person-view', <MainSurfaceRoutes />);
 
-    render(<RouteContextStoreProvider />);
-
-    expect(screen.getByTestId('context-view')).toHaveAttribute(
+    expect(screen.getByTestId('route-context-store')).toHaveAttribute(
       'data-view-id',
-      'company-index-view',
+      'company-view',
+    );
+  });
+
+  it('provides workflow index context on the core workflows page', () => {
+    renderAt('/workflows', <MainSurfaceRoutes />);
+
+    const routeContextStore = screen.getByTestId('route-context-store');
+
+    expect(routeContextStore).not.toHaveAttribute('data-object-metadata-id');
+    expect(routeContextStore).toHaveAttribute(
+      'data-is-record-index-page',
+      'true',
+    );
+    expect(routeContextStore).not.toHaveAttribute('data-view-id');
+    expect(
+      screen.getByTestId('route-context-store-core-object-name'),
+    ).toHaveAttribute('data-core-object-name', 'workflow');
+  });
+
+  it('provides workflow context on the core workflow show page', () => {
+    renderAt('/workflow/core-workflow-id', <MainSurfaceRoutes />);
+
+    expect(screen.getByTestId('route-context-store')).not.toHaveAttribute(
+      'data-object-metadata-id',
+    );
+    expect(screen.getByTestId('route-context-store')).toHaveAttribute(
+      'data-is-record-index-page',
+      'false',
+    );
+  });
+
+  it('sets the workflow core object on the core workflow show page', () => {
+    renderAt('/workflow/core-workflow-id', <MainSurfaceRoutes />);
+
+    expect(
+      screen.getByTestId('route-context-store-core-object-name'),
+    ).toHaveAttribute('data-core-object-name', 'workflow');
+  });
+
+  it('clears the core object on agent pages', () => {
+    renderAt('/agents', <MainSurfaceRoutes />);
+
+    expect(
+      screen.getByTestId('route-context-store-core-object-name'),
+    ).toHaveAttribute('data-core-object-name', 'none');
+  });
+
+  it('treats the chat page as the record page of a chat', () => {
+    renderAt('/chat/chat-id', <MainSurfaceRoutes />);
+
+    const routeContextStore = screen.getByTestId('route-context-store');
+
+    expect(routeContextStore).toHaveAttribute(
+      'data-object-metadata-id',
+      'chat-object',
+    );
+    expect(routeContextStore).toHaveAttribute(
+      'data-is-record-show-page',
+      'true',
+    );
+    expect(routeContextStore).not.toHaveAttribute('data-view-id');
+  });
+
+  it.each(['/agents', '/agent/agent-id'])(
+    'clears the object on %s so the previous page object does not linger',
+    (agentPath) => {
+      renderAt(agentPath, <MainSurfaceRoutes />);
+
+      const routeContextStore = screen.getByTestId('route-context-store');
+
+      expect(routeContextStore).not.toHaveAttribute('data-object-metadata-id');
+      expect(routeContextStore).toHaveAttribute(
+        'data-is-record-index-page',
+        'false',
+      );
+    },
+  );
+
+  it('resolves the object on settings object pages', () => {
+    renderAt(
+      '/settings/objects/companies/new-field/select',
+      <MainSurfaceRoutes />,
+    );
+
+    expect(screen.getByTestId('route-context-store')).toHaveAttribute(
+      'data-object-metadata-id',
+      'company-object',
+    );
+  });
+
+  it('does not read a static settings segment as an object name', () => {
+    renderAt('/settings/objects/new', <MainSurfaceRoutes />);
+
+    expect(screen.getByTestId('route-context-store')).not.toHaveAttribute(
+      'data-object-metadata-id',
+    );
+  });
+
+  it('resolves the side panel object from the panel location rather than the main surface route params', () => {
+    renderAt('/objects/companies', <SidePanelHostRoutes />);
+
+    expect(screen.getByTestId('route-context-store')).toHaveAttribute(
+      'data-object-metadata-id',
+      'person-object',
     );
   });
 });

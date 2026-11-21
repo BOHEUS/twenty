@@ -8,7 +8,7 @@ import {
 
 import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfaces/relation-type.interface';
 
-import { getFlatFieldsFromFlatObjectMetadata } from 'src/engine/api/graphql/workspace-schema-builder/utils/get-flat-fields-for-flat-object-metadata.util';
+import { getFlatFieldsFromFlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/utils/get-flat-fields-for-flat-object-metadata.util';
 import { isCompositeFieldMetadataType } from 'src/engine/metadata-modules/field-metadata/utils/is-composite-field-metadata-type.util';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
@@ -53,7 +53,9 @@ export const computeRelationConnectQueryConfigs = (
     const nestedRelationConnectFields =
       relationConnectQueryFieldsByEntityIndex[entityIndex];
 
-    if (!isDefined(nestedRelationConnectFields)) continue;
+    if (!isDefined(nestedRelationConnectFields)) {
+      continue;
+    }
 
     for (const [connectFieldName, connectObject] of Object.entries(
       nestedRelationConnectFields,
@@ -258,7 +260,7 @@ const checkUniqueConstraintFullyPopulated = (
       `Missing required fields: at least one unique constraint have to be fully populated for '${connectFieldName}'.`,
       TwentyOrmExceptionCode.CONNECT_UNIQUE_CONSTRAINT_ERROR,
       {
-        userFriendlyMessage: msg`Missing required fields: at least one unique constraint have to be fully populated for '${connectFieldName}'.`,
+        userFriendlyMessage: msg`Missing required fields: at least one unique constraint have to be fully populated for "${connectFieldName}".`,
       },
     );
   }

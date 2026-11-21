@@ -1,4 +1,5 @@
 import { PageLayoutVerticalList } from '@/page-layout/components/PageLayoutVerticalList';
+import { PageLayoutWidgetViewportContext } from '@/page-layout/contexts/PageLayoutWidgetViewportContext';
 import { makeWidget as makePageLayoutWidget } from '@/page-layout/testing/pageLayoutDraftFixtures';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
 import { WorkflowDiagramAllowPageScrollContext } from '@/workflow/workflow-diagram/contexts/WorkflowDiagramAllowPageScrollContext';
@@ -6,6 +7,7 @@ import { render, screen } from '@testing-library/react';
 import { type ReactNode, useContext } from 'react';
 import {
   PageLayoutTabLayoutMode,
+  PageLayoutWidgetVerticalListHeightBehavior,
   WidgetType,
 } from '~/generated-metadata/graphql';
 
@@ -31,10 +33,12 @@ jest.mock('@/page-layout/hooks/useIsSideColumnContext', () => ({
 jest.mock('@/page-layout/widgets/components/WidgetRenderer', () => ({
   WidgetRenderer: ({ widget }: { widget: PageLayoutWidget }) => {
     const allowPageScroll = useContext(WorkflowDiagramAllowPageScrollContext);
+    const fillsViewport = useContext(PageLayoutWidgetViewportContext);
 
     return (
       <div
         data-allow-page-scroll={String(allowPageScroll)}
+        data-fills-viewport={String(fillsViewport)}
         data-testid={widget.id}
       />
     );
@@ -74,6 +78,19 @@ jest.mock('@dnd-kit/react', () => ({
 const makeWidget = (id: string, type: WidgetType): PageLayoutWidget => ({
   ...makePageLayoutWidget(id, 0, 'tab-id'),
   type,
+});
+
+const makeTabViewportWidget = (
+  id: string,
+  type: WidgetType,
+): PageLayoutWidget => ({
+  ...makeWidget(id, type),
+  position: {
+    __typename: 'PageLayoutWidgetVerticalListPosition',
+    layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+    index: 0,
+    heightBehavior: PageLayoutWidgetVerticalListHeightBehavior.TAB_VIEWPORT,
+  },
 });
 
 describe('PageLayoutVerticalList', () => {
@@ -123,6 +140,10 @@ describe('PageLayoutVerticalList', () => {
       'data-fill',
       'true',
     );
+    expect(screen.getByTestId('timeline')).toHaveAttribute(
+      'data-fills-viewport',
+      'true',
+    );
     expect(
       screen
         .getByTestId('fields')
@@ -130,6 +151,10 @@ describe('PageLayoutVerticalList', () => {
     ).toBeNull();
     expect(screen.getByTestId('fields-sortable-cell')).toHaveAttribute(
       'data-fill',
+      'false',
+    );
+    expect(screen.getByTestId('fields')).toHaveAttribute(
+      'data-fills-viewport',
       'false',
     );
   });
@@ -145,6 +170,7 @@ describe('PageLayoutVerticalList', () => {
       makeWidget('emails', WidgetType.EMAILS),
       makeWidget('email-thread', WidgetType.EMAIL_THREAD),
       makeWidget('files', WidgetType.FILES),
+      makeWidget('message-campaign-body', WidgetType.MESSAGE_CAMPAIGN_BODY),
       makeWidget('notes', WidgetType.NOTES),
       makeWidget('tasks', WidgetType.TASKS),
       makeWidget('workflow', WidgetType.WORKFLOW),
@@ -176,27 +202,7 @@ describe('PageLayoutVerticalList', () => {
     ).toBeNull();
   });
 
-  it('keeps campaign documents fit-content so the tab owns scrolling', () => {
-    render(
-      <PageLayoutVerticalList
-        isInEditMode={false}
-        widgets={[
-          makeWidget('message-campaign-body', WidgetType.MESSAGE_CAMPAIGN_BODY),
-        ]}
-      />,
-    );
-
-    expect(
-      screen
-        .getByTestId('message-campaign-body')
-        .closest('.page-layout-viewport-filling-widget-slot'),
-    ).toBeNull();
-    expect(
-      screen.getByTestId('message-campaign-body-sortable-cell'),
-    ).toHaveAttribute('data-fill', 'false');
-  });
-
-  it('gives a lone Canvas front component viewport-filling sizing', () => {
+  it('keeps a legacy Canvas tab full-height when only one widget is visible', () => {
     mockLayoutMode = PageLayoutTabLayoutMode.CANVAS;
 
     render(
@@ -215,16 +221,62 @@ describe('PageLayoutVerticalList', () => {
       'data-fill',
       'true',
     );
+    expect(screen.getByTestId('front-component')).toHaveAttribute(
+      'data-fills-viewport',
+      'true',
+    );
   });
 
-  it('keeps multiple Canvas widgets fit-content', () => {
+  it.each([
+    { isInEditMode: true, isInPinnedTab: false },
+    { isInEditMode: false, isInPinnedTab: true },
+  ])(
+    'preserves legacy Canvas sizing in $isInEditMode edit / $isInPinnedTab pinned mode',
+    ({ isInEditMode, isInPinnedTab }) => {
+      mockLayoutMode = PageLayoutTabLayoutMode.CANVAS;
+      mockIsInPinnedTab = isInPinnedTab;
+
+      render(
+        <PageLayoutVerticalList
+          isInEditMode={isInEditMode}
+          widgets={[makeWidget('front-component', WidgetType.FRONT_COMPONENT)]}
+        />,
+      );
+
+      expect(
+        screen.getByTestId('front-component-sortable-cell'),
+      ).toHaveAttribute('data-fill', 'false');
+      expect(screen.getByTestId('front-component')).toHaveAttribute(
+        'data-fills-viewport',
+        'false',
+      );
+    },
+  );
+
+  it('uses the default viewport height for a Timeline with a null position', () => {
+    render(
+      <PageLayoutVerticalList
+        isInEditMode={false}
+        widgets={[
+          { ...makeWidget('timeline', WidgetType.TIMELINE), position: null },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('timeline-sortable-cell')).toHaveAttribute(
+      'data-fill',
+      'true',
+    );
+  });
+
+  it('keeps viewport-classified widgets fit-content in legacy Canvas tabs', () => {
     mockLayoutMode = PageLayoutTabLayoutMode.CANVAS;
 
     render(
       <PageLayoutVerticalList
         isInEditMode={false}
         widgets={[
-          makeWidget('front-component', WidgetType.FRONT_COMPONENT),
+          makeWidget('timeline', WidgetType.TIMELINE),
           makeWidget('fields', WidgetType.FIELDS),
         ]}
       />,
@@ -232,10 +284,10 @@ describe('PageLayoutVerticalList', () => {
 
     expect(
       screen
-        .getByTestId('front-component')
+        .getByTestId('timeline')
         .closest('.page-layout-viewport-filling-widget-slot'),
     ).toBeNull();
-    expect(screen.getByTestId('front-component-sortable-cell')).toHaveAttribute(
+    expect(screen.getByTestId('timeline-sortable-cell')).toHaveAttribute(
       'data-fill',
       'false',
     );
@@ -245,30 +297,35 @@ describe('PageLayoutVerticalList', () => {
     );
   });
 
-  it('keeps a lone Canvas widget fit-content in edit mode', () => {
-    mockLayoutMode = PageLayoutTabLayoutMode.CANVAS;
-
+  it('gives an explicit TAB_VIEWPORT front component viewport-filling sizing in edit mode', () => {
     render(
       <PageLayoutVerticalList
         isInEditMode
-        widgets={[makeWidget('front-component', WidgetType.FRONT_COMPONENT)]}
+        widgets={[
+          makeTabViewportWidget('front-component', WidgetType.FRONT_COMPONENT),
+        ]}
       />,
     );
 
     expect(screen.getByTestId('front-component-sortable-cell')).toHaveAttribute(
       'data-fill',
-      'false',
+      'true',
+    );
+    expect(screen.getByTestId('front-component')).toHaveAttribute(
+      'data-fills-viewport',
+      'true',
     );
   });
 
-  it('keeps a lone Canvas front component viewport-filling in a side panel', () => {
-    mockLayoutMode = PageLayoutTabLayoutMode.CANVAS;
+  it('keeps an explicit TAB_VIEWPORT front component viewport-filling in a side panel', () => {
     mockIsSideColumnContext = true;
 
     render(
       <PageLayoutVerticalList
         isInEditMode={false}
-        widgets={[makeWidget('front-component', WidgetType.FRONT_COMPONENT)]}
+        widgets={[
+          makeTabViewportWidget('front-component', WidgetType.FRONT_COMPONENT),
+        ]}
       />,
     );
 
@@ -278,18 +335,44 @@ describe('PageLayoutVerticalList', () => {
     );
   });
 
-  it('keeps a lone Canvas widget fit-content in a pinned tab', () => {
-    mockLayoutMode = PageLayoutTabLayoutMode.CANVAS;
+  it('keeps an explicit TAB_VIEWPORT widget viewport-filling in a pinned tab', () => {
     mockIsInPinnedTab = true;
 
     render(
       <PageLayoutVerticalList
         isInEditMode={false}
-        widgets={[makeWidget('front-component', WidgetType.FRONT_COMPONENT)]}
+        widgets={[
+          makeTabViewportWidget('front-component', WidgetType.FRONT_COMPONENT),
+        ]}
       />,
     );
 
     expect(screen.getByTestId('front-component-sortable-cell')).toHaveAttribute(
+      'data-fill',
+      'true',
+    );
+  });
+
+  it('keeps an explicit FIT_CONTENT viewport-classified widget fit-content', () => {
+    render(
+      <PageLayoutVerticalList
+        isInEditMode={false}
+        widgets={[
+          {
+            ...makeWidget('timeline', WidgetType.TIMELINE),
+            position: {
+              __typename: 'PageLayoutWidgetVerticalListPosition',
+              layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+              index: 0,
+              heightBehavior:
+                PageLayoutWidgetVerticalListHeightBehavior.FIT_CONTENT,
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId('timeline-sortable-cell')).toHaveAttribute(
       'data-fill',
       'false',
     );

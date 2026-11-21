@@ -1,20 +1,12 @@
+import { ChartSettingsDropdownSection } from '@/side-panel/pages/page-layout/components/chart-settings/ChartSettingsDropdownSection';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { useRecordTableWidgetLayoutCallbacks } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetLayoutCallbacks';
 import { useRecordTableWidgetLayoutPickerOptions } from '@/page-layout/widgets/record-table/hooks/useRecordTableWidgetLayoutPickerOptions';
 import { type RecordTableWidgetLayoutViewType } from '@/page-layout/widgets/record-table/types/RecordTableWidgetLayoutViewType';
-import {
-  getSelectableLayoutViewTypes,
-  isSelectableLayout,
-} from '@/page-layout/widgets/record-table/utils/getRecordTableWidgetLayoutPickerOptions';
+import { isSelectableLayout } from '@/page-layout/widgets/record-table/utils/getRecordTableWidgetLayoutPickerOptions';
 import { RecordTableWidgetLayoutMenuItems } from '@/side-panel/pages/page-layout/components/record-table-settings/RecordTableWidgetLayoutMenuItems';
-import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
-import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
-import { SelectableList } from '@/ui/layout/selectable-list/components/SelectableList';
-import { selectedItemIdComponentState } from '@/ui/layout/selectable-list/states/selectedItemIdComponentState';
-import { DropdownComponentInstanceContext } from '@/ui/layout/dropdown/contexts/DropdownComponentInstanceContext';
-import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
-import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
-import { useWorkspaceSurfaceScopedComponentInstanceId } from '@/ui/layout/hooks/useWorkspaceSurfaceScopedComponentInstanceId';
+import { useLingui } from '@lingui/react/macro';
 
 type RecordTableLayoutDropdownContentProps = {
   pageLayoutId: string;
@@ -29,25 +21,12 @@ export const RecordTableLayoutDropdownContent = ({
   objectMetadataId,
   currentLayoutViewType,
 }: RecordTableLayoutDropdownContentProps) => {
+  const { t } = useLingui();
   const { objectMetadataItems } = useObjectMetadataItems();
   const objectMetadataItem = objectMetadataItems.find(
     (objectMetadataItemToFind) =>
       objectMetadataItemToFind.id === objectMetadataId,
   );
-
-  const dropdownId = useAvailableComponentInstanceIdOrThrow(
-    DropdownComponentInstanceContext,
-  );
-
-  const scopedDropdownId =
-    useWorkspaceSurfaceScopedComponentInstanceId(dropdownId);
-
-  const selectedItemId = useAtomComponentStateValue(
-    selectedItemIdComponentState,
-    scopedDropdownId,
-  );
-
-  const { closeDropdown } = useCloseDropdown();
 
   const { handleLayoutChange } = useRecordTableWidgetLayoutCallbacks({
     pageLayoutId,
@@ -71,23 +50,19 @@ export const RecordTableLayoutDropdownContent = ({
       defaultGroupByFieldMetadataItem,
       defaultCalendarFieldMetadataItem,
     });
-    closeDropdown();
   };
 
   return (
-    <DropdownMenuItemsContainer>
-      <SelectableList
-        selectableListInstanceId={dropdownId}
-        selectableItemIdArray={getSelectableLayoutViewTypes(layoutOptions)}
-        focusId={dropdownId}
+    <ChartSettingsDropdownSection>
+      <Dropdown.SelectionGroup
+        aria-label={t`Layout`}
+        value={currentLayoutViewType}
       >
         <RecordTableWidgetLayoutMenuItems
           layoutOptions={layoutOptions}
-          selectedViewType={currentLayoutViewType}
-          focusedItemId={selectedItemId}
           onSelect={handleSelectLayout}
         />
-      </SelectableList>
-    </DropdownMenuItemsContainer>
+      </Dropdown.SelectionGroup>
+    </ChartSettingsDropdownSection>
   );
 };

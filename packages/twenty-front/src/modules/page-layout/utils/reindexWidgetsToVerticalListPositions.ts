@@ -1,15 +1,13 @@
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
-import { sortWidgetsWithViewportFillingLast } from '@/page-layout/utils/sortWidgetsWithViewportFillingLast';
-import { PageLayoutTabLayoutMode } from '~/generated-metadata/graphql';
+import { reindexWidgetsToVerticalListPositions as reindexWidgets } from 'twenty-shared/utils';
 
 export const reindexWidgetsToVerticalListPositions = (
   widgets: PageLayoutWidget[],
 ): PageLayoutWidget[] =>
-  sortWidgetsWithViewportFillingLast(widgets).map((widget, index) => ({
+  reindexWidgets(widgets).map((widget) => ({
     ...widget,
     position: {
-      __typename: 'PageLayoutWidgetVerticalListPosition' as const,
-      layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
-      index,
+      ...widget.position,
+      __typename: 'PageLayoutWidgetVerticalListPosition',
     },
   }));

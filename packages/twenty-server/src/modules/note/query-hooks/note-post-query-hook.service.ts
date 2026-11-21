@@ -27,7 +27,7 @@ export class NotePostQueryHookService {
 
     await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
       const noteTargetRepository =
-        this.workspaceOrmManager.getRepository<NoteTargetWorkspaceEntity>(
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<NoteTargetWorkspaceEntity>(
           'noteTarget',
         );
 
@@ -51,7 +51,7 @@ export class NotePostQueryHookService {
 
     await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
       const noteTargetRepository =
-        this.workspaceOrmManager.getRepository<NoteTargetWorkspaceEntity>(
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<NoteTargetWorkspaceEntity>(
           'noteTarget',
         );
 

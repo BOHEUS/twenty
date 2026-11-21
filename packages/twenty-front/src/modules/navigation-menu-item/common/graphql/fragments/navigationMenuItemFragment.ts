@@ -8,14 +8,20 @@ export const NAVIGATION_MENU_ITEM_FRAGMENT = gql`
     targetRecordId
     targetObjectMetadataId
     viewId
-    folderId
+    parentId
     name
     link
+    nativePageKey
+    builtInSectionKey
     icon
     color
     pageLayoutId
+    agentChatChannelId
+    workflowId
+    agentId
     position
     applicationId
+    isActive
     createdAt
     updatedAt
   }

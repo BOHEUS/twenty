@@ -8,8 +8,7 @@ import { SettingsWorkspaceUnsubscribeTopicSection } from '@/settings/unsubscribe
 import { SettingsUnsubscribePreview } from '@/settings/unsubscribers/components/SettingsUnsubscribePreview';
 import { SettingsUnsubscribersList } from '@/settings/unsubscribers/components/SettingsUnsubscribersList';
 import { SETTINGS_UNSUBSCRIBE_TAB_IDS } from '@/settings/unsubscribers/constants/SettingsUnsubscribeTabIds';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
-import { FeatureFlagKey, SettingsPath } from 'twenty-shared/types';
+import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
 import { IconEye, IconForbid, IconMailCog } from 'twenty-ui/icon';
 
@@ -18,14 +17,10 @@ const UNSUBSCRIBE_TABS_INSTANCE_ID = 'settings-unsubscribe-tabs';
 export const SettingsWorkspaceUnsubscribe = () => {
   const { t } = useLingui();
 
-  const isEmailGroupEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_EMAIL_GROUP_ENABLED,
-  );
-
   const tabs = [
     {
       id: SETTINGS_UNSUBSCRIBE_TAB_IDS.UNSUBSCRIBERS,
-      title: t`Unsubscribers`,
+      title: t`Opt-outs`,
       Icon: IconForbid,
     },
     {
@@ -45,10 +40,6 @@ export const SettingsWorkspaceUnsubscribe = () => {
     tabs.map((tab) => tab.id),
   );
 
-  if (!isEmailGroupEnabled) {
-    return null;
-  }
-
   return (
     <SettingsPageLayout
       title={t`Unsubscribe`}
@@ -65,6 +56,7 @@ export const SettingsWorkspaceUnsubscribe = () => {
       ]}
       secondaryBar={
         <SettingsTabBar
+          aria-label={t`Unsubscribe settings`}
           tabs={tabs}
           componentInstanceId={UNSUBSCRIBE_TABS_INSTANCE_ID}
         />

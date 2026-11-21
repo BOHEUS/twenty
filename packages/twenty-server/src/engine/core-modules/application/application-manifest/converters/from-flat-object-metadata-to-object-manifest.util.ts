@@ -31,8 +31,12 @@ export const fromFlatObjectMetadataToObjectManifest = ({
   isSearchable: flatObjectMetadata.isSearchable,
   isUICreatable: flatObjectMetadata.isUICreatable,
   isUIEditable: flatObjectMetadata.isUIEditable,
-  writability: flatObjectMetadata.writability,
-  readability: flatObjectMetadata.readability,
+  ...(isDefined(flatObjectMetadata.disabledObjectPermissionActions)
+    ? {
+        disabledObjectPermissionActions:
+          flatObjectMetadata.disabledObjectPermissionActions,
+      }
+    : {}),
   openRecordIn: flatObjectMetadata.openRecordIn,
   labelIdentifierFieldMetadataUniversalIdentifier,
   imageIdentifierFieldMetadataUniversalIdentifier:

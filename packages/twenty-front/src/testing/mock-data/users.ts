@@ -1,11 +1,13 @@
+import { getMockedDateWithOffset } from '~/testing/utils/getMockedDateWithOffset';
 import { type CurrentUserWorkspace } from '@/auth/states/currentUserWorkspaceState';
 import { CUSTOM_WORKSPACE_APPLICATION_MOCK } from '@/object-metadata/hooks/__tests__/constants/CustomWorkspaceApplicationMock.test.constant';
 import { type WorkspaceMember } from '@/workspace-member/types/WorkspaceMember';
+import { DEFAULT_AI_CHAT_ASSISTANT_PROFILE } from 'twenty-shared/ai';
 import {
-  AUTO_SELECT_FAST_MODEL_ID,
-  AUTO_SELECT_SMART_MODEL_ID,
-} from 'twenty-shared/constants';
-import {
+  AiChatAssistantMode,
+  AiModelTier,
+  BillingPlanKey,
+  BillingProductKey,
   OnboardingStatus,
   PermissionFlagType,
   SubscriptionInterval,
@@ -53,10 +55,6 @@ const PRO_BASE_LICENSED_PRODUCT = PRO_PLAN?.baseProducts?.[0]!;
 const PRO_BASE_MONTHLY_PRICE = PRO_BASE_LICENSED_PRODUCT?.prices?.find(
   (pr) => pr.recurringInterval === 'Month',
 )!;
-const PRO_METERED_PRODUCT = PRO_PLAN?.meteredProducts?.[0]!;
-const PRO_METERED_MONTHLY_PRICE = PRO_METERED_PRODUCT?.prices?.find(
-  (pr) => pr.recurringInterval === 'Month',
-)!;
 
 export const mockCurrentWorkspace = {
   workspaceCustomApplication: CUSTOM_WORKSPACE_APPLICATION_MOCK,
@@ -68,15 +66,19 @@ export const mockCurrentWorkspace = {
   inviteHash: 'twenty.com-invite-hash',
   logo: workspaceLogoUrl,
   isPublicInviteLinkEnabled: true,
+  isCampaignClickTrackingEnabled: false,
+  isCampaignOpenTrackingEnabled: false,
   workspaceDiscoverability: WorkspaceDiscoverability.PUBLIC,
   allowImpersonation: true,
   activationStatus: WorkspaceActivationStatus.ACTIVE,
   hasValidSignedEnterpriseKey: false,
   hasValidEnterpriseValidityToken: false,
+  isTrialAvailable: true,
   isGoogleAuthEnabled: true,
   isPasswordAuthEnabled: true,
   isMicrosoftAuthEnabled: false,
   isCustomDomainEnabled: false,
+  iframeMediaPermissions: [],
   isPasswordAuthBypassEnabled: false,
   isGoogleAuthBypassEnabled: false,
   isMicrosoftAuthBypassEnabled: false,
@@ -89,18 +91,24 @@ export const mockCurrentWorkspace = {
   updatedAt: '2023-04-26T10:23:42.33625+00:00',
   metadataVersion: 1,
   trashRetentionDays: 14,
-  fastModel: AUTO_SELECT_FAST_MODEL_ID,
-  smartModel: AUTO_SELECT_SMART_MODEL_ID,
-  routerModel: 'auto',
-  enabledAiModelIds: [],
-  useRecommendedModels: true,
+  aiChatModelTier: AiModelTier.fast,
+  aiChatAssistantProfile: {
+    ...DEFAULT_AI_CHAT_ASSISTANT_PROFILE,
+    __typename: 'AiChatAssistantProfile',
+  },
+  aiChatDirectMessageAssistantMode: AiChatAssistantMode.MENTION_ONLY,
+  aiChatInboxAssistantMode: AiChatAssistantMode.AUTOMATIC,
+  aiAgentModelTier: AiModelTier.fast,
+  isAutoModelSelectionEnabled: true,
+  aiModelIdByTier: {},
+  isInternalImportEnabled: false,
   isInternalMessagesImportEnabled: false,
   currentBillingSubscription: {
     __typename: 'BillingSubscription',
     id: '7efbc3f7-6e5e-4128-957e-8d86808cdf6a',
     interval: SubscriptionInterval.Month,
     status: SubscriptionStatus.Active,
-    currentPeriodEnd: new Date().toString(),
+    currentPeriodEnd: getMockedDateWithOffset({ months: 1 }),
     metadata: {
       plan: PRO_PLAN.planKey,
     },
@@ -112,6 +120,8 @@ export const mockCurrentWorkspace = {
         hasReachedCurrentPeriodCap: false,
         quantity: 1,
         stripePriceId: PRO_BASE_MONTHLY_PRICE.stripePriceId,
+        unitAmount: PRO_BASE_MONTHLY_PRICE.unitAmount,
+        creditAmount: PRO_BASE_MONTHLY_PRICE.creditAmount,
         billingProduct: {
           name: PRO_BASE_LICENSED_PRODUCT.name,
           description: PRO_BASE_LICENSED_PRODUCT.description,
@@ -124,12 +134,19 @@ export const mockCurrentWorkspace = {
         id: '11111111-1111-4111-8111-111111111112',
         hasReachedCurrentPeriodCap: false,
         quantity: null,
-        stripePriceId: PRO_METERED_MONTHLY_PRICE.stripePriceId,
+        stripePriceId: 'price_1S5245Qh1LFc4XrXPCSjYIq0',
+        unitAmount: null,
+        creditAmount: null,
         billingProduct: {
-          name: PRO_METERED_PRODUCT.name,
-          description: PRO_METERED_PRODUCT.description,
-          images: PRO_METERED_PRODUCT.images,
-          metadata: PRO_METERED_PRODUCT.metadata,
+          name: 'Resource Usage - Pro',
+          description: '',
+          images: [],
+          metadata: {
+            __typename: 'BillingProductMetadata',
+            isLegacy: null,
+            productKey: BillingProductKey.RESOURCE_CREDIT,
+            planKey: BillingPlanKey.PRO,
+          },
         },
       },
     ],
@@ -149,6 +166,8 @@ export const mockCurrentWorkspace = {
           hasReachedCurrentPeriodCap: false,
           quantity: 1,
           stripePriceId: PRO_BASE_MONTHLY_PRICE.stripePriceId,
+          unitAmount: PRO_BASE_MONTHLY_PRICE.unitAmount,
+          creditAmount: PRO_BASE_MONTHLY_PRICE.creditAmount,
           billingProduct: {
             name: PRO_BASE_LICENSED_PRODUCT.name,
             description: PRO_BASE_LICENSED_PRODUCT.description,
@@ -204,16 +223,17 @@ export const mockedUserData: MockedUser = {
       PermissionFlagType.CONNECTED_ACCOUNTS,
     ],
     twoFactorAuthenticationMethodSummary: [],
-    objectsPermissions: getTestEnrichedObjectMetadataItemsMock().map(
+    objectRecordsPermissions: getTestEnrichedObjectMetadataItemsMock().map(
       (item) => ({
         objectMetadataId: item.id,
-        canReadObjectRecords: true,
-        canUpdateObjectRecords: true,
-        canSoftDeleteObjectRecords: true,
-        canDestroyObjectRecords: true,
+        canCreateAllRecords: true,
+        canReadAllRecords: true,
+        canUpdateAllRecords: true,
+        canSoftDeleteAllRecords: true,
+        canDestroyAllRecords: true,
+        unreadableFields: [],
+        uneditableFields: [],
         restrictedFields: {},
-        rowLevelPermissionPredicates: [],
-        rowLevelPermissionPredicateGroups: [],
       }),
     ),
   },
@@ -232,22 +252,24 @@ export const mockedLimitedPermissionsUserData: MockedUser = {
   ...mockedUserData,
   currentUserWorkspace: {
     ...mockedUserData.currentUserWorkspace,
-    objectsPermissions: getTestEnrichedObjectMetadataItemsMock()
-      .filter(
-        (objectMetadata) =>
-          objectMetadata.nameSingular !== 'task' &&
-          objectMetadata.nameSingular !== 'opportunity',
-      )
-      .map((item) => ({
-        objectMetadataId: item.id,
-        canReadObjectRecords: true,
-        canUpdateObjectRecords: true,
-        canSoftDeleteObjectRecords: true,
-        canDestroyObjectRecords: true,
-        restrictedFields: {},
-        rowLevelPermissionPredicates: [],
-        rowLevelPermissionPredicateGroups: [],
-      })),
+    objectRecordsPermissions: getTestEnrichedObjectMetadataItemsMock().map(
+      (item) => {
+        const hasAccess =
+          item.nameSingular !== 'task' && item.nameSingular !== 'opportunity';
+
+        return {
+          objectMetadataId: item.id,
+          canCreateAllRecords: hasAccess,
+          canReadAllRecords: hasAccess,
+          canUpdateAllRecords: hasAccess,
+          canSoftDeleteAllRecords: hasAccess,
+          canDestroyAllRecords: hasAccess,
+          unreadableFields: [],
+          uneditableFields: [],
+          restrictedFields: {},
+        };
+      },
+    ),
   },
 };
 
@@ -270,16 +292,17 @@ export const mockedOnboardingUserData = (
     currentWorkspace: mockCurrentWorkspace,
     currentUserWorkspace: {
       permissionFlags: [PermissionFlagType.WORKSPACE_MEMBERS],
-      objectPermissions: getTestEnrichedObjectMetadataItemsMock().map(
+      objectRecordsPermissions: getTestEnrichedObjectMetadataItemsMock().map(
         (item) => ({
           objectMetadataId: item.id,
-          canReadObjectRecords: true,
-          canUpdateObjectRecords: true,
-          canSoftDeleteObjectRecords: true,
-          canDestroyObjectRecords: true,
+          canCreateAllRecords: true,
+          canReadAllRecords: true,
+          canUpdateAllRecords: true,
+          canSoftDeleteAllRecords: true,
+          canDestroyAllRecords: true,
+          unreadableFields: [],
+          uneditableFields: [],
           restrictedFields: {},
-          rowLevelPermissionPredicates: [],
-          rowLevelPermissionPredicateGroups: [],
         }),
       ),
     },

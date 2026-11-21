@@ -1,19 +1,20 @@
-import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   ResetTimelineActivityTypeDocument,
   UpdateTimelineActivityTypeIsActiveDocument,
 } from '~/generated-metadata/graphql';
 import { useInstalledTimelineActivityTypes } from '~/pages/settings/applications/hooks/useInstalledTimelineActivityTypes';
+import { useLingui } from '@lingui/react/macro';
 
 export const useApplicationTimelineActivityTypes = ({
   isInstalledApplication,
 }: {
   isInstalledApplication: boolean;
 }) => {
-  const { enqueueErrorSnackBar } = useSnackBar();
+  const { t } = useLingui();
+  const { enqueueToast } = useToast();
   const [mutatingTimelineActivityTypeIds, setMutatingTimelineActivityTypeIds] =
     useState<ReadonlySet<string>>(new Set());
   const { installedTimelineActivityTypes, loading } =
@@ -42,9 +43,7 @@ export const useApplicationTimelineActivityTypes = ({
     try {
       await mutation();
     } catch {
-      enqueueErrorSnackBar({
-        message: errorMessage,
-      });
+      enqueueToast({ status: 'error', children: errorMessage });
     } finally {
       setMutatingTimelineActivityTypeIds((currentIds) => {
         const nextIds = new Set(currentIds);

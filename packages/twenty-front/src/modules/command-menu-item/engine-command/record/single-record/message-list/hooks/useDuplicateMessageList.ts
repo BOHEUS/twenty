@@ -1,22 +1,26 @@
 import { useMetadataErrorHandler } from '@/metadata-error-handler/hooks/useMetadataErrorHandler';
 import { useAddDuplicatedRecordToCache } from '@/object-record/cache/hooks/useAddDuplicatedRecordToCache';
-import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
-import { CoreObjectNameSingular, CrudOperationType } from 'twenty-shared/types';
+import {
+  StandardObjectNameSingular,
+  CrudOperationType,
+} from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
 import { DuplicateMessageListDocument } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 export const useDuplicateMessageList = () => {
+  const { t } = useLingui();
   const { addDuplicatedRecordToCache } = useAddDuplicatedRecordToCache({
-    objectNameSingular: CoreObjectNameSingular.MessageList,
+    objectNameSingular: StandardObjectNameSingular.MessageList,
   });
 
   const [mutate] = useMutation(DuplicateMessageListDocument);
 
   const { handleMetadataError } = useMetadataErrorHandler();
-  const { enqueueErrorSnackBar } = useSnackBar();
+  const { enqueueToast } = useToast();
 
   const duplicateMessageList = async (messageListId: string) => {
     try {
@@ -25,7 +29,9 @@ export const useDuplicateMessageList = () => {
         update: (cache, { data }) => {
           const record = data?.duplicateMessageList;
 
-          if (!isDefined(record)) return;
+          if (!isDefined(record)) {
+            return;
+          }
 
           const { memberCount: _memberCount, ...duplicatedListRecord } = record;
 
@@ -44,7 +50,10 @@ export const useDuplicateMessageList = () => {
           operationType: CrudOperationType.CREATE,
         });
       } else {
-        enqueueErrorSnackBar({ message: t`Failed to duplicate list` });
+        enqueueToast({
+          status: 'error',
+          children: t`Failed to duplicate list`,
+        });
       }
 
       return undefined;

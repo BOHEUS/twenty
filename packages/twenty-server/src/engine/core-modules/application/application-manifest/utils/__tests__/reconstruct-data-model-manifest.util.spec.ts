@@ -116,7 +116,6 @@ const buildIndex = (overrides: Partial<FlatIndexMetadata>): FlatIndexMetadata =>
     objectMetadataUniversalIdentifier: PET_UID,
     indexType: IndexType.BTREE,
     indexWhereClause: null,
-    isCustom: false,
     isUnique: false,
     isSystemSideEffect: false,
     createdAt: '2026-09-03T10:00:00.000Z',
@@ -151,7 +150,7 @@ describe('reconstructDataModelManifest', () => {
     });
 
     expect(objects).toHaveLength(1);
-    expect(objects[0].fields.map(({ name }) => name)).toEqual(['age', 'name']);
+    expect(objects[0].fields.map(({ name }) => name)).toEqual(['name', 'age']);
     expect(fields).toEqual([]);
     expect(statusOf(coverage, ID_FIELD_UID)?.status).toBe(
       ApplicationExportCoverageStatus.ENGINE_DERIVED,
@@ -281,7 +280,7 @@ describe('reconstructDataModelManifest', () => {
       }),
     });
 
-    expect(objects[0].fields.map(({ name }) => name)).toEqual(['age', 'name']);
+    expect(objects[0].fields.map(({ name }) => name)).toEqual(['name', 'age']);
     expect(statusOf(coverage, RELATION_FIELD_UID)).toMatchObject({
       status: ApplicationExportCoverageStatus.UNSUPPORTED,
       reason: 'relation field without target or settings',
@@ -296,7 +295,11 @@ describe('reconstructDataModelManifest', () => {
           nameField,
           buildPetField({
             ...ageField,
-            overrides: { label: 'Age in years' },
+            overrides: {
+              '20202020-aaaa-4aaa-8aaa-000000000001': {
+                label: 'Age in years',
+              },
+            },
           }),
         ],
       }),

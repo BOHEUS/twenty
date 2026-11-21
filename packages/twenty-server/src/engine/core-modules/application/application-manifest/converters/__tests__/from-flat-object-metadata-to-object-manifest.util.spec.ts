@@ -1,9 +1,5 @@
 import { type ObjectManifest } from 'twenty-shared/application';
-import {
-  MetadataReadability,
-  MetadataWritability,
-  ObjectOpenRecordIn,
-} from 'twenty-shared/types';
+import { ObjectOpenRecordIn } from 'twenty-shared/types';
 
 import { fromFlatObjectMetadataToObjectManifest } from 'src/engine/core-modules/application/application-manifest/converters/from-flat-object-metadata-to-object-manifest.util';
 import { fromObjectManifestToUniversalFlatObjectMetadata } from 'src/engine/core-modules/application/application-manifest/converters/from-object-manifest-to-universal-flat-object-metadata.util';
@@ -29,8 +25,7 @@ const OBJECT_MANIFEST: Required<ObjectManifest> = {
   isSearchable: false,
   isUICreatable: false,
   isUIEditable: false,
-  writability: MetadataWritability.APPLICATION,
-  readability: MetadataReadability.PRIVATE,
+  disabledObjectPermissionActions: ['canDestroyObjectRecords'],
   openRecordIn: ObjectOpenRecordIn.RECORD_PAGE,
   labelIdentifierFieldMetadataUniversalIdentifier: LABEL_FIELD_UID,
   imageIdentifierFieldMetadataUniversalIdentifier: IMAGE_FIELD_UID,
@@ -62,10 +57,14 @@ describe('fromFlatObjectMetadataToObjectManifest', () => {
       description: null,
       icon: null,
       color: 'red',
+      shortcut: null,
+      targetTableName: 'DEPRECATED',
       isLabelSyncedWithName: true,
       isSearchable: false,
-      writability: MetadataWritability.APPLICATION,
-      readability: MetadataReadability.PRIVATE,
+      disabledObjectPermissionActions: [
+        'canUpdateObjectRecords',
+        'canCreateObjectRecords',
+      ],
       openRecordIn: ObjectOpenRecordIn.SIDE_PANEL,
       labelIdentifierFieldMetadataUniversalIdentifier: LABEL_FIELD_UID,
       imageIdentifierFieldMetadataUniversalIdentifier: null,

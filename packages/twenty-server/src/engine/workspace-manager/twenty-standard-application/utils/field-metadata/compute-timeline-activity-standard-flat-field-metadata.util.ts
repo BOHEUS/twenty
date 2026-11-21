@@ -8,6 +8,7 @@ import {
   RelationType,
 } from 'twenty-shared/types';
 
+import { createStandardMorphRelationHeadFlatMetadata } from 'src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/create-standard-morph-relation-head-flat-metadata.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
 import { type AllStandardObjectFieldName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-field-name.type';
 import {
@@ -35,9 +36,9 @@ export const buildTimelineActivityStandardFlatFieldMetadatas = ({
     context: {
       fieldName: 'id',
       type: FieldMetadataType.UUID,
-      label: i18nLabel(msg({ message: `Id`, context: 'fieldMetadata.label' })),
+      label: i18nLabel(msg({ message: `ID`, context: 'fieldMetadata.label' })),
       description: i18nLabel(
-        msg({ message: `Id`, context: 'fieldMetadata.description' }),
+        msg({ message: `ID`, context: 'fieldMetadata.description' }),
       ),
       icon: 'Icon123',
       isSystem: true,
@@ -295,7 +296,7 @@ export const buildTimelineActivityStandardFlatFieldMetadatas = ({
       ),
       description: i18nLabel(
         msg({
-          message: `Json value for event details`,
+          message: `JSON value for event details`,
           context: 'fieldMetadata.description',
         }),
       ),
@@ -369,13 +370,13 @@ export const buildTimelineActivityStandardFlatFieldMetadatas = ({
       type: FieldMetadataType.UUID,
       label: i18nLabel(
         msg({
-          message: `Linked Object Metadata Id`,
+          message: `Linked Object Metadata ID`,
           context: 'fieldMetadata.label',
         }),
       ),
       description: i18nLabel(
         msg({
-          message: `Linked Object Metadata Id`,
+          message: `Linked Object Metadata ID`,
           context: 'fieldMetadata.description',
         }),
       ),
@@ -417,6 +418,14 @@ export const buildTimelineActivityStandardFlatFieldMetadatas = ({
         joinColumnName: 'workspaceMemberId',
       },
     },
+    standardObjectMetadataRelatedEntityIds,
+    dependencyFlatEntityMaps,
+    twentyStandardApplicationId,
+    now,
+  }),
+  target: createStandardMorphRelationHeadFlatMetadata({
+    objectName,
+    workspaceId,
     standardObjectMetadataRelatedEntityIds,
     dependencyFlatEntityMaps,
     twentyStandardApplicationId,
@@ -565,66 +574,6 @@ export const buildTimelineActivityStandardFlatFieldMetadatas = ({
         relationType: RelationType.MANY_TO_ONE,
         onDelete: RelationOnDeleteAction.SET_NULL,
         joinColumnName: 'targetTaskId',
-      },
-    },
-    standardObjectMetadataRelatedEntityIds,
-    dependencyFlatEntityMaps,
-    twentyStandardApplicationId,
-    now,
-  }),
-  targetWorkflow: createStandardRelationFieldFlatMetadata({
-    objectName,
-    workspaceId,
-    context: {
-      type: FieldMetadataType.MORPH_RELATION,
-      morphId: STANDARD_OBJECTS.timelineActivity.morphIds.targetMorphId.morphId,
-      fieldName: 'targetWorkflow',
-      label: i18nLabel(
-        msg({ message: `Workflow`, context: 'fieldMetadata.label' }),
-      ),
-      description: i18nLabel(
-        msg({ message: `Event target`, context: 'fieldMetadata.description' }),
-      ),
-      icon: 'IconTimelineEvent',
-      isNullable: true,
-      isUIEditable: false,
-      isSystemSideEffect: true,
-      targetObjectName: 'workflow',
-      targetFieldName: 'timelineActivities',
-      settings: {
-        relationType: RelationType.MANY_TO_ONE,
-        onDelete: RelationOnDeleteAction.CASCADE,
-        joinColumnName: 'targetWorkflowId',
-      },
-    },
-    standardObjectMetadataRelatedEntityIds,
-    dependencyFlatEntityMaps,
-    twentyStandardApplicationId,
-    now,
-  }),
-  targetWorkflowVersion: createStandardRelationFieldFlatMetadata({
-    objectName,
-    workspaceId,
-    context: {
-      type: FieldMetadataType.MORPH_RELATION,
-      morphId: STANDARD_OBJECTS.timelineActivity.morphIds.targetMorphId.morphId,
-      fieldName: 'targetWorkflowVersion',
-      label: i18nLabel(
-        msg({ message: `WorkflowVersion`, context: 'fieldMetadata.label' }),
-      ),
-      description: i18nLabel(
-        msg({ message: `Event target`, context: 'fieldMetadata.description' }),
-      ),
-      icon: 'IconTimelineEvent',
-      isNullable: true,
-      isUIEditable: false,
-      isSystemSideEffect: true,
-      targetObjectName: 'workflowVersion',
-      targetFieldName: 'timelineActivities',
-      settings: {
-        relationType: RelationType.MANY_TO_ONE,
-        onDelete: RelationOnDeleteAction.CASCADE,
-        joinColumnName: 'targetWorkflowVersionId',
       },
     },
     standardObjectMetadataRelatedEntityIds,

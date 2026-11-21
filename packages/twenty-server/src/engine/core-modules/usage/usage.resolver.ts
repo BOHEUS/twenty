@@ -18,17 +18,34 @@ import {
   type UsageBreakdownItem,
 } from 'src/engine/core-modules/usage/services/usage-analytics.service';
 import { consolidateUsageByApplication } from 'src/engine/core-modules/usage/utils/consolidate-usage-by-application.util';
+import { listDeclaredBillingChargeNames } from 'src/engine/core-modules/usage/utils/list-declared-billing-charge-names.util';
+import { fromUsageBreakdownItemToUsageBreakdownItemDTO } from 'src/engine/core-modules/usage/utils/from-usage-breakdown-item-to-usage-breakdown-item-dto.util';
 import { toDisplayCredits } from 'src/engine/core-modules/usage/utils/to-display-credits.util';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { type WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
 @MetadataResolver()
 @UseFilters(PreventNestToAutoLogGraphqlErrorsFilter)
 @UsePipes(ResolverValidationPipe)
+@UseGuards(
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: true,
+      oauthClient: true,
+      application: true,
+    },
+    requiredPermissionFlags: [PermissionFlagType.WORKSPACE],
+  }),
+)
 export class UsageResolver {
   constructor(
     private readonly usageAnalyticsService: UsageAnalyticsService,
@@ -38,10 +55,6 @@ export class UsageResolver {
   ) {}
 
   @Query(() => UsageAnalyticsDTO)
-  @UseGuards(
-    WorkspaceAuthGuard,
-    SettingsPermissionGuard(PermissionFlagType.WORKSPACE),
-  )
   async getUsageAnalytics(
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Args('input', { nullable: true }) input?: UsageAnalyticsInput,
@@ -66,16 +79,12 @@ export class UsageResolver {
         'flatApplicationMaps',
       ]);
 
-    // Per application, not workspace-wide: two apps may use the same operation
-    // name, and only the one that declared it should keep it as its own slice.
+    // Per application: two apps may declare the same operation name.
     const declaredOperationsByApplicationId = Object.fromEntries(
       Object.entries(flatApplicationMaps.byId).map(
         ([applicationId, application]) => [
           applicationId,
-          [
-            ...Object.keys(application?.billing?.recurring ?? {}),
-            ...Object.keys(application?.billing?.operations ?? {}),
-          ],
+          listDeclaredBillingChargeNames({ billing: application?.billing }),
         ],
       ),
     );
@@ -112,25 +121,22 @@ export class UsageResolver {
     });
 
     const result: UsageAnalyticsDTO = {
-      usageByUser: resolvedUsageByUser.map((item) => ({
-        ...item,
-        creditsUsed: toDisplayCredits(item.creditsUsed),
-      })),
-      usageByOperationType: usageByOperationType.map((item) => ({
-        ...item,
-        creditsUsed: toDisplayCredits(item.creditsUsed),
-      })),
-      usageByApplication: resolvedUsageByApplication.map((item) => ({
-        ...item,
-        creditsUsed: toDisplayCredits(item.creditsUsed),
-      })),
-      usageByModel: usageByModel.map((item) => ({
-        ...item,
-        creditsUsed: toDisplayCredits(item.creditsUsed),
-      })),
+      usageByUser: resolvedUsageByUser.map(
+        fromUsageBreakdownItemToUsageBreakdownItemDTO,
+      ),
+      usageByOperationType: usageByOperationType.map(
+        fromUsageBreakdownItemToUsageBreakdownItemDTO,
+      ),
+      usageByApplication: resolvedUsageByApplication.map(
+        fromUsageBreakdownItemToUsageBreakdownItemDTO,
+      ),
+      usageByModel: usageByModel.map(
+        fromUsageBreakdownItemToUsageBreakdownItemDTO,
+      ),
       timeSeries: timeSeries.map((point) => ({
         ...point,
         creditsUsed: toDisplayCredits(point.creditsUsed),
+        workspaceCreditsUsed: toDisplayCredits(point.workspaceCreditsUsed),
       })),
       periodStart,
       periodEnd,
@@ -154,6 +160,7 @@ export class UsageResolver {
           dailyUsage: dailyUsage.map((point) => ({
             ...point,
             creditsUsed: toDisplayCredits(point.creditsUsed),
+            workspaceCreditsUsed: toDisplayCredits(point.workspaceCreditsUsed),
           })),
         };
       }

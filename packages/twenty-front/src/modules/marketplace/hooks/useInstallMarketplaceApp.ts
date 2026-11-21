@@ -2,20 +2,20 @@ import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { useTrackedQueueJob } from '@/queue-job/hooks/useTrackedQueueJob';
 import { type TrackedJobStatus } from '@/queue-job/types/TrackedJobStatus';
 import { isTerminalJobState } from '@/queue-job/utils/isTerminalJobState';
-import { useSnackBar } from '@/ui/feedback/snack-bar-manager/hooks/useSnackBar';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useLazyQuery, useMutation, useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useCallback } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   FindInstallApplicationJobStatusDocument,
   FindOneApplicationByUniversalIdentifierDocument,
   type FindOneApplicationByUniversalIdentifierQuery,
   JobState,
-  TriggerInstallApplicationJobDocument,
+  TriggerInstallApplicationDocument,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type UseInstallMarketplaceAppArgs = {
   universalIdentifier?: string;
@@ -28,11 +28,16 @@ export const useInstallMarketplaceApp = ({
   universalIdentifier,
   onCompleted,
 }: UseInstallMarketplaceAppArgs = {}) => {
-  const { enqueueErrorSnackBar, enqueueSuccessSnackBar } = useSnackBar();
-  const [triggerInstallApplicationJob, { loading: isTriggeringInstall }] =
-    useMutation(TriggerInstallApplicationJobDocument);
+  const { t } = useLingui();
+  const { enqueueToast } = useToast();
+  const [triggerInstallApplication, { loading: isTriggeringInstall }] =
+    useMutation(TriggerInstallApplicationDocument);
   const [findInstalledApplication] = useLazyQuery(
     FindOneApplicationByUniversalIdentifierDocument,
+    { fetchPolicy: 'network-only' },
+  );
+  const [findInstallApplicationJobStatus] = useLazyQuery(
+    FindInstallApplicationJobStatusDocument,
     { fetchPolicy: 'network-only' },
   );
   const setCurrentWorkspace = useSetAtomState(currentWorkspaceState);
@@ -47,16 +52,23 @@ export const useInstallMarketplaceApp = ({
   );
 
   const runningJobStatus = jobStatusData?.findInstallApplicationJobStatus;
-  const runningJobId =
-    isDefined(runningJobStatus) && !isTerminalJobState(runningJobStatus.state)
-      ? runningJobStatus.jobId
+  const runningJob =
+    isDefined(runningJobStatus) &&
+    !isTerminalJobState(runningJobStatus.state) &&
+    isDefined(universalIdentifier)
+      ? {
+          jobId: runningJobStatus.jobId,
+          context: universalIdentifier,
+          progress: runningJobStatus.progress ?? undefined,
+        }
       : undefined;
 
   const handleInstallJobSettled = useCallback(
     async (jobStatus: TrackedJobStatus, trackedUniversalIdentifier: string) => {
       if (jobStatus.state === JobState.FAILED) {
-        enqueueErrorSnackBar({
-          message: isNonEmptyString(jobStatus.failedReason)
+        enqueueToast({
+          status: 'error',
+          children: isNonEmptyString(jobStatus.failedReason)
             ? jobStatus.failedReason
             : t`Failed to install the application.`,
         });
@@ -74,12 +86,18 @@ export const useInstallMarketplaceApp = ({
 
         installedApplication = result.data?.findOneApplication;
       } catch {
-        enqueueErrorSnackBar({ message: t`Failed to load the application.` });
+        enqueueToast({
+          status: 'error',
+          children: t`Failed to load the application.`,
+        });
         return;
       }
 
       if (!isDefined(installedApplication)) {
-        enqueueErrorSnackBar({ message: t`Failed to load the application.` });
+        enqueueToast({
+          status: 'error',
+          children: t`Failed to load the application.`,
+        });
         return;
       }
 
@@ -97,26 +115,36 @@ export const useInstallMarketplaceApp = ({
           : currentWorkspace,
       );
 
-      enqueueSuccessSnackBar({
-        message: t`Application installed successfully.`,
+      enqueueToast({
+        status: 'success',
+        children: t`Application installed successfully.`,
       });
       onCompleted?.(installedApplication);
     },
     [
-      enqueueErrorSnackBar,
-      enqueueSuccessSnackBar,
+      enqueueToast,
       findInstalledApplication,
       onCompleted,
       setCurrentWorkspace,
+      t,
     ],
   );
 
-  const { activeJobId, trackJob } = useTrackedQueueJob({
-    runningJob:
-      isDefined(runningJobId) && isDefined(universalIdentifier)
-        ? { jobId: runningJobId, context: universalIdentifier }
-        : undefined,
+  const fetchInstallJobStatus = useCallback(
+    async (jobId: string, trackedUniversalIdentifier: string) => {
+      const { data } = await findInstallApplicationJobStatus({
+        variables: { universalIdentifier: trackedUniversalIdentifier, jobId },
+      });
+
+      return data?.findInstallApplicationJobStatus;
+    },
+    [findInstallApplicationJobStatus],
+  );
+
+  const { activeJobId, activeJobProgress, trackJob } = useTrackedQueueJob({
+    runningJob,
     onQueueJobSettled: handleInstallJobSettled,
+    fetchJobStatus: fetchInstallJobStatus,
   });
 
   const install = async (): Promise<void> => {
@@ -125,11 +153,11 @@ export const useInstallMarketplaceApp = ({
     }
 
     try {
-      const { data } = await triggerInstallApplicationJob({
+      const { data } = await triggerInstallApplication({
         variables: { input: { universalIdentifier } },
       });
 
-      const jobId = data?.triggerInstallApplicationJob.jobId;
+      const jobId = data?.triggerInstallApplication.jobId;
 
       if (isDefined(jobId)) {
         trackJob({ jobId, context: universalIdentifier });
@@ -137,8 +165,9 @@ export const useInstallMarketplaceApp = ({
     } catch (error) {
       const graphqlMessage = error instanceof Error ? error.message : undefined;
 
-      enqueueErrorSnackBar({
-        message: graphqlMessage ?? t`Failed to install the application.`,
+      enqueueToast({
+        status: 'error',
+        children: graphqlMessage ?? t`Failed to install the application.`,
       });
     }
   };
@@ -146,5 +175,6 @@ export const useInstallMarketplaceApp = ({
   return {
     install,
     isInstalling: isTriggeringInstall || isDefined(activeJobId),
+    installProgress: activeJobProgress,
   };
 };

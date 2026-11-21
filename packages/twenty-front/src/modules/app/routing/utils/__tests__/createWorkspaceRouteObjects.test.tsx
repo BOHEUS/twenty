@@ -42,6 +42,9 @@ describe('workspace route objects', () => {
     );
 
     expect(panelRoutes.map(({ path }) => path)).toEqual([
+      AppPath.WorkflowIndexPage,
+      '/objects/workflows',
+      AppPath.WorkflowCoreShowPage,
       AppPath.RecordIndexPage,
       AppPath.RecordShowPage,
       SETTINGS_ROOT_PATH,
@@ -78,32 +81,6 @@ describe('workspace route objects', () => {
     );
     expect(matchRoutes(panelRoutes, '/settings/billing')).toBeNull();
     expect(matchRoutes(mainRoutes, '/settings/billing')).not.toBeNull();
-  });
-
-  it('hosts the specialized workflow index on both surfaces', () => {
-    const routeObjects = createWorkspaceRouteObjects({
-      isWorkflowCoreIndexPageEnabled: true,
-    });
-
-    expect(
-      isWorkspaceLocationAvailableOnSurface(
-        routeObjects,
-        'side-panel',
-        '/objects/workflows',
-      ),
-    ).toBe(true);
-    expect(
-      getWorkspaceRouteObjectsForSurface(routeObjects, 'side-panel').map(
-        ({ path }) => path,
-      ),
-    ).toContain(AppPath.WorkflowCoreIndexPage);
-    expect(
-      isWorkspaceLocationAvailableOnSurface(
-        routeObjects,
-        'side-panel',
-        '/objects/companies',
-      ),
-    ).toBe(true);
   });
 
   it.each([
@@ -168,7 +145,6 @@ describe('workspace route objects', () => {
     '/settings/members/roles/create',
     '/settings/members/roles/role-id',
     '/settings/members/roles/role-id/object/object-id',
-    '/settings/members/roles/role-id/add-object-permission',
   ])('keeps generic expansion off for the stateful route %s', (path) => {
     expect(
       isWorkspaceLocationExpandableFromSidePanel(
@@ -178,14 +154,19 @@ describe('workspace route objects', () => {
     ).toBe(false);
   });
 
-  it('allows the specialized workflow index to expand', () => {
+  it('allows the core workflow show page to expand', () => {
     expect(
       isWorkspaceLocationExpandableFromSidePanel(
-        createWorkspaceRouteObjects({
-          isWorkflowCoreIndexPageEnabled: true,
-        }),
-        '/objects/workflows',
+        createWorkspaceRouteObjects({}),
+        '/workflow/core-workflow-id',
       ),
     ).toBe(true);
+  });
+
+  it('routes the legacy workflows index to a redirect, not the record index', () => {
+    const [match] =
+      matchRoutes(createWorkspaceRouteObjects({}), '/objects/workflows') ?? [];
+
+    expect(match?.route.path).toBe('/objects/workflows');
   });
 });

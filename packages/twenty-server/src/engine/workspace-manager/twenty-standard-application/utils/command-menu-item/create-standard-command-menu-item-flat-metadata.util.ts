@@ -75,9 +75,14 @@ export const createStandardCommandMenuItemFlatMetadata = ({
         : null,
     hotKeys: definition.hotKeys ? [...definition.hotKeys] : null,
     workflowVersionId: null,
+    coreWorkflowVersionId: null,
     availabilityObjectMetadataId: resolvedObjectMetadataId,
     availabilityObjectMetadataUniversalIdentifier:
       resolvedObjectMetadataUniversalIdentifier,
+    availabilityCoreObjectName:
+      'availabilityCoreObjectName' in definition
+        ? definition.availabilityCoreObjectName
+        : null,
     navigationTargetObjectMetadataId: null,
     navigationTargetObjectMetadataUniversalIdentifier: null,
     pageLayoutId: null,

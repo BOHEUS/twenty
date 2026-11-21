@@ -33,6 +33,10 @@ const FLAT_OBJECT_METADATA_ROWS_REQUIREMENT = {
     columns: ['id', 'universalIdentifier'],
     groupBy: ['objectMetadataId'],
   },
+  rowLevelPermissionRule: {
+    columns: ['id', 'universalIdentifier'],
+    groupBy: ['objectMetadataId'],
+  },
   searchFieldMetadata: {
     columns: ['id', 'universalIdentifier'],
     groupBy: ['objectMetadataId'],
@@ -44,6 +48,10 @@ const FLAT_OBJECT_METADATA_ROWS_REQUIREMENT = {
   commandMenuItem: {
     columns: ['id', 'universalIdentifier'],
     groupBy: ['navigationTargetObjectMetadataId'],
+  },
+  navigationMenuItem: {
+    columns: ['id', 'universalIdentifier'],
+    groupBy: ['targetObjectMetadataId'],
   },
 } as const;
 
@@ -65,9 +73,11 @@ export class WorkspaceFlatObjectMetadataMapCacheService extends MetadataFlatEnti
       view: views,
       objectPermission: objectPermissions,
       fieldPermission: fieldPermissions,
+      rowLevelPermissionRule: rowLevelPermissionRules,
       searchFieldMetadata: searchFieldMetadatas,
       pageLayout: pageLayouts,
       commandMenuItem: commandMenuItems,
+      navigationMenuItem: navigationMenuItems,
     } = rows;
 
     const applicationIdToUniversalIdentifierMap =
@@ -94,6 +104,10 @@ export class WorkspaceFlatObjectMetadataMapCacheService extends MetadataFlatEnti
           fieldPermissions:
             fieldPermissions.byObjectMetadataId.get(objectMetadataEntity.id) ||
             [],
+          rowLevelPermissionRules:
+            rowLevelPermissionRules.byObjectMetadataId.get(
+              objectMetadataEntity.id,
+            ) || [],
           searchFieldMetadatas:
             searchFieldMetadatas.byObjectMetadataId.get(
               objectMetadataEntity.id,
@@ -102,6 +116,10 @@ export class WorkspaceFlatObjectMetadataMapCacheService extends MetadataFlatEnti
             pageLayouts.byObjectMetadataId.get(objectMetadataEntity.id) || [],
           commandMenuItems:
             commandMenuItems.byNavigationTargetObjectMetadataId.get(
+              objectMetadataEntity.id,
+            ) || [],
+          navigationMenuItems:
+            navigationMenuItems.byTargetObjectMetadataId.get(
               objectMetadataEntity.id,
             ) || [],
         },

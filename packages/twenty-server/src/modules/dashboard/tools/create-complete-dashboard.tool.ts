@@ -7,24 +7,22 @@ import {
   type PageLayoutWidgetGridPosition,
   type WidgetType,
 } from 'twenty-shared/types';
-import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import {
-  widgetPositionSchema,
+  widgetGridPositionSchema,
   widgetConfigurationSchema,
   widgetTypeSchema,
-} from 'src/modules/dashboard/tools/schemas/widget.schema';
+} from 'src/engine/metadata-modules/page-layout/tools/schemas/widget.schema';
 import {
-  type DashboardToolContext,
-  type DashboardToolDependencies,
-} from 'src/modules/dashboard/tools/types/dashboard-tool-dependencies.type';
-import { type WidgetConfigurationInput } from 'src/modules/dashboard/tools/types/widget-configuration-input.type';
-import { computeDashboardIdentifierMaps } from 'src/modules/dashboard/tools/utils/compute-dashboard-identifier-maps.util';
-import { resolveWidgetFieldNamesToIds } from 'src/modules/dashboard/tools/utils/resolve-widget-field-names-to-metadata-ids.util';
+  type PageLayoutToolContextWithPermissions,
+  type PageLayoutToolDependencies,
+} from 'src/engine/metadata-modules/page-layout/tools/types/page-layout-tool-dependencies.type';
+import { type WidgetConfigurationInput } from 'src/engine/metadata-modules/page-layout/tools/types/widget-configuration-input.type';
+import { resolveWidgetFieldNamesToIds } from 'src/engine/metadata-modules/page-layout/tools/utils/resolve-widget-field-names-to-metadata-ids.util';
 
 const widgetSchema = z.object({
   title: z.string().describe('Widget title displayed in the header'),
   type: widgetTypeSchema.describe('Widget type'),
-  position: widgetPositionSchema.describe('Position in 12-column grid'),
+  position: widgetGridPositionSchema.describe('Position in 12-column grid'),
   objectMetadataId: z
     .uuid()
     .optional()
@@ -54,9 +52,33 @@ const createCompleteDashboardSchema = z.object({
     .describe('Widgets to add'),
 });
 
+type CreateCompleteDashboardToolDeps = {
+  pageLayoutToolService: PageLayoutToolDependencies['pageLayoutToolService'];
+  pageLayoutService: Pick<
+    PageLayoutToolDependencies['pageLayoutService'],
+    'create' | 'destroy'
+  >;
+  pageLayoutTabService: Pick<
+    PageLayoutToolDependencies['pageLayoutTabService'],
+    'create'
+  >;
+  pageLayoutWidgetService: Pick<
+    PageLayoutToolDependencies['pageLayoutWidgetService'],
+    'create'
+  >;
+  workspaceOrmManager: Pick<
+    PageLayoutToolDependencies['workspaceOrmManager'],
+    'executeInWorkspaceContext' | 'getRepository'
+  >;
+  recordPositionService: Pick<
+    PageLayoutToolDependencies['recordPositionService'],
+    'buildRecordPosition'
+  >;
+};
+
 export const createCreateCompleteDashboardTool = (
-  deps: DashboardToolDependencies,
-  context: DashboardToolContext,
+  deps: CreateCompleteDashboardToolDeps,
+  context: PageLayoutToolContextWithPermissions,
 ) => ({
   name: 'create_complete_dashboard' as const,
   description: `Create a dashboard with layout, tab, and widgets.
@@ -128,7 +150,9 @@ AGGREGATION OPERATIONS: COUNT, SUM, AVG, MIN, MAX, COUNT_EMPTY, COUNT_NOT_EMPTY`
       const widgets = parameters.widgets ?? [];
       const identifierMaps =
         widgets.length > 0
-          ? await computeDashboardIdentifierMaps(deps, context)
+          ? await deps.pageLayoutToolService.computePageLayoutIdentifierMaps(
+              context,
+            )
           : null;
       const pageLayout = await deps.pageLayoutService.create({
         createPageLayoutInput: {
@@ -152,6 +176,15 @@ AGGREGATION OPERATIONS: COUNT, SUM, AVG, MIN, MAX, COUNT_EMPTY, COUNT_NOT_EMPTY`
 
       for (const widget of widgets) {
         try {
+          await deps.pageLayoutToolService.assertFrontComponentWidgetAvailableOnPageLayoutOrThrow(
+            {
+              configuration: widget.configuration,
+              pageLayoutTabId: pageLayoutTab.id,
+              position: widget.position,
+              context,
+            },
+          );
+
           const widgetWithMetadataIds = identifierMaps
             ? resolveWidgetFieldNamesToIds(widget, identifierMaps)
             : widget;
@@ -177,12 +210,12 @@ AGGREGATION OPERATIONS: COUNT, SUM, AVG, MIN, MAX, COUNT_EMPTY, COUNT_NOT_EMPTY`
         }
       }
 
-      const dashboardId = await createDashboardRecord(
+      const dashboardId = await createDashboardRecordOrRollBackLayout({
         deps,
         context,
-        parameters.title,
-        pageLayout.id,
-      );
+        title: parameters.title,
+        pageLayoutId: pageLayout.id,
+      });
 
       const result = {
         dashboardId,
@@ -230,21 +263,40 @@ AGGREGATION OPERATIONS: COUNT, SUM, AVG, MIN, MAX, COUNT_EMPTY, COUNT_NOT_EMPTY`
   },
 });
 
-const createDashboardRecord = async (
-  deps: DashboardToolDependencies,
-  context: DashboardToolContext,
-  title: string,
-  pageLayoutId: string,
-): Promise<string> => {
-  const authContext = buildSystemAuthContext(context.workspaceId);
+type CreateDashboardRecordParams = {
+  deps: CreateCompleteDashboardToolDeps;
+  context: PageLayoutToolContextWithPermissions;
+  title: string;
+  pageLayoutId: string;
+};
 
+const createDashboardRecordOrRollBackLayout = async (
+  params: CreateDashboardRecordParams,
+): Promise<string> => {
+  try {
+    return await createDashboardRecord(params);
+  } catch (error) {
+    await params.deps.pageLayoutService
+      .destroy({
+        id: params.pageLayoutId,
+        workspaceId: params.context.workspaceId,
+        isLinkedDashboardAlreadyDestroyed: true,
+      })
+      .catch(() => undefined);
+
+    throw error;
+  }
+};
+
+const createDashboardRecord = async ({
+  deps,
+  context,
+  title,
+  pageLayoutId,
+}: CreateDashboardRecordParams): Promise<string> => {
   return deps.workspaceOrmManager.executeInWorkspaceContext(async () => {
-    const dashboardRepository = deps.workspaceOrmManager.getRepository(
-      'dashboard',
-      {
-        shouldBypassPermissionChecks: true,
-      },
-    );
+    const dashboardRepository =
+      deps.workspaceOrmManager.getRepository('dashboard');
 
     const position = await deps.recordPositionService.buildRecordPosition({
       value: 'first',
@@ -257,5 +309,5 @@ const createDashboardRecord = async (
     await dashboardRepository.insert(dashboard);
 
     return dashboard.id;
-  }, authContext);
+  }, context.authContext);
 };

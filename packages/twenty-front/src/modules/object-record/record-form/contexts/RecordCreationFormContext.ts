@@ -1,18 +1,21 @@
-import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
+import { type RecordCreationRequest } from '@/object-record/record-form/types/RecordCreationRequest';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
-import { createContext } from 'react';
+import { createRequiredContext } from '~/utils/createRequiredContext';
 
 export type RecordCreationFormContextValue = {
-  requestRecordCreation: (params: {
-    objectMetadataItem: EnrichedObjectMetadataItem;
-    initialDraftRecord?: Partial<ObjectRecord>;
-    createRecord: (draftRecord: Partial<ObjectRecord>) => Promise<ObjectRecord>;
-  }) => Promise<ObjectRecord | null>;
+  requestRecordCreation: (
+    request: RecordCreationRequest,
+  ) => Promise<ObjectRecord | null>;
   settleRecordCreationDraft: (params: {
     requestId: string;
     draftRecord: Partial<ObjectRecord> | null;
-  }) => void;
+    shouldKeepOpen?: boolean;
+  }) => Promise<{ error?: unknown }>;
 };
 
-export const RecordCreationFormContext =
-  createContext<RecordCreationFormContextValue | null>(null);
+export const [
+  RecordCreationFormContextProvider,
+  useRecordCreationFormContextOrThrow,
+] = createRequiredContext<RecordCreationFormContextValue>(
+  'RecordCreationFormContext',
+);

@@ -21,7 +21,11 @@ import { RegisteredWorkspaceCommand } from 'src/engine/core-modules/upgrade/deco
 import { EngineComponentKey } from 'src/engine/metadata-modules/command-menu-item/enums/engine-component-key.enum';
 import { isObjectMetadataCommandMenuItemPayload } from 'src/engine/metadata-modules/command-menu-item/utils/is-object-metadata-command-menu-item-payload.util';
 import { type FlatCommandMenuItem } from 'src/engine/metadata-modules/flat-command-menu-item/types/flat-command-menu-item.type';
-import { NAVIGATION_INTERPOLATED_ICON, NAVIGATION_INTERPOLATED_LABEL, NAVIGATION_INTERPOLATED_SHORT_LABEL } from 'src/engine/metadata-modules/flat-command-menu-item/utils/build-object-navigation-universal-flat-command-menu-item.util';
+import {
+  NAVIGATION_INTERPOLATED_ICON,
+  NAVIGATION_INTERPOLATED_LABEL,
+  NAVIGATION_INTERPOLATED_SHORT_LABEL,
+} from 'src/engine/metadata-modules/flat-command-menu-item/utils/build-object-navigation-universal-flat-command-menu-item.util';
 import { seedCompareObjectMetadataForNavigationPosition } from 'src/engine/metadata-modules/flat-command-menu-item/utils/seed-compare-object-metadata-for-navigation-position.util';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 import { STANDARD_COMMAND_MENU_ITEMS } from 'src/engine/workspace-manager/twenty-standard-application/constants/standard-command-menu-item.constant';
@@ -44,8 +48,6 @@ const SETTINGS_NAVIGATION_ITEM_KEYS = [
   'goToSettings',
   'goToSettingsExperience',
   'goToSettingsAccounts',
-  'goToSettingsAccountsEmails',
-  'goToSettingsAccountsCalendars',
   'goToSettingsGeneral',
   'goToSettingsObjects',
   'goToSettingsMembers',
@@ -237,6 +239,8 @@ export class RefactorNavigationCommandsCommand extends ProvisionedWorkspaceComma
         payload: { ...commandMenuItem.payload },
         hotKeys: commandMenuItem.hotKeys ? [...commandMenuItem.hotKeys] : null,
         workflowVersionId: null,
+        coreWorkflowVersionId: null,
+        availabilityCoreObjectName: null,
         availabilityObjectMetadataId: null,
         availabilityObjectMetadataUniversalIdentifier: null,
         navigationTargetObjectMetadataId: null,
@@ -292,6 +296,7 @@ export class RefactorNavigationCommandsCommand extends ProvisionedWorkspaceComma
     const validateAndBuildResult =
       await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunLegacyWorkspaceMigration(
         {
+          shouldDeferActions: false,
           allFlatEntityOperationByMetadataName: {
             commandMenuItem: {
               flatEntityToCreate: flatCommandMenuItemsToCreate,

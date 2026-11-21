@@ -11,20 +11,18 @@ import { LastUsedPill } from '@/auth/sign-in-up/components/internal/LastUsedPill
 import { SignInUpEmailField } from '@/auth/sign-in-up/components/internal/SignInUpEmailField';
 import { SignInUpPasswordField } from '@/auth/sign-in-up/components/internal/SignInUpPasswordField';
 import { StyledSsoButtonContainer } from '@/auth/sign-in-up/components/internal/SignInUpSsoButtonStyles';
-import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod.enum';
-import { SignInUpMode } from '@/auth/types/signInUpMode';
-import { isRequestingCaptchaTokenState } from '@/captcha/states/isRequestingCaptchaTokenState';
-import { captchaState } from '@/client-config/states/captchaState';
+import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod';
+import { SignInUpMode } from '@/auth/types/SignInUpMode';
 import { isDDLLockedState } from '@/client-config/states/isDDLLockedState';
+import { InputHint } from '@/ui/input/components/internal/InputHint/InputHint';
+import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { useMemo, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { isDefined } from 'twenty-shared/utils';
-import { Loader } from 'twenty-ui/feedback';
-import { MainButton, InputHint } from 'twenty-ui/input';
-import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { MainButton } from 'twenty-ui/components/input';
 
 const StyledForm = styled.form`
   align-items: center;
@@ -44,11 +42,7 @@ export const SignInUpWithCredentials = ({
 
   const [signInUpStep, setSignInUpStep] = useAtomState(signInUpStepState);
   const [showErrors, setShowErrors] = useState(false);
-  const captcha = useAtomStateValue(captchaState);
   const isDDLLocked = useAtomStateValue(isDDLLockedState);
-  const isRequestingCaptchaToken = useAtomStateValue(
-    isRequestingCaptchaTokenState,
-  );
   const lastAuthenticatedMethod = useAtomStateValue(
     lastAuthenticatedMethodState,
   );
@@ -69,7 +63,9 @@ export const SignInUpWithCredentials = ({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (isSubmitButtonDisabled) return;
+    if (isSubmitButtonDisabled) {
+      return;
+    }
 
     if (signInUpStep === SignInUpStep.Init) {
       continueWithEmail();
@@ -115,22 +111,15 @@ export const SignInUpWithCredentials = ({
     return t`Continue`;
   }, [signInUpMode, signInUpStep, t]);
 
-  const shouldWaitForCaptchaToken =
-    signInUpStep !== SignInUpStep.Init &&
-    isDefined(captcha?.provider) &&
-    isRequestingCaptchaToken;
-
   const isEmailStepSubmitButtonDisabledCondition =
     signInUpStep === SignInUpStep.Email &&
-    (isDefined(form.formState.errors['email']) || shouldWaitForCaptchaToken);
+    isDefined(form.formState.errors['email']);
 
   // TODO: isValid is actually a proxy function. If it is not rendered the first time, react might not trigger re-renders
   // We make the isValid check synchronous and update a reactState to make sure this does not happen
   const isPasswordStepSubmitButtonDisabledCondition =
     signInUpStep === SignInUpStep.Password &&
-    (!form.formState.isValid ||
-      form.formState.isSubmitting ||
-      shouldWaitForCaptchaToken);
+    (!form.formState.isValid || form.formState.isSubmitting);
 
   const isSignUpBlockedByDDLLock =
     isDDLLocked &&
@@ -162,15 +151,15 @@ export const SignInUpWithCredentials = ({
           )}
           <StyledSsoButtonContainer>
             <MainButton
-              title={buttonTitle}
               type="submit"
-              variant={
-                signInUpStep === SignInUpStep.Init ? 'secondary' : 'primary'
-              }
-              Icon={() => (form.formState.isSubmitting ? <Loader /> : null)}
+              loading={form.formState.isSubmitting}
+              loadingPosition="start"
               disabled={isSubmitButtonDisabled}
               fullWidth
-            />
+              variant={signInUpStep === SignInUpStep.Init ? 'outline' : 'solid'}
+            >
+              {buttonTitle}
+            </MainButton>
             {isLastUsed && <LastUsedPill />}
             {isSignUpBlockedByDDLLock && (
               <InputHint>{t`Sign-up is temporarily unavailable during maintenance.`}</InputHint>

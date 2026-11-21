@@ -15,6 +15,7 @@ import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system
 import { CALENDAR_EVENT_PARTICIPANT_CHUNK_SIZE } from 'src/modules/calendar/calendar-event-participant-manager/constants/calendar-event-participant-chunk-size';
 import { type CalendarEventParticipantSaveOperations } from 'src/modules/calendar/calendar-event-participant-manager/types/calendar-event-participant-save-operations.type';
 import { type CalendarEventParticipantWorkspaceEntity } from 'src/modules/calendar/common/standard-objects/calendar-event-participant.workspace-entity';
+import { type FetchedCalendarEventParticipant } from 'src/modules/calendar/common/types/fetched-calendar-event.type';
 import {
   CreateCompanyAndContactJob,
   type CreateCompanyAndContactJobData,
@@ -36,7 +37,7 @@ export class CalendarEventParticipantService {
     calendarEventIds: string[];
   }): Promise<CalendarEventParticipantWorkspaceEntity[]> {
     const calendarEventParticipantRepository =
-      this.workspaceOrmManager.getRepository<CalendarEventParticipantWorkspaceEntity>(
+      this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<CalendarEventParticipantWorkspaceEntity>(
         'calendarEventParticipant',
       );
 
@@ -53,7 +54,7 @@ export class CalendarEventParticipantService {
     transactionScope: WorkspaceTransactionScope;
   }): Promise<void> {
     const calendarEventParticipantRepository =
-      transactionScope.getRepository<CalendarEventParticipantWorkspaceEntity>(
+      transactionScope.getRepositoryWithoutPermissionChecks<CalendarEventParticipantWorkspaceEntity>(
         'calendarEventParticipant',
       );
 
@@ -80,12 +81,16 @@ export class CalendarEventParticipantService {
 
   public async matchParticipantsAndEnqueueContactCreationJob({
     savedParticipantIds,
+    participantsOfLinkedEvents,
+    resourceHandles,
     calendarChannel,
     connectedAccount,
     workspaceId,
     calendarEventIds,
   }: {
     savedParticipantIds: string[];
+    participantsOfLinkedEvents: FetchedCalendarEventParticipant[];
+    resourceHandles: string[];
     calendarChannel: CalendarChannelEntity;
     connectedAccount: ConnectedAccountEntity;
     workspaceId: string;
@@ -96,7 +101,7 @@ export class CalendarEventParticipantService {
     await this.workspaceOrmManager.executeInWorkspaceContext(
       async () => {
         const calendarEventParticipantRepository =
-          this.workspaceOrmManager.getRepository<CalendarEventParticipantWorkspaceEntity>(
+          this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<CalendarEventParticipantWorkspaceEntity>(
             'calendarEventParticipant',
           );
 
@@ -120,12 +125,24 @@ export class CalendarEventParticipantService {
             {
               workspaceId,
               connectedAccount,
-              contactsToCreate: savedParticipants.map((participant) => ({
-                handle: participant.handle ?? '',
-                displayName:
-                  participant.displayName ?? participant.handle ?? '',
-              })),
+              contactsToCreate: [
+                ...savedParticipants,
+                ...participantsOfLinkedEvents,
+              ]
+                .filter(
+                  (participant) =>
+                    !resourceHandles.includes(participant.handle ?? ''),
+                )
+                .map((participant) => ({
+                  handle: participant.handle ?? '',
+                  displayName:
+                    participant.displayName ?? participant.handle ?? '',
+                })),
               source: FieldActorSource.CALENDAR,
+            },
+            {
+              workspaceId,
+              isWorkspaceJob: true,
             },
           );
         }
