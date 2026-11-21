@@ -8,6 +8,7 @@ export const getStandardPageLayoutTabTitles = () => [
   msg({ message: `Notes`, context: 'pageLayoutTab.title' }),
   msg({ message: `Files`, context: 'pageLayoutTab.title' }),
   msg({ message: `Emails`, context: 'pageLayoutTab.title' }),
+  msg({ message: `Messages`, context: 'pageLayoutTab.title' }),
   msg({ message: `Calendar`, context: 'pageLayoutTab.title' }),
   msg({ message: `Note`, context: 'pageLayoutTab.title' }),
   msg({ message: `Members`, context: 'pageLayoutTab.title' }),
@@ -16,4 +17,8 @@ export const getStandardPageLayoutTabTitles = () => [
   msg({ message: `Call Recording`, context: 'pageLayoutTab.title' }),
   msg({ message: `Email`, context: 'pageLayoutTab.title' }),
   msg({ message: `Summary`, context: 'pageLayoutTab.title' }),
+  msg({ message: `Fields`, context: 'pageLayoutTab.title' }),
+  msg({ message: `Chat`, context: 'pageLayoutTab.title' }),
+  msg({ message: `Task`, context: 'pageLayoutTab.title' }),
+  msg({ message: `Thread`, context: 'pageLayoutTab.title' }),
 ];

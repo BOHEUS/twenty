@@ -31,6 +31,7 @@ import { isMultiWorkspaceEnabledState } from '@/client-config/states/isMultiWork
 import { isOnboardingAiChatEnabledState } from '@/client-config/states/isOnboardingAiChatEnabledState';
 import { labPublicFeatureFlagsState } from '@/client-config/states/labPublicFeatureFlagsState';
 import { sentryConfigState } from '@/client-config/states/sentryConfigState';
+import { webPushVapidPublicKeyState } from '@/client-config/states/webPushVapidPublicKeyState';
 import { supportChatState } from '@/client-config/states/supportChatState';
 import { type ClientConfig } from '@/client-config/types/ClientConfig';
 import { domainConfigurationState } from '@/domain-manager/states/domainConfigurationState';
@@ -42,6 +43,7 @@ import { allowRequestsToTwentyIconsState } from '@/client-config/states/allowReq
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
 import { ENTERPRISE_INSTANCE_TYPE } from 'twenty-shared/constants';
+import { t } from '@lingui/core/macro';
 
 type UseClientConfigResult = {
   data: { clientConfig: ClientConfig } | undefined;
@@ -152,6 +154,8 @@ export const useClientConfig = (): UseClientConfigResult => {
     enterpriseInstanceTypeState,
   );
 
+  const setWebPushVapidPublicKey = useSetAtomState(webPushVapidPublicKeyState);
+
   const setAppVersion = useSetAtomState(appVersionState);
 
   const loadClientConfig = useCallback(
@@ -260,11 +264,12 @@ export const useClientConfig = (): UseClientConfigResult => {
           clientConfig?.enterpriseInstanceType ??
             ENTERPRISE_INSTANCE_TYPE.PRODUCTION,
         );
+        setWebPushVapidPublicKey(clientConfig?.webPushVapidPublicKey ?? null);
       } catch (err) {
         const error =
           err instanceof Error
             ? err
-            : new Error('Failed to fetch client config');
+            : new Error(t`Failed to fetch client config`);
         setClientConfigApiStatus((prev) => ({
           ...prev,
           isLoading: false,
@@ -312,6 +317,7 @@ export const useClientConfig = (): UseClientConfigResult => {
       setSentryConfig,
       setSupportChat,
       setAllowRequestsToTwentyIcons,
+      setWebPushVapidPublicKey,
     ],
   );
 

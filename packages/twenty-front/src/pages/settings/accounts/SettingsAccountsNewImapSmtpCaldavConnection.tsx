@@ -2,6 +2,7 @@ import { useLingui } from '@lingui/react/macro';
 import { FormProvider } from 'react-hook-form';
 
 import { SaveAndCancelButtons } from '@/settings/components/SaveAndCancelButtons/SaveAndCancelButtons';
+import { useAccountsSettingsBreadcrumbLink } from '@/settings/app-preferences/hooks/useAccountsSettingsBreadcrumbLink';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { SettingsPath } from 'twenty-shared/types';
@@ -15,6 +16,7 @@ import { useImapSmtpCaldavConnectionForm } from '@/settings/accounts/hooks/useIm
 export const SettingsAccountsNewImapSmtpCaldavConnection = () => {
   const { t } = useLingui();
   const navigate = useNavigateSettings();
+  const accountsBreadcrumbLink = useAccountsSettingsBreadcrumbLink();
 
   const {
     formMethods,
@@ -37,10 +39,7 @@ export const SettingsAccountsNewImapSmtpCaldavConnection = () => {
             children: t`User`,
             href: getSettingsPath(SettingsPath.ProfilePage),
           },
-          {
-            children: t`Accounts`,
-            href: getSettingsPath(SettingsPath.Accounts),
-          },
+          accountsBreadcrumbLink,
           { children: t`New Account` },
         ]}
         actionButton={
@@ -48,7 +47,7 @@ export const SettingsAccountsNewImapSmtpCaldavConnection = () => {
             isSaveDisabled={!canSave}
             isCancelDisabled={isSubmitting}
             isLoading={loading}
-            onCancel={() => navigate(SettingsPath.Accounts)}
+            onCancel={() => navigate(SettingsPath.AppPreferences)}
             onSave={handleSubmit((data) => handleSave(data))}
           />
         }

@@ -11,6 +11,7 @@ import {
 import { type ThemeColor } from 'twenty-ui/theme';
 import { z } from 'zod';
 import { type RelationType } from '~/generated-metadata/graphql';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 type BaseFieldMetadata = {
   description?: string | null;
@@ -168,14 +169,21 @@ export type FieldMorphRelationMetadata = BaseFieldMetadata & {
   settings?: FieldRelationMetadataSettings;
 };
 
+type FieldSelectMetadataOption = {
+  label: string;
+  color: ThemeColor;
+  value: string;
+  isActive?: boolean;
+};
+
 export type FieldSelectMetadata = BaseFieldMetadata & {
-  options: { label: string; color: ThemeColor; value: string }[];
+  options: FieldSelectMetadataOption[];
   isNullable: boolean;
   settings?: null;
 };
 
 export type FieldMultiSelectMetadata = BaseFieldMetadata & {
-  options: { label: string; color: ThemeColor; value: string }[];
+  options: FieldSelectMetadataOption[];
   settings?: null;
 };
 
@@ -302,12 +310,13 @@ export type Json = ZodHelperLiteral | { [key: string]: Json } | Json[];
 export type FieldJsonValue = Record<string, Json> | Json[] | null;
 
 export type FieldRichTextValue = {
-  blocknote: string | null;
-  markdown: string | null;
+  tiptap?: string | null;
+  markdown?: string | null;
+  blocknote?: string | null;
 };
 
 const FieldActorSourceSchema = z.union([
-  z.literal('API'),
+  z.literal(doNotTranslate('API')),
   z.literal('IMPORT'),
   z.literal('EMAIL'),
   z.literal('CALENDAR'),
@@ -327,6 +336,7 @@ export const FieldActorValueSchema = z.object({
     .object({
       // GraphQL ActorContext returns provider: null for MANUAL/SYSTEM/… actors
       provider: z.enum(ConnectedAccountProvider).nullish(),
+      applicationId: z.string().nullish(),
     })
     .nullable(),
 });

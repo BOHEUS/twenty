@@ -3,7 +3,6 @@ import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { isDropdownOpenComponentState } from '@/ui/layout/dropdown/states/isDropdownOpenComponentState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { type MouseEvent } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 import { LightIconButton } from 'twenty-ui/components/input';
@@ -12,6 +11,7 @@ import { IconDotsVertical } from 'twenty-ui/icon';
 import { ListItem } from 'twenty-ui/primitives/navigation';
 import { themeCssVariables, useTheme } from 'twenty-ui/theme';
 import { type MenuItemWithOptionDropdownProps } from './types/MenuItemWithOptionDropdownProps';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledMenuItemContainer = styled.div<{
   focused: boolean;
@@ -64,6 +64,7 @@ export const MenuItemWithOptionDropdown = ({
   dropdownContent,
   dropdownId,
   LeftIcon,
+  LeftComponent,
   RightIcon,
   onClick,
   onMouseEnter,
@@ -75,6 +76,7 @@ export const MenuItemWithOptionDropdown = ({
   dropdownAlign = 'end',
   selected = false,
 }: MenuItemWithOptionDropdownProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
   const isDropdownOpen = useAtomComponentStateValue(
     isDropdownOpenComponentState,
@@ -104,7 +106,8 @@ export const MenuItemWithOptionDropdown = ({
         color={accent === 'danger' ? 'danger' : 'neutral'}
         focused={selected}
         startIcon={
-          isDefined(LeftIcon) && <LeftIcon size={theme.icon.size.md} />
+          LeftComponent ??
+          (isDefined(LeftIcon) && <LeftIcon size={theme.icon.size.md} />)
         }
         hasSubmenu={hasSubMenu}
       >

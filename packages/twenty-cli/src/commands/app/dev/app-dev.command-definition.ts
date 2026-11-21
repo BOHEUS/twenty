@@ -11,8 +11,18 @@ export const APP_DEV_COMMAND_DEFINITION: TargetCommandDefinition = {
         'App directory (default: the app containing the current folder)',
     },
     {
-      flags: '--no-delete',
+      flags: '--prune',
+      description:
+        'Delete remote entities missing from the app source (the default, except for the workspace custom application)',
+    },
+    {
+      flags: '--no-prune',
       description: 'Keep remote entities missing from the app source',
+    },
+    {
+      flags: '--no-delete',
+      description: 'Deprecated alias of --no-prune',
+      hidden: true,
     },
     {
       flags: '--create',
@@ -23,11 +33,17 @@ export const APP_DEV_COMMAND_DEFINITION: TargetCommandDefinition = {
       flags: '--yes',
       description: 'Allow object and field deletions without asking',
     },
+    {
+      flags: '--verbose',
+      description:
+        'Show watched and excluded external paths when scope changes',
+    },
   ],
   examples: [
     'twenty app dev --remote dev',
-    'twenty app dev --create --no-delete',
-    'twenty app dev --format ndjson --no-delete',
+    'twenty app dev --create --no-prune',
+    'twenty app dev --format ndjson --no-prune',
+    'twenty app dev --verbose',
   ],
   outputModes: ['human', 'ndjson'],
   writes: true,

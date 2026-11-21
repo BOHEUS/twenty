@@ -1,7 +1,7 @@
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
-import { useIcons } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { Tag } from 'twenty-ui/primitives/data-display';
 import { themeCssVariables, useTheme } from 'twenty-ui/theme';
 
@@ -33,6 +33,7 @@ const StyledHeader = styled.div`
 const StyledTitleRow = styled.div`
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: ${themeCssVariables.spacing[2]};
   justify-content: space-between;
 `;
@@ -77,7 +78,7 @@ export const SettingsValidationRuleHelperDetails = ({
   item,
   editorFields,
 }: SettingsValidationRuleHelperDetailsProps) => {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const theme = useTheme();
   const { getIcon } = useIcons();
 
@@ -100,8 +101,7 @@ export const SettingsValidationRuleHelperDetails = ({
     switch (item.kind) {
       case 'field': {
         const typeLabel = isFieldTypeSupportedInSettings(item.field.type)
-          ? (getSettingsFieldTypeConfig(item.field.type)?.label ??
-            item.field.type)
+          ? i18n._(getSettingsFieldTypeConfig(item.field.type).label)
           : item.field.type;
         const ObjectIcon = getIcon(item.field.objectIconName);
 

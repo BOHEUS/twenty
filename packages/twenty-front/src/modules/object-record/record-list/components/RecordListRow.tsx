@@ -1,6 +1,8 @@
 import { getLinkToShowPage } from '@/object-metadata/utils/getLinkToShowPage';
 import { RecordChip } from '@/object-record/components/RecordChip';
 import { visibleRecordFieldsComponentSelector } from '@/object-record/record-field/states/visibleRecordFieldsComponentSelector';
+import { CoreRecordReferenceFieldsContext } from '@/object-record/record-field/ui/contexts/CoreRecordReferenceFieldsContext';
+import { getFieldValueSourceDefinition } from '@/object-record/record-field/ui/utils/getFieldValueSourceDefinition';
 import { isFieldValueEmpty } from '@/object-record/record-field/ui/utils/isFieldValueEmpty';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { useOpenRecordFromIndexView } from '@/object-record/record-index/hooks/useOpenRecordFromIndexView';
@@ -20,12 +22,13 @@ import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
 import { styled } from '@linaria/react';
-import { plural, t } from '@lingui/core/macro';
+import { plural } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
-import { type MouseEvent, type Ref } from 'react';
+import { type MouseEvent, type Ref, useContext } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 import { Chip } from 'twenty-ui/primitives/data-display';
 import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledRowContainer = styled.div`
   cursor: pointer;
@@ -80,6 +83,7 @@ type RecordListRowProps = {
 };
 
 export const RecordListRow = ({ recordId, rowRef }: RecordListRowProps) => {
+  const { t } = useLingui();
   const { objectNameSingular } = useRecordIndexContextOrThrow();
   const {
     labelIdentifierFieldMetadataItem,
@@ -87,6 +91,10 @@ export const RecordListRow = ({ recordId, rowRef }: RecordListRowProps) => {
   } = useRecordIndexContextOrThrow();
 
   const recordStore = useAtomFamilyStateValue(recordStoreFamilyState, recordId);
+
+  const coreRecordReferenceFields = useContext(
+    CoreRecordReferenceFieldsContext,
+  );
 
   const visibleRecordFields = useAtomComponentSelectorValue(
     visibleRecordFieldsComponentSelector,
@@ -120,11 +128,20 @@ export const RecordListRow = ({ recordId, rowRef }: RecordListRowProps) => {
       const fieldDefinition =
         fieldDefinitionByFieldMetadataItemId[recordField.fieldMetadataItemId];
 
+      if (!isDefined(fieldDefinition)) {
+        return [];
+      }
+
+      const fieldValueSourceDefinition = getFieldValueSourceDefinition({
+        fieldDefinition,
+        coreRecordReferenceFields,
+      });
+
       if (
-        !isDefined(fieldDefinition) ||
         isFieldValueEmpty({
-          fieldDefinition,
-          fieldValue: recordStore[fieldDefinition.metadata.fieldName],
+          fieldDefinition: fieldValueSourceDefinition,
+          fieldValue:
+            recordStore[fieldValueSourceDefinition.metadata.fieldName],
         })
       ) {
         return [];
@@ -212,7 +229,7 @@ export const RecordListRow = ({ recordId, rowRef }: RecordListRowProps) => {
         <StyledFieldsContainer>
           {displayedRecordFields.map(({ recordField, fieldDefinition }) => (
             <RecordListRowField
-              key={recordField.fieldMetadataItemId}
+              key={recordField.id}
               recordId={recordId}
               recordField={recordField}
               fieldDefinition={fieldDefinition}

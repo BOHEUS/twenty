@@ -16,7 +16,7 @@ import { useIsMobile } from 'twenty-ui/utilities';
 const StyledPlaceholderDragAndDropFooterCell = styled.div`
   background-color: ${themeCssVariables.background.primary};
   bottom: 0;
-  left: 0px;
+  inset-inline-start: 0px;
   position: sticky;
   width: calc(
     var(${RECORD_TABLE_DRAG_DROP_WIDTH_CSS_VAR}) +
@@ -66,7 +66,7 @@ export const RecordTableAggregateFooter = ({
       {visibleRecordFields.map((recordField, index) => {
         return (
           <RecordTableColumnAggregateFooterCellContext.Provider
-            key={`${recordField.fieldMetadataItemId}${currentRecordGroupId ? '-' + currentRecordGroupId : ''}`}
+            key={`${recordField.id}${currentRecordGroupId ? '-' + currentRecordGroupId : ''}`}
             value={{
               viewFieldId: recordField.id || '',
               fieldMetadataId: recordField.fieldMetadataItemId,

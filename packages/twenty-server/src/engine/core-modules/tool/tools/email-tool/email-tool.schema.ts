@@ -1,4 +1,4 @@
-import { emailDocumentSchema, isValidUuid } from 'twenty-shared/utils';
+import { emailBodyInputSchema, isValidUuid } from 'twenty-shared/utils';
 import { workflowFileSchema } from 'twenty-shared/workflow';
 import { z } from 'zod';
 
@@ -24,11 +24,9 @@ export const EmailToolInputZodSchema = z.object({
     'Recipients object with to, cc, and bcc fields (comma-separated)',
   ),
   subject: z.string().describe('The email subject line'),
-  body: z
-    .union([emailDocumentSchema, z.string()])
-    .describe(
-      'The email body. Preferred: a structured email document ({type: "doc", content: [...]} with paragraph, heading, bulletList/orderedList, image, button, section, divider and html blocks), rendered to email-safe HTML server-side. An HTML string is also accepted. Campaign-style {{variables}} are not substituted in 1:1 emails.',
-    ),
+  body: emailBodyInputSchema.describe(
+    'The email body, with its format stated by "type". Plain text: {"type":"text","text":"Hi Alice,\\n\\nThanks"} (line breaks are kept). HTML: {"type":"html","html":"<p>Hi Alice,</p>"} (sent as written). Rich text: TipTap JSON (editor.getJSON() format), e.g. {"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Hi Alice,"}]},{"type":"paragraph"},{"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"Point","marks":[{"type":"bold"}]}]}]}]}]}; its doc.content holds only paragraph, heading (attrs.level 1, 2 or 3), bulletList, orderedList and image (attrs.src) blocks, each listItem holds a paragraph, text nodes are never empty, a blank line is {"type":"paragraph"} and a line break is {"type":"hardBreak"}; marks are bold, italic, underline, strike and link (attrs.href). Write real values: {{...}} placeholders are sent literally. A bare string is rejected.',
+  ),
   connectedAccountId: z
     .string()
     .refine((val) => isValidUuid(val))

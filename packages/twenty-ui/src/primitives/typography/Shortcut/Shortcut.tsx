@@ -13,6 +13,7 @@ export const Shortcut = ({
   platform,
   sequenceJoinLabel,
   combinationSeparator,
+  accessibleKeyLabels,
   variant = 'keys',
   visibility = 'always',
   className,
@@ -25,6 +26,7 @@ export const Shortcut = ({
     platform,
     sequenceJoinLabel,
     combinationSeparator,
+    accessibleKeyLabels,
   });
 
   if (
@@ -48,9 +50,11 @@ export const Shortcut = ({
           : presentation.groups.map((keys, stepIndex) => (
               <Fragment key={stepIndex}>
                 {stepIndex > 0 && (
-                  <span>{` ${presentation.sequenceJoinLabel} `}</span>
+                  <span className={styles.sequenceJoinLabel}>
+                    {` ${presentation.sequenceJoinLabel} `}
+                  </span>
                 )}
-                <span className={styles.combination}>
+                <span>
                   {keys.map((key, keyIndex) => (
                     <Fragment key={keyIndex}>
                       {keyIndex > 0 && presentation.separator}

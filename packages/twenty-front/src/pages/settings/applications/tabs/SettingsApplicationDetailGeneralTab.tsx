@@ -1,17 +1,21 @@
+import { ToastOnQueryErrorEffect } from '@/apollo/components/ToastOnQueryErrorEffect';
 import { formatQueueJobProgressLabel } from '@/queue-job/utils/formatQueueJobProgressLabel';
+import { SettingsApplicationConnectedMembersSection } from '@/settings/applications/components/SettingsApplicationConnectedMembersSection';
+import { SettingsApplicationContentSummarySection } from '@/settings/applications/components/SettingsApplicationContentSummarySection';
+import { useInstalledApplicationContent } from '@/settings/applications/hooks/useInstalledApplicationContent';
 import { SettingsApplicationOverviewCard } from '@/settings/applications/components/SettingsApplicationOverviewCard';
 import { SettingsApplicationUninstallButton } from '@/settings/applications/components/SettingsApplicationUninstallButton';
-import { AdvancedSettingsWrapper } from '@/settings/components/AdvancedSettingsWrapper';
+import { SettingsApplicationIframeMediaPermissionsSection } from '@/settings/applications/components/SettingsApplicationIframeMediaPermissionsSection';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { SettingsPath } from 'twenty-shared/types';
-import { isNonEmptyArray } from 'twenty-shared/utils';
-import { IconArrowUp, IconShoppingBag } from 'twenty-ui/icon';
+import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
+import { IconArrowUp, IconInfoCircle, IconShoppingBag } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { Section } from 'twenty-ui/components/layout';
 import {
   type Application,
+  ApplicationRegistrationSourceType,
   PermissionFlagType,
 } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
@@ -19,7 +23,8 @@ import { SettingsApplicationAutoUpdateSection } from '~/pages/settings/applicati
 import { SettingsApplicationConnectionsSection } from '~/pages/settings/applications/tabs/SettingsApplicationConnectionsSection';
 import { SettingsApplicationFunctionDomainSection } from '~/pages/settings/applications/tabs/SettingsApplicationFunctionDomainSection';
 import { applicationHasHttpTriggeredFunctions } from '~/pages/settings/applications/utils/applicationHasHttpTriggeredFunctions';
-import { isUpgradableApplicationSourceType } from '~/pages/settings/applications/utils/isUpgradableApplicationSourceType';
+import { isUpgradableApplicationSourceType } from '@/settings/applications/utils/isUpgradableApplicationSourceType';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsApplicationDetailGeneralTabProps = {
   application: Pick<
@@ -31,11 +36,14 @@ type SettingsApplicationDetailGeneralTabProps = {
     | 'isUninstallBlockedByOtherWorkspaceInstallations'
     | 'applicationRegistration'
     | 'logicFunctions'
+    | 'requestedIframeMediaPermissions'
+    | 'grantedIframeMediaPermissions'
   >;
   displayName: string;
   description?: string;
   coverImageUrl?: string;
   marketplaceUniversalIdentifier?: string;
+  isMarketplaceApplication: boolean;
   hasUpdate: boolean;
   latestAvailableVersion?: string;
   onUpgrade: () => void;
@@ -52,6 +60,7 @@ export const SettingsApplicationDetailGeneralTab = ({
   description,
   coverImageUrl,
   marketplaceUniversalIdentifier,
+  isMarketplaceApplication,
   hasUpdate,
   latestAvailableVersion,
   onUpgrade,
@@ -61,11 +70,16 @@ export const SettingsApplicationDetailGeneralTab = ({
   isUninstalling,
   uninstallProgress,
 }: SettingsApplicationDetailGeneralTabProps) => {
+  const { t } = useLingui();
   const navigateSettings = useNavigateSettings();
 
   const canManageApplications = useHasPermissionFlag(
     PermissionFlagType.APPLICATIONS,
   );
+
+  const { content, error: contentError } = useInstalledApplicationContent({
+    applicationId: application.id,
+  });
 
   const isUpgradable = isUpgradableApplicationSourceType(
     application.applicationRegistration?.sourceType,
@@ -80,7 +94,13 @@ export const SettingsApplicationDetailGeneralTab = ({
       ? [
           <Button
             key="see"
-            startIcon={<IconShoppingBag />}
+            startIcon={
+              isMarketplaceApplication ? (
+                <IconShoppingBag />
+              ) : (
+                <IconInfoCircle />
+              )
+            }
             variant="outline"
             size="sm"
             onClick={() =>
@@ -88,7 +108,11 @@ export const SettingsApplicationDetailGeneralTab = ({
                 availableApplicationId: marketplaceUniversalIdentifier,
               })
             }
-          >{t`See`}</Button>,
+          >
+            {isMarketplaceApplication
+              ? t`View in marketplace`
+              : t`See app page`}
+          </Button>,
         ]
       : []),
     ...(canManageApplications && hasUpdate
@@ -137,19 +161,41 @@ export const SettingsApplicationDetailGeneralTab = ({
           actions={isNonEmptyArray(actions) ? actions : undefined}
         />
       </Section.Root>
+      <ToastOnQueryErrorEffect error={contentError} />
+      {isDefined(content) && (
+        <SettingsApplicationContentSummarySection
+          applicationName={displayName}
+          content={content}
+          location={{ kind: 'installed', applicationId: application.id }}
+        />
+      )}
       {isUpgradable && (
         <SettingsApplicationAutoUpdateSection
           applicationId={application.id}
           autoUpgrade={application.autoUpgrade}
         />
       )}
+      {canManageApplications && (
+        <SettingsApplicationIframeMediaPermissionsSection
+          key={application.id}
+          applicationId={application.id}
+          applicationName={displayName}
+          requestedPermissions={application.requestedIframeMediaPermissions}
+          grantedPermissions={application.grantedIframeMediaPermissions}
+        />
+      )}
       {applicationHasHttpTriggeredFunctions(application) && (
-        <AdvancedSettingsWrapper>
-          <SettingsApplicationFunctionDomainSection
+        <SettingsApplicationFunctionDomainSection
+          applicationId={application.id}
+        />
+      )}
+      {canManageApplications &&
+        application.applicationRegistration?.sourceType ===
+          ApplicationRegistrationSourceType.OAUTH_ONLY && (
+          <SettingsApplicationConnectedMembersSection
             applicationId={application.id}
           />
-        </AdvancedSettingsWrapper>
-      )}
+        )}
       <SettingsApplicationConnectionsSection applicationId={application.id} />
     </>
   );

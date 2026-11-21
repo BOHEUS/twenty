@@ -1,19 +1,23 @@
 import { useIsThirdPartyApplication } from '@/applications/hooks/useIsThirdPartyApplication';
 import { CoreWorkflowEditor } from '@/object-core/workflows/components/CoreWorkflowEditor';
+import { CoreWorkflowsPermissionGate } from '@/object-core/workflows/components/CoreWorkflowsPermissionGate';
 import { CoreObjectIdentifierBar } from '@/object-core/components/CoreObjectIdentifierBar';
-import { CoreWorkflowToWorkspaceRedirect } from '@/object-core/workflows/components/CoreWorkflowToWorkspaceRedirect';
 import { useRenameCoreWorkflow } from '@/object-core/workflows/hooks/useRenameCoreWorkflow';
 import { styled } from '@linaria/react';
 import { isNonEmptyString } from '@sniptt/guards';
-import { t } from '@lingui/core/macro';
 import { useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { AppPath } from 'twenty-shared/types';
-import { PermissionFlagType } from 'twenty-shared/constants';
 import { getAppPath, isDefined } from 'twenty-shared/utils';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 
+import { CoreWorkflowShowPageActiveTab } from '@/object-core/workflows/components/CoreWorkflowShowPageActiveTab';
+import { CoreWorkflowShowPageTabList } from '@/object-core/workflows/components/CoreWorkflowShowPageTabList';
+import { useCanReadWorkflowRuns } from '@/object-core/workflows/hooks/useCanReadWorkflowRuns';
+import { useCoreWorkflowRunInsights } from '@/object-core/workflows/hooks/useCoreWorkflowRunInsights';
+import { useCoreWorkflowShowPageActiveTab } from '@/object-core/workflows/hooks/useCoreWorkflowShowPageActiveTab';
+import { getCoreWorkflowShowPageTabListComponentInstanceId } from '@/object-core/workflows/utils/getCoreWorkflowShowPageTabListComponentInstanceId';
 import { WorkspaceRouteUnavailable } from '@/ui/layout/page/components/WorkspaceRouteUnavailable';
 import { RecordShowCommandMenu } from '@/command-menu-item/components/RecordShowCommandMenu';
 import { CommandMenuComponentInstanceContext } from '@/command-menu/states/contexts/CommandMenuComponentInstanceContext';
@@ -22,17 +26,15 @@ import { useListenToCoreWorkflowEvents } from '@/object-core/workflows/hooks/use
 import { useCoreWorkflowVersions } from '@/object-core/workflows/versions/hooks/useCoreWorkflowVersions';
 import { invalidateCoreWorkflowVersions } from '@/object-core/workflows/versions/utils/invalidateCoreWorkflowVersions';
 import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
-import { CoreObjectNamePlural } from '@/object-metadata/types/CoreObjectNamePlural';
 import { RecordShowPageResourceEffect } from '@/object-record/record-show/components/RecordShowPageResourceEffect';
 import { RecordShowContainerContextStoreTargetedRecordsEffect } from '@/object-record/record-show/components/RecordShowContainerContextStoreTargetedRecordsEffect';
-import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { SidePanelToggleButton } from '@/side-panel/components/SidePanelToggleButton';
 import { PageCardHeader } from '@/ui/layout/page/components/PageCardHeader';
 import { PageCardLayout } from '@/ui/layout/page/components/PageCardLayout';
 import { PageTitle } from '@/ui/utilities/page-title/components/PageTitle';
-import { useIsWorkflowCoreEnabled } from '@/workflow/hooks/useIsWorkflowCoreEnabled';
 import { getWorkflowCurrentVersion } from '@/workflow/utils/getWorkflowCurrentVersion';
 import { PageContentSkeletonLoader } from '~/loading/components/PageContentSkeletonLoader';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledContainer = styled.div`
   display: flex;
@@ -50,6 +52,7 @@ const CoreWorkflowShowContent = ({
 }: {
   coreWorkflowId: string;
 }) => {
+  const { t } = useLingui();
   const client = useApolloCoreClient();
   const { record, coreWorkflow, loading, error, refetch } =
     useCoreWorkflowShowPageResource({
@@ -82,6 +85,16 @@ const CoreWorkflowShowContent = ({
     : currentVersion;
   const isReadOnlyVersion =
     isApplicationManaged || isDefined(requestedVersionId);
+  const canReadWorkflowRuns = useCanReadWorkflowRuns();
+  const runInsights = useCoreWorkflowRunInsights({
+    coreWorkflowId,
+    shouldSkip: !canReadWorkflowRuns,
+  });
+  const activeTabId = useCoreWorkflowShowPageActiveTab({
+    coreWorkflowId,
+    hasRuns: runInsights.hasRuns,
+    requestedVersionId,
+  });
   const { renameWorkflow } = useRenameCoreWorkflow({
     coreWorkflowId,
     currentName: record?.name,
@@ -97,7 +110,8 @@ const CoreWorkflowShowContent = ({
 
   if (
     (loading && !isDefined(record)) ||
-    (versions.loading && versions.coreWorkflowVersions.length === 0)
+    (versions.loading && versions.coreWorkflowVersions.length === 0) ||
+    !isDefined(runInsights.hasRuns)
   ) {
     return (
       <>
@@ -146,9 +160,7 @@ const CoreWorkflowShowContent = ({
             links={[
               {
                 children: t`Workflows`,
-                href: getAppPath(AppPath.RecordIndexPage, {
-                  objectNamePlural: CoreObjectNamePlural.Workflow,
-                }),
+                href: getAppPath(AppPath.WorkflowIndexPage),
               },
               {
                 children: isNonEmptyString(record.name) ? (
@@ -174,17 +186,39 @@ const CoreWorkflowShowContent = ({
             namePlaceholder={t`Untitled`}
             onRename={renameWorkflow}
             isReadOnly={isApplicationManaged}
+            tabList={
+              <CoreWorkflowShowPageTabList
+                activeTabId={activeTabId}
+                componentInstanceId={getCoreWorkflowShowPageTabListComponentInstanceId(
+                  {
+                    coreWorkflowId,
+                    requestedVersionId,
+                  },
+                )}
+              />
+            }
           />
-          {isDefined(selectedVersion) ? (
-            <CoreWorkflowEditor
-              key={selectedVersion.id}
-              coreWorkflowId={coreWorkflowId}
-              coreWorkflowVersionId={selectedVersion.id}
-              readonly={isReadOnlyVersion}
-            />
-          ) : (
-            <WorkspaceRouteUnavailable>{t`Workflow version not found.`}</WorkspaceRouteUnavailable>
-          )}
+          <CoreWorkflowShowPageActiveTab
+            activeTabId={activeTabId}
+            coreWorkflowId={coreWorkflowId}
+            coreWorkflowVersions={versions.coreWorkflowVersions}
+            runInsights={runInsights.insights}
+            isLoadingRunInsights={runInsights.loading}
+            hasRunInsightsError={isDefined(runInsights.error)}
+            flowTab={
+              isDefined(selectedVersion) ? (
+                <CoreWorkflowEditor
+                  // The editable editor outlives a change of current version, so creating a draft does not remount the canvas
+                  key={isReadOnlyVersion ? selectedVersion.id : coreWorkflowId}
+                  coreWorkflowId={coreWorkflowId}
+                  coreWorkflowVersionId={selectedVersion.id}
+                  readonly={isReadOnlyVersion}
+                />
+              ) : (
+                <WorkspaceRouteUnavailable>{t`Workflow version not found.`}</WorkspaceRouteUnavailable>
+              )
+            }
+          />
         </StyledContainer>
       </PageCardLayout>
     </CommandMenuComponentInstanceContext.Provider>
@@ -193,22 +227,16 @@ const CoreWorkflowShowContent = ({
 
 export const WorkflowCoreShowPage = () => {
   const { coreWorkflowId } = useParams<{ coreWorkflowId: string }>();
-  const isCore = useIsWorkflowCoreEnabled();
-  const canManageWorkflows = useHasPermissionFlag(PermissionFlagType.WORKFLOWS);
-  if (!canManageWorkflows) {
-    return (
-      <WorkspaceRouteUnavailable>{t`You do not have permission to access workflows.`}</WorkspaceRouteUnavailable>
-    );
-  }
-  if (!isDefined(coreWorkflowId)) {
-    return <WorkspaceRouteUnavailable />;
-  }
-  return isCore ? (
-    <CoreWorkflowShowContent
-      key={coreWorkflowId}
-      coreWorkflowId={coreWorkflowId}
-    />
-  ) : (
-    <CoreWorkflowToWorkspaceRedirect coreWorkflowId={coreWorkflowId} />
+  return (
+    <CoreWorkflowsPermissionGate>
+      {isDefined(coreWorkflowId) ? (
+        <CoreWorkflowShowContent
+          key={coreWorkflowId}
+          coreWorkflowId={coreWorkflowId}
+        />
+      ) : (
+        <WorkspaceRouteUnavailable />
+      )}
+    </CoreWorkflowsPermissionGate>
   );
 };

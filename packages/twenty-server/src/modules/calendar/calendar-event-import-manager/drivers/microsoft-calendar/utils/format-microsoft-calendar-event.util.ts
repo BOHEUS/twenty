@@ -4,6 +4,7 @@ import {
   type ResponseType,
 } from '@microsoft/microsoft-graph-types';
 
+import { isMicrosoftCalendarResourceAttendee } from 'src/modules/calendar/calendar-event-import-manager/drivers/microsoft-calendar/utils/is-microsoft-calendar-resource-attendee.util';
 import { sanitizeCalendarEvent } from 'src/modules/calendar/calendar-event-import-manager/drivers/utils/sanitizeCalendarEvent';
 import { CalendarEventParticipantResponseStatus } from 'src/modules/calendar/common/standard-objects/calendar-event-participant.workspace-entity';
 import { type FetchedCalendarEvent } from 'src/modules/calendar/common/types/fetched-calendar-event.type';
@@ -34,6 +35,8 @@ const formatMicrosoftCalendarEvent = (event: Event): FetchedCalendarEvent => {
   const calendarEvent: FetchedCalendarEvent = {
     title: event.subject ?? '',
     isCanceled: !!event.isCancelled,
+    isPrivate:
+      event.sensitivity === 'private' || event.sensitivity === 'confidential',
     isFullDay: !!event.isAllDay,
     startsAt: event.start?.dateTime ?? '',
     endsAt: event.end?.dateTime ?? '',
@@ -47,6 +50,14 @@ const formatMicrosoftCalendarEvent = (event: Event): FetchedCalendarEvent => {
     conferenceLinkLabel: event.onlineMeeting?.joinUrl ?? '',
     conferenceLinkUrl: event.onlineMeeting?.joinUrl ?? '',
     recurringEventExternalId: event.id ?? '',
+    organizerHandle:
+      event.organizer?.emailAddress?.address?.toLowerCase() ?? '',
+    resourceHandles:
+      event.attendees
+        ?.filter(isMicrosoftCalendarResourceAttendee)
+        .map(
+          (attendee) => attendee.emailAddress?.address?.toLowerCase() ?? '',
+        ) ?? [],
     participants:
       event.attendees?.map((attendee) => ({
         handle: attendee.emailAddress?.address?.toLowerCase() ?? '',
@@ -71,6 +82,7 @@ const formatMicrosoftCalendarEvent = (event: Event): FetchedCalendarEvent => {
     'conferenceLinkLabel',
     'conferenceLinkUrl',
     'recurringEventExternalId',
+    'organizerHandle',
     'status',
   ];
 

@@ -9,8 +9,9 @@ type GetRelationsSelectFieldsArgs = Parameters<
   typeof buildRelationSelectionFromDepth
 >[0];
 
-type TestFlatObjectMetadata =
-  GetRelationsSelectFieldsArgs['flatObjectMetadata'];
+type TestFlatObjectMetadata = NonNullable<
+  GetRelationsSelectFieldsArgs['flatObjectMetadataMaps']['byUniversalIdentifier'][string]
+>;
 
 type TestFlatFieldMetadata = NonNullable<
   GetRelationsSelectFieldsArgs['flatFieldMetadataMaps']['byUniversalIdentifier'][string]
@@ -41,6 +42,7 @@ const createField = ({
   applicationId: APPLICATION_ID,
   workspaceId: WORKSPACE_ID,
   type,
+  morphId: null,
   name,
   settings: relationType ? { relationType } : null,
   relationTargetObjectMetadataId,
@@ -167,16 +169,11 @@ const buildArgs = (
   return {
     flatObjectMetadataMaps: buildFlatEntityMaps(objects),
     flatFieldMetadataMaps: buildFlatEntityMaps(fields),
-    flatObjectMetadata: opportunity,
     flatFields: fields.filter((field) =>
       opportunity.fieldIds.includes(field.id),
     ),
-    objectsPermissions: Object.fromEntries(
-      objects.map((object) => [
-        object.id,
-        { canReadObjectRecords: true, restrictedFields: {} },
-      ]),
-    ),
+    unreadableFieldMetadataIds: new Set<string>(),
+    readableObjectMetadataIds: new Set(objects.map((object) => object.id)),
     depth,
   };
 };
@@ -185,17 +182,43 @@ const buildArgs = (
 describe('buildRelationSelectionFromDepth', () => {
   it('should expand relations but not timeline activities at depth 1', () => {
     expect(buildRelationSelectionFromDepth(buildArgs(1))).toEqual({
-      company: { name: true, accountOwnerId: true, timelineActivities: true },
+      company: {
+        fieldName: 'company',
+        selectedFields: {
+          fields: {
+            name: true,
+            accountOwnerId: true,
+            timelineActivities: true,
+          },
+          aggregates: [],
+          relations: {},
+        },
+      },
     });
   });
 
   it('should expand nested relations but not their timeline activities at depth 2', () => {
     expect(buildRelationSelectionFromDepth(buildArgs(2))).toEqual({
       company: {
-        name: true,
-        accountOwnerId: true,
-        timelineActivities: true,
-        accountOwner: { name: true },
+        fieldName: 'company',
+        selectedFields: {
+          fields: {
+            name: true,
+            accountOwnerId: true,
+            timelineActivities: true,
+          },
+          aggregates: [],
+          relations: {
+            accountOwner: {
+              fieldName: 'accountOwner',
+              selectedFields: {
+                fields: { name: true },
+                aggregates: [],
+                relations: {},
+              },
+            },
+          },
+        },
       },
     });
   });

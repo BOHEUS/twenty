@@ -2,7 +2,6 @@ import {
   AVAILABLE_WORKSPACE_FOR_AUTH_FRAGMENT,
   AVAILABLE_WORKSPACES_FOR_AUTH_FRAGMENT,
 } from '@/auth/graphql/fragments/authFragments';
-import { OBJECT_PERMISSION_FRAGMENT } from '@/settings/roles/graphql/fragments/objectPermissionFragment';
 import { ROLE_FRAGMENT } from '@/settings/roles/graphql/fragments/roleFragment';
 import { ROW_LEVEL_PERMISSION_PREDICATE_FRAGMENT } from '@/settings/roles/graphql/fragments/rowLevelPermissionPredicateFragment';
 import { ROW_LEVEL_PERMISSION_PREDICATE_GROUP_FRAGMENT } from '@/settings/roles/graphql/fragments/rowLevelPermissionPredicateGroupFragment';
@@ -40,13 +39,32 @@ export const USER_QUERY_FRAGMENT = gql`
       id
       permissionFlags
       isImpersonating
-      objectsPermissions {
-        ...ObjectPermissionFragment
-        rowLevelPermissionPredicates {
-          ...RowLevelPermissionPredicateFragment
-        }
-        rowLevelPermissionPredicateGroups {
-          ...RowLevelPermissionPredicateGroupFragment
+      inboxNotificationLevel
+      isInboxNotificationPreviewEnabled
+      objectRecordsPermissions {
+        objectMetadataId
+        canCreateAllRecords
+        canReadAllRecords
+        canUpdateAllRecords
+        canSoftDeleteAllRecords
+        canDestroyAllRecords
+        unreadableFields
+        uneditableFields
+        rowLevelRecordsPermissions {
+          ruleId
+          canCreateRecords
+          canReadRecords
+          canUpdateRecords
+          canSoftDeleteRecords
+          canDestroyRecords
+          predicates {
+            ...RowLevelPermissionPredicateFragment
+          }
+          predicateGroups {
+            ...RowLevelPermissionPredicateGroupFragment
+          }
+          unreadableFields
+          uneditableFields
         }
       }
       twoFactorAuthenticationMethodSummary {
@@ -64,6 +82,7 @@ export const USER_QUERY_FRAGMENT = gql`
       activationStatus
       isPublicInviteLinkEnabled
       isCampaignClickTrackingEnabled
+      isCampaignOpenTrackingEnabled
       workspaceDiscoverability
       isGoogleAuthEnabled
       isMicrosoftAuthEnabled
@@ -79,12 +98,20 @@ export const USER_QUERY_FRAGMENT = gql`
         id
       }
       installedApplications {
+        runHealthCheckOnUserPreferences
         id
         name
+        description
         universalIdentifier
         logoUrl
+        createdAt
       }
       isCustomDomainEnabled
+      iframeMediaPermissions {
+        origin
+        microphone
+        camera
+      }
       workspaceUrls {
         ...WorkspaceUrlsFragment
       }
@@ -98,6 +125,7 @@ export const USER_QUERY_FRAGMENT = gql`
       billingCustomer {
         id
         hasPaymentMethod
+        userCreditsFallback
       }
       billingSubscriptions {
         ...BillingSubscriptionFragment
@@ -106,20 +134,35 @@ export const USER_QUERY_FRAGMENT = gql`
         key
         value
       }
+      isTrialAvailable
       workspaceMembersCount
       defaultRole {
         ...RoleFragment
       }
       aiChatModelTier
+      aiChatAssistantProfile {
+        displayName
+        avatarShape
+        avatarColor
+        avatarFace
+        isAvatarAnimated
+      }
+      aiChatDirectMessageAssistantMode
+      aiChatInboxAssistantMode
       aiAgentModelTier
       isAutoModelSelectionEnabled
       aiModelIdByTier
       aiAdditionalInstructions
+      aiDataPolicy {
+        requiredDataResidencyRegion
+        isZeroDataRetentionRequired
+        isProductImprovementDataSharingEnabled
+      }
       isTwoFactorAuthenticationEnforced
       trashRetentionDays
       eventLogRetentionDays
       editableProfileFields
-      isInternalMessagesImportEnabled
+      isInternalImportEnabled
     }
     availableWorkspaces {
       ...AvailableWorkspacesFragment
@@ -130,7 +173,6 @@ export const USER_QUERY_FRAGMENT = gql`
   ${WORKSPACE_MEMBER_QUERY_FRAGMENT}
   ${DELETED_WORKSPACE_MEMBER_QUERY_FRAGMENT}
   ${PARTIAL_WORKSPACE_MEMBER_QUERY_FRAGMENT}
-  ${OBJECT_PERMISSION_FRAGMENT}
   ${ROW_LEVEL_PERMISSION_PREDICATE_FRAGMENT}
   ${ROW_LEVEL_PERMISSION_PREDICATE_GROUP_FRAGMENT}
   ${WORKSPACE_URLS_FRAGMENT}

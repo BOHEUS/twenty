@@ -14,12 +14,18 @@ import {
   type WorkspaceRouteHandle,
   type WorkspaceRouteObject,
 } from '@/app/routing/types/WorkspaceRouteObject';
+import { SETTINGS_AI_TABS } from '@/settings/ai/constants/SettingsAiTabs';
+import { SettingsLegacyAccountsRedirect } from '@/settings/app-preferences/components/SettingsLegacyAccountsRedirect';
+import { APP_PREFERENCES_PATH_BY_LEGACY_ACCOUNTS_PATH } from '@/settings/app-preferences/constants/AppPreferencesPathByLegacyAccountsPath';
 import { SettingsProtectedRouteWrapper } from '@/settings/components/SettingsProtectedRouteWrapper';
 import { SettingsSkeletonLoader } from '@/settings/components/SettingsSkeletonLoader';
 import { SettingPublicDomain } from '@/settings/domains/components/SettingPublicDomain';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { PermissionFlagType } from '~/generated-metadata/graphql';
+import {
+  FeatureFlagKey,
+  PermissionFlagType,
+} from '~/generated-metadata/graphql';
 
 const SettingsGraphQLPlayground = lazy(() =>
   import('~/pages/settings/developers/playground/SettingsGraphQLPlayground').then(
@@ -37,22 +43,24 @@ const SettingsRestPlayground = lazy(() =>
   ),
 );
 
-// TODO: remove these legacy /api-webhooks redirects after 2026-08-04.
-const LEGACY_API_WEBHOOKS_SETTINGS_PATHS = {
-  ApiWebhooks: 'api-webhooks',
-  NewApiKey: 'api-webhooks/apis/new',
-  ApiKeyDetail: 'api-webhooks/apis/:apiKeyId',
-  NewWebhook: 'api-webhooks/webhooks/new',
-  WebhookDetail: 'api-webhooks/webhooks/:webhookId',
-} as const;
+// TODO: remove these legacy redirects after 2027-01-14.
+const LEGACY_DEVELOPERS_SETTINGS_PATH_PREFIX = 'mcp-apis';
+
+const LEGACY_DEVELOPERS_SETTINGS_PATHS = [
+  { suffix: '', to: SettingsPath.Developers },
+  { suffix: '/apis/new', to: SettingsPath.NewApiKey },
+  { suffix: '/apis/:apiKeyId', to: SettingsPath.ApiKeyDetail },
+  { suffix: '/webhooks/new', to: SettingsPath.NewWebhook },
+  { suffix: '/webhooks/:webhookId', to: SettingsPath.WebhookDetail },
+] as const;
+
+const LEGACY_APPLICATION_REGISTRATION_DETAIL_PATH =
+  'applications/registrations/:applicationRegistrationId';
 
 type LegacySettingsPathRedirectProps = {
   to:
-    | SettingsPath.ApiWebhooks
-    | SettingsPath.NewApiKey
-    | SettingsPath.ApiKeyDetail
-    | SettingsPath.NewWebhook
-    | SettingsPath.WebhookDetail;
+    | (typeof LEGACY_DEVELOPERS_SETTINGS_PATHS)[number]['to']
+    | SettingsPath.ApplicationRegistrationDetail;
 };
 
 const getLegacySettingsPathRedirectPathname = (
@@ -68,7 +76,11 @@ const getLegacySettingsPathRedirectPathname = (
       return getSettingsPath(SettingsPath.WebhookDetail, {
         webhookId: params.webhookId ?? null,
       });
-    case SettingsPath.ApiWebhooks:
+    case SettingsPath.ApplicationRegistrationDetail:
+      return getSettingsPath(SettingsPath.ApplicationRegistrationDetail, {
+        applicationRegistrationId: params.applicationRegistrationId ?? null,
+      });
+    case SettingsPath.Developers:
     case SettingsPath.NewApiKey:
     case SettingsPath.NewWebhook:
       return getSettingsPath(to);
@@ -78,6 +90,16 @@ const getLegacySettingsPathRedirectPathname = (
 function LegacySettingsPathRedirect({ to }: LegacySettingsPathRedirectProps) {
   const location = useLocation();
   const params = useParams();
+
+  if (to === SettingsPath.Developers && location.hash === '#mcp') {
+    return (
+      <Navigate
+        to={`${getSettingsPath(SettingsPath.AI)}${location.search}#${SETTINGS_AI_TABS.TABS_IDS.MCP}`}
+        replace
+      />
+    );
+  }
+
   const pathname = getLegacySettingsPathRedirectPathname(to, params);
 
   return (
@@ -227,6 +249,14 @@ const SettingsWorkspaceUnsubscribe = lazy(() =>
   ),
 );
 
+const SettingsWorkspaceBlocklist = lazy(() =>
+  import('~/pages/settings/communications/SettingsWorkspaceBlocklist').then(
+    (module) => ({
+      default: module.SettingsWorkspaceBlocklist,
+    }),
+  ),
+);
+
 const SettingsSubdomainPage = lazy(() =>
   import('~/pages/settings/domains/SettingsSubdomainPage').then((module) => ({
     default: module.SettingsSubdomainPage,
@@ -241,12 +271,10 @@ const SettingsCustomDomainPage = lazy(() =>
   ),
 );
 
-const SettingsApiWebhooks = lazy(() =>
-  import('~/pages/settings/api-webhooks/SettingsApiWebhooks').then(
-    (module) => ({
-      default: module.SettingsApiWebhooks,
-    }),
-  ),
+const SettingsDevelopers = lazy(() =>
+  import('~/pages/settings/developers/SettingsDevelopers').then((module) => ({
+    default: module.SettingsDevelopers,
+  })),
 );
 
 const SettingsAI = lazy(() =>
@@ -279,6 +307,14 @@ const SettingsApplicationDetails = lazy(() =>
   import('~/pages/settings/applications/SettingsApplicationDetails').then(
     (module) => ({
       default: module.SettingsApplicationDetails,
+    }),
+  ),
+);
+
+const SettingsApplicationConnectWithApiKey = lazy(() =>
+  import('~/pages/settings/applications/SettingsApplicationConnectWithApiKey').then(
+    (module) => ({
+      default: module.SettingsApplicationConnectWithApiKey,
     }),
   ),
 );
@@ -343,6 +379,14 @@ const SettingsAdminApplicationRegistrationDetail = lazy(() =>
   ),
 );
 
+const SettingsAdminApplicationRegistrationMonitoring = lazy(() =>
+  import('~/pages/settings/admin-panel/SettingsAdminApplicationRegistrationMonitoring').then(
+    (module) => ({
+      default: module.SettingsAdminApplicationRegistrationMonitoring,
+    }),
+  ),
+);
+
 const SettingsAvailableApplicationDetails = lazy(() =>
   import('~/pages/settings/applications/SettingsAvailableApplicationDetails').then(
     (module) => ({
@@ -351,10 +395,42 @@ const SettingsAvailableApplicationDetails = lazy(() =>
   ),
 );
 
+const SettingsApplicationContent = lazy(() =>
+  import('~/pages/settings/applications/SettingsApplicationContent').then(
+    (module) => ({
+      default: module.SettingsApplicationContent,
+    }),
+  ),
+);
+
+const SettingsAvailableApplicationResources = lazy(() =>
+  import('~/pages/settings/applications/SettingsAvailableApplicationResources').then(
+    (module) => ({
+      default: module.SettingsAvailableApplicationResources,
+    }),
+  ),
+);
+
+const SettingsApplicationContentTypeDetail = lazy(() =>
+  import('~/pages/settings/applications/SettingsApplicationContentTypeDetail').then(
+    (module) => ({
+      default: module.SettingsApplicationContentTypeDetail,
+    }),
+  ),
+);
+
 const SettingsApplicationRegistrationDetails = lazy(() =>
   import('~/pages/settings/applications/SettingsApplicationRegistrationDetails').then(
     (module) => ({
       default: module.SettingsApplicationRegistrationDetails,
+    }),
+  ),
+);
+
+const SettingsApplicationRegistrationMonitoring = lazy(() =>
+  import('~/pages/settings/applications/SettingsApplicationRegistrationMonitoring').then(
+    (module) => ({
+      default: module.SettingsApplicationRegistrationMonitoring,
     }),
   ),
 );
@@ -419,24 +495,10 @@ const SettingsAccountDetail = lazy(() =>
   })),
 );
 
-const SettingsNativeAccountApp = lazy(() =>
-  import('~/pages/settings/accounts/SettingsNativeAccountApp').then(
+const SettingsAppPreferencesApp = lazy(() =>
+  import('~/pages/settings/accounts/SettingsAppPreferencesApp').then(
     (module) => ({
-      default: module.SettingsNativeAccountApp,
-    }),
-  ),
-);
-
-const SettingsAccountsEmails = lazy(() =>
-  import('~/pages/settings/accounts/SettingsAccountsEmails').then((module) => ({
-    default: module.SettingsAccountsEmails,
-  })),
-);
-
-const SettingsAccountsCalendars = lazy(() =>
-  import('~/pages/settings/accounts/SettingsAccountsCalendars').then(
-    (module) => ({
-      default: module.SettingsAccountsCalendars,
+      default: module.SettingsAppPreferencesApp,
     }),
   ),
 );
@@ -468,6 +530,12 @@ const SettingsBillingLimits = lazy(() =>
 const SettingsBillingNewLimit = lazy(() =>
   import('~/pages/settings/billing/SettingsBillingNewLimit').then((module) => ({
     default: module.SettingsBillingNewLimit,
+  })),
+);
+
+const SettingsPartner = lazy(() =>
+  import('~/pages/settings/billing/SettingsPartner').then((module) => ({
+    default: module.SettingsPartner,
   })),
 );
 
@@ -507,6 +575,18 @@ const SettingsDevelopersWebhookDetail = lazy(() =>
   ),
 );
 
+const SettingsAiMcpServerNew = lazy(() =>
+  import('~/pages/settings/ai/SettingsAiMcpServerNew').then((module) => ({
+    default: module.SettingsAiMcpServerNew,
+  })),
+);
+
+const SettingsAiMcpServerDetail = lazy(() =>
+  import('~/pages/settings/ai/SettingsAiMcpServerDetail').then((module) => ({
+    default: module.SettingsAiMcpServerDetail,
+  })),
+);
+
 const SettingsObjectNewFieldSelect = lazy(() =>
   import('~/pages/settings/data-model/new-field/SettingsObjectNewFieldSelect').then(
     (module) => ({
@@ -531,14 +611,6 @@ const SettingsObjectNewIndex = lazy(() =>
   ),
 );
 
-const SettingsObjectNewValidationRule = lazy(() =>
-  import('~/pages/settings/data-model/validation-rules/SettingsObjectNewValidationRule').then(
-    (module) => ({
-      default: module.SettingsObjectNewValidationRule,
-    }),
-  ),
-);
-
 const SettingsObjectValidationRuleEdit = lazy(() =>
   import('~/pages/settings/data-model/validation-rules/SettingsObjectValidationRuleEdit').then(
     (module) => ({
@@ -551,6 +623,20 @@ const SettingsObjectFieldEdit = lazy(() =>
   import('~/pages/settings/data-model/SettingsObjectFieldEdit').then(
     (module) => ({
       default: module.SettingsObjectFieldEdit,
+    }),
+  ),
+);
+
+const SettingsObjectSearch = lazy(() =>
+  import('~/pages/settings/data-model/SettingsObjectSearch').then((module) => ({
+    default: module.SettingsObjectSearch,
+  })),
+);
+
+const SettingsObjectIndexes = lazy(() =>
+  import('~/pages/settings/data-model/SettingsObjectIndexes').then(
+    (module) => ({
+      default: module.SettingsObjectIndexes,
     }),
   ),
 );
@@ -681,12 +767,6 @@ const SettingsAdminWorkspaceChatThread = lazy(() =>
   ),
 );
 
-const SettingsAdminChats = lazy(() =>
-  import('~/pages/settings/admin-panel/SettingsAdminChats').then((module) => ({
-    default: module.SettingsAdminChats,
-  })),
-);
-
 const SettingsCommunity = lazy(() =>
   import('~/pages/settings/community/SettingsCommunity').then((module) => ({
     default: module.SettingsCommunity,
@@ -707,20 +787,10 @@ const SettingsRoleEdit = lazy(() =>
   })),
 );
 
-const SettingsRoleObjectLevel = lazy(() =>
-  import('~/pages/settings/members/roles/SettingsRoleObjectLevel').then(
-    (module) => ({
-      default: module.SettingsRoleObjectLevel,
-    }),
-  ),
-);
-
-const SettingsRoleAddObjectLevel = lazy(() =>
-  import('~/pages/settings/members/roles/SettingsRoleAddObjectLevel').then(
-    (module) => ({
-      default: module.SettingsRoleAddObjectLevel,
-    }),
-  ),
+const SettingsRoleRule = lazy(() =>
+  import('~/pages/settings/members/roles/SettingsRoleRule').then((module) => ({
+    default: module.SettingsRoleRule,
+  })),
 );
 
 type CreateSettingsRouteObjectsArgs = {
@@ -760,6 +830,11 @@ const createSettingsRouteElements = ({
       element={<SettingsTwoFactorAuthenticationMethod />}
     />
     <Route path={SettingsPath.Experience} element={<SettingsExperience />} />
+    {/* Reached from both the Applications and Accounts settings; the mutation checks the caller per provider scope */}
+    <Route
+      path={SettingsPath.ApplicationConnectWithApiKey}
+      element={<SettingsApplicationConnectWithApiKey />}
+    />
     <Route
       element={
         <SettingsProtectedRouteWrapper
@@ -767,34 +842,41 @@ const createSettingsRouteElements = ({
         />
       }
     >
-      <Route path={SettingsPath.Accounts} element={<SettingsAccounts />} />
+      {Object.keys(APP_PREFERENCES_PATH_BY_LEGACY_ACCOUNTS_PATH).map(
+        (legacyAccountsPath) => (
+          <Route
+            key={legacyAccountsPath}
+            path={legacyAccountsPath}
+            element={<SettingsLegacyAccountsRedirect />}
+          />
+        ),
+      )}
       <Route
-        path={SettingsPath.AccountDetail}
+        path={SettingsPath.AppPreferences}
+        element={<SettingsAccounts />}
+      />
+      <Route
+        path={SettingsPath.AppPreferencesApp}
+        element={<SettingsAppPreferencesApp />}
+      />
+      <Route
+        path={SettingsPath.AppPreferencesAccountDetail}
         element={<SettingsAccountDetail />}
       />
       <Route
-        path={SettingsPath.NativeAccountApp}
-        element={<SettingsNativeAccountApp />}
+        path={SettingsPath.AppPreferencesNewAccount}
+        element={<SettingsNewAccount />}
       />
       <Route
-        path={SettingsPath.AccountsEmails}
-        element={<SettingsAccountsEmails />}
-      />
-      <Route
-        path={SettingsPath.AccountsCalendars}
-        element={<SettingsAccountsCalendars />}
-      />
-      <Route path={SettingsPath.NewAccount} element={<SettingsNewAccount />} />
-      <Route
-        path={SettingsPath.AccountsConfiguration}
+        path={SettingsPath.AppPreferencesAccountConfiguration}
         element={<SettingsAccountsConfiguration />}
       />
       <Route
-        path={SettingsPath.NewImapSmtpCaldavConnection}
+        path={SettingsPath.AppPreferencesNewImapSmtpCaldavConnection}
         element={<SettingsNewImapSmtpCaldavConnection />}
       />
       <Route
-        path={SettingsPath.EditImapSmtpCaldavConnection}
+        path={SettingsPath.AppPreferencesEditImapSmtpCaldavConnection}
         element={<SettingsEditImapSmtpCaldavConnection />}
       />
     </Route>
@@ -830,6 +912,10 @@ const createSettingsRouteElements = ({
         path={SettingsPath.Unsubscribe}
         element={<SettingsWorkspaceUnsubscribe />}
       />
+      <Route
+        path={SettingsPath.WorkspaceBlocklist}
+        element={<SettingsWorkspaceBlocklist />}
+      />
       <Route path={SettingsPath.Billing} element={<SettingsBilling />} />
       <Route
         path={SettingsPath.BillingPlans}
@@ -852,6 +938,7 @@ const createSettingsRouteElements = ({
         path={SettingsPath.BillingLimitEdit}
         element={<SettingsBillingLimitEdit />}
       />
+      <Route path={SettingsPath.Partner} element={<SettingsPartner />} />
       <Route
         path={SettingsPath.Subdomain}
         element={<SettingsSubdomainPage />}
@@ -973,11 +1060,6 @@ const createSettingsRouteElements = ({
         handle={MAIN_AND_SIDE_PANEL_SETTINGS_ROUTE_HANDLE}
       />
       <Route
-        path={SettingsPath.ObjectNewValidationRule}
-        element={<SettingsObjectNewValidationRule />}
-        handle={MAIN_AND_SIDE_PANEL_SETTINGS_ROUTE_HANDLE}
-      />
-      <Route
         path={SettingsPath.ObjectValidationRuleEdit}
         element={<SettingsObjectValidationRuleEdit />}
         handle={MAIN_AND_SIDE_PANEL_SETTINGS_ROUTE_HANDLE}
@@ -990,6 +1072,16 @@ const createSettingsRouteElements = ({
       <Route
         path={SettingsPath.ObjectTranslations}
         element={<SettingsObjectTranslations />}
+        handle={MAIN_AND_SIDE_PANEL_SETTINGS_ROUTE_HANDLE}
+      />
+      <Route
+        path={SettingsPath.ObjectSearch}
+        element={<SettingsObjectSearch />}
+        handle={MAIN_AND_SIDE_PANEL_SETTINGS_ROUTE_HANDLE}
+      />
+      <Route
+        path={SettingsPath.ObjectIndexes}
+        element={<SettingsObjectIndexes />}
         handle={MAIN_AND_SIDE_PANEL_SETTINGS_ROUTE_HANDLE}
       />
       <Route
@@ -1026,13 +1118,8 @@ const createSettingsRouteElements = ({
         handle={MAIN_AND_SIDE_PANEL_SETTINGS_ROUTE_HANDLE}
       />
       <Route
-        path={SettingsPath.RoleObjectLevel}
-        element={<SettingsRoleObjectLevel />}
-        handle={MAIN_AND_SIDE_PANEL_SETTINGS_ROUTE_HANDLE}
-      />
-      <Route
-        path={SettingsPath.RoleAddObjectLevel}
-        element={<SettingsRoleAddObjectLevel />}
+        path={SettingsPath.RoleRule}
+        element={<SettingsRoleRule />}
         handle={MAIN_AND_SIDE_PANEL_SETTINGS_ROUTE_HANDLE}
       />
     </Route>
@@ -1043,29 +1130,29 @@ const createSettingsRouteElements = ({
         />
       }
     >
+      {LEGACY_DEVELOPERS_SETTINGS_PATHS.map(({ suffix, to }) => (
+        <Route
+          key={suffix}
+          path={`${LEGACY_DEVELOPERS_SETTINGS_PATH_PREFIX}${suffix}`}
+          element={<LegacySettingsPathRedirect to={to} />}
+        />
+      ))}
+      <Route path={SettingsPath.Developers} element={<SettingsDevelopers />} />
       <Route
-        path={LEGACY_API_WEBHOOKS_SETTINGS_PATHS.ApiWebhooks}
-        element={<LegacySettingsPathRedirect to={SettingsPath.ApiWebhooks} />}
+        path={SettingsPath.ApplicationRegistrationDetail}
+        element={<SettingsApplicationRegistrationDetails />}
       />
       <Route
-        path={LEGACY_API_WEBHOOKS_SETTINGS_PATHS.NewApiKey}
-        element={<LegacySettingsPathRedirect to={SettingsPath.NewApiKey} />}
+        path={SettingsPath.ApplicationRegistrationMonitoring}
+        element={<SettingsApplicationRegistrationMonitoring />}
       />
       <Route
-        path={LEGACY_API_WEBHOOKS_SETTINGS_PATHS.ApiKeyDetail}
-        element={<LegacySettingsPathRedirect to={SettingsPath.ApiKeyDetail} />}
-      />
-      <Route
-        path={LEGACY_API_WEBHOOKS_SETTINGS_PATHS.NewWebhook}
-        element={<LegacySettingsPathRedirect to={SettingsPath.NewWebhook} />}
-      />
-      <Route
-        path={LEGACY_API_WEBHOOKS_SETTINGS_PATHS.WebhookDetail}
-        element={<LegacySettingsPathRedirect to={SettingsPath.WebhookDetail} />}
-      />
-      <Route
-        path={SettingsPath.ApiWebhooks}
-        element={<SettingsApiWebhooks />}
+        path={LEGACY_APPLICATION_REGISTRATION_DETAIL_PATH}
+        element={
+          <LegacySettingsPathRedirect
+            to={SettingsPath.ApplicationRegistrationDetail}
+          />
+        }
       />
       <Route
         path={`${SettingsPath.GraphQLPlayground}`}
@@ -1092,6 +1179,31 @@ const createSettingsRouteElements = ({
         element={<SettingsDevelopersWebhookDetail />}
       />
     </Route>
+    <Route
+      element={
+        <SettingsProtectedRouteWrapper
+          settingsPermission={PermissionFlagType.AI_SETTINGS}
+          requiredFeatureFlag={FeatureFlagKey.IS_MCP_SERVERS_ENABLED}
+        />
+      }
+    >
+      <Route
+        element={
+          <SettingsProtectedRouteWrapper
+            settingsPermission={PermissionFlagType.API_KEYS_AND_WEBHOOKS}
+          />
+        }
+      >
+        <Route
+          path={SettingsPath.AiNewMcpServer}
+          element={<SettingsAiMcpServerNew />}
+        />
+        <Route
+          path={SettingsPath.AiMcpServerDetail}
+          element={<SettingsAiMcpServerDetail />}
+        />
+      </Route>
+    </Route>
 
     <Route
       element={
@@ -1117,8 +1229,24 @@ const createSettingsRouteElements = ({
         element={<SettingsAvailableApplicationDetails />}
       />
       <Route
-        path={SettingsPath.ApplicationRegistrationDetail}
-        element={<SettingsApplicationRegistrationDetails />}
+        path={SettingsPath.ApplicationContent}
+        element={<SettingsApplicationContent />}
+      />
+      <Route
+        path={SettingsPath.ApplicationContentTypeDetail}
+        element={<SettingsApplicationContentTypeDetail />}
+      />
+      <Route
+        path={SettingsPath.AvailableApplicationResources}
+        element={<SettingsAvailableApplicationResources />}
+      />
+      <Route
+        path={SettingsPath.AvailableApplicationContent}
+        element={<SettingsApplicationContent />}
+      />
+      <Route
+        path={SettingsPath.AvailableApplicationContentTypeDetail}
+        element={<SettingsApplicationContentTypeDetail />}
       />
       <Route
         path={SettingsPath.ApplicationLogicFunctionDetail}
@@ -1230,12 +1358,12 @@ const createSettingsRouteElements = ({
           element={<SettingsAdminApplicationRegistrationDetail />}
         />
         <Route
-          path={SettingsPath.AdminPanelWorkspaceChatThread}
-          element={<SettingsAdminWorkspaceChatThread />}
+          path={SettingsPath.AdminPanelApplicationRegistrationMonitoring}
+          element={<SettingsAdminApplicationRegistrationMonitoring />}
         />
         <Route
-          path={SettingsPath.AdminPanelChats}
-          element={<SettingsAdminChats />}
+          path={SettingsPath.AdminPanelWorkspaceChatThread}
+          element={<SettingsAdminWorkspaceChatThread />}
         />
       </>
     )}

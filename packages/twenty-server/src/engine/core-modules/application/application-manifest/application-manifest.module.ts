@@ -1,6 +1,12 @@
+import { ApplicationLogicFunctionExportService } from 'src/engine/core-modules/application/application-manifest/services/application-logic-function-export.service';
+import { ApplicationSourceService } from 'src/engine/core-modules/application/application-manifest/services/application-source.service';
+import { ApplicationFrontComponentExportService } from 'src/engine/core-modules/application/application-manifest/services/application-front-component-export.service';
+import { ApplicationPublicAssetExportService } from 'src/engine/core-modules/application/application-manifest/services/application-public-asset-export.service';
+import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
+import { ApplicationGrantRoleModule } from 'src/engine/core-modules/application/application-grant-role/application-grant-role.module';
 import { ApplicationLookupModule } from 'src/engine/core-modules/application/application-lookup/application-lookup.module';
 import { ApplicationModule } from 'src/engine/core-modules/application/application.module';
 import { ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
@@ -11,27 +17,36 @@ import { ApplicationUninstallService } from 'src/engine/core-modules/application
 import { ComputeApplicationManifestAllUniversalFlatEntityMapsService } from 'src/engine/core-modules/application/application-manifest/services/compute-application-manifest-all-universal-flat-entity-maps.service';
 import { ApplicationSyncService } from 'src/engine/core-modules/application/application-manifest/application-sync.service';
 import { ApplicationHealthModule } from 'src/engine/core-modules/application/application-health/application-health.module';
+import { ApplicationPackageModule } from 'src/engine/core-modules/application/application-package/application-package.module';
 import { ApplicationRegistrationLookupModule } from 'src/engine/core-modules/application/application-registration/application-registration-lookup/application-registration-lookup.module';
 import { ApplicationRegistrationModule } from 'src/engine/core-modules/application/application-registration/application-registration.module';
 import { ApplicationTranslationModule } from 'src/engine/core-modules/application/application-translation/application-translation.module';
-import { SecretEncryptionModule } from 'src/engine/core-modules/secret-encryption/secret-encryption.module';
 import { SdkClientModule } from 'src/engine/core-modules/sdk-client/sdk-client.module';
+import { ConnectedAccountMetadataModule } from 'src/engine/metadata-modules/connected-account/connected-account-metadata.module';
 import { FrontComponentEntity } from 'src/engine/metadata-modules/front-component/entities/front-component.entity';
+import { WorkflowVersionCoreModule } from 'src/engine/core-modules/workflow/workflow-version-core.module';
 import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache.module';
 import { WorkspaceMigrationModule } from 'src/engine/workspace-manager/workspace-migration/workspace-migration.module';
 import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/provide-workspace-scoped-repository';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([ApplicationEntity, FrontComponentEntity]),
+    TypeOrmModule.forFeature([
+      ApplicationEntity,
+      FrontComponentEntity,
+      FileEntity,
+    ]),
+    ApplicationGrantRoleModule,
     ApplicationLookupModule,
     ApplicationModule,
     ApplicationHealthModule,
+    ApplicationPackageModule,
     ApplicationRegistrationLookupModule,
     ApplicationRegistrationModule,
     ApplicationTranslationModule,
-    SecretEncryptionModule,
+    ConnectedAccountMetadataModule,
     SdkClientModule,
+    WorkflowVersionCoreModule,
     WorkspaceCacheModule,
     WorkspaceMigrationModule,
   ],
@@ -43,6 +58,11 @@ import { provideWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspac
     ApplicationUninstallService,
     ComputeApplicationManifestAllUniversalFlatEntityMapsService,
     ApplicationManifestExportService,
+    ApplicationFrontComponentExportService,
+    ApplicationSourceService,
+    ApplicationLogicFunctionExportService,
+    ApplicationPublicAssetExportService,
+    provideWorkspaceScopedRepository(FileEntity),
     provideWorkspaceScopedRepository(ApplicationEntity),
   ],
   exports: [

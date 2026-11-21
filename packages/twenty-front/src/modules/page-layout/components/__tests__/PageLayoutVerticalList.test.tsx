@@ -1,4 +1,5 @@
 import { PageLayoutVerticalList } from '@/page-layout/components/PageLayoutVerticalList';
+import { PageLayoutWidgetViewportContext } from '@/page-layout/contexts/PageLayoutWidgetViewportContext';
 import { makeWidget as makePageLayoutWidget } from '@/page-layout/testing/pageLayoutDraftFixtures';
 import { type PageLayoutWidget } from '@/page-layout/types/PageLayoutWidget';
 import { WorkflowDiagramAllowPageScrollContext } from '@/workflow/workflow-diagram/contexts/WorkflowDiagramAllowPageScrollContext';
@@ -32,10 +33,12 @@ jest.mock('@/page-layout/hooks/useIsSideColumnContext', () => ({
 jest.mock('@/page-layout/widgets/components/WidgetRenderer', () => ({
   WidgetRenderer: ({ widget }: { widget: PageLayoutWidget }) => {
     const allowPageScroll = useContext(WorkflowDiagramAllowPageScrollContext);
+    const fillsViewport = useContext(PageLayoutWidgetViewportContext);
 
     return (
       <div
         data-allow-page-scroll={String(allowPageScroll)}
+        data-fills-viewport={String(fillsViewport)}
         data-testid={widget.id}
       />
     );
@@ -137,6 +140,10 @@ describe('PageLayoutVerticalList', () => {
       'data-fill',
       'true',
     );
+    expect(screen.getByTestId('timeline')).toHaveAttribute(
+      'data-fills-viewport',
+      'true',
+    );
     expect(
       screen
         .getByTestId('fields')
@@ -144,6 +151,10 @@ describe('PageLayoutVerticalList', () => {
     ).toBeNull();
     expect(screen.getByTestId('fields-sortable-cell')).toHaveAttribute(
       'data-fill',
+      'false',
+    );
+    expect(screen.getByTestId('fields')).toHaveAttribute(
+      'data-fills-viewport',
       'false',
     );
   });
@@ -159,6 +170,7 @@ describe('PageLayoutVerticalList', () => {
       makeWidget('emails', WidgetType.EMAILS),
       makeWidget('email-thread', WidgetType.EMAIL_THREAD),
       makeWidget('files', WidgetType.FILES),
+      makeWidget('message-campaign-body', WidgetType.MESSAGE_CAMPAIGN_BODY),
       makeWidget('notes', WidgetType.NOTES),
       makeWidget('tasks', WidgetType.TASKS),
       makeWidget('workflow', WidgetType.WORKFLOW),
@@ -190,26 +202,6 @@ describe('PageLayoutVerticalList', () => {
     ).toBeNull();
   });
 
-  it('keeps campaign documents fit-content so the tab owns scrolling', () => {
-    render(
-      <PageLayoutVerticalList
-        isInEditMode={false}
-        widgets={[
-          makeWidget('message-campaign-body', WidgetType.MESSAGE_CAMPAIGN_BODY),
-        ]}
-      />,
-    );
-
-    expect(
-      screen
-        .getByTestId('message-campaign-body')
-        .closest('.page-layout-viewport-filling-widget-slot'),
-    ).toBeNull();
-    expect(
-      screen.getByTestId('message-campaign-body-sortable-cell'),
-    ).toHaveAttribute('data-fill', 'false');
-  });
-
   it('keeps a legacy Canvas tab full-height when only one widget is visible', () => {
     mockLayoutMode = PageLayoutTabLayoutMode.CANVAS;
 
@@ -227,6 +219,10 @@ describe('PageLayoutVerticalList', () => {
     ).not.toBeNull();
     expect(screen.getByTestId('front-component-sortable-cell')).toHaveAttribute(
       'data-fill',
+      'true',
+    );
+    expect(screen.getByTestId('front-component')).toHaveAttribute(
+      'data-fills-viewport',
       'true',
     );
   });
@@ -250,6 +246,10 @@ describe('PageLayoutVerticalList', () => {
       expect(
         screen.getByTestId('front-component-sortable-cell'),
       ).toHaveAttribute('data-fill', 'false');
+      expect(screen.getByTestId('front-component')).toHaveAttribute(
+        'data-fills-viewport',
+        'false',
+      );
     },
   );
 
@@ -309,6 +309,10 @@ describe('PageLayoutVerticalList', () => {
 
     expect(screen.getByTestId('front-component-sortable-cell')).toHaveAttribute(
       'data-fill',
+      'true',
+    );
+    expect(screen.getByTestId('front-component')).toHaveAttribute(
+      'data-fills-viewport',
       'true',
     );
   });

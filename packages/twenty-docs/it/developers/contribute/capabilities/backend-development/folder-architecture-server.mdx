@@ -1,7 +1,12 @@
 ---
 title: Architettura delle Cartelle
+description: Come è organizzato il codice del backend.
 info: Uno sguardo dettagliato alla nostra architettura di cartelle del server
 ---
+
+import { PageBanner } from "/snippets/page-banner.mdx"
+
+## Panoramica
 
 La struttura della directory del backend è la seguente:
 
@@ -66,7 +71,6 @@ workspace
     └───storage
     └───utils
   └───workspace-resolver-builder
-    └───factories
     └───interfaces
   └───workspace-query-builder
     └───factories
@@ -79,11 +83,9 @@ workspace
   └───workspace-migration-runner
   └───utils
   └───workspace.module.ts
-  └───workspace.factory.spec.ts
-  └───workspace.factory.ts
 ```
 
-La radice della directory di lavoro include il `workspace.factory.ts`, un file contenente la funzione `createGraphQLSchema`. Questa funzione genera uno schema specifico per il workspace utilizzando i metadati per adattare uno schema per i singoli lavori. Separando la costruzione dello schema e del risolutore, utilizziamo la funzione `makeExecutableSchema`, che combina questi elementi discreti.
+Ogni spazio di lavoro ottiene uno schema GraphQL generato dai relativi metadati. Lo schema viene mantenuto come SDL e le richieste vengono eseguite tramite esecuzione diretta, che analizza il documento e chiama gli esecutori di query senza creare uno schema eseguibile.
 
 Questa strategia non riguarda solo l'organizzazione, ma aiuta anche con l'ottimizzazione, come la memorizzazione nella cache delle definizioni di tipo generate per migliorare le prestazioni e la scalabilità.
 
@@ -116,10 +118,12 @@ Include la classe `TypeDefinitionsStorage` che contiene definizioni di tipo riut
 
 ### Generatore di resolver dello spazio di lavoro
 
-Crea funzioni di risolutore per interrogare e modificare lo schema GraphQL.
+Mappa ogni metodo del resolver (`findMany`, `createOne`, ...) ai campi selezionati da una query.
 
-Ogni factory in questa directory è responsabile della produzione di un tipo di resolver distinto, come `FindManyResolverFactory`, progettato per un'applicazione adattabile su varie tabelle.
+`WorkspaceResolverRunnerService` (in `direct-execution/services`) esegue il runner di query comune corrispondente per un metodo e `graphQLFormatResultFromSelectedFields` proietta il relativo risultato nella risposta in un unico passaggio.
 
 ### Esecutore di query dello spazio di lavoro
 
 Esegue le query generate sul database e analizza il risultato.
+
+<PageBanner illustration="card-page-frontend-architecture" />

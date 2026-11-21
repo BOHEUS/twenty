@@ -1,9 +1,11 @@
+import { DraggableListRow } from '@/ui/layout/draggable-list/components/DraggableListRow';
+import { ApplicationStackIcon } from '@/applications/components/ApplicationStackIcon';
 import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
 import { type FieldsConfigurationFieldItem } from '@/page-layout/types/FieldsConfiguration';
-import { t } from '@lingui/core/macro';
 import { LightIconButton } from 'twenty-ui/components/input';
-import { MenuItemDraggable } from 'twenty-ui/components/navigation';
-import { IconEye, IconEyeOff, useIcons } from 'twenty-ui/icon';
+import { IconEye, IconEyeOff } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
+import { useLingui } from '@lingui/react/macro';
 
 type FieldsConfigurationFieldEditorProps = {
   field: FieldsConfigurationFieldItem;
@@ -16,18 +18,23 @@ export const FieldsConfigurationFieldEditor = ({
   fieldMetadata,
   onToggleVisibility,
 }: FieldsConfigurationFieldEditorProps) => {
+  const { t } = useLingui();
   const { getIcon } = useIcons();
   const isVisible = field.isVisible ?? true;
   const FieldIcon = getIcon(fieldMetadata.icon);
 
   return (
-    <MenuItemDraggable
-      LeftIcon={FieldIcon}
-      text={fieldMetadata.label}
-      gripMode="onHover"
-      withIconContainer
-      isIconDisplayedOnHoverOnly={false}
-      iconButtons={
+    <DraggableListRow
+      startIcon={
+        <ApplicationStackIcon
+          Icon={FieldIcon}
+          applicationId={fieldMetadata.applicationId}
+        />
+      }
+      dragHandleVisibility="hover"
+      hasIconBackground
+      actionsVisibility="always"
+      actions={
         <LightIconButton
           aria-label={isVisible ? t`Hide field` : t`Show field`}
           onClick={(event) => {
@@ -38,6 +45,8 @@ export const FieldsConfigurationFieldEditor = ({
           {isVisible ? <IconEye /> : <IconEyeOff />}
         </LightIconButton>
       }
-    />
+    >
+      {fieldMetadata.label}
+    </DraggableListRow>
   );
 };

@@ -16,8 +16,6 @@ describe('withResolvedToolAuthContext', () => {
     overrides?: Partial<ToolProviderContext>,
   ): ToolProviderContext => ({
     workspaceId,
-    roleId: 'role-1',
-    rolePermissionConfig: { unionOf: ['role-1'] },
     ...overrides,
   });
 
@@ -95,7 +93,7 @@ describe('withResolvedToolAuthContext', () => {
       workspaceMemberId,
       user: { id: userId },
       workspaceMember: { id: workspaceMemberId },
-    } as unknown as WorkspaceAuthContext;
+    } as WorkspaceAuthContext;
 
     let storeDuringDispatch: WorkspaceAuthContext | undefined;
 

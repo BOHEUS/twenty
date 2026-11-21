@@ -1,11 +1,11 @@
-import { type ApolloCache, gql } from '@apollo/client';
+import { type ApolloCache } from '@apollo/client';
 
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
-import { mapObjectMetadataToGraphQLQuery } from '@/object-metadata/utils/mapObjectMetadataToGraphQLQuery';
+import { generateRecordCacheFragment } from '@/object-record/cache/utils/generateRecordCacheFragment';
 import { getRecordFromRecordNode } from '@/object-record/cache/utils/getRecordFromRecordNode';
 import {
+  type ObjectRecordsPermissions,
   type RecordGqlFields,
-  type ObjectPermissions,
 } from 'twenty-shared/types';
 import { generateDepthRecordGqlFieldsFromObject } from '@/object-record/graphql/record-gql-fields/utils/generateDepthRecordGqlFieldsFromObject';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
@@ -20,10 +20,7 @@ export type GetRecordFromCacheArgs = {
     'fields' | 'nameSingular' | 'id' | 'readableFields'
   >;
   recordGqlFields?: RecordGqlFields;
-  objectPermissionsByObjectMetadataId: Record<
-    string,
-    ObjectPermissions & { objectMetadataId: string }
-  >;
+  objectPermissionsByObjectMetadataId: Record<string, ObjectRecordsPermissions>;
 };
 export const getRecordFromCache = <T extends ObjectRecord = ObjectRecord>({
   objectMetadataItem,
@@ -45,18 +42,12 @@ export const getRecordFromCache = <T extends ObjectRecord = ObjectRecord>({
       objectMetadataItems,
     });
 
-  const capitalizedObjectName = capitalize(objectMetadataItem.nameSingular);
-
-  const cacheReadFragment = gql`
-      fragment ${capitalizedObjectName}Fragment on ${capitalizedObjectName} ${mapObjectMetadataToGraphQLQuery(
-        {
-          objectMetadataItems,
-          objectMetadataItem,
-          recordGqlFields: appliedRecordGqlFields,
-          objectPermissionsByObjectMetadataId,
-        },
-      )}
-    `;
+  const cacheReadFragment = generateRecordCacheFragment({
+    objectMetadataItems,
+    objectMetadataItem,
+    recordGqlFields: appliedRecordGqlFields,
+    objectPermissionsByObjectMetadataId,
+  });
 
   const cachedRecordId = cache.identify({
     __typename: capitalize(objectMetadataItem.nameSingular),

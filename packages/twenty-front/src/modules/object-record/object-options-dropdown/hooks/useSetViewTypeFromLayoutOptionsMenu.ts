@@ -8,12 +8,15 @@ import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSe
 import { useUpdateCurrentView } from '@/views/hooks/useUpdateCurrentView';
 import { viewsSelector } from '@/views/states/selectors/viewsSelector';
 import { type GraphQLView } from '@/views/types/GraphQLView';
+import { type ViewWithRelations } from '@/views/types/ViewWithRelations';
 import { ViewType, viewTypeIconKeyMapping } from '@/views/types/ViewType';
+import { resolveMainGroupByFieldMetadataId } from '@/views/utils/resolveMainGroupByFieldMetadataId';
 import { useGetAvailableFieldsForCalendar } from '@/views/view-picker/hooks/useGetAvailableFieldsForCalendar';
 import { useGetAvailableFieldsToGroupRecordsBy } from '@/views/view-picker/hooks/useGetAvailableFieldsToGroupRecordsBy';
 import { useStore } from 'jotai';
 import { useCallback } from 'react';
-import { assertUnreachable, isDefined } from 'twenty-shared/utils';
+import { assertUnreachable, findById, isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { ViewCalendarLayout } from '~/generated-metadata/graphql';
 
 export const useSetViewTypeFromLayoutOptionsMenu = () => {
@@ -25,13 +28,28 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
     useGetAvailableFieldsToGroupRecordsBy();
   const { objectMetadataItem } = useRecordIndexContextOrThrow();
 
-  const { loadRecordIndexStates } = useLoadRecordIndexStates();
+  const { loadRecordIndexStates, syncRecordIndexViewFields } =
+    useLoadRecordIndexStates();
 
   const { availableFieldsForCalendar } = useGetAvailableFieldsForCalendar();
 
   const contextStoreInstanceId = useContextStoreInstanceId();
 
   const store = useStore();
+
+  // Nothing else reloads the type-dependent fields here; the latest view keeps columns changed meanwhile
+  const syncViewFieldsForViewType = useCallback(
+    ({ view, viewType }: { view: ViewWithRelations; viewType: ViewType }) => {
+      const latestView =
+        store.get(viewsSelector.atom).find(findById(view.id)) ?? view;
+
+      syncRecordIndexViewFields(
+        { ...latestView, type: viewType },
+        objectMetadataItem,
+      );
+    },
+    [store, syncRecordIndexViewFields, objectMetadataItem],
+  );
 
   const setAndPersistViewType = useCallback(
     async (viewType: ViewType) => {
@@ -44,7 +62,7 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
       const existingViews = store.get(viewsSelector.atom);
 
       if (!isDefined(currentViewId)) {
-        throw new Error('No view id found');
+        throw new Error(doNotTranslate('No view id found'));
       }
 
       const currentView = existingViews.find(
@@ -52,7 +70,7 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
       );
 
       if (!isDefined(currentView)) {
-        throw new Error('No current view found');
+        throw new Error(doNotTranslate('No current view found'));
       }
 
       const updateCurrentViewParams: Partial<GraphQLView> = {};
@@ -60,11 +78,18 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
 
       switch (viewType) {
         case ViewType.KANBAN: {
-          if (availableFieldsForGrouping.length === 0) {
-            throw new Error('No fields for kanban - should not happen');
+          const mainGroupByFieldMetadataId = resolveMainGroupByFieldMetadataId({
+            availableFieldsForGrouping,
+            currentMainGroupByFieldMetadataId:
+              currentView.mainGroupByFieldMetadataId,
+          });
+
+          if (!isDefined(mainGroupByFieldMetadataId)) {
+            throw new Error(
+              doNotTranslate('No fields for kanban - should not happen'),
+            );
           }
 
-          const mainGroupByFieldMetadataId = availableFieldsForGrouping[0].id;
           updateCurrentViewParams.mainGroupByFieldMetadataId =
             mainGroupByFieldMetadataId;
 
@@ -74,6 +99,7 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
 
           setRecordIndexViewType(viewType);
           await updateCurrentView(updateCurrentViewParams);
+          syncViewFieldsForViewType({ view: currentView, viewType });
           return;
         }
         case ViewType.TABLE:
@@ -84,11 +110,12 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
           updateCurrentViewParams.mainGroupByFieldMetadataId = null;
           await updateCurrentView(updateCurrentViewParams);
           setRecordIndexViewType(viewType);
+          syncViewFieldsForViewType({ view: currentView, viewType });
           return;
         }
         case ViewType.CALENDAR: {
           if (availableFieldsForCalendar.length === 0) {
-            throw new Error('No date fields for calendar');
+            throw new Error(doNotTranslate('No date fields for calendar'));
           }
 
           const calendarFieldMetadataId = availableFieldsForCalendar[0].id;
@@ -135,6 +162,7 @@ export const useSetViewTypeFromLayoutOptionsMenu = () => {
       updateCurrentView,
       availableFieldsForCalendar,
       loadRecordIndexStates,
+      syncViewFieldsForViewType,
       objectMetadataItem,
       contextStoreInstanceId,
     ],

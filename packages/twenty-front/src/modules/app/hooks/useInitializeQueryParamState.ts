@@ -1,11 +1,13 @@
 import { useCallback } from 'react';
 
 import { billingCheckoutSessionState } from '@/auth/states/billingCheckoutSessionState';
+import { affiliatePartnerNameState } from '@/auth/states/affiliatePartnerNameState';
 import { returnToPathState } from '@/auth/states/returnToPathState';
 import { type BillingCheckoutSession } from '@/auth/types/BillingCheckoutSession';
 import { isValidReturnToPath } from '@/auth/utils/isValidReturnToPath';
 import { BILLING_CHECKOUT_SESSION_DEFAULT_VALUE } from '@/settings/billing/constants/BillingCheckoutSessionDefaultValue';
 import { useStore } from 'jotai';
+import { isDefined, normalizePartner } from 'twenty-shared/utils';
 import { isDeeplyEqual } from '~/utils/isDeeplyEqual';
 
 export const useInitializeQueryParamState = () => {
@@ -23,7 +25,6 @@ export const useInitializeQueryParamState = () => {
           if (
             typeof parsedValue === 'object' &&
             parsedValue !== null &&
-            'plan' in parsedValue &&
             'interval' in parsedValue &&
             'requirePaymentMethod' in parsedValue &&
             !isDeeplyEqual(billingCheckoutSession, parsedValue)
@@ -48,6 +49,15 @@ export const useInitializeQueryParamState = () => {
       returnToPath: (value: string) => {
         if (isValidReturnToPath(value)) {
           store.set(returnToPathState.atom, value);
+        }
+      },
+      via: (value: string) => {
+        const affiliatePartnerName = normalizePartner(value);
+
+        if (isDefined(affiliatePartnerName)) {
+          store.set(affiliatePartnerNameState.atom, {
+            partner: affiliatePartnerName,
+          });
         }
       },
     };

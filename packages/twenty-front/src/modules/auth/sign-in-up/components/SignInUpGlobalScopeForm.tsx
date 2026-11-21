@@ -148,14 +148,14 @@ export const SignInUpGlobalScopeForm = () => {
       { email: form.getValues('email') },
     );
 
-    return buildWorkspaceUrl(
-      getWorkspaceUrl(availableWorkspace.workspaceUrls),
+    return buildWorkspaceUrl({
+      endpoint: getWorkspaceUrl(availableWorkspace.workspaceUrls),
       pathname,
-      {
+      searchParams: {
         ...searchParams,
         ...(isNonEmptyString(returnToPath) ? { returnToPath } : {}),
       },
-    );
+    });
   };
 
   const availableWorkspacesList = [
@@ -250,12 +250,7 @@ export const SignInUpGlobalScopeForm = () => {
             />
           )}
           {(authProviders.google || authProviders.microsoft) && (
-            <Separator
-              style={{
-                backgroundColor: themeCssVariables.background.transparent.light,
-                marginBlock: themeCssVariables.spacing[3],
-              }}
-            />
+            <Separator style={{ marginBlock: themeCssVariables.spacing[3] }} />
           )}
           {/* oxlint-disable-next-line react/jsx-props-no-spreading */}
           <FormProvider {...form}>

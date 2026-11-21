@@ -5,6 +5,7 @@ import {
   ViewKey,
   ViewType,
 } from '~/generated-metadata/graphql';
+import { getMockObjectMetadataItemOrThrow } from '~/testing/utils/getMockObjectMetadataItemOrThrow';
 
 const OBJECT_METADATA_ID = 'object-metadata-id';
 
@@ -13,9 +14,9 @@ const objectMetadataItem = {
   namePlural: 'companies',
 };
 
-const objectMetadataItems = [objectMetadataItem] as unknown as Parameters<
-  typeof getObjectDrawerItemNavigationPath
->[0]['objectMetadataItems'];
+const objectMetadataItems = [
+  { ...getMockObjectMetadataItemOrThrow('company'), ...objectMetadataItem },
+];
 
 const makeView = (id: string, key: ViewKey | null, position: number) => ({
   id,
@@ -35,31 +36,18 @@ const objectNavigationMenuItem = {
 } as NavigationMenuItem;
 
 describe('getObjectDrawerItemNavigationPath', () => {
-  it('should target the index view without a navigation menu item when the flag is off', () => {
+  it('should target the initial view without a navigation menu item', () => {
     expect(
       getObjectDrawerItemNavigationPath({
         objectMetadataItem,
         objectMetadataItems,
         views: [indexView, initialView],
         lastVisitedViewPerObjectMetadataItem: null,
-        isInitialObjectViewEnabled: false,
-      }),
-    ).toBe('/objects/companies?viewId=index-view-id');
-  });
-
-  it('should target the initial view without a navigation menu item when the flag is on', () => {
-    expect(
-      getObjectDrawerItemNavigationPath({
-        objectMetadataItem,
-        objectMetadataItems,
-        views: [indexView, initialView],
-        lastVisitedViewPerObjectMetadataItem: null,
-        isInitialObjectViewEnabled: true,
       }),
     ).toBe('/objects/companies?viewId=initial-view-id');
   });
 
-  it('should ignore a stale index last visited view when the flag is on', () => {
+  it('should ignore a stale index last visited view', () => {
     expect(
       getObjectDrawerItemNavigationPath({
         objectMetadataItem,
@@ -68,7 +56,6 @@ describe('getObjectDrawerItemNavigationPath', () => {
         lastVisitedViewPerObjectMetadataItem: {
           [OBJECT_METADATA_ID]: 'index-view-id',
         },
-        isInitialObjectViewEnabled: true,
       }),
     ).toBe('/objects/companies?viewId=initial-view-id');
   });
@@ -82,7 +69,6 @@ describe('getObjectDrawerItemNavigationPath', () => {
         lastVisitedViewPerObjectMetadataItem: {
           [OBJECT_METADATA_ID]: 'user-view-id',
         },
-        isInitialObjectViewEnabled: true,
       }),
     ).toBe('/objects/companies?viewId=user-view-id');
   });
@@ -95,7 +81,6 @@ describe('getObjectDrawerItemNavigationPath', () => {
         objectMetadataItems,
         views: [indexView, initialView],
         lastVisitedViewPerObjectMetadataItem: null,
-        isInitialObjectViewEnabled: true,
       }),
     ).toBe('/objects/companies?viewId=initial-view-id');
   });

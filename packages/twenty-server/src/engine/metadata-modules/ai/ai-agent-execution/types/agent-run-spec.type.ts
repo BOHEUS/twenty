@@ -1,14 +1,20 @@
+import { type AgentResponseFormat } from 'twenty-shared/ai';
+
+import { type AgentRunInlineConfig } from 'src/engine/metadata-modules/ai/ai-agent-execution/types/agent-run-inline-config.type';
 import { type AgentToolLoadingStrategy } from 'src/engine/metadata-modules/ai/ai-agent-execution/types/agent-tool-loading-strategy.type';
 
 // What a suspended run needs to continue without its caller building it again.
-// Permissions are left out: the caller derives them anew on each continuation
-export type AgentRunSpec = {
-  // without an agent, the run uses the workspace's default model
-  agentId: string | null;
+// The caller's roles are left out and derived anew on each continuation; an inline scope is kept with the run
+export type AgentRunPersonaSpec =
+  | { agentId: string; inlineConfig?: never }
+  | { agentId: null; inlineConfig: AgentRunInlineConfig };
+
+export type AgentRunSpec = AgentRunPersonaSpec & {
   title: string;
   baseSystemPrompt: string;
   // the caller's own instructions, after what the engine says about its pausing tools
   instructions: string | null;
+  responseFormat?: AgentResponseFormat;
   capabilities: {
     // ask_question, request_form and propose_tool_call, answered from the conversation
     canAskHumans: boolean;

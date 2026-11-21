@@ -1,12 +1,20 @@
+import { isString } from '@sniptt/guards';
 import gql from 'graphql-tag';
+import { findMyParticipant } from 'test/integration/graphql/suites/chat-thread-participant/utils/chat-thread-participant-test.util';
 import { answerToolCall } from 'test/integration/graphql/suites/workflow/utils/answer-tool-call.util';
+import {
+  createCoreWorkflow,
+  deleteCoreWorkflows,
+} from 'test/integration/graphql/suites/workflow/utils/core-workflow.util';
 import { runWorkflowActionStep } from 'test/integration/graphql/suites/workflow/utils/run-workflow-action-step.util';
 import { workflowGraphqlRequest } from 'test/integration/graphql/suites/workflow/utils/workflow-graphql-request.util';
 import { waitForWorkflowRunStepStatus } from 'test/integration/graphql/suites/workflow/utils/workflow-run-test.util';
 import { makeGraphqlApiRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
 import { updateFeatureFlag } from 'test/integration/metadata/suites/utils/update-feature-flag.util';
 import { destroyAgentChatThread } from 'test/integration/utils/destroy-agent-chat-thread.util';
+import { formatRecordReference } from 'twenty-shared/ai';
 import { FeatureFlagKey } from 'twenty-shared/types';
+import { isDefined } from 'twenty-shared/utils';
 import { v4 as uuidv4 } from 'uuid';
 
 import { getAppProviderByClassName } from 'test/integration/utils/get-app-provider-by-class-name.util';
@@ -14,7 +22,8 @@ import { getAppProviderByClassName } from 'test/integration/utils/get-app-provid
 import { WorkflowRunStatus } from 'src/modules/workflow/common/standard-objects/workflow-run.workspace-entity';
 import { type WorkflowRunWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run/workflow-run.workspace-service';
 import { type AgentCallerConversationService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-caller-conversation.service';
-import { type AgentChatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat.service';
+import { type ToolCallAnswerRecorderService } from 'src/engine/metadata-modules/ai/ai-tool-call-answer/services/tool-call-answer-recorder.service';
+import { type WorkflowExecutionContextService } from 'src/modules/workflow/workflow-executor/services/workflow-execution-context.service';
 import { type WorkflowRunInboxSenderWorkspaceService } from 'src/modules/workflow/workflow-executor/services/workflow-run-inbox-sender.workspace-service';
 import { getWorkspaceSchemaName } from 'src/engine/workspace-datasource/utils/get-workspace-schema-name.util';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
@@ -22,20 +31,27 @@ import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev
 
 const SCHEMA = getWorkspaceSchemaName(SEED_APPLE_WORKSPACE_ID);
 
-const setSendChatMessageEnabled = (value: boolean) =>
+const setAiChatInboxEnabled = (value: boolean) =>
   updateFeatureFlag({
-    featureFlag: FeatureFlagKey.IS_WORKFLOW_SEND_CHAT_MESSAGE_ENABLED,
+    featureFlag: FeatureFlagKey.IS_AI_CHAT_INBOX_ENABLED,
+    value,
+    expectToFail: false,
+  });
+
+const setRecordSharingEnabled = (value: boolean) =>
+  updateFeatureFlag({
+    featureFlag: FeatureFlagKey.IS_RECORD_LEVEL_SHARING_ENABLED,
     value,
     expectToFail: false,
   });
 
 describe('Send chat message workflow step', () => {
   afterAll(async () => {
-    await setSendChatMessageEnabled(true);
+    await setAiChatInboxEnabled(true);
   });
 
   it('posts the message in a conversation of the recipient', async () => {
-    await setSendChatMessageEnabled(true);
+    await setAiChatInboxEnabled(true);
 
     const title = `Your new deal is ready ${uuidv4()}`;
     const { status, stepStatus, stepResult, stepError } =
@@ -62,7 +78,7 @@ describe('Send chat message workflow step', () => {
         [threadId],
       );
       const messages = await global.testDataSource.query(
-        `SELECT m.role, m."isHidden", p."textContent"
+        `SELECT m.role, p."textContent"
          FROM "${SCHEMA}"."agentMessage" m
          JOIN "${SCHEMA}"."agentMessagePart" p ON p."messageId" = m.id
          WHERE m."threadId" = $1
@@ -77,18 +93,65 @@ describe('Send chat message workflow step', () => {
       expect(messages).toEqual([
         {
           role: 'system',
-          isHidden: false,
           textContent:
             'The "Welcome new deal owners" workflow started this conversation. Its messages follow.',
         },
         {
           role: 'assistant',
-          isHidden: false,
           textContent: 'You now own the **Acme renewal**.',
         },
       ]);
     } finally {
       if (threadId !== undefined) {
+        await destroyAgentChatThread({ threadId });
+      }
+    }
+  }, 120000);
+
+  it('mentions a member its text names through a variable', async () => {
+    await setAiChatInboxEnabled(true);
+    await setRecordSharingEnabled(true);
+
+    let threadId: string | undefined;
+
+    try {
+      const { status, stepStatus, stepResult, stepError } =
+        await runWorkflowActionStep({
+          name: 'Ask for a review',
+          stepType: 'SEND_CHAT_MESSAGE',
+          input: {
+            workspaceMemberId: WORKSPACE_MEMBER_DATA_SEED_IDS.JANE,
+            title: `Review requested ${uuidv4()}`,
+            text: '{{trigger.comment}}',
+          },
+          payload: {
+            comment: `${formatRecordReference({
+              objectNameSingular: 'workspaceMember',
+              recordId: WORKSPACE_MEMBER_DATA_SEED_IDS.JONY,
+              displayName: 'Jony',
+            })}, can you review the deck?`,
+          },
+        });
+
+      const stepThreadId = stepResult?.threadId;
+
+      threadId = isString(stepThreadId) ? stepThreadId : undefined;
+
+      expect({ status, stepStatus, stepError }).toEqual({
+        status: 'COMPLETED',
+        stepStatus: 'SUCCESS',
+        stepError: undefined,
+      });
+      expect(
+        await findMyParticipant(threadId!, APPLE_JONY_MEMBER_ACCESS_TOKEN),
+      ).toMatchObject({
+        lastMentionedAt: expect.any(String),
+        mentionsResolvedAt: null,
+      });
+    } finally {
+      await setRecordSharingEnabled(false);
+
+      if (isDefined(threadId)) {
         await destroyAgentChatThread({ threadId });
       }
     }
@@ -155,7 +218,7 @@ describe('Send chat message workflow step', () => {
     };
 
     beforeEach(async () => {
-      await setSendChatMessageEnabled(true);
+      await setAiChatInboxEnabled(true);
 
       const response = await makeGraphqlApiRequest({
         query: gql`
@@ -265,6 +328,13 @@ describe('Send chat message workflow step', () => {
               workflowRunId,
               workspaceId: SEED_APPLE_WORKSPACE_ID,
             });
+          const permissions =
+            await getAppProviderByClassName<WorkflowExecutionContextService>(
+              'WorkflowExecutionContextService',
+            ).getExecutionContext({
+              workflowRunId,
+              workspaceId: SEED_APPLE_WORKSPACE_ID,
+            });
 
           postAgain = () =>
             getAppProviderByClassName<AgentCallerConversationService>(
@@ -282,10 +352,7 @@ describe('Send chat message workflow step', () => {
               fallbackThreadKey: `${workflowRunId}:${workflowRunId}:${stepId}`,
               awaitedToolCall: {
                 ...toolCall,
-                caller: {
-                  type: 'WORKFLOW_STEP',
-                  ref: { workflowRunId, stepId },
-                },
+                permissions,
                 // the message was already written, so the call is not built again
                 waitOnAnswer: async () => {},
               },
@@ -387,10 +454,12 @@ describe('Send chat message workflow step', () => {
     }, 120000);
 
     it('never runs an approved action twice when recording the answer fails', async () => {
-      const agentChatService =
-        getAppProviderByClassName<AgentChatService>('AgentChatService');
+      const toolCallAnswerRecorderService =
+        getAppProviderByClassName<ToolCallAnswerRecorderService>(
+          'ToolCallAnswerRecorderService',
+        );
       const recordToolCallAnswer = jest
-        .spyOn(agentChatService, 'recordToolCallAnswer')
+        .spyOn(toolCallAnswerRecorderService, 'recordToolCallAnswer')
         .mockRejectedValueOnce(new Error('Database unavailable'));
       let secondAnswerErrors: string | undefined;
       let partResult: Record<string, unknown> | undefined;
@@ -612,7 +681,7 @@ describe('Send chat message workflow step', () => {
   });
 
   it('fails a step that runs after the feature flag is turned off', async () => {
-    await setSendChatMessageEnabled(true);
+    await setAiChatInboxEnabled(true);
 
     const { stepStatus, stepError } = await runWorkflowActionStep({
       name: 'Send chat message turned off',
@@ -622,7 +691,7 @@ describe('Send chat message workflow step', () => {
         title: 'Should not be sent',
         text: 'Hello',
       },
-      beforeRun: () => setSendChatMessageEnabled(false),
+      beforeRun: () => setAiChatInboxEnabled(false),
     });
 
     expect(stepStatus).toBe('FAILED');
@@ -630,50 +699,26 @@ describe('Send chat message workflow step', () => {
   }, 120000);
 
   it('cannot be added to a workflow while the feature flag is off', async () => {
-    await setSendChatMessageEnabled(false);
+    await setAiChatInboxEnabled(false);
 
-    const workflowResponse = await makeGraphqlApiRequest({
-      query: gql`
-        mutation CreateWorkflow($name: String!) {
-          createWorkflow(data: { name: $name }) {
-            id
-          }
-        }
-      `,
-      variables: { name: 'Send chat message disabled' },
+    const { coreWorkflowId, coreWorkflowVersionId } = await createCoreWorkflow({
+      name: 'Send chat message disabled',
     });
-    const workflow = workflowResponse.body.data.createWorkflow;
 
     try {
-      const versionResponse = await makeGraphqlApiRequest({
-        query: gql`
-          query FindDraftWorkflowVersion($workflowId: UUID!) {
-            workflowVersions(filter: { workflowId: { eq: $workflowId } }) {
-              edges {
-                node {
-                  id
-                }
-              }
-            }
-          }
-        `,
-        variables: { workflowId: workflow.id },
-      });
-
       const stepResponse = await makeGraphqlApiRequest({
         query: gql`
-          mutation CreateWorkflowVersionStep(
-            $input: CreateWorkflowVersionStepInput!
+          mutation CreateCoreWorkflowVersionStep(
+            $input: CreateCoreWorkflowVersionStepInput!
           ) {
-            createWorkflowVersionStep(input: $input) {
+            createCoreWorkflowVersionStep(input: $input) {
               stepsDiff
             }
           }
         `,
         variables: {
           input: {
-            workflowVersionId:
-              versionResponse.body.data.workflowVersions.edges[0].node.id,
+            coreWorkflowVersionId,
             stepType: 'SEND_CHAT_MESSAGE',
             parentStepId: 'trigger',
             position: { x: 200, y: 0 },
@@ -685,16 +730,7 @@ describe('Send chat message workflow step', () => {
         'is not enabled',
       );
     } finally {
-      await makeGraphqlApiRequest({
-        query: gql`
-          mutation DestroyWorkflow($id: ID!) {
-            destroyWorkflow(id: $id) {
-              id
-            }
-          }
-        `,
-        variables: { id: workflow.id },
-      });
+      await deleteCoreWorkflows({ coreWorkflowIds: [coreWorkflowId] });
     }
   }, 120000);
 });

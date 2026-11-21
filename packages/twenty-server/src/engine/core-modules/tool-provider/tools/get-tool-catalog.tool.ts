@@ -3,9 +3,9 @@ import { z } from 'zod';
 import { ToolCategory } from 'twenty-shared/ai';
 
 import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
+import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import { type ToolRegistryService } from 'src/engine/core-modules/tool-provider/services/tool-registry.service';
 import { type ToolIndexEntry } from 'src/engine/core-modules/tool-provider/types/tool-index-entry.type';
-import { type RolePermissionConfig } from 'src/engine/twenty-orm/types/role-permission-config.type';
 
 export const GET_TOOL_CATALOG_TOOL_NAME = 'get_tool_catalog';
 
@@ -32,12 +32,11 @@ export type GetToolCatalogResult = {
 export const createGetToolCatalogTool = (
   toolRegistry: ToolRegistryService,
   workspaceId: string,
-  roleId: string,
-  options?: {
-    rolePermissionConfig?: RolePermissionConfig;
+  options: {
     userId?: string;
     userWorkspaceId?: string;
     excludeTools?: Set<string>;
+    authContext?: WorkspaceAuthContext;
     application?: FlatApplication;
   },
 ) => ({
@@ -47,17 +46,13 @@ export const createGetToolCatalogTool = (
   execute: async (
     parameters: GetToolCatalogInput,
   ): Promise<GetToolCatalogResult> => {
-    const entries = await toolRegistry.buildToolIndex(
-      workspaceId,
-      roleId,
-      options,
-    );
+    const entries = await toolRegistry.buildToolIndex(workspaceId, options);
 
     const categoryFilter = parameters.categories
       ? new Set(parameters.categories)
       : undefined;
 
-    const excludeSet = options?.excludeTools;
+    const excludeSet = options.excludeTools;
 
     const catalog: Record<
       string,

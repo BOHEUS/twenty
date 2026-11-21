@@ -2,6 +2,7 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { applyAppBuild } from '@/app/deployment/apply-app-build';
 import { createPostSyncFailure } from '@/app/deployment/create-post-sync-failure';
+import { readInferDeletionOption } from '@/app/deployment/read-infer-deletion-option';
 import {
   buildDevSnapshot,
   type BuiltDevSnapshot,
@@ -10,6 +11,8 @@ import { createDevClientGenerator } from '@/app/dev/generate-dev-client';
 import { createDevOutput } from '@/app/dev/create-dev-output';
 import { runDevLoop } from '@/app/dev/run-dev-loop';
 import { watchAppInputs } from '@/app/dev/watch-app-inputs';
+import { formatWatchScope } from '@/app/dev/format-watch-scope';
+import { type WatchScope } from '@/app/dev/types/watch-scope.type';
 import { isToolingDiagnostic } from '@/app/parse-tooling-result';
 import { formatToolingDiagnostic } from '@/app/format-tooling-diagnostic';
 import { recordPullBase } from '@/app/record-pull-base';
@@ -26,6 +29,7 @@ import { toCliError } from '@/output/to-cli-error';
 export const runAppDevCommand: CommandRun<TargetCommandContext> = async (
   context,
 ) => {
+  const inferDeletionFromMissingEntities = readInferDeletionOption(context);
   const project = await resolveAppProject({
     explicitPath: readStringOption(context.options, 'path'),
     workingDirectory: process.cwd(),
@@ -33,6 +37,18 @@ export const runAppDevCommand: CommandRun<TargetCommandContext> = async (
   const { output, emit } = createDevOutput(context);
   const generateClient = createDevClientGenerator({ appPath: project.path });
   let watcher: Awaited<ReturnType<typeof watchAppInputs>>;
+  let hasWarnedAboutNode = false;
+
+  const reportWatchScope = (scope: WatchScope) =>
+    emit(
+      {
+        kind: 'watch-scope',
+        message: formatWatchScope({ appPath: project.path, scope }),
+        appPath: project.path,
+        ...scope,
+      },
+      context.signal,
+    );
 
   await runDevLoop<BuiltDevSnapshot>({
     signal: context.signal,
@@ -42,6 +58,10 @@ export const runAppDevCommand: CommandRun<TargetCommandContext> = async (
         signal: context.signal,
         onChange: invalidate,
         onError: fail,
+        onWarning: output.warn,
+        onScopeChange: readBooleanOption(context.options, 'verbose')
+          ? reportWatchScope
+          : undefined,
       });
       try {
         await emit(
@@ -75,6 +95,12 @@ export const runAppDevCommand: CommandRun<TargetCommandContext> = async (
           appPath: project.path,
           signal,
           updateWatchInputs: watcher.update,
+          warn: (warning) => {
+            if (!hasWarnedAboutNode) {
+              hasWarnedAboutNode = true;
+              output.warn(warning);
+            }
+          },
         });
 
         try {
@@ -125,7 +151,7 @@ export const runAppDevCommand: CommandRun<TargetCommandContext> = async (
 
         if (context.outputMode === 'human' && Array.isArray(diagnostics)) {
           for (const diagnostic of diagnostics.filter(isToolingDiagnostic)) {
-            output.progress(formatToolingDiagnostic(diagnostic));
+            output.progress({ message: formatToolingDiagnostic(diagnostic) });
           }
         }
 
@@ -168,7 +194,7 @@ export const runAppDevCommand: CommandRun<TargetCommandContext> = async (
           build: snapshot.build,
           appPath: project.path,
           context: currentContext,
-          inferDeletionFromMissingEntities: context.options.delete !== false,
+          inferDeletionFromMissingEntities,
           isCreationApproved: readBooleanOption(context.options, 'create'),
           isDeletionApproved: readBooleanOption(context.options, 'yes'),
           approvalSignal: controls.revisionSignal,
@@ -226,6 +252,10 @@ export const runAppDevCommand: CommandRun<TargetCommandContext> = async (
           appPath: project.path,
           universalIdentifier: applied.acknowledgedUniversalIdentifier,
           sourceFingerprints: snapshot.sourceFingerprints,
+          appliedManifest: {
+            frontComponents: snapshot.build.manifest.frontComponents,
+            logicFunctions: snapshot.build.manifest.logicFunctions,
+          },
           context: currentContext,
         });
 

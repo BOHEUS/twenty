@@ -16,15 +16,27 @@ import {
   type SpreadsheetImportFields,
 } from '@/spreadsheet-import/types';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { COMPOSITE_FIELD_SUB_FIELD_LABELS } from 'twenty-shared/constants';
 import {
   assertUnreachable,
   getUniqueConstraintsFields,
   isDefined,
 } from 'twenty-shared/utils';
-import { useIcons } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { FieldMetadataType, RelationType } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
+
+const getSourceLocaleAlternateMatches = ({
+  label,
+  sourceLocaleLabel,
+}: {
+  label: string;
+  sourceLocaleLabel: string;
+}): Partial<SpreadsheetImportField> =>
+  label === sourceLocaleLabel ? {} : { alternateMatches: [sourceLocaleLabel] };
 
 export const useBuildSpreadsheetImportFields = () => {
+  const { t } = useLingui();
   const { getIcon } = useIcons();
   const objectMetadataItems = useAtomStateValue(objectMetadataItemsSelector);
 
@@ -132,15 +144,24 @@ export const useBuildSpreadsheetImportFields = () => {
 
     SETTINGS_COMPOSITE_FIELD_TYPE_CONFIGS[fieldType].subFields.forEach(
       ({ subFieldName, isImportable, subFieldLabel }) => {
-        if (!isImportable) return;
+        if (!isImportable) {
+          return;
+        }
         const label = getCompositeSubFieldLabelWithFieldLabel(
           fieldMetadataItem,
-          subFieldLabel,
+          t(subFieldLabel),
         );
 
         spreadsheetImportFields.push(
           createBaseField(fieldMetadataItem, {
             label,
+            ...getSourceLocaleAlternateMatches({
+              label,
+              sourceLocaleLabel: getCompositeSubFieldLabelWithFieldLabel(
+                fieldMetadataItem,
+                COMPOSITE_FIELD_SUB_FIELD_LABELS[fieldType][subFieldName],
+              ),
+            }),
             key: getCompositeSubFieldKey(fieldMetadataItem, subFieldName),
             fieldValidationDefinitions:
               getSpreadSheetFieldValidationDefinitions(
@@ -174,16 +195,35 @@ export const useBuildSpreadsheetImportFields = () => {
     SETTINGS_COMPOSITE_FIELD_TYPE_CONFIGS[
       uniqueConstraintType
     ].subFields.forEach(
-      ({ subFieldName, isImportable, isIncludedInUniqueConstraint }) => {
-        if (!isImportable || !isIncludedInUniqueConstraint) return;
+      ({
+        subFieldName,
+        subFieldLabel,
+        isImportable,
+        isIncludedInUniqueConstraint,
+      }) => {
+        if (!isImportable || !isIncludedInUniqueConstraint) {
+          return;
+        }
+
+        const label = getRelationConnectSubFieldLabel(
+          fieldMetadataItem,
+          uniqueConstraintField,
+          t(subFieldLabel),
+        );
 
         spreadsheetImportFields.push(
           createBaseField(fieldMetadataItem, {
-            label: getRelationConnectSubFieldLabel(
-              fieldMetadataItem,
-              uniqueConstraintField,
-              subFieldName,
-            ),
+            label,
+            ...getSourceLocaleAlternateMatches({
+              label,
+              sourceLocaleLabel: getRelationConnectSubFieldLabel(
+                fieldMetadataItem,
+                uniqueConstraintField,
+                COMPOSITE_FIELD_SUB_FIELD_LABELS[uniqueConstraintType][
+                  subFieldName
+                ],
+              ),
+            }),
             key: getRelationConnectSubFieldKey(
               fieldMetadataItem,
               uniqueConstraintField,

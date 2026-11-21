@@ -95,6 +95,10 @@ export class CreateEventLogFromInternalEvent {
     await this.messageQueueService.add<CreateEventLogFromInternalEventData>(
       CreateEventLogFromInternalEvent.name,
       { ...batch, transientErrorRetryCount: transientErrorRetryCount + 1 },
+      {
+        workspaceId: batch.workspaceId,
+        isWorkspaceJob: true,
+      },
     );
   }
 
@@ -136,6 +140,7 @@ export class CreateEventLogFromInternalEvent {
   }) {
     return {
       ...(event === OBJECT_RECORD_DESTROYED_EVENT ? {} : eventData.properties),
+      eventId: eventData.eventId,
       recordId: eventData.recordId,
       objectMetadataId: batch.objectMetadata.id,
     };

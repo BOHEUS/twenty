@@ -1,4 +1,3 @@
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
 
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
@@ -9,8 +8,10 @@ import { useMutation } from '@apollo/client/react';
 import { useToast } from 'twenty-ui/components/feedback';
 import { UpdateWorkspaceDocument } from '~/generated-metadata/graphql';
 import { isDefined } from 'twenty-shared/utils';
+import { useLingui } from '@lingui/react/macro';
 
 export const WorkspaceLogoUploader = () => {
+  const { t } = useLingui();
   const { enqueueToast } = useToast();
   const { uploadWorkspaceLogo } = useUploadWorkspaceLogo();
   const [updateWorkspace] = useMutation(UpdateWorkspaceDocument);
@@ -44,7 +45,7 @@ export const WorkspaceLogoUploader = () => {
       const message =
         error instanceof Error ? error.message : t`Failed to upload picture`;
       setErrorMessage(t`An error occurred while uploading the picture.`);
-      enqueueToast({ variant: 'error', children: message });
+      enqueueToast({ status: 'error', children: message });
     } finally {
       setIsUploading(false);
     }
@@ -76,7 +77,7 @@ export const WorkspaceLogoUploader = () => {
       const message =
         error instanceof Error ? error.message : t`Failed to remove picture`;
       setErrorMessage(t`An error occurred while removing the picture.`);
-      enqueueToast({ variant: 'error', children: message });
+      enqueueToast({ status: 'error', children: message });
     } finally {
       setIsRemoving(false);
     }

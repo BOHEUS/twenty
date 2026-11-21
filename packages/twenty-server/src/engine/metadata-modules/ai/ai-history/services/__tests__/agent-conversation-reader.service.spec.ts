@@ -10,12 +10,12 @@ const MEMBER_B = 'user-workspace-b';
 
 const buildTurn = ({
   turnId,
-  senderUserWorkspaceId,
+  senderWorkspaceMemberId,
   question,
   answer,
 }: {
   turnId: string;
-  senderUserWorkspaceId: string | null;
+  senderWorkspaceMemberId: string | null;
   question: string;
   answer: string;
 }) => [
@@ -23,7 +23,7 @@ const buildTurn = ({
     id: `${turnId}-user`,
     turnId,
     role: 'user',
-    senderUserWorkspaceId,
+    senderWorkspaceMemberId,
     senderApplicationId: APPLICATION_ID,
     parts: [{ type: 'text', textContent: question }],
   },
@@ -31,7 +31,7 @@ const buildTurn = ({
     id: `${turnId}-assistant`,
     turnId,
     role: 'assistant',
-    senderUserWorkspaceId: null,
+    senderWorkspaceMemberId: null,
     senderApplicationId: null,
     parts: [
       {
@@ -46,17 +46,23 @@ const buildTurn = ({
   },
 ];
 
-const buildService = (
-  messages: unknown[],
-  failedTurnIds: string[] = [],
-  hasUpgradedAgentHistory = true,
-) => {
-  const messageRepository = { find: jest.fn().mockResolvedValue(messages) };
-  const turnRepository = {
-    find: jest
-      .fn()
-      .mockResolvedValue(failedTurnIds.map((turnId) => ({ id: turnId }))),
+type TurnRow = {
+  id: string;
+  status?: string;
+  createdBy: {
+    workspaceMemberId?: string;
+    context?: { applicationId?: string };
   };
+};
+
+const openedBy = (id: string, workspaceMemberId?: string): TurnRow => ({
+  id,
+  createdBy: { workspaceMemberId },
+});
+
+const buildService = (messages: unknown[], turns: TurnRow[] = []) => {
+  const messageRepository = { find: jest.fn().mockResolvedValue(messages) };
+  const turnRepository = { find: jest.fn().mockResolvedValue(turns) };
   const fileUrlService = {
     signFileByIdUrl: jest
       .fn()
@@ -68,11 +74,6 @@ const buildService = (
     turnRepository as never,
     fileUrlService as never,
     {} as never,
-    {
-      hasUpgradedAgentHistory: jest
-        .fn()
-        .mockResolvedValue(hasUpgradedAgentHistory),
-    } as never,
   );
 
   return { service, messageRepository, turnRepository, fileUrlService };
@@ -80,15 +81,15 @@ const buildService = (
 
 const buildFileMessage = ({
   turnId,
-  senderUserWorkspaceId,
+  senderWorkspaceMemberId,
 }: {
   turnId: string;
-  senderUserWorkspaceId: string;
+  senderWorkspaceMemberId: string;
 }) => ({
   id: `${turnId}-user`,
   turnId,
   role: 'user',
-  senderUserWorkspaceId,
+  senderWorkspaceMemberId,
   senderApplicationId: APPLICATION_ID,
   parts: [
     { type: 'text', textContent: 'What does this deck say?' },
@@ -110,7 +111,7 @@ describe('AgentConversationReaderService', () => {
       [
         ...buildTurn({
           turnId: 'turn-1',
-          senderUserWorkspaceId: MEMBER_A,
+          senderWorkspaceMemberId: MEMBER_A,
           question: 'Who is our biggest customer?',
           answer: 'Private Co',
         }),
@@ -118,12 +119,12 @@ describe('AgentConversationReaderService', () => {
           id: 'turn-2-user',
           turnId: 'turn-2',
           role: 'user',
-          senderUserWorkspaceId: MEMBER_A,
+          senderWorkspaceMemberId: MEMBER_A,
           senderApplicationId: APPLICATION_ID,
           parts: [{ type: 'text', textContent: 'And the second one?' }],
         },
       ],
-      ['turn-2'],
+      [{ ...openedBy('turn-2', MEMBER_A), status: 'failed' }],
     );
 
     const messages = await service.loadMessages({
@@ -137,35 +138,41 @@ describe('AgentConversationReaderService', () => {
     ]);
   });
 
-  it('keeps every turn of a workspace the 2.46 commands have not reached', async () => {
-    const { service, turnRepository } = buildService(
-      buildTurn({
-        turnId: 'turn-1',
-        senderUserWorkspaceId: MEMBER_A,
-        question: 'Who is our biggest customer?',
-        answer: 'Private Co',
-      }),
-      ['turn-1'],
-      false,
-    );
+  it('leaves reactions out of the conversation given to the model', async () => {
+    const [userMessage, assistantMessage] = buildTurn({
+      turnId: 'turn-1',
+      senderWorkspaceMemberId: MEMBER_A,
+      question: 'Who is our biggest customer?',
+      answer: 'Private Co',
+    });
+    const { service, messageRepository } = buildService([
+      userMessage,
+      {
+        ...assistantMessage,
+        reactions: [{ emoji: '👍', workspaceMemberId: MEMBER_B }],
+      },
+    ]);
 
     const messages = await service.loadMessages({
       workspaceId: WORKSPACE_ID,
       threadId: THREAD_ID,
     });
 
-    expect(messages.map(({ id }) => id)).toEqual([
-      'turn-1-user',
-      'turn-1-assistant',
+    expect(messageRepository.find).toHaveBeenCalledWith(
+      WORKSPACE_ID,
+      expect.objectContaining({ relations: ['parts', 'parts.file'] }),
+    );
+    expect(messages.map((message) => Object.keys(message).sort())).toEqual([
+      ['id', 'parts', 'role'],
+      ['id', 'parts', 'role'],
     ]);
-    expect(turnRepository.find).not.toHaveBeenCalled();
   });
 
-  it('keeps every part when no actor is given', async () => {
+  it('keeps every part when no viewer is given', async () => {
     const { service } = buildService([
       ...buildTurn({
         turnId: 'turn-1',
-        senderUserWorkspaceId: MEMBER_A,
+        senderWorkspaceMemberId: MEMBER_A,
         question: 'Who is our biggest customer?',
         answer: 'Private Co',
       }),
@@ -180,25 +187,28 @@ describe('AgentConversationReaderService', () => {
   });
 
   it('reduces turns sent by someone else to their text', async () => {
-    const { service } = buildService([
-      ...buildTurn({
-        turnId: 'turn-1',
-        senderUserWorkspaceId: MEMBER_A,
-        question: 'Who is our biggest customer?',
-        answer: 'Private Co',
-      }),
-      ...buildTurn({
-        turnId: 'turn-2',
-        senderUserWorkspaceId: MEMBER_B,
-        question: 'And the second one?',
-        answer: 'Other Co',
-      }),
-    ]);
+    const { service } = buildService(
+      [
+        ...buildTurn({
+          turnId: 'turn-1',
+          senderWorkspaceMemberId: MEMBER_A,
+          question: 'Who is our biggest customer?',
+          answer: 'Private Co',
+        }),
+        ...buildTurn({
+          turnId: 'turn-2',
+          senderWorkspaceMemberId: MEMBER_B,
+          question: 'And the second one?',
+          answer: 'Other Co',
+        }),
+      ],
+      [openedBy('turn-1', MEMBER_A), openedBy('turn-2', MEMBER_B)],
+    );
 
     const messages = await service.loadMessages({
       workspaceId: WORKSPACE_ID,
       threadId: THREAD_ID,
-      actor: { type: 'user', userWorkspaceId: MEMBER_B },
+      viewer: { workspaceMemberId: MEMBER_B },
     });
 
     expect(messages.map(getPartTypes)).toEqual([
@@ -209,26 +219,35 @@ describe('AgentConversationReaderService', () => {
     ]);
   });
 
-  it('treats a member and the application acting alone as different actors', async () => {
-    const { service } = buildService([
-      ...buildTurn({
-        turnId: 'turn-1',
-        senderUserWorkspaceId: MEMBER_A,
-        question: 'Who is our biggest customer?',
-        answer: 'Private Co',
-      }),
-      ...buildTurn({
-        turnId: 'turn-2',
-        senderUserWorkspaceId: null,
-        question: 'Summarize this thread',
-        answer: 'Done',
-      }),
-    ]);
+  it('hides from an application the turns a member opened elsewhere, not its own', async () => {
+    const { service } = buildService(
+      [
+        ...buildTurn({
+          turnId: 'turn-1',
+          senderWorkspaceMemberId: MEMBER_A,
+          question: 'Who is our biggest customer?',
+          answer: 'Private Co',
+        }),
+        ...buildTurn({
+          turnId: 'turn-2',
+          senderWorkspaceMemberId: null,
+          question: 'Summarize this thread',
+          answer: 'Done',
+        }),
+      ],
+      [
+        openedBy('turn-1', MEMBER_A),
+        {
+          id: 'turn-2',
+          createdBy: { context: { applicationId: APPLICATION_ID } },
+        },
+      ],
+    );
 
     const messages = await service.loadMessages({
       workspaceId: WORKSPACE_ID,
       threadId: THREAD_ID,
-      actor: { type: 'application', applicationId: APPLICATION_ID },
+      viewer: { workspaceMemberId: undefined, applicationId: APPLICATION_ID },
     });
 
     expect(messages.map(getPartTypes)).toEqual([
@@ -239,15 +258,71 @@ describe('AgentConversationReaderService', () => {
     ]);
   });
 
-  it('loads files with their type and signs them for the actor', async () => {
-    const { service, messageRepository, fileUrlService } = buildService([
-      buildFileMessage({ turnId: 'turn-1', senderUserWorkspaceId: MEMBER_A }),
+  it('reads back the turns an application ran as a member', async () => {
+    const [, assistantMessage] = buildTurn({
+      turnId: 'turn-2',
+      senderWorkspaceMemberId: null,
+      question: '',
+      answer: 'Done',
+    });
+    const { service } = buildService(
+      [
+        ...buildTurn({
+          turnId: 'turn-1',
+          senderWorkspaceMemberId: MEMBER_A,
+          question: 'Who is our biggest customer?',
+          answer: 'Private Co',
+        }),
+        assistantMessage,
+      ],
+      [
+        {
+          id: 'turn-1',
+          createdBy: {
+            workspaceMemberId: MEMBER_A,
+            context: { applicationId: APPLICATION_ID },
+          },
+        },
+        openedBy('turn-2', MEMBER_A),
+      ],
+    );
+
+    const appMessages = await service.loadMessages({
+      workspaceId: WORKSPACE_ID,
+      threadId: THREAD_ID,
+      viewer: { workspaceMemberId: undefined, applicationId: APPLICATION_ID },
+    });
+    const memberMessages = await service.loadMessages({
+      workspaceId: WORKSPACE_ID,
+      threadId: THREAD_ID,
+      viewer: { workspaceMemberId: MEMBER_A },
+    });
+
+    expect(appMessages.map(getPartTypes)[1]).toEqual([
+      'tool-find_companies',
+      'text',
     ]);
+    expect(memberMessages.map(getPartTypes)[1]).toEqual([
+      'tool-find_companies',
+      'text',
+    ]);
+  });
+
+  it('loads files with their type and signs them for the viewer', async () => {
+    const { service, messageRepository, fileUrlService } = buildService(
+      [
+        buildFileMessage({
+          turnId: 'turn-1',
+          senderWorkspaceMemberId: MEMBER_A,
+        }),
+      ],
+      [openedBy('turn-1', MEMBER_A)],
+    );
 
     const messages = await service.loadMessages({
       workspaceId: WORKSPACE_ID,
       threadId: THREAD_ID,
-      actor: { type: 'user', userWorkspaceId: MEMBER_A },
+      viewer: { workspaceMemberId: MEMBER_A },
     });
 
     expect(messageRepository.find).toHaveBeenCalledWith(
@@ -269,14 +344,20 @@ describe('AgentConversationReaderService', () => {
   });
 
   it('drops the files of turns sent by someone else without signing them', async () => {
-    const { service, fileUrlService } = buildService([
-      buildFileMessage({ turnId: 'turn-1', senderUserWorkspaceId: MEMBER_A }),
-    ]);
+    const { service, fileUrlService } = buildService(
+      [
+        buildFileMessage({
+          turnId: 'turn-1',
+          senderWorkspaceMemberId: MEMBER_A,
+        }),
+      ],
+      [openedBy('turn-1', MEMBER_A)],
+    );
 
     const messages = await service.loadMessages({
       workspaceId: WORKSPACE_ID,
       threadId: THREAD_ID,
-      actor: { type: 'user', userWorkspaceId: MEMBER_B },
+      viewer: { workspaceMemberId: MEMBER_B },
     });
 
     expect(getPartTypes(messages[0])).toEqual(['text']);
@@ -306,7 +387,6 @@ describe('AgentConversationReaderService.findToolPart', () => {
       {} as never,
       {} as never,
       messagePartRepository as never,
-      { hasUpgradedAgentHistory: jest.fn().mockResolvedValue(true) } as never,
     );
   };
 
