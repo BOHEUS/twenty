@@ -1,9 +1,9 @@
+import { isDDLLockedState } from '@/client-config/states/isDDLLockedState';
 import { useDeleteOneFieldMetadataItem } from '@/object-metadata/hooks/useDeleteOneFieldMetadataItem';
 import { useFieldMetadataItem } from '@/object-metadata/hooks/useFieldMetadataItem';
 import { useGetIsMetadataItemCustom } from '@/object-metadata/hooks/useGetIsMetadataItemCustom';
 import { useGetRelationMetadata } from '@/object-metadata/hooks/useGetRelationMetadata';
 import { isLabelIdentifierField } from '@/object-metadata/utils/isLabelIdentifierField';
-import { isDDLLockedState } from '@/client-config/states/isDDLLockedState';
 import { isObjectMetadataReadOnly } from '@/object-record/read-only/utils/isObjectMetadataReadOnly';
 import { SettingsItemTypeTag } from '@/settings/components/SettingsItemTypeTag';
 import { SettingsNameCellSecondaryLabel } from '@/settings/components/SettingsNameCellSecondaryLabel';
@@ -13,27 +13,23 @@ import { settingsObjectFieldsFamilyState } from '@/settings/data-model/object-de
 import { isFieldTypeSupportedInSettings } from '@/settings/data-model/utils/isFieldTypeSupportedInSettings';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
-import { useContext, useMemo } from 'react';
-import { styled } from '@linaria/react';
-import { useLingui } from '@lingui/react/macro';
 import { TooltipDelay } from '@/ui/layout/tooltip/constants/TooltipDelay';
+import { UndecoratedLink } from '@/ui/navigation/link/components/UndecoratedLink/UndecoratedLink';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomFamilyState } from '@/ui/utilities/state/jotai/hooks/useSetAtomFamilyState';
+import { styled } from '@linaria/react';
+import { useLingui } from '@lingui/react/macro';
+import { useMemo } from 'react';
 import { FieldMetadataType, SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import {
-  IconChevronRight,
-  IconMinus,
-  IconPlus,
-  useIcons,
-} from 'twenty-ui/icon';
-import { LightIconButton } from 'twenty-ui/components';
-import { UndecoratedLink } from 'twenty-ui/primitives/navigation';
+import { LightIconButton } from 'twenty-ui/components/input';
+import { IconChevronRight, IconMinus, IconPlus } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { RelationType } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
-import { type SettingsObjectDetailTableItem } from '~/pages/settings/data-model/types/SettingsObjectDetailTableItem';
+import { type SettingsObjectDetailTableItem } from '@/settings/data-model/types/SettingsObjectDetailTableItem';
 import { SettingsObjectFieldDataType } from './SettingsObjectFieldDataType';
 
 type SettingsObjectFieldItemTableRowProps = {
@@ -72,7 +68,7 @@ export const SettingsObjectFieldItemTableRow = ({
   status,
   isMostlyEmpty = false,
 }: SettingsObjectFieldItemTableRowProps) => {
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const { t } = useLingui();
   const { fieldMetadataItem, objectMetadataItem } =
     settingsObjectDetailTableItem;
@@ -149,7 +145,9 @@ export const SettingsObjectFieldItemTableRow = ({
     });
   };
 
-  if (!isFieldTypeSupported) return null;
+  if (!isFieldTypeSupported) {
+    return null;
+  }
 
   const isRelatedObjectLinkable = isDefined(
     relationObjectMetadataItem?.namePlural,
@@ -266,7 +264,7 @@ export const SettingsObjectFieldItemTableRow = ({
         ) : mode === 'view' ? (
           <SettingsObjectFieldInactiveActionDropdown
             isCustomField={getIsMetadataItemCustom(fieldMetadataItem)}
-            isSystemField={fieldMetadataItem.isSystem === true}
+            isSystemField={fieldMetadataItem.isSystem ?? false}
             readonly={readonly}
             fieldMetadataItemId={fieldMetadataItem.id}
             onEdit={navigateToFieldEdit}

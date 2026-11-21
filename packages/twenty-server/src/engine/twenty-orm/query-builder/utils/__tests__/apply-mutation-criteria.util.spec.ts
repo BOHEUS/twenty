@@ -1,9 +1,12 @@
+import { runInNewContext } from 'node:vm';
+
 import { FieldMetadataType } from 'twenty-shared/types';
 
 import { TwentyOrmException } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
 import { applyMutationCriteriaToQueryBuilder } from 'src/engine/twenty-orm/query-builder/utils/apply-mutation-criteria.util';
 import { WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/query-builder/workspace-select-query-builder';
 import { type WorkspaceTableShape } from 'src/engine/twenty-orm/table-shape/types/workspace-table-shape.type';
+import { NO_RECORD_READ_RESTRICTIONS } from 'src/engine/permissions/constants/no-record-read-restrictions.constant';
 
 const buildColumn = (columnName: string) => ({
   columnName,
@@ -31,7 +34,7 @@ const buildQueryBuilder = () =>
   new WorkspaceSelectQueryBuilder('person', {
     tableShape: personTableShape,
     executor: { execute: async () => [] },
-    objectRecordsPermissions: {},
+    recordReadRestrictions: NO_RECORD_READ_RESTRICTIONS,
     tableShapeByObjectMetadataId: () => personTableShape,
     onBeforeExecute: () => undefined,
     formatResult: (records) => records as never,
@@ -89,5 +92,26 @@ describe('applyMutationCriteriaToQueryBuilder', () => {
     expect(() =>
       applyMutationCriteriaToQueryBuilder(buildQueryBuilder(), ''),
     ).toThrow(TwentyOrmException);
+  });
+
+  it.each([
+    ['an empty where object', {}],
+    ['an empty null-prototype where object', Object.create(null)],
+    ['a where array with an empty entry', [{ name: 'Ada' }, {}]],
+    ['a where array with an empty null-prototype entry', [Object.create(null)]],
+  ])('throws on %s, which would reach every row', (_label, criteria) => {
+    expect(() =>
+      applyMutationCriteriaToQueryBuilder(buildQueryBuilder(), criteria),
+    ).toThrow(TwentyOrmException);
+  });
+
+  it('applies a where object built in another realm', () => {
+    const [text, values] = applyMutationCriteriaToQueryBuilder(
+      buildQueryBuilder(),
+      [runInNewContext("({ name: 'Ada' })")],
+    ).getQueryAndParameters();
+
+    expect(text).toContain('"person"."name" = $1');
+    expect(values).toContain('Ada');
   });
 });

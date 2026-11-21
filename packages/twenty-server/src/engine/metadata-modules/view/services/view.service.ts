@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
 
-import { FeatureFlagKey, ViewType } from 'twenty-shared/types';
+import { ViewType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
-import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
-import { isInitialObjectView } from 'src/engine/metadata-modules/view/utils/is-initial-object-view.util';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { findFlatEntityByUniversalIdentifierOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier-or-throw.util';
@@ -31,7 +29,15 @@ import { DestroyViewInput } from 'src/engine/metadata-modules/view/dtos/inputs/d
 import { UpdateViewInput } from 'src/engine/metadata-modules/view/dtos/inputs/update-view.input';
 import { ViewDTO } from 'src/engine/metadata-modules/view/dtos/view.dto';
 import { ViewEntity } from 'src/engine/metadata-modules/view/entities/view.entity';
+import {
+  generateViewExceptionMessage,
+  generateViewUserFriendlyExceptionMessage,
+  ViewException,
+  ViewExceptionCode,
+  ViewExceptionMessageKey,
+} from 'src/engine/metadata-modules/view/exceptions/view.exception';
 import { fromFlatViewToViewDto } from 'src/engine/metadata-modules/view/utils/from-flat-view-to-view-dto.util';
+import { isViewAvailableToUser } from 'src/engine/metadata-modules/view/utils/is-view-available-to-user.util';
 import { isViewVisibleToUser } from 'src/engine/metadata-modules/view/utils/is-view-visible-to-user.util';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
@@ -47,7 +53,6 @@ export class ViewService {
     private readonly workspaceMigrationValidateBuildAndRunService: WorkspaceMigrationValidateBuildAndRunService,
     private readonly flatEntityMapsCacheService: WorkspaceManyOrAllFlatEntityMapsCacheService,
     private readonly applicationService: ApplicationService,
-    private readonly featureFlagService: FeatureFlagService,
   ) {}
 
   async createOne({
@@ -68,14 +73,18 @@ export class ViewService {
 
     const {
       flatFieldMetadataMaps: existingFlatFieldMetadataMaps,
+      flatFieldMetadataOptionMaps: existingFlatFieldMetadataOptionMaps,
       flatObjectMetadataMaps: existingFlatObjectMetadataMaps,
-    } =
-      await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
-        {
-          workspaceId,
-          flatMapsKeys: ['flatFieldMetadataMaps', 'flatObjectMetadataMaps'],
-        },
-      );
+    } = await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+      {
+        workspaceId,
+        flatMapsKeys: [
+          'flatFieldMetadataMaps',
+          'flatFieldMetadataOptionMaps',
+          'flatObjectMetadataMaps',
+        ],
+      },
+    );
 
     const { flatViewToCreate, flatViewGroupsToCreate } =
       fromCreateViewInputToFlatViewToCreate({
@@ -83,6 +92,7 @@ export class ViewService {
         createdByUserWorkspaceId,
         flatApplication: workspaceCustomFlatApplication,
         flatFieldMetadataMaps: existingFlatFieldMetadataMaps,
+        flatFieldMetadataOptionMaps: existingFlatFieldMetadataOptionMaps,
         flatObjectMetadataMaps: existingFlatObjectMetadataMaps,
       });
 
@@ -151,6 +161,7 @@ export class ViewService {
     const {
       flatViewMaps: existingFlatViewMaps,
       flatFieldMetadataMaps: existingFlatFieldMetadataMaps,
+      flatFieldMetadataOptionMaps: existingFlatFieldMetadataOptionMaps,
       flatViewGroupMaps: existingFlatViewGroupMaps,
     } = await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
       {
@@ -158,6 +169,7 @@ export class ViewService {
         flatMapsKeys: [
           'flatViewMaps',
           'flatFieldMetadataMaps',
+          'flatFieldMetadataOptionMaps',
           'flatViewGroupMaps',
         ],
       },
@@ -169,6 +181,7 @@ export class ViewService {
         flatViewMaps: existingFlatViewMaps,
         flatViewGroupMaps: existingFlatViewGroupMaps,
         flatFieldMetadataMaps: existingFlatFieldMetadataMaps,
+        flatFieldMetadataOptionMaps: existingFlatFieldMetadataOptionMaps,
         userWorkspaceId,
         callerApplicationUniversalIdentifier:
           workspaceCustomFlatApplication.universalIdentifier,
@@ -345,31 +358,22 @@ export class ViewService {
         },
       );
 
-    const isInitialObjectViewEnabled =
-      await this.featureFlagService.isFeatureEnabled(
-        FeatureFlagKey.IS_INITIAL_OBJECT_VIEW_ENABLED,
-        workspaceId,
-      );
-
     return Object.values(flatViewMaps.byUniversalIdentifier)
       .filter(isDefined)
-      .filter(
-        (flatView) =>
-          isInitialObjectViewEnabled || !isInitialObjectView(flatView),
-      )
       .filter((flatView) => flatView.workspaceId === workspaceId)
       .filter(
         (flatView) =>
           !objectMetadataId || flatView.objectMetadataId === objectMetadataId,
       )
-      .filter((flatView) => flatView.deletedAt === null)
       .filter(
         (flatView) =>
           !viewTypes ||
           viewTypes.length === 0 ||
           viewTypes.includes(flatView.type),
       )
-      .filter((flatView) => isViewVisibleToUser(flatView, userWorkspaceId))
+      .filter((flatView) =>
+        isViewAvailableToUser({ flatView, userWorkspaceId }),
+      )
       .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id));
   }
 
@@ -584,6 +588,65 @@ export class ViewService {
     );
 
     return results[0] ?? null;
+  }
+
+  async findByIdVisibleToUserOrThrow({
+    id,
+    workspaceId,
+    userWorkspaceId,
+  }: {
+    id: string;
+    workspaceId: string;
+    userWorkspaceId: string | undefined;
+  }): Promise<ViewDTO> {
+    return this.getViewVisibleToUserOrThrow({
+      view: await this.findById(id, workspaceId),
+      viewId: id,
+      userWorkspaceId,
+    });
+  }
+
+  async findByIdWithRelationsVisibleToUserOrThrow({
+    id,
+    workspaceId,
+    userWorkspaceId,
+  }: {
+    id: string;
+    workspaceId: string;
+    userWorkspaceId: string | undefined;
+  }): Promise<ViewDTO> {
+    return this.getViewVisibleToUserOrThrow({
+      view: await this.findByIdWithRelations(id, workspaceId),
+      viewId: id,
+      userWorkspaceId,
+    });
+  }
+
+  private getViewVisibleToUserOrThrow({
+    view,
+    viewId,
+    userWorkspaceId,
+  }: {
+    view: ViewDTO | null;
+    viewId: string;
+    userWorkspaceId: string | undefined;
+  }): ViewDTO {
+    if (!isDefined(view) || !isViewVisibleToUser(view, userWorkspaceId)) {
+      throw new ViewException(
+        generateViewExceptionMessage(
+          ViewExceptionMessageKey.VIEW_NOT_FOUND,
+          viewId,
+        ),
+        ViewExceptionCode.VIEW_NOT_FOUND,
+        {
+          userFriendlyMessage: generateViewUserFriendlyExceptionMessage(
+            ViewExceptionMessageKey.VIEW_NOT_FOUND,
+          ),
+        },
+      );
+    }
+
+    return view;
   }
 
   async findByIdIncludingDeleted(

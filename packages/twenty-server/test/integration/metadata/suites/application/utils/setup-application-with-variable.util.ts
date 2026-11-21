@@ -1,24 +1,46 @@
+import { TEST_APPLICATION_PACKAGE_JSON_CHECKSUM } from 'test/integration/metadata/suites/application/constants/test-application-package-json.constant';
 import { buildBaseManifest } from 'test/integration/metadata/suites/application/utils/build-base-manifest.util';
 import { findOneApplication } from 'test/integration/metadata/suites/application/utils/find-one-application.util';
 import { setupApplicationForSync } from 'test/integration/metadata/suites/application/utils/setup-application-for-sync.util';
 import { syncApplication } from 'test/integration/metadata/suites/application/utils/sync-application.util';
+import {
+  type ApplicationVariableScope,
+  type LegacyObjectPermissionManifest,
+} from 'twenty-shared/application';
 import { SystemPermissionFlag } from 'twenty-shared/constants';
+import { isDefined } from 'twenty-shared/utils';
 import { v4 as uuidv4 } from 'uuid';
 
 export type ApplicationWithVariable = {
   id: string;
+  requestedRoleId: string;
   universalIdentifier: string;
   variableKey: string;
 };
 
-// Syncs an application whose default role holds APPLICATIONS, as the official
-// apps with a settings component do, and declares one non-secret variable.
 export const setupApplicationWithVariable = async ({
   name,
   variableKey,
+  variableScope,
+  isSecret = false,
+  value = variableScope === 'USER' ? undefined : 'initial',
+  permissionFlagUniversalIdentifiers = variableScope === 'USER'
+    ? [
+        SystemPermissionFlag.APPLICATIONS,
+        SystemPermissionFlag.CONNECTED_ACCOUNTS,
+      ]
+    : [SystemPermissionFlag.APPLICATIONS],
+  objectPermissions = [],
 }: {
   name: string;
   variableKey: string;
+  variableScope?: ApplicationVariableScope;
+  isSecret?: boolean;
+  value?: string;
+  permissionFlagUniversalIdentifiers?: string[];
+  // An application-owned role can only be granted object permissions through
+  // its own manifest; upserting them afterwards is refused.
+  objectPermissions?: LegacyObjectPermissionManifest[];
 }): Promise<ApplicationWithVariable> => {
   const applicationUniversalIdentifier = uuidv4();
   const roleUniversalIdentifier = uuidv4();
@@ -43,10 +65,12 @@ export const setupApplicationWithVariable = async ({
           applicationVariables: {
             [variableKey]: {
               universalIdentifier: uuidv4(),
-              value: 'initial',
+              scope: variableScope,
+              ...(isSecret ? { isSecret: true } : {}),
+              ...(isSecret || !isDefined(value) ? {} : { value }),
             },
           },
-          packageJsonChecksum: null,
+          packageJsonChecksum: TEST_APPLICATION_PACKAGE_JSON_CHECKSUM,
           yarnLockChecksum: null,
         },
         roles: [
@@ -54,9 +78,9 @@ export const setupApplicationWithVariable = async ({
             universalIdentifier: roleUniversalIdentifier,
             label: `${name} role`,
             description: 'Manages applications',
-            permissionFlagUniversalIdentifiers: [
-              SystemPermissionFlag.APPLICATIONS,
-            ],
+            canUpdateAllSettings: false,
+            permissionFlagUniversalIdentifiers,
+            objectPermissions,
           },
         ],
       },
@@ -66,11 +90,22 @@ export const setupApplicationWithVariable = async ({
 
   const { data } = await findOneApplication({
     input: { universalIdentifier: applicationUniversalIdentifier },
+    gqlFields: `
+      id
+      requestedRoleId
+    `,
     expectToFail: false,
   });
 
+  const { id, requestedRoleId } = data.findOneApplication;
+
+  if (requestedRoleId === undefined) {
+    throw new Error(`Application ${name} synced without its declared role`);
+  }
+
   return {
-    id: data.findOneApplication.id,
+    id,
+    requestedRoleId,
     universalIdentifier: applicationUniversalIdentifier,
     variableKey,
   };

@@ -7,7 +7,6 @@ let mockParameters = {
   objectNameSingular: 'person',
   objectRecordId: 'record-1',
 };
-let mockIsWorkflowCoreIndexPageEnabled = false;
 let mockRecordResource: {
   record: { id: string } | undefined;
   loading: boolean;
@@ -19,11 +18,9 @@ let mockRecordResource: {
 };
 
 jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
   useParams: () => mockParameters,
-}));
-
-jest.mock('@/workspace/hooks/useIsFeatureEnabled', () => ({
-  useIsFeatureEnabled: () => mockIsWorkflowCoreIndexPageEnabled,
+  Navigate: ({ to }: { to: string }) => <div data-testid="navigate">{to}</div>,
 }));
 
 jest.mock('@/object-core/utils/findCoreObjectShowPage', () => ({
@@ -55,7 +52,7 @@ jest.mock('@/object-metadata/hooks/useObjectMetadataItems', () => ({
   }),
 }));
 
-jest.mock('@/app/routing/components/WorkspaceRouteUnavailable', () => ({
+jest.mock('@/ui/layout/page/components/WorkspaceRouteUnavailable', () => ({
   WorkspaceRouteUnavailable: () => <div data-testid="route-unavailable" />,
 }));
 
@@ -112,13 +109,16 @@ jest.mock('@/ui/layout/page/components/PageCardLayout', () => ({
   ),
 }));
 
-jest.mock('~/pages/object-record/RecordShowPageHeader', () => ({
-  RecordShowPageHeader: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="record-header">{children}</div>
-  ),
-}));
+jest.mock(
+  '@/object-record/record-show/components/RecordShowPageHeader',
+  () => ({
+    RecordShowPageHeader: ({ children }: { children?: React.ReactNode }) => (
+      <div data-testid="record-header">{children}</div>
+    ),
+  }),
+);
 
-jest.mock('~/pages/object-record/RecordShowPageTitle', () => ({
+jest.mock('@/object-record/record-show/components/RecordShowPageTitle', () => ({
   RecordShowPageTitle: () => <div data-testid="record-page-title" />,
 }));
 
@@ -137,7 +137,6 @@ describe('RecordShowPage workspace surface composition', () => {
       objectNameSingular: 'person',
       objectRecordId: 'record-1',
     };
-    mockIsWorkflowCoreIndexPageEnabled = false;
     mockRecordResource = {
       record: { id: 'record-1' },
       loading: false,
@@ -150,7 +149,6 @@ describe('RecordShowPage workspace surface composition', () => {
       objectNameSingular: 'workflow',
       objectRecordId: 'workspace-workflow-1',
     };
-    mockIsWorkflowCoreIndexPageEnabled = true;
 
     render(<RecordShowPage />);
 
@@ -158,20 +156,6 @@ describe('RecordShowPage workspace surface composition', () => {
       'workspace-workflow-1',
     );
     expect(screen.queryByTestId('record-renderer')).not.toBeInTheDocument();
-  });
-
-  it('keeps the workspace show page for core-owned records when the flag is disabled', () => {
-    mockParameters = {
-      objectNameSingular: 'workflow',
-      objectRecordId: 'workspace-workflow-1',
-    };
-
-    render(<RecordShowPage />);
-
-    expect(screen.getByTestId('record-renderer')).toBeInTheDocument();
-    expect(
-      screen.queryByTestId('core-object-show-page'),
-    ).not.toBeInTheDocument();
   });
 
   it('keeps the existing main-page chrome and canonical renderer', () => {

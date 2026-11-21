@@ -1,52 +1,42 @@
-import { useState } from 'react';
-import { Section } from 'twenty-ui/components';
-import { Button } from 'twenty-ui/primitives/input';
+import 'twenty-ui/style.css';
 import { defineFrontComponent } from 'twenty-sdk/define';
-import {
-  VisibilityHidden,
-  VisibilityHiddenInput,
-} from 'twenty-ui/primitives/accessibility';
-import { ThemeProvider } from 'twenty-ui/theme-constants';
+import { SectionExample } from './section-example';
+import { TypographyCompositionExample } from './typography-composition-example';
+import { VisuallyHiddenExample } from './visually-hidden-example';
 import {
   Heading,
   Text,
-  Label,
-  LinkifiedText,
-  SeparatorLineText,
-  StyledText,
-  StyledTextContent,
-  StyledTextWrapper,
+  Shortcut,
+  formatShortcut,
 } from 'twenty-ui/primitives/typography';
+import { ThemeProvider } from 'twenty-ui/theme';
 
 import {
   ComponentGallery,
   type GalleryEntry,
 } from '../shared/front-components/component-gallery';
 
-const SectionExample = () => {
-  const [activations, setActivations] = useState(0);
-
-  return (
-    <Section.Root>
-      <Section.Header
-        title="Workspace preferences"
-        description="Manage the settings for your workspace."
-        adornment={
-          <Button onClick={() => setActivations((count) => count + 1)}>
-            Edit workspace
-          </Button>
-        }
-      />
-      <Text aria-label="Workspace edits">{activations}</Text>
-    </Section.Root>
-  );
-};
-
 const TYPOGRAPHY_ENTRIES: GalleryEntry[] = [
+  { name: 'Typography composition', node: <TypographyCompositionExample /> },
+  {
+    name: 'Shortcut',
+    node: (
+      <>
+        <Shortcut shortcut={['Mod', 'K']} platform="mac" />
+        <Shortcut shortcut={[['G'], ['P']]} sequenceJoinLabel="next" />
+        <Text>
+          {formatShortcut({
+            shortcut: ['Mod', 'K'],
+            platform: 'other',
+          })}
+        </Text>
+      </>
+    ),
+  },
   {
     name: 'Heading',
     node: (
-      <Heading level={1} size="lg">
+      <Heading level={1} size="xxl">
         Heading 1
       </Heading>
     ),
@@ -58,42 +48,14 @@ const TYPOGRAPHY_ENTRIES: GalleryEntry[] = [
   {
     name: 'HeadingLevel',
     node: (
-      <Heading level={3} size="sm">
+      <Heading level={3} size="xl">
         Heading 3
       </Heading>
     ),
   },
   {
-    name: 'Label',
-    node: <Label variant="default">Label</Label>,
-  },
-  {
-    name: 'LinkifiedText',
-    node: <LinkifiedText text="Visit https://twenty.com now" />,
-  },
-  {
-    name: 'SeparatorLineText',
-    node: <SeparatorLineText>or</SeparatorLineText>,
-  },
-  {
-    name: 'StyledText',
-    node: <StyledText text="Styled text" />,
-  },
-  {
-    name: 'StyledTextContent',
-    node: <StyledTextContent>Content</StyledTextContent>,
-  },
-  {
-    name: 'StyledTextWrapper',
-    node: <StyledTextWrapper>Wrapper</StyledTextWrapper>,
-  },
-  {
-    name: 'VisibilityHidden',
-    node: <VisibilityHidden>Screen-reader only</VisibilityHidden>,
-  },
-  {
-    name: 'VisibilityHiddenInput',
-    node: <VisibilityHiddenInput readOnly value="" />,
+    name: 'VisuallyHidden',
+    node: <VisuallyHiddenExample />,
   },
 ];
 

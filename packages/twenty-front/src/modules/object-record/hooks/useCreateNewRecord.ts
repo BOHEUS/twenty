@@ -8,6 +8,7 @@ import { useResolveOpenRecordIn } from '@/object-record/record-index/hooks/useRe
 import { useUpsertRecordsInStore } from '@/object-record/record-store/hooks/useUpsertRecordsInStore';
 import { newRecordTitleCellToOpenState } from '@/object-record/record-title-cell/states/newRecordTitleCellToOpenState';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
+import { type OnRecordCreated } from '@/object-record/types/OnRecordCreated';
 import { useOpenRecordInSidePanel } from '@/side-panel/hooks/useOpenRecordInSidePanel';
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
@@ -21,10 +22,7 @@ import { useNavigateApp } from '~/hooks/useNavigateApp';
 type UseCreateNewRecordProps = {
   objectMetadataItem: EnrichedObjectMetadataItem;
   buildRecordInput?: () => Partial<ObjectRecord>;
-  onRecordCreated?: (
-    record: ObjectRecord,
-    recordInput?: Partial<ObjectRecord>,
-  ) => void;
+  onRecordCreated?: OnRecordCreated;
 };
 
 export const useCreateNewRecord = ({
@@ -48,9 +46,7 @@ export const useCreateNewRecord = ({
 
   const { upsertRecordsInStore } = useUpsertRecordsInStore();
 
-  const { requestRecordCreation } = useRecordCreationForm({
-    objectMetadataItem,
-  });
+  const { requestRecordCreation } = useRecordCreationForm();
 
   const navigate = useNavigateApp();
 
@@ -76,13 +72,53 @@ export const useCreateNewRecord = ({
         ...mergedRecordInput,
       });
 
+      return createdRecord;
+    },
+    [buildRecordInputFromRLSPredicates, buildRecordInput, createOneRecord],
+  );
+
+  const createAndStoreRecord = useCallback(
+    async (recordInput?: Partial<ObjectRecord>) => {
+      const createdRecord = await createRecord(recordInput);
+
+      onRecordCreated?.({ record: createdRecord, recordInput });
+      upsertRecordsInStore({ partialRecords: [createdRecord] });
+
+      return createdRecord;
+    },
+    [createRecord, onRecordCreated, upsertRecordsInStore],
+  );
+
+  const createNewRecord = useCallback(
+    async (recordInput?: Partial<ObjectRecord>) => {
+      let submittedRecordInput = recordInput;
+
+      const createdRecord = await requestRecordCreation({
+        objectMetadataItem,
+        initialDraftRecord: {
+          ...buildRecordInputFromRLSPredicates(),
+          ...buildRecordInput?.(),
+          ...recordInput,
+        },
+        createRecord: (draftRecord) => {
+          submittedRecordInput = { ...recordInput, ...draftRecord };
+          return createAndStoreRecord(submittedRecordInput);
+        },
+      });
+
+      if (!isDefined(createdRecord)) {
+        return;
+      }
+
+      const recordId = createdRecord.id;
+
       const labelIdentifierFieldMetadataItem =
         getLabelIdentifierFieldMetadataItem(objectMetadataItem);
 
       const shouldOpenLabelIdentifierInEditMode =
         !isDefined(labelIdentifierFieldMetadataItem) ||
         !isDefined(
-          recordInput?.[
+          submittedRecordInput?.[
             getFieldMetadataItemGqlFieldName(labelIdentifierFieldMetadataItem)
           ],
         );
@@ -118,46 +154,19 @@ export const useCreateNewRecord = ({
         });
       }
 
-      onRecordCreated?.(createdRecord, recordInput);
-
-      upsertRecordsInStore({ partialRecords: [createdRecord] });
-
       return createdRecord;
     },
     [
-      store,
       buildRecordInputFromRLSPredicates,
       buildRecordInput,
-      onRecordCreated,
-      createOneRecord,
+      createAndStoreRecord,
+      store,
       navigate,
       objectMetadataItem,
       openRecordInSidePanel,
       openRecordIn,
-      upsertRecordsInStore,
       closeSidePanelMenu,
       workspaceSurface.type,
-    ],
-  );
-
-  const createNewRecord = useCallback(
-    async (recordInput?: Partial<ObjectRecord>) => {
-      const createdRecord = await requestRecordCreation({
-        initialDraftRecord: {
-          ...buildRecordInputFromRLSPredicates(),
-          ...buildRecordInput?.(),
-          ...recordInput,
-        },
-        createRecord: (draftRecord) =>
-          createRecord({ ...recordInput, ...draftRecord }),
-      });
-
-      return createdRecord ?? undefined;
-    },
-    [
-      buildRecordInputFromRLSPredicates,
-      buildRecordInput,
-      createRecord,
       requestRecordCreation,
     ],
   );

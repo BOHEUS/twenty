@@ -1,22 +1,23 @@
-import { ApolloProvider } from '@apollo/client/react';
-import { loadDevMessages } from '@apollo/client/dev';
-import { type Decorator } from '@storybook/react-vite';
-import { Provider as JotaiProvider } from 'jotai';
-import { HelmetProvider } from '@dr.pogodin/react-helmet';
-import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { AppNavigatorProvider } from '@/app/components/AppNavigatorProvider';
 import { WorkspaceRouteObjectsProvider } from '@/app/routing/components/WorkspaceRouteObjectsProvider';
 import { type WorkspaceRouteObject } from '@/app/routing/types/WorkspaceRouteObject';
 import { ClientConfigProviderEffect } from '@/client-config/components/ClientConfigProviderEffect';
 import { MinimalMetadataGate } from '@/metadata-store/components/MinimalMetadataGate';
 import { ApolloCoreClientMockedProvider } from '@/object-metadata/hooks/__mocks__/ApolloCoreClientMockedProvider';
+import { loadDevMessages } from '@apollo/client/dev';
+import { ApolloProvider } from '@apollo/client/react';
+import { HelmetProvider } from '@dr.pogodin/react-helmet';
+import { type Decorator } from '@storybook/react-vite';
+import { Provider as JotaiProvider } from 'jotai';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 
-import { DefaultLayout } from '@/ui/layout/page/components/DefaultLayout';
 import { UserMetadataProviderInitialEffect } from '@/metadata-store/effect-components/UserMetadataProviderInitialEffect';
-import { UserContextProvider } from '@/users/components/UserContextProvider';
-import { MockedMetadataLoadEffect } from '~/testing/decorators/MockedMetadataLoadEffect';
+import { DefaultLayout } from '@/app/components/DefaultLayout';
 import { jotaiStore } from '@/ui/utilities/state/jotai/jotaiStore';
+import { UserContextProvider } from '@/users/components/UserContextProvider';
 import { type JSX, useState } from 'react';
-import { ClientConfigProvider } from '~/modules/client-config/components/ClientConfigProvider';
+import { ClientConfigProvider } from '@/client-config/components/ClientConfigProvider';
+import { MockedMetadataLoadEffect } from '~/testing/decorators/MockedMetadataLoadEffect';
 import { mockedApolloClient } from '~/testing/mockedApolloClient';
 
 import { RouteContextStoreProvider } from '@/context-store/components/RouteContextStoreProvider';
@@ -24,13 +25,12 @@ import { MAIN_CONTEXT_STORE_INSTANCE_ID } from '@/context-store/constants/MainCo
 import { ContextStoreComponentInstanceContext } from '@/context-store/states/contexts/ContextStoreComponentInstanceContext';
 import { PreComputedChipGeneratorsProvider } from '@/object-metadata/components/PreComputedChipGeneratorsProvider';
 import { RecordComponentInstanceContextsWrapper } from '@/object-record/components/RecordComponentInstanceContextsWrapper';
-import { RecordCreationFormProvider } from '@/object-record/record-form/components/RecordCreationFormProvider';
-import { ToastProvider } from 'twenty-ui/primitives/feedback';
 import { WorkspaceProviderEffect } from '@/workspace/components/WorkspaceProviderEffect';
 import { i18n } from '@lingui/core';
 import { I18nProvider } from '@lingui/react';
 import { SOURCE_LOCALE } from 'twenty-shared/translations';
-import { IconsProvider } from 'twenty-ui/icon';
+import { ToastProvider } from 'twenty-ui/components/feedback';
+import { IconsProvider } from 'twenty-ui/icon/provider';
 import { FullHeightStorybookLayout } from '~/testing/FullHeightStorybookLayout';
 import { dynamicActivate } from '~/utils/i18n/dynamicActivate';
 
@@ -39,6 +39,7 @@ export type PageDecoratorArgs = {
   routeParams: RouteParams;
   additionalRoutes?: string[];
   searchParams?: RouteParams;
+  routeHash?: string;
 };
 
 export type RouteParams = {
@@ -53,11 +54,15 @@ export const isRouteParams = (obj: any): obj is RouteParams => {
   return Object.keys(obj).every((key) => typeof obj[key] === 'string');
 };
 
-export const computeLocation = (
-  routePath: string,
-  routeParams?: RouteParams,
-  searchParams?: RouteParams,
-) => {
+export const computeLocation = ({
+  routePath,
+  routeParams,
+  searchParams,
+  routeHash = '',
+}: Pick<PageDecoratorArgs, 'routePath'> &
+  Partial<
+    Pick<PageDecoratorArgs, 'routeParams' | 'searchParams' | 'routeHash'>
+  >) => {
   const search = searchParams
     ? `?${new URLSearchParams(searchParams).toString()}`
     : '';
@@ -68,6 +73,7 @@ export const computeLocation = (
       (paramName) => routeParams?.[paramName] ?? '',
     ),
     search,
+    hash: routeHash,
   };
 };
 
@@ -103,9 +109,7 @@ const Providers = () => {
                         <HelmetProvider>
                           <IconsProvider>
                             <RecordComponentInstanceContextsWrapper componentInstanceId="storybook-test-record">
-                              <RecordCreationFormProvider>
-                                <MinimalMetadataGate />
-                              </RecordCreationFormProvider>
+                              <MinimalMetadataGate />
                             </RecordComponentInstanceContextsWrapper>
                           </IconsProvider>
                         </HelmetProvider>
@@ -137,6 +141,8 @@ const createRouter = ({
   };
   initialEntries?: {
     pathname: string;
+    search?: string;
+    hash?: string;
   }[];
   initialIndex?: number;
 }) => {
@@ -169,17 +175,24 @@ export const PageDecorator: Decorator<{
   routeParams: RouteParams;
   additionalRoutes?: string[];
   searchParams?: RouteParams;
+  routeHash?: string;
 }> = (Story, { args }) => {
+  const router = createRouter({
+    Story,
+    args,
+    initialEntries: [
+      computeLocation({
+        routePath: args.routePath,
+        routeParams: args.routeParams,
+        searchParams: args.searchParams,
+        routeHash: args.routeHash,
+      }),
+    ],
+  });
+
   return (
-    <RouterProvider
-      useTransitions={false}
-      router={createRouter({
-        Story,
-        args,
-        initialEntries: [
-          computeLocation(args.routePath, args.routeParams, args.searchParams),
-        ],
-      })}
-    />
+    <AppNavigatorProvider router={router}>
+      <RouterProvider useTransitions={false} router={router} />
+    </AppNavigatorProvider>
   );
 };

@@ -4,12 +4,18 @@ import { action } from 'storybook/actions';
 import {
   A11Y_DEFER_COLOR_CONTRAST,
   CatalogDecorator,
-  type CatalogStory,
   ComponentDecorator,
+  type CatalogStory,
 } from '@ui/testing';
 
-import { IconBell, IconEdit, IconSettings, IconTrash } from '@ui/icon';
-import { LightIconButton } from '@ui/components/LightIconButton/LightIconButton';
+import { Button } from '@ui/primitives/input/Button/Button';
+import {
+  IconBell,
+  IconCopy,
+  IconEdit,
+  IconSettings,
+  IconTrash,
+} from '@ui/icon';
 import { ListItem } from '@ui/primitives/navigation/ListItem/ListItem';
 import { type ListItemColor } from '@ui/primitives/navigation/ListItem/types/ListItemColor';
 import { type ListItemIndicator } from '@ui/primitives/navigation/ListItem/types/ListItemIndicator';
@@ -29,19 +35,33 @@ const START_ICON = <IconBell />;
 
 const ACTIONS = (
   <>
-    <LightIconButton aria-label="Edit" onClick={action('Edit')}>
-      <IconEdit />
-    </LightIconButton>
-    <LightIconButton aria-label="Delete" onClick={action('Delete')}>
-      <IconTrash />
-    </LightIconButton>
+    <Button
+      aria-label="Edit"
+      onClick={action('Edit')}
+      variant="ghost"
+      size="sm"
+      startIcon={<IconEdit />}
+    />
+    <Button
+      aria-label="Delete"
+      onClick={action('Delete')}
+      variant="ghost"
+      size="sm"
+      startIcon={<IconTrash />}
+    />
   </>
 );
 
-export const Default: Story = {
+export const Display: Story = {
   decorators: [ComponentDecorator],
   parameters: { container: { width: 240 } },
-  args: { startIcon: START_ICON },
+  args: { children: 'Notifications', startIcon: START_ICON },
+};
+
+export const OverflowingLabel: Story = {
+  decorators: [ComponentDecorator],
+  parameters: { container: { width: 160 } },
+  args: { children: 'A workspace preference with a long label' },
 };
 
 export const WithDescription: Story = {
@@ -57,6 +77,41 @@ export const WithActions: Story = {
   decorators: [ComponentDecorator],
   parameters: { container: { width: 240 } },
   args: { startIcon: START_ICON, actions: ACTIONS },
+};
+
+export const WithPersistentActions: Story = {
+  ...WithActions,
+  args: { ...WithActions.args, actionsVisibility: 'always' },
+};
+
+export const ButtonOwner: Story = {
+  ...Display,
+  args: {
+    children: 'Duplicate record',
+    render: <button type="button" />,
+    startIcon: <IconCopy />,
+  },
+};
+
+export const LinkOwner: Story = {
+  ...Display,
+  args: {
+    children: 'Typography documentation',
+    render: (renderProps) => (
+      <a {...renderProps} href="https://twenty.com/developers">
+        {renderProps.children}
+      </a>
+    ),
+  },
+};
+
+export const ExplicitLinkContent: Story = {
+  ...Display,
+  parameters: { ...Display.parameters, a11y: A11Y_DEFER_COLOR_CONTRAST },
+  args: {
+    children: <a href="https://twenty.com/developers">Read documentation</a>,
+    description: 'Resource',
+  },
 };
 
 export const WithCheckbox: Story = {
@@ -126,7 +181,7 @@ type ListItemCatalogSlot =
   | 'endIcon'
   | 'description'
   | 'endDescription'
-  | 'hotkeys'
+  | 'shortcut'
   | 'actions'
   | 'submenu';
 
@@ -138,7 +193,7 @@ const LIST_ITEM_CATALOG_SLOT_PROPS: Record<
   endIcon: { endIcon: <IconSettings /> },
   description: { description: 'Description' },
   endDescription: { description: '3 selected', descriptionPlacement: 'end' },
-  hotkeys: { hotkeys: ['⌘', 'K'] },
+  shortcut: { shortcut: ['Mod', 'K'] },
   actions: { actions: ACTIONS },
   submenu: { hasSubmenu: true },
 };
@@ -162,7 +217,7 @@ export const SlotsCatalog: CatalogStory<Story, typeof ListItem> = {
             'endIcon',
             'description',
             'endDescription',
-            'hotkeys',
+            'shortcut',
             'actions',
             'submenu',
           ] satisfies ListItemCatalogSlot[],

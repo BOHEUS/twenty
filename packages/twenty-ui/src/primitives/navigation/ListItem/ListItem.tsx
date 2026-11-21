@@ -1,12 +1,13 @@
 import { useRender } from '@base-ui/react/use-render';
-import { isNonEmptyArray } from '@sniptt/guards';
+import { isString } from '@sniptt/guards';
 import { clsx } from 'clsx';
-import { type MouseEvent } from 'react';
 
 import { IconCheck, IconChevronRight } from '@ui/icon';
-import { MenuItemHotKeys } from '@ui/primitives/navigation/MenuItemHotKeys/MenuItemHotKeys';
+import { Shortcut } from '@ui/primitives/typography/Shortcut/Shortcut';
+import { OverflowingTextWithTooltip } from '@ui/primitives/typography/OverflowingTextWithTooltip/OverflowingTextWithTooltip';
+import { isRenderableSlot } from '@ui/utilities/internal/isRenderableSlot';
+import { isDefined } from '@ui/utilities/utils/isDefined';
 
-import { isRenderableSlot } from './internal/isRenderableSlot';
 import { ListItemCheckboxIndicator } from './internal/ListItemCheckboxIndicator';
 import styles from './ListItem.module.scss';
 import { type ListItemProps } from './types/ListItemProps';
@@ -14,6 +15,8 @@ import { type ListItemProps } from './types/ListItemProps';
 export const ListItem = ({
   color = 'neutral',
   selected = false,
+  selectionAppearance = 'default',
+  active = false,
   focused = false,
   disabled = false,
   indicator = 'none',
@@ -22,35 +25,40 @@ export const ListItem = ({
   description,
   descriptionPlacement = 'inline',
   actions,
-  hotkeys,
+  actionsVisibility = 'hover',
+  actionsPlacement = 'auto',
+  shortcut,
+  shortcutJoinLabel,
   hasSubmenu = false,
   className,
   children,
   render,
   ref,
-  onClick,
   ...props
 }: ListItemProps) => {
   const hasDescription = isRenderableSlot(description);
-
-  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (disabled) {
-      event.preventDefault();
-      return;
-    }
-
-    onClick?.(event);
-  };
+  const actionSlot = isRenderableSlot(actions) ? (
+    <span className={styles.actions}>{actions}</span>
+  ) : null;
 
   return useRender({
     render,
     ref,
-    state: { color, indicator, selected, highlighted: focused, disabled },
+    state: {
+      color,
+      indicator,
+      selected,
+      active,
+      highlighted: focused,
+      disabled,
+    },
     props: {
       ...props,
+      'data-actions-visibility': actionsVisibility,
+      'data-actions-placement': actionsPlacement,
+      'data-description-placement': descriptionPlacement,
+      'data-selection-appearance': selectionAppearance,
       className: clsx(styles.root, className),
-      'aria-disabled': disabled || undefined,
-      onClick: handleClick,
       children: (
         <>
           {indicator === 'checkbox' && (
@@ -60,10 +68,19 @@ export const ListItem = ({
             <span className={styles.startIcon}>{startIcon}</span>
           )}
           <span className={styles.label}>
-            <span className={styles.text}>{children}</span>
-            {hasDescription && descriptionPlacement === 'inline' && (
+            <span className={styles.text}>
+              {isString(children) ? (
+                <OverflowingTextWithTooltip text={children} />
+              ) : (
+                children
+              )}
+            </span>
+            {hasDescription && descriptionPlacement !== 'end' && (
               <span
-                className={clsx(styles.description, styles.inlineDescription)}
+                className={clsx(
+                  styles.description,
+                  descriptionPlacement === 'inline' && styles.inlineDescription,
+                )}
               >
                 {description}
               </span>
@@ -74,13 +91,13 @@ export const ListItem = ({
               {description}
             </span>
           )}
-          {isRenderableSlot(actions) && (
-            <span className={styles.actions}>{actions}</span>
-          )}
-          {isNonEmptyArray(hotkeys) && (
-            <span className={styles.hotkeys}>
-              <MenuItemHotKeys hotKeys={hotkeys} />
-            </span>
+          {descriptionPlacement !== 'below' && actionSlot}
+          {isDefined(shortcut) && (
+            <Shortcut
+              className={styles.hotkeys}
+              shortcut={shortcut}
+              sequenceJoinLabel={shortcutJoinLabel}
+            />
           )}
           {isRenderableSlot(endIcon) && (
             <span className={styles.endIcon}>{endIcon}</span>
@@ -91,6 +108,7 @@ export const ListItem = ({
           {hasSubmenu && (
             <IconChevronRight className={styles.submenuIcon} aria-hidden />
           )}
+          {descriptionPlacement === 'below' && actionSlot}
         </>
       ),
     },

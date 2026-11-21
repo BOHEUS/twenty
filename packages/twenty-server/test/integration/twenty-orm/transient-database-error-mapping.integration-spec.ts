@@ -1,4 +1,4 @@
-import { POSTGRESQL_ERROR_CODES } from 'src/engine/api/graphql/workspace-query-runner/constants/postgres-error-codes.constants';
+import { POSTGRESQL_ERROR_CODES } from 'src/engine/workspace-query-executor/constants/postgres-error-codes.constants';
 import { type WorkspaceTransactionScope } from 'src/engine/twenty-orm/types/workspace-transaction-scope.type';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
@@ -14,8 +14,9 @@ const authContext = buildSystemAuthContext(SEED_APPLE_WORKSPACE_ID);
 const runInTransaction = (
   work: (transactionScope: WorkspaceTransactionScope) => Promise<unknown>,
 ): Promise<unknown> => {
-  const workspaceOrmManager =
-    getAppProviderByClassName<WorkspaceOrmManager>('WorkspaceOrmManager');
+  const workspaceOrmManager = getAppProviderByClassName<WorkspaceOrmManager>(
+    'WorkspaceOrmManager',
+  );
 
   return workspaceOrmManager.executeInWorkspaceContext(
     async () => workspaceOrmManager.runInWorkspaceTransaction(work),

@@ -62,8 +62,6 @@ describe('formatSubscriptionItemValue', () => {
   });
 
   it('formats the amount through the caller formatter, not its own', () => {
-    // The digits have to honour the workspace member's number format, so the
-    // injected formatter is what decides how an amount reads.
     expect(
       formatSubscriptionItemValue({
         item: {
@@ -84,5 +82,31 @@ describe('formatSubscriptionItemValue', () => {
         formatNumber,
       }),
     ).toBe('US15.00');
+  });
+
+  it.each(['CHF', 'SEK', 'PLN'])(
+    'keeps the nonbreaking separator after %s',
+    (currency) => {
+      expect(
+        formatSubscriptionItemValue({
+          item: { unitAmount: 1500 },
+          currency,
+          formatNumber,
+        }),
+      ).toBe(`${currency}\u00a015.00`);
+    },
+  );
+
+  it.each([
+    { currency: 'CAD', prefix: 'CA$' },
+    { currency: 'AUD', prefix: 'A$' },
+  ])('keeps $currency adjacent to the amount', ({ currency, prefix }) => {
+    expect(
+      formatSubscriptionItemValue({
+        item: { unitAmount: 1500 },
+        currency,
+        formatNumber,
+      }),
+    ).toBe(`${prefix}15.00`);
   });
 });

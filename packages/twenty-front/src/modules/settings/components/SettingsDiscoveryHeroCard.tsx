@@ -1,12 +1,13 @@
+import { isDefined } from 'twenty-shared/utils';
 import { type SettingsCustomizeVideoModalTab } from '@/settings/types/SettingsCustomizeVideoModalTab';
 import { SettingsCustomizeVideoModal } from '@/settings/components/SettingsCustomizeVideoModal';
 import { HeroPlayButton } from '@/ui/layout/hero/components/HeroPlayButton';
 import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
-import { type ReactNode, useContext } from 'react';
+import { type ReactNode } from 'react';
 import { Card } from 'twenty-ui/primitives/surfaces';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { useThemeColorScheme, themeCssVariables } from 'twenty-ui/theme';
 
 const DEFAULT_COVER_HEIGHT = 150;
 
@@ -61,7 +62,7 @@ export const SettingsDiscoveryHeroCard = ({
   playButtonAriaLabel,
 }: SettingsDiscoveryHeroCardProps) => {
   const { t } = useLingui();
-  const { colorScheme } = useContext(ThemeContext);
+  const colorScheme = useThemeColorScheme();
   const { openDialog } = useDialog();
   const shouldDisplayVideo = tabs.length > 0;
 
@@ -72,7 +73,7 @@ export const SettingsDiscoveryHeroCard = ({
 
   return (
     <>
-      <Card rounded>
+      <Card.Root>
         <StyledCoverContainer coverHeight={coverHeight}>
           <StyledImage src={src} alt="" aria-hidden />
           {shouldDisplayVideo && (
@@ -84,10 +85,8 @@ export const SettingsDiscoveryHeroCard = ({
             </StyledOverlay>
           )}
         </StyledCoverContainer>
-        {footer !== undefined && footer !== null && (
-          <StyledFooter>{footer}</StyledFooter>
-        )}
-      </Card>
+        {isDefined(footer) && <StyledFooter>{footer}</StyledFooter>}
+      </Card.Root>
       {shouldDisplayVideo && (
         <SettingsCustomizeVideoModal
           modalInstanceId={modalInstanceId}

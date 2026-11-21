@@ -7,15 +7,15 @@ import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { useContext, useState } from 'react';
-import { Section } from 'twenty-ui/components';
-import { Avatar } from 'twenty-ui/primitives/data-display';
+import { useState } from 'react';
+import { SearchInput } from 'twenty-ui/components/input';
+import { Section } from 'twenty-ui/components/layout';
 import { IconChevronRight } from 'twenty-ui/icon';
-import { SearchInput } from 'twenty-ui/primitives/input';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { Avatar } from 'twenty-ui/primitives/data-display';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { type UsageOperationType } from '~/generated-metadata/graphql';
-import { normalizeSearchText } from '~/utils/normalizeSearchText';
+import { normalizeSearchText } from 'twenty-ui/utilities';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledSearchInputContainer = styled.div`
   padding-bottom: ${themeCssVariables.spacing[2]};
@@ -44,7 +44,8 @@ export const UsageByUserTableSection = ({
   getDetailPath,
   showAvatar = false,
 }: UsageByUserTableSectionProps) => {
-  const { theme } = useContext(ThemeContext);
+  const { t } = useLingui();
+  const theme = useTheme();
   const { formatUsageValue } = useUsageValueFormatter();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -80,7 +81,7 @@ export const UsageByUserTableSection = ({
       <Section.Header
         title={title}
         description={description}
-        adornment={
+        actions={
           <Select
             dropdownId={`${title.replace(/\s+/g, '-').toLowerCase()}-period`}
             value={period}
@@ -95,7 +96,7 @@ export const UsageByUserTableSection = ({
         <SearchInput
           placeholder={t`Search for a user...`}
           value={searchTerm}
-          onChange={setSearchTerm}
+          onValueChange={setSearchTerm}
         />
       </StyledSearchInputContainer>
       <Table>
@@ -125,7 +126,7 @@ export const UsageByUserTableSection = ({
               {item.label ?? item.key}
             </TableCell>
             <TableCell align="right">
-              {formatUsageValue(item.creditsUsed)}
+              {formatUsageValue(item.workspaceCreditsUsed)}
             </TableCell>
             <TableCell align="center">
               <StyledIconChevronRightContainer>

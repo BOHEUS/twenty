@@ -10,6 +10,7 @@ import { SupportDriver } from 'src/engine/core-modules/twenty-config/interfaces/
 
 import { MaintenanceModeService } from 'src/engine/core-modules/admin-panel/maintenance-mode.service';
 import {
+  type ClientAiEvaluationModelConfig,
   type ClientAiModelConfig,
   type ClientConfig,
 } from 'src/engine/core-modules/client-config/client-config.entity';
@@ -18,11 +19,13 @@ import { EmailingDomainDriver } from 'src/engine/core-modules/emailing-domain/dr
 import { PUBLIC_FEATURE_FLAGS } from 'src/engine/core-modules/feature-flag/constants/public-feature-flag.const';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { toDisplayCredits } from 'src/engine/core-modules/usage/utils/to-display-credits.util';
+import { deriveWebPushVapidKeyPair } from 'src/engine/core-modules/web-push/utils/derive-web-push-vapid-key-pair.util';
 import { AI_MODEL_TIERS, parseAiModelVariantId } from 'twenty-shared/ai';
 import { ENTERPRISE_INSTANCE_TYPE } from 'twenty-shared/constants';
-import { MODEL_FAMILY_LABELS } from 'src/engine/metadata-modules/ai/ai-models/constants/model-family-labels.const';
+import { MODEL_FAMILY_LABELS } from 'src/engine/metadata-modules/ai/ai-models/constants/model-family-labels.constant';
 import { getAvailableEfforts } from 'src/engine/metadata-modules/ai/ai-models/utils/get-available-efforts.util';
 import { getNativeModelCapabilities } from 'src/engine/metadata-modules/ai/ai-models/utils/get-native-model-capabilities.util';
+import { AI_DATA_POLICIES } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-data-policies.constant';
 import { AiModelRegistryService } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-registry.service';
 import { type AiModelBenchmark } from 'src/engine/metadata-modules/ai/ai-models/types/ai-model-benchmark.type';
 import { type AiModelConfig } from 'src/engine/metadata-modules/ai/ai-models/types/ai-model-config.type';
@@ -36,8 +39,6 @@ export class ClientConfigService {
     private maintenanceModeService: MaintenanceModeService,
   ) {}
 
-  // A variant carries only the reading taken at its own effort, so until the
-  // sync measures it the base model's reading is shown, flagged as such.
   private resolveBenchmark(modelConfig: AiModelConfig | undefined): {
     benchmark?: AiModelBenchmark;
     isInherited: boolean;
@@ -121,6 +122,7 @@ export class ClientConfigService {
           maxOutputTokens: modelConfig?.maxOutputTokens,
           isDeprecated: modelConfig?.isDeprecated,
           dataResidency: modelConfig?.dataResidency,
+          zeroDataRetention: modelConfig?.zeroDataRetention,
           intelligenceIndex: benchmark?.intelligenceIndex,
           outputTokensPerSecond: benchmark?.outputTokensPerSecond,
           costPerTask: benchmark?.costPerTask,
@@ -134,13 +136,52 @@ export class ClientConfigService {
       },
     );
 
-    // A tier with no model is left out; the client shows its "configure a
-    // provider" state from the empty list rather than an error.
-    const aiModelTiers = AI_MODEL_TIERS.flatMap((tier) => {
-      const model = this.aiModelRegistryService.findDefaultModelForTier(tier);
+    const aiEvaluationModels: ClientAiEvaluationModelConfig[] =
+      this.aiModelRegistryService
+        .getAvailableEvaluationModelConfigs()
+        .filter((modelConfig) =>
+          this.aiModelRegistryService.isModelAdminAllowed(modelConfig.modelId),
+        )
+        .map((modelConfig) => ({
+          modelId: modelConfig.modelId,
+          label: modelConfig.label,
+          description: modelConfig.description,
+          providerLabel: getProviderLabel(modelConfig.modelId.split('/')[0]),
+          isAvailable: isDefined(
+            this.aiModelRegistryService.getEvaluationModel(modelConfig.modelId),
+          ),
+          supportedQuestionTypes: modelConfig.supportedQuestionTypes,
+          maxCriteriaPerQuestion: modelConfig.maxCriteriaPerQuestion,
+          maxScoreLevels: modelConfig.maxScoreLevels,
+          medianLatencyMs: modelConfig.medianLatencyMs,
+          inputCostPerMillionTokens: modelConfig.inputCostPerMillionTokens,
+          outputCostPerMillionTokens: modelConfig.outputCostPerMillionTokens,
+          isDeprecated: modelConfig.isDeprecated,
+        }));
 
-      return isDefined(model) ? [{ tier, modelId: model.modelId }] : [];
-    });
+    const aiModelTiers = AI_DATA_POLICIES.flatMap((aiDataPolicy) =>
+      AI_MODEL_TIERS.flatMap((tier) => {
+        const model = this.aiModelRegistryService.findDefaultModelForTier({
+          tier,
+          aiDataPolicy,
+        });
+
+        if (!isDefined(model)) {
+          return [];
+        }
+
+        return [
+          {
+            tier,
+            modelId: model.modelId,
+            requiredDataResidencyRegion:
+              aiDataPolicy.requiredDataResidencyRegion,
+            isZeroDataRetentionRequired:
+              aiDataPolicy.isZeroDataRetentionRequired,
+          },
+        ];
+      }),
+    );
 
     const clientConfig: ClientConfig = {
       appVersion: this.twentyConfigService.get('APP_VERSION'),
@@ -166,6 +207,7 @@ export class ClientConfigService {
         ],
       },
       aiModels,
+      aiEvaluationModels,
       aiModelTiers,
       authProviders: {
         google: this.twentyConfigService.get('AUTH_GOOGLE_ENABLED'),
@@ -183,6 +225,7 @@ export class ClientConfigService {
       ),
       defaultSubdomain: this.twentyConfigService.get('DEFAULT_SUBDOMAIN'),
       frontDomain: this.domainServerConfigService.getFrontUrl().hostname,
+      serverUrl: this.twentyConfigService.get('SERVER_URL'),
       publicFunctionDomain:
         this.domainServerConfigService.getPublicBaseHostnameOrUndefined() ??
         null,
@@ -221,15 +264,24 @@ export class ClientConfigService {
                 'ONBOARDING_INVITE_TEAM_CREDITS_REWARD_PER_USER',
               ),
             ),
-            upgradeCreditsReward: toDisplayCredits(
+            createProfileCreditsReward: toDisplayCredits(
               this.twentyConfigService.get(
-                'BILLING_FREE_WORKFLOW_CREDITS_FOR_TRIAL_PERIOD_WITH_CREDIT_CARD',
+                'BILLING_FREE_WORKFLOW_CREDITS_FOR_TRIAL_PERIOD_WITHOUT_CREDIT_CARD',
               ),
             ),
-            installAppsCreditsRewardPerApp: toDisplayCredits(
-              this.twentyConfigService.get(
-                'ONBOARDING_INSTALL_APPS_CREDITS_REWARD_PER_APP',
+            upgradeCreditsReward: toDisplayCredits(
+              Math.max(
+                0,
+                this.twentyConfigService.get(
+                  'BILLING_FREE_WORKFLOW_CREDITS_FOR_TRIAL_PERIOD_WITH_CREDIT_CARD',
+                ) -
+                  this.twentyConfigService.get(
+                    'BILLING_FREE_WORKFLOW_CREDITS_FOR_TRIAL_PERIOD_WITHOUT_CREDIT_CARD',
+                  ),
               ),
+            ),
+            inviteTeamMaxInvites: this.twentyConfigService.get(
+              'ONBOARDING_INVITE_TEAM_MAX_INVITES',
             ),
           }
         : null,
@@ -282,6 +334,9 @@ export class ClientConfigService {
       enterpriseInstanceType:
         this.twentyConfigService.get('ENTERPRISE_INSTANCE_TYPE') ??
         ENTERPRISE_INSTANCE_TYPE.PRODUCTION,
+      webPushVapidPublicKey: deriveWebPushVapidKeyPair({
+        twentyConfigService: this.twentyConfigService,
+      }).publicKey,
     };
 
     const maintenanceMode =

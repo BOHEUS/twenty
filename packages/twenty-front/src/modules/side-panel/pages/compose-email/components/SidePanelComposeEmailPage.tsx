@@ -13,13 +13,12 @@ import { SidePanelFooter } from '@/ui/layout/side-panel/components/SidePanelFoot
 import { useHotkeysOnFocusedElement } from '@/ui/utilities/hotkey/hooks/useHotkeysOnFocusedElement';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { IconPaperclip, IconSend, IconTrash } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
-import { IconButton } from 'twenty-ui/components';
-import { getOsControlSymbol } from 'twenty-ui/utilities';
+import { IconButton } from 'twenty-ui/components/input';
 
 import { useAttachEmailFiles } from '@/activities/emails/hooks/useAttachEmailFiles';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledContainer = styled.div`
   display: flex;
@@ -35,6 +34,7 @@ const StyledContent = styled.div`
 `;
 
 export const SidePanelComposeEmailPage = () => {
+  const { t } = useLingui();
   const composeEmailConnectedAccountId = useAtomComponentStateValue(
     composeEmailConnectedAccountIdComponentState,
   );
@@ -58,6 +58,7 @@ export const SidePanelComposeEmailPage = () => {
     defaultTo: composeEmailDefaultTo ?? '',
     defaultSubject: composeEmailDefaultSubject ?? '',
     defaultInReplyTo: composeEmailDefaultInReplyTo ?? undefined,
+    contextRecord: composeEmailContextRecord,
     onSent: goBackFromSidePanel,
   });
 
@@ -116,7 +117,7 @@ export const SidePanelComposeEmailPage = () => {
             key="send"
             size="sm"
             startIcon={<IconSend />}
-            hotkeys={[getOsControlSymbol(), '⏎']}
+            shortcut={['Mod', 'Enter']}
             onClick={composerState.handleSend}
             disabled={!canSend}
             variant="solid"

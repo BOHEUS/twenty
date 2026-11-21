@@ -2,28 +2,70 @@ import { expect, userEvent, waitFor, within } from 'storybook/test';
 
 import { errorHandler } from '@/__stories__/shared/test-utils/createFrontComponentStoryMeta';
 import { expectFrontComponentMounted } from '@/__stories__/shared/test-utils/matchers/expectFrontComponentMounted';
+import { INTERACTION_TIMEOUT } from '@/__stories__/shared/test-utils/timeouts';
 import { type TwentyUiGalleryPlayFunction } from '@/__stories__/twenty-ui-gallery/types/TwentyUiGalleryPlayFunction';
+import { hoverUntilTooltipOpens } from '@/__stories__/twenty-ui-gallery/utils/hoverUntilTooltipOpens';
+import { listItemButtonTest } from '@/__stories__/twenty-ui-gallery/utils/listItemButtonTest';
+import { listItemOwnerTest } from '@/__stories__/twenty-ui-gallery/utils/listItemOwnerTest';
+import { listItemPopupOwnerTest } from '@/__stories__/twenty-ui-gallery/utils/listItemPopupOwnerTest';
+import { listItemPresentationTest } from '@/__stories__/twenty-ui-gallery/utils/listItemPresentationTest';
 
-export const listItemTest: TwentyUiGalleryPlayFunction = async ({
-  canvasElement,
-}) => {
+const OVERFLOW_LABEL = 'A long workspace preference that overflows its row';
+
+export const listItemTest: TwentyUiGalleryPlayFunction = async (context) => {
+  const { canvasElement } = context;
+  const user = userEvent.setup();
   const canvas = within(canvasElement);
+  const page = within(canvasElement.ownerDocument.body);
   await expectFrontComponentMounted(canvas);
+  await listItemButtonTest(context);
+  await listItemOwnerTest(context);
+  await listItemPresentationTest(context);
+  await listItemPopupOwnerTest(context);
 
-  const digest = canvas.getByText('Weekly digest');
+  const digest = canvas.getByRole('button', {
+    name: /^Weekly digest\s*Workspace preference$/,
+  });
 
-  await userEvent.click(digest);
-  await waitFor(() =>
-    expect(canvas.getByRole('status')).toHaveTextContent('Digest: enabled'),
+  await user.click(digest);
+  const overflowingLabel = canvas.getByText(OVERFLOW_LABEL);
+  await waitFor(
+    () =>
+      expect(overflowingLabel.scrollWidth).toBeGreaterThan(
+        overflowingLabel.clientWidth,
+      ),
+    { timeout: INTERACTION_TIMEOUT },
   );
-  await userEvent.click(digest);
-  await waitFor(() =>
-    expect(canvas.getByRole('status')).toHaveTextContent('Digest: disabled'),
+  await waitFor(
+    async () => {
+      await user.unhover(overflowingLabel);
+      await user.hover(overflowingLabel);
+      expect(overflowingLabel).toHaveAttribute('data-content-overflowing');
+    },
+    { timeout: INTERACTION_TIMEOUT },
   );
-  await userEvent.click(canvas.getByText('Disabled preference'));
-  expect(canvas.getByRole('status')).toHaveTextContent('Digest: disabled');
-  const hiddenFields = canvas.getByRole('button', { name: 'Hidden fields' });
-  await userEvent.click(hiddenFields);
-  await waitFor(() => expect(canvas.getByText('Fields: open')).toBeVisible());
+  await user.unhover(overflowingLabel);
+  await hoverUntilTooltipOpens({
+    user,
+    hoverTarget: overflowingLabel,
+    expectTooltipOpen: () =>
+      waitFor(
+        () => {
+          expect(page.getByRole('tooltip')).toHaveTextContent(OVERFLOW_LABEL);
+          expect(page.getByRole('tooltip')).toBeVisible();
+        },
+        { timeout: INTERACTION_TIMEOUT },
+      ),
+  });
+
+  expect(digest).toHaveFocus();
+  await user.keyboard('{Escape}');
+  await waitFor(() =>
+    expect(page.queryByRole('tooltip')).not.toBeInTheDocument(),
+  );
+  await user.click(digest);
+  await waitFor(() =>
+    expect(canvas.getByLabelText('Digest activations')).toHaveTextContent('5'),
+  );
   expect(errorHandler).not.toHaveBeenCalled();
 };

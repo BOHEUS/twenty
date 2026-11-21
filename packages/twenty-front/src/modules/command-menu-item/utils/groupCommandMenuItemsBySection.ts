@@ -2,19 +2,26 @@ import { type CommandMenuItemDefinition } from '@/command-menu-item/types/Comman
 import { type CommandMenuItemSection } from '@/command-menu-item/types/CommandMenuItemSection';
 import { resolveCommandMenuItemSection } from '@/command-menu-item/utils/resolveCommandMenuItemSection';
 
-export const groupCommandMenuItemsBySection = (
-  commandMenuItems: CommandMenuItemDefinition[],
-): Record<CommandMenuItemSection, CommandMenuItemDefinition[]> => {
+export const groupCommandMenuItemsBySection = <
+  TCommandMenuItem extends Pick<
+    CommandMenuItemDefinition,
+    'engineComponentKey' | 'availabilityType' | 'creationTargetObjectMetadataId'
+  >,
+>(
+  commandMenuItems: TCommandMenuItem[],
+): Record<CommandMenuItemSection, TCommandMenuItem[]> => {
   const commandMenuItemsBySection: Record<
     CommandMenuItemSection,
-    CommandMenuItemDefinition[]
+    TCommandMenuItem[]
   > = {
     SELECTION: [],
-    THIS_VIEW: [],
+    CURRENT_VIEW: [],
+    THIS_OBJECT: [],
     ASK_AND_FIND: [],
     CREATE_RECORD: [],
     WORKSPACE: [],
     GO_TO: [],
+    DEVELOPER: [],
     FALLBACK: [],
   };
 

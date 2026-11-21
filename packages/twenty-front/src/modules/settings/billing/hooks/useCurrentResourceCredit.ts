@@ -17,7 +17,7 @@ export const useCurrentResourceCredit = () => {
   ): BillingPriceLicensed[] => {
     const prices = currentPlan.resourceCreditProducts
       .flatMap((product) => product.prices ?? [])
-      .filter((price): price is BillingPriceLicensed => isDefined(price));
+      .filter(isDefined);
 
     return interval
       ? prices.filter((p) => p.recurringInterval === interval)
@@ -44,8 +44,7 @@ export const useCurrentResourceCredit = () => {
   return {
     currentResourceCreditSubscriptionItem,
     currentResourceCreditBillingPrice,
-    // Read off the subscription rather than the catalog: an archived package is
-    // no longer in listPlans, and the workspace is still being billed for it.
+    // Subscription item first: an archived package is gone from listPlans but still billed.
     currentResourceCreditUnitAmount:
       currentResourceCreditSubscriptionItem?.unitAmount ??
       currentResourceCreditBillingPrice?.unitAmount,

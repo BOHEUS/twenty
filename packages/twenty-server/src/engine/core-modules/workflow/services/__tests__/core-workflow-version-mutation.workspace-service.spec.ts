@@ -1,150 +1,170 @@
+import { Test } from '@nestjs/testing';
+
 import { WorkflowActionType } from 'twenty-shared/workflow';
 
+import { CacheLockService } from 'src/engine/core-modules/cache-lock/cache-lock.service';
+import { WorkflowVersionEntity } from 'src/engine/core-modules/workflow/entities/workflow-version.entity';
+import { CoreWorkflowIdResolutionService } from 'src/engine/core-modules/workflow/services/core-workflow-id-resolution.service';
+import { CoreWorkflowVersionListService } from 'src/engine/core-modules/workflow/services/core-workflow-version-list.service';
 import { CoreWorkflowVersionMutationWorkspaceService } from 'src/engine/core-modules/workflow/services/core-workflow-version-mutation.workspace-service';
-import { CoreWorkflowVersionPostCommitError } from 'src/engine/core-modules/workflow/services/core-workflow-version-write.service';
-import { type WorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
+import { CoreWorkflowVersionWriteService } from 'src/engine/core-modules/workflow/services/core-workflow-version-write.service';
+import { WorkflowCoreSyncService } from 'src/engine/core-modules/workflow/services/workflow-core-sync.service';
+import { getWorkspaceScopedRepositoryToken } from 'src/engine/twenty-orm/workspace-scoped-repository/get-workspace-scoped-repository-token.util';
+import { WorkflowVersionStepOperationsWorkspaceService } from 'src/modules/workflow/workflow-builder/workflow-version-step/workflow-version-step-operations.workspace-service';
+import { type WorkflowAiAgentAction } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
 
-const workspaceId = '20202020-0000-0000-0000-000000000001';
-const coreWorkflowVersionId = '20202020-0000-0000-0000-000000000002';
-const stepId = '20202020-0000-0000-0000-000000000003';
+const WORKSPACE_ID = 'workspace-id';
+const CORE_WORKFLOW_VERSION_ID = 'core-workflow-version-id';
 
-const existingCodeStep = {
-  id: stepId,
-  name: 'Code',
-  type: WorkflowActionType.CODE,
+const buildAiAgentStep = ({
+  input,
+}: {
+  input: WorkflowAiAgentAction['settings']['input'];
+}): WorkflowAiAgentAction => ({
+  id: 'step-id',
+  name: 'Agent',
+  type: WorkflowActionType.AI_AGENT,
   valid: true,
+  nextStepIds: ['next-step-id'],
+  position: { x: 10, y: 20 },
   settings: {
-    input: {
-      logicFunctionId: '20202020-0000-0000-0000-000000000004',
-      logicFunctionInput: {},
-    },
+    input,
     outputSchema: {},
     errorHandlingOptions: {
-      retryOnFailure: { value: 0 },
       continueOnFailure: { value: false },
+      retryOnFailure: { value: 0 },
     },
   },
-  nextStepIds: [],
-} as WorkflowAction;
+});
 
-const replacementEmptyStep = {
-  id: '20202020-0000-0000-0000-000000000005',
-  name: 'Empty',
-  type: WorkflowActionType.EMPTY,
-  valid: true,
-  settings: {
-    input: {},
-    outputSchema: {},
-    errorHandlingOptions: {
-      retryOnFailure: { value: 0 },
-      continueOnFailure: { value: false },
-    },
-  },
-  nextStepIds: [],
-} as WorkflowAction;
-
-describe('CoreWorkflowVersionMutationWorkspaceService', () => {
-  const getValidatedDraftCoreWorkflowVersion = jest.fn();
-  const writeContentAndMirror = jest.fn();
-  const runStepCreationSideEffectsAndBuildStep = jest.fn();
-  const runWorkflowVersionStepDeletionSideEffects = jest.fn();
-  const enrichOutputSchema = jest.fn();
-
-  const service = new CoreWorkflowVersionMutationWorkspaceService(
-    {} as never,
-    {} as never,
-    {
-      getValidatedDraftCoreWorkflowVersion,
-      writeContentAndMirror,
-    } as never,
-    {} as never,
-    {} as never,
-    {
-      runStepCreationSideEffectsAndBuildStep,
-      runWorkflowVersionStepDeletionSideEffects,
-    } as never,
-    { enrichOutputSchema } as never,
-  );
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    getValidatedDraftCoreWorkflowVersion.mockResolvedValue({
-      coreWorkflowVersion: {
-        triggers: [],
-        steps: [existingCodeStep],
-      },
+const buildService = async ({
+  existingStep,
+}: {
+  existingStep: WorkflowAiAgentAction;
+}) => {
+  const coreWorkflowVersionWriteService = {
+    getValidatedDraftCoreWorkflowVersion: jest.fn().mockResolvedValue({
+      coreWorkflowVersion: { id: CORE_WORKFLOW_VERSION_ID },
       trigger: null,
-      steps: [existingCodeStep],
+      steps: [existingStep],
+    }),
+    writeContent: jest
+      .fn()
+      .mockImplementation(async ({ steps }) => ({ trigger: null, steps })),
+  };
+  const workflowVersionStepOperationsWorkspaceService = {
+    runStepCreationSideEffectsAndBuildStep: jest.fn(),
+  };
+
+  const testingModule = await Test.createTestingModule({
+    providers: [
+      CoreWorkflowVersionMutationWorkspaceService,
+      {
+        provide: getWorkspaceScopedRepositoryToken(WorkflowVersionEntity),
+        useValue: {},
+      },
+      { provide: CoreWorkflowIdResolutionService, useValue: {} },
+      {
+        provide: CoreWorkflowVersionWriteService,
+        useValue: coreWorkflowVersionWriteService,
+      },
+      { provide: CoreWorkflowVersionListService, useValue: {} },
+      { provide: WorkflowCoreSyncService, useValue: {} },
+      {
+        provide: WorkflowVersionStepOperationsWorkspaceService,
+        useValue: workflowVersionStepOperationsWorkspaceService,
+      },
+      { provide: CacheLockService, useValue: {} },
+    ],
+  }).compile();
+
+  return {
+    service: testingModule.get(CoreWorkflowVersionMutationWorkspaceService),
+    coreWorkflowVersionWriteService,
+    workflowVersionStepOperationsWorkspaceService,
+  };
+};
+
+describe('CoreWorkflowVersionMutationWorkspaceService.updateStep', () => {
+  it.each([
+    ['removes its agent', { agentId: 'agent-id' }, {}],
+    ['adds an agent', {}, { agentId: 'agent-id' }],
+    ['changes its agent', { agentId: 'agent-id' }, { agentId: 'other-id' }],
+  ])('rebuilds an AI step that %s', async (_, existingInput, updatedInput) => {
+    const existingStep = buildAiAgentStep({
+      input: { ...existingInput, prompt: 'Qualify' },
     });
-    runStepCreationSideEffectsAndBuildStep.mockResolvedValue({
-      builtStep: replacementEmptyStep,
+    const {
+      service,
+      coreWorkflowVersionWriteService,
+      workflowVersionStepOperationsWorkspaceService,
+    } = await buildService({ existingStep });
+    const step = buildAiAgentStep({
+      input: { ...updatedInput, prompt: 'Qualify' },
     });
-    enrichOutputSchema.mockImplementation(
-      async ({ step }: { step: WorkflowAction }) => step,
+    const builtStep = buildAiAgentStep({ input: { prompt: 'Qualify' } });
+
+    workflowVersionStepOperationsWorkspaceService.runStepCreationSideEffectsAndBuildStep.mockResolvedValue(
+      {
+        builtStep: { ...builtStep, nextStepIds: [], position: { x: 0, y: 0 } },
+      },
     );
-    runWorkflowVersionStepDeletionSideEffects.mockResolvedValue(undefined);
+
+    const updatedStep = await service.updateStep({
+      workspaceId: WORKSPACE_ID,
+      userWorkspaceId: undefined,
+      coreWorkflowVersionId: CORE_WORKFLOW_VERSION_ID,
+      step,
+    });
+
+    expect(
+      workflowVersionStepOperationsWorkspaceService.runStepCreationSideEffectsAndBuildStep,
+    ).toHaveBeenCalledTimes(1);
+    expect(
+      workflowVersionStepOperationsWorkspaceService.runStepCreationSideEffectsAndBuildStep,
+    ).toHaveBeenCalledWith({
+      type: WorkflowActionType.AI_AGENT,
+      workspaceId: WORKSPACE_ID,
+      position: step.position,
+      id: 'step-id',
+      defaultSettings: step.settings,
+    });
+    expect(updatedStep).toEqual(builtStep);
+    expect(coreWorkflowVersionWriteService.writeContent).toHaveBeenCalledWith(
+      expect.objectContaining({ steps: [builtStep] }),
+    );
   });
 
-  it('keeps the existing step resource when the optimistic write is rejected', async () => {
-    const writeError = new Error('Workflow version changed');
-
-    writeContentAndMirror.mockRejectedValue(writeError);
-
-    await expect(
-      service.updateStep({
-        workspaceId,
-        coreWorkflowVersionId,
-        step: { ...replacementEmptyStep, id: stepId },
-      }),
-    ).rejects.toBe(writeError);
-
-    expect(runWorkflowVersionStepDeletionSideEffects).not.toHaveBeenCalledWith({
-      step: existingCodeStep,
-      workspaceId,
+  it('updates an AI step in place when its agent is unchanged', async () => {
+    const existingStep = buildAiAgentStep({
+      input: { agentId: 'agent-id', prompt: 'Qualify' },
     });
-    expect(runWorkflowVersionStepDeletionSideEffects).toHaveBeenCalledWith({
-      step: expect.objectContaining({ type: WorkflowActionType.EMPTY }),
-      workspaceId,
-    });
-  });
-
-  it('deletes the existing step resource only after the replacement is stored', async () => {
-    writeContentAndMirror.mockResolvedValue(undefined);
-
-    await service.updateStep({
-      workspaceId,
-      coreWorkflowVersionId,
-      step: { ...replacementEmptyStep, id: stepId },
+    const {
+      service,
+      coreWorkflowVersionWriteService,
+      workflowVersionStepOperationsWorkspaceService,
+    } = await buildService({ existingStep });
+    const step = buildAiAgentStep({
+      input: { agentId: 'agent-id', prompt: 'Qualify the lead' },
     });
 
-    expect(runWorkflowVersionStepDeletionSideEffects).toHaveBeenCalledWith({
-      step: existingCodeStep,
-      workspaceId,
+    const updatedStep = await service.updateStep({
+      workspaceId: WORKSPACE_ID,
+      userWorkspaceId: undefined,
+      coreWorkflowVersionId: CORE_WORKFLOW_VERSION_ID,
+      step,
     });
-    expect(writeContentAndMirror.mock.invocationCallOrder[0]).toBeLessThan(
-      runWorkflowVersionStepDeletionSideEffects.mock.invocationCallOrder[0],
-    );
-  });
 
-  it('keeps the committed replacement and deletes the old resource when cache invalidation fails', async () => {
-    const cacheError = new CoreWorkflowVersionPostCommitError(
-      new Error('Cache unavailable'),
-    );
-
-    writeContentAndMirror.mockRejectedValue(cacheError);
-
-    await expect(
-      service.updateStep({
-        workspaceId,
-        coreWorkflowVersionId,
-        step: { ...replacementEmptyStep, id: stepId },
-      }),
-    ).rejects.toBe(cacheError);
-
-    expect(runWorkflowVersionStepDeletionSideEffects).toHaveBeenCalledTimes(1);
-    expect(runWorkflowVersionStepDeletionSideEffects).toHaveBeenCalledWith({
-      step: existingCodeStep,
-      workspaceId,
+    expect(updatedStep).toEqual(step);
+    expect(coreWorkflowVersionWriteService.writeContent).toHaveBeenCalledWith({
+      workspaceId: WORKSPACE_ID,
+      coreWorkflowVersionId: CORE_WORKFLOW_VERSION_ID,
+      expectedVersion: { id: CORE_WORKFLOW_VERSION_ID },
+      trigger: null,
+      steps: [step],
     });
+    expect(
+      workflowVersionStepOperationsWorkspaceService.runStepCreationSideEffectsAndBuildStep,
+    ).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,8 @@
-import { NavigationButton } from '@/ui/input/components/NavigationButton';
-import { t } from '@lingui/core/macro';
 import { SettingsDataModelOverviewEffect } from '@/settings/data-model/graph-overview/components/SettingsDataModelOverviewEffect';
 import { SettingsDataModelOverviewObject } from '@/settings/data-model/graph-overview/components/SettingsDataModelOverviewObject';
 import { SettingsDataModelOverviewRelationMarkers } from '@/settings/data-model/graph-overview/components/SettingsDataModelOverviewRelationMarkers';
 import { calculateHandlePosition } from '@/settings/data-model/graph-overview/utils/calculateHandlePosition';
+import { NavigationButton } from '@/ui/input/components/NavigationButton';
 import { styled } from '@linaria/react';
 import {
   Background,
@@ -24,6 +23,7 @@ import {
 import { useCallback, useState } from 'react';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
+import { LightIconButton } from 'twenty-ui/components/input';
 import {
   IconLock,
   IconLockOpen,
@@ -32,9 +32,9 @@ import {
   IconPlus,
   IconX,
 } from 'twenty-ui/icon';
-import { LightIconButton } from 'twenty-ui/components';
 import { ButtonGroup } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const nodeTypes: NodeTypes = {
   object: SettingsDataModelOverviewObject,
@@ -73,6 +73,7 @@ const StyledCloseButton = styled.div`
 `;
 
 export const SettingsDataModelOverview = () => {
+  const { t } = useLingui();
   const { fitView, zoomIn, zoomOut } = useReactFlow();
 
   const [nodes, setNodes] = useNodesState<Node>([]);
@@ -215,7 +216,7 @@ export const SettingsDataModelOverview = () => {
         <ButtonGroup
           framed
           attached={false}
-          className="react-flow__panel react-flow__controls bottom left horizontal"
+          className="react-flow__panel bottom left"
           aria-label={t`Diagram controls`}
         >
           <LightIconButton

@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   OneToMany,
   PrimaryGeneratedColumn,
   type Relation,
@@ -13,8 +14,12 @@ import {
   MetadataReadability,
   MetadataWritability,
   ObjectOpenRecordIn,
+  ObjectSharingReach,
 } from 'twenty-shared/types';
+import { type DisableableObjectPermissionAction } from 'twenty-shared/application';
 
+import { ADD_OBJECT_METADATA_DISABLED_OBJECT_PERMISSION_ACTIONS_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-53/add-object-metadata-disabled-object-permission-actions-upgrade-command-name.constant';
+import { ADD_OBJECT_METADATA_SHARING_REACH_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-45/add-object-metadata-sharing-reach-upgrade-command-name.constant';
 import { ADD_METADATA_OVERRIDES_COLUMN_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-19/add-metadata-overrides-column-upgrade-command-name.constant';
 import { ADD_METADATA_WRITABILITY_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-32/add-metadata-writability-upgrade-command-name.constant';
 import { ADD_OBJECT_METADATA_OPEN_RECORD_IN_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-27/add-object-metadata-open-record-in-upgrade-command-name.constant';
@@ -31,6 +36,7 @@ import { NavigationMenuItemEntity } from 'src/engine/metadata-modules/navigation
 import { RENAME_IS_UI_READ_ONLY_TO_IS_UI_EDITABLE_UPGRADE_COMMAND_NAME } from 'src/engine/metadata-modules/object-metadata/constants/rename-is-ui-read-only-to-is-ui-editable-upgrade-command-name.constant';
 import { type ObjectMetadataOverrides } from 'src/engine/metadata-modules/object-metadata/types/object-metadata-overrides.type';
 import { FieldPermissionEntity } from 'src/engine/metadata-modules/object-permission/field-permission/field-permission.entity';
+import { RowLevelPermissionRuleEntity } from 'src/engine/metadata-modules/row-level-permission-predicate/entities/row-level-permission-rule.entity';
 import { ObjectPermissionEntity } from 'src/engine/metadata-modules/object-permission/object-permission.entity';
 import { PageLayoutEntity } from 'src/engine/metadata-modules/page-layout/entities/page-layout.entity';
 import { SearchFieldMetadataEntity } from 'src/engine/metadata-modules/search-field-metadata/search-field-metadata.entity';
@@ -40,6 +46,7 @@ import { type AuthoredOverrides } from 'src/engine/metadata-modules/overrides/ty
 import { type JsonbProperty } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/jsonb-property.type';
 
 @Entity('objectMetadata')
+@Index('IDX_OBJECT_METADATA_APPLICATION_ID', ['applicationId'])
 @Unique('IDX_OBJECT_METADATA_NAME_SINGULAR_WORKSPACE_ID_UNIQUE', [
   'nameSingular',
   'workspaceId',
@@ -135,10 +142,7 @@ export class ObjectMetadataEntity
   @Column({ default: true })
   isUIEditable: boolean;
 
-  // Superseded by isUIEditable. Intentionally NOT @WasRemovedInUpgrade: dropping
-  // it in 2.13 would break the previous release's pods mid rolling-deploy, since
-  // they still SELECT it. The WasRemovedInUpgrade<T> type is kept so callers may
-  // omit it; the decorator + physical drop are deferred (core-team-issues#2542).
+  // Superseded by isUIEditable; not @WasRemovedInUpgrade yet as previous-release pods still SELECT it mid rolling deploy (core-team-issues#2542)
   @Column({ type: 'boolean', default: false })
   isUIReadOnly: WasRemovedInUpgrade<boolean>;
 
@@ -175,6 +179,25 @@ export class ObjectMetadataEntity
   })
   @Column({ nullable: true, type: 'uuid', array: true })
   readabilityParentFieldUniversalIdentifiers: string[] | null;
+
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ADD_OBJECT_METADATA_SHARING_REACH_UPGRADE_COMMAND_NAME,
+  })
+  @Column({
+    type: 'enum',
+    enum: Object.values(ObjectSharingReach),
+    default: ObjectSharingReach.WORKSPACE,
+  })
+  sharingReach: ObjectSharingReach;
+
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      ADD_OBJECT_METADATA_DISABLED_OBJECT_PERMISSION_ACTIONS_UPGRADE_COMMAND_NAME,
+  })
+  @Column({ type: 'jsonb', nullable: true })
+  disabledObjectPermissionActions: JsonbProperty<
+    DisableableObjectPermissionAction[]
+  > | null;
 
   @Column({ default: true })
   isAuditLogged: boolean;
@@ -241,6 +264,12 @@ export class ObjectMetadataEntity
     },
   )
   fieldPermissions: Relation<FieldPermissionEntity[]>;
+
+  @OneToMany(
+    () => RowLevelPermissionRuleEntity,
+    (rowLevelPermissionRule) => rowLevelPermissionRule.objectMetadata,
+  )
+  rowLevelPermissionRules: Relation<RowLevelPermissionRuleEntity[]>;
 
   @OneToMany(() => ViewEntity, (view) => view.objectMetadata, {
     cascade: true,

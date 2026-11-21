@@ -1,9 +1,5 @@
 import { type ObjectManifest } from 'twenty-shared/application';
-import {
-  MetadataReadability,
-  MetadataWritability,
-  ObjectOpenRecordIn,
-} from 'twenty-shared/types';
+import { ObjectOpenRecordIn } from 'twenty-shared/types';
 
 import { fromFlatObjectMetadataToObjectManifest } from 'src/engine/core-modules/application/application-manifest/converters/from-flat-object-metadata-to-object-manifest.util';
 import { fromObjectManifestToUniversalFlatObjectMetadata } from 'src/engine/core-modules/application/application-manifest/converters/from-object-manifest-to-universal-flat-object-metadata.util';
@@ -14,7 +10,6 @@ const APP_UID = '11111111-1111-4111-8111-111111111111';
 const OBJECT_UID = '22222222-2222-4222-8222-222222222222';
 const LABEL_FIELD_UID = '33333333-3333-4333-8333-333333333333';
 const IMAGE_FIELD_UID = '44444444-4444-4444-8444-444444444444';
-const PARENT_FIELD_UID = '55555555-5555-4555-8555-555555555555';
 const NOW = '2026-09-03T10:00:00.000Z';
 
 const OBJECT_MANIFEST: Required<ObjectManifest> = {
@@ -30,9 +25,7 @@ const OBJECT_MANIFEST: Required<ObjectManifest> = {
   isSearchable: false,
   isUICreatable: false,
   isUIEditable: false,
-  writability: MetadataWritability.APPLICATION,
-  readability: MetadataReadability.INHERITED,
-  readabilityParentFieldUniversalIdentifiers: [PARENT_FIELD_UID],
+  disabledObjectPermissionActions: ['canDestroyObjectRecords'],
   openRecordIn: ObjectOpenRecordIn.RECORD_PAGE,
   labelIdentifierFieldMetadataUniversalIdentifier: LABEL_FIELD_UID,
   imageIdentifierFieldMetadataUniversalIdentifier: IMAGE_FIELD_UID,
@@ -64,11 +57,14 @@ describe('fromFlatObjectMetadataToObjectManifest', () => {
       description: null,
       icon: null,
       color: 'red',
+      shortcut: null,
+      targetTableName: 'DEPRECATED',
       isLabelSyncedWithName: true,
       isSearchable: false,
-      writability: MetadataWritability.APPLICATION,
-      readability: MetadataReadability.INHERITED,
-      readabilityParentFieldUniversalIdentifiers: [PARENT_FIELD_UID],
+      disabledObjectPermissionActions: [
+        'canUpdateObjectRecords',
+        'canCreateObjectRecords',
+      ],
       openRecordIn: ObjectOpenRecordIn.SIDE_PANEL,
       labelIdentifierFieldMetadataUniversalIdentifier: LABEL_FIELD_UID,
       imageIdentifierFieldMetadataUniversalIdentifier: null,

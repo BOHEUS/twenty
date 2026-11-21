@@ -10,7 +10,10 @@ import { getRecordNodeFromRecord } from '@/object-record/cache/utils/getRecordNo
 import { isObjectRecordConnectionWithRefs } from '@/object-record/cache/utils/isObjectRecordConnectionWithRefs';
 import { type RecordGqlNode } from '@/object-record/graphql/types/RecordGqlNode';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
-import { type ObjectPermissions, RelationType } from 'twenty-shared/types';
+import {
+  type ObjectRecordsPermissions,
+  RelationType,
+} from 'twenty-shared/types';
 import {
   capitalize,
   getConnectionTypename,
@@ -36,10 +39,7 @@ export const triggerAttachRelationOptimisticEffect = ({
   fieldNameOnTargetRecord: string;
   targetRecordId: string;
   objectMetadataItems: EnrichedObjectMetadataItem[];
-  objectPermissionsByObjectMetadataId: Record<
-    string,
-    ObjectPermissions & { objectMetadataId: string }
-  >;
+  objectPermissionsByObjectMetadataId: Record<string, ObjectRecordsPermissions>;
   upsertRecordsInStore: (props: { partialRecords: ObjectRecord[] }) => void;
 }) => {
   const sourceRecordId = sourceRecord.id;
@@ -110,9 +110,8 @@ export const triggerAttachRelationOptimisticEffect = ({
             ...targetRecordFieldValue,
             edges: nextEdges,
           };
-        } else {
-          return sourceRecordReference;
         }
+        return sourceRecordReference;
       },
     },
   });
@@ -162,9 +161,7 @@ export const triggerAttachRelationOptimisticEffect = ({
   });
 };
 
-// A target fetched without the relation field cannot be modified in the cache,
-// but it is still attached to the source record, which is all the target's
-// cached lists need to know to place it.
+// A target fetched without the relation field can't be modified in cache, but its lists only need it attached to the source.
 const buildRelationValueFromSourceRecord = ({
   sourceObjectNameSingular,
   sourceRecord,

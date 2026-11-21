@@ -1,11 +1,11 @@
-import { styled } from '@linaria/react';
+import { ListItemButton } from 'twenty-ui/components/navigation';
 import { type DraggableListDropResult } from '@/ui/layout/draggable-list/types/DraggableListDropResult';
 import { type MouseEvent, useCallback } from 'react';
 
 import { useContextStoreObjectMetadataItemOrThrow } from '@/context-store/hooks/useContextStoreObjectMetadataItemOrThrow';
 import { DraggableItem } from '@/ui/layout/draggable-list/components/DraggableItem';
 import { DraggableList } from '@/ui/layout/draggable-list/components/DraggableList';
-import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
+import { LegacyDropdownContent } from '@/ui/layout/dropdown/components/LegacyDropdownContent';
 import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
 import { DropdownMenuSectionLabel } from '@/ui/layout/dropdown/components/DropdownMenuSectionLabel';
 import { DropdownMenuSeparator } from '@/ui/layout/dropdown/components/DropdownMenuSeparator';
@@ -21,17 +21,10 @@ import { ViewPickerOptionDropdown } from '@/views/view-picker/components/ViewPic
 import { useViewPickerMode } from '@/views/view-picker/hooks/useViewPickerMode';
 import { viewPickerReferenceViewIdComponentState } from '@/views/view-picker/states/viewPickerReferenceViewIdComponentState';
 import { computeViewPickerVisibleViews } from '@/views/view-picker/utils/computeViewPickerVisibleViews';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import { useLingui } from '@lingui/react/macro';
 import { IconPlus } from 'twenty-ui/icon';
-import { MenuItem } from 'twenty-ui/primitives/navigation';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
-import { FeatureFlagKey, ViewVisibility } from '~/generated-metadata/graphql';
+import { ViewVisibility } from '~/generated-metadata/graphql';
 import { moveArrayItem } from '~/utils/array/moveArrayItem';
-
-const StyledBoldDropdownMenuItemsContainerWrapper = styled.div`
-  font-weight: ${themeCssVariables.font.weight.regular};
-`;
 
 export const ViewPickerListContent = () => {
   const { t } = useLingui();
@@ -45,14 +38,9 @@ export const ViewPickerListContent = () => {
 
   const { currentView } = useGetCurrentViewOnly();
 
-  const isInitialObjectViewEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_INITIAL_OBJECT_VIEW_ENABLED,
-  );
-
   const visibleViews = computeViewPickerVisibleViews({
     views: viewsOnCurrentObject,
     currentViewId: currentView?.id,
-    isInitialObjectViewEnabled,
   });
 
   const workspaceViews = visibleViews.filter(
@@ -101,7 +89,9 @@ export const ViewPickerListContent = () => {
 
   const handleWorkspaceDragEnd = useCallback(
     async (result: DraggableListDropResult) => {
-      if (!result.destination) return;
+      if (!result.destination) {
+        return;
+      }
 
       const viewsReordered = moveArrayItem(workspaceViews, {
         fromIndex: result.source.index,
@@ -124,7 +114,9 @@ export const ViewPickerListContent = () => {
 
   const handleUnlistedDragEnd = useCallback(
     async (result: DraggableListDropResult) => {
-      if (!result.destination) return;
+      if (!result.destination) {
+        return;
+      }
 
       const viewsReordered = moveArrayItem(unlistedViews, {
         fromIndex: result.source.index,
@@ -146,7 +138,7 @@ export const ViewPickerListContent = () => {
   );
 
   return (
-    <DropdownContent>
+    <LegacyDropdownContent>
       {workspaceViews.length > 0 && (
         <>
           {shouldShowSectionLabels && (
@@ -217,15 +209,12 @@ export const ViewPickerListContent = () => {
         </>
       )}
       <DropdownMenuSeparator />
-      <StyledBoldDropdownMenuItemsContainerWrapper>
-        <DropdownMenuItemsContainer scrollable={false}>
-          <MenuItem
-            onClick={handleAddViewButtonClick}
-            LeftIcon={IconPlus}
-            text={t`Add view`}
-          />
-        </DropdownMenuItemsContainer>
-      </StyledBoldDropdownMenuItemsContainerWrapper>
-    </DropdownContent>
+      <DropdownMenuItemsContainer scrollable={false}>
+        <ListItemButton
+          onClick={handleAddViewButtonClick}
+          startIcon={<IconPlus />}
+        >{t`Add view`}</ListItemButton>
+      </DropdownMenuItemsContainer>
+    </LegacyDropdownContent>
   );
 };

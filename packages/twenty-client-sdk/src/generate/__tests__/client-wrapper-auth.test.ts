@@ -1,10 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
-
-import { transform } from 'esbuild';
 import {
   afterAll,
   beforeAll,
@@ -15,128 +8,20 @@ import {
   vi,
 } from 'vitest';
 
-import { buildClientWrapperSource } from '../client-wrapper';
-
-const twentyClientTemplateSource = readFileSync(
-  join(__dirname, '..', 'twenty-client-template.ts'),
-  'utf-8',
-);
-
-type TwentyClassType = new (options?: {
-  url?: string;
-  fetch?: typeof globalThis.fetch;
-}) => {
-  query: (request: Record<string, unknown>) => Promise<unknown>;
-  uploadFile: (
-    fileBuffer: Buffer,
-    filename: string,
-    contentType: string,
-    fieldMetadataUniversalIdentifier: string,
-  ) => Promise<{
-    id: string;
-    path: string;
-    size: number;
-    createdAt: string;
-    url: string;
-  }>;
-};
-
-const stubGeneratedIndexSource = `
-export type QueryGenqlSelection = Record<string, unknown>
-export type MutationGenqlSelection = Record<string, unknown>
-export type GraphqlOperation = Record<string, unknown>
-
-export type ClientOptions = {
-  url?: string
-  headers?: HeadersInit | (() => HeadersInit | Promise<HeadersInit>)
-  fetcher?: (operation: GraphqlOperation | GraphqlOperation[]) => Promise<unknown>
-  fetch?: typeof globalThis.fetch
-  batch?: unknown
-}
-
-export type Client = {
-  query: (request: QueryGenqlSelection & { __name?: string }) => Promise<unknown>
-  mutation: (
-    request: MutationGenqlSelection & { __name?: string },
-  ) => Promise<unknown>
-}
-
-export class GenqlError extends Error {
-  constructor(
-    public readonly errors: unknown,
-    public readonly data: unknown,
-  ) {
-    super('GenqlError')
-  }
-}
-
-export const createClient = (options: ClientOptions): Client => {
-  return {
-    query: (request) => {
-      return options.fetcher?.({
-        query: 'query',
-        variables: request,
-      })
-    },
-    mutation: (request) => {
-      return options.fetcher?.({
-        query: 'mutation',
-        variables: request,
-      })
-    },
-  }
-}
-`;
-
-const createJsonResponse = ({
-  body,
-  status = 200,
-  statusText = 'OK',
-}: {
-  body: unknown;
-  status?: number;
-  statusText?: string;
-}) =>
-  new Response(JSON.stringify(body), {
-    status,
-    statusText,
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-const getAuthorizationHeaderValue = (requestInit: RequestInit | undefined) => {
-  return new Headers(requestInit?.headers).get('Authorization');
-};
+import {
+  createJsonResponse,
+  type GeneratedClientClass,
+  getAuthorizationHeaderValue,
+  loadGeneratedClientClass,
+} from './generated-client-test-helpers';
 
 describe('Generated client wrapper auth behavior', () => {
-  let temporaryDir: string;
-  let TwentyClass: TwentyClassType;
+  let TwentyClass: GeneratedClientClass;
+  let cleanup: () => Promise<void>;
 
   beforeAll(async () => {
-    temporaryDir = await mkdtemp(join(tmpdir(), 'twenty-generated-client-'));
-
-    const wrapperSource = buildClientWrapperSource(twentyClientTemplateSource, {
-      apiClientName: 'MetadataApiClient',
-      defaultUrl: '`${process.env.TWENTY_API_URL}/metadata`',
-      includeUploadFile: true,
-    });
-
-    const fullSource = stubGeneratedIndexSource + wrapperSource;
-
-    const transpiledModule = await transform(fullSource, {
-      loader: 'ts',
-      format: 'esm',
-      target: 'es2022',
-    });
-
-    const outputPath = join(temporaryDir, 'index.mjs');
-
-    await writeFile(outputPath, transpiledModule.code);
-
-    const generatedModule = await import(
-      `${pathToFileURL(outputPath).href}?t=${Date.now()}`
-    );
-
-    TwentyClass = generatedModule.MetadataApiClient as TwentyClassType;
+    ({ GeneratedClientClass: TwentyClass, cleanup } =
+      await loadGeneratedClientClass());
   });
 
   beforeEach(() => {
@@ -148,16 +33,14 @@ describe('Generated client wrapper auth behavior', () => {
   });
 
   afterAll(async () => {
-    if (temporaryDir) {
-      await rm(temporaryDir, { recursive: true, force: true });
-    }
+    await cleanup();
   });
 
   const runQueryCapturingAuthorization = async (
     clientOptions: Record<string, unknown>,
   ) => {
     const capturedAuthorizationHeaders: string[] = [];
-    const fetchMock = vi.fn(
+    const fetchMock = vi.fn<typeof globalThis.fetch>(
       async (_url: string | URL | Request, requestInit?: RequestInit) => {
         const authorizationHeaderValue =
           getAuthorizationHeaderValue(requestInit);
@@ -174,7 +57,7 @@ describe('Generated client wrapper auth behavior', () => {
 
     const twentyClient = new TwentyClass({
       url: 'https://example.com/graphql',
-      fetch: fetchMock as unknown as typeof globalThis.fetch,
+      fetch: fetchMock,
       ...clientOptions,
     });
 
@@ -202,8 +85,6 @@ describe('Generated client wrapper auth behavior', () => {
   });
 
   it('should act as the application when nobody triggered the run', async () => {
-    // The runtime points TWENTY_APP_ACCESS_TOKEN at the application in a cron
-    // schedule or install hook, so the default client keeps working there.
     process.env.TWENTY_APP_ACCESS_TOKEN = 'application-token';
     process.env.TWENTY_APP_APPLICATION_ACCESS_TOKEN = 'application-token';
 
@@ -231,7 +112,7 @@ describe('Generated client wrapper auth behavior', () => {
     process.env.TWENTY_API_KEY = 'api-key-token';
 
     const capturedAuthorizationHeaders: string[] = [];
-    const fetchMock = vi.fn(
+    const fetchMock = vi.fn<typeof globalThis.fetch>(
       async (_url: string | URL | Request, requestInit?: RequestInit) => {
         const authorizationHeaderValue =
           getAuthorizationHeaderValue(requestInit);
@@ -248,7 +129,7 @@ describe('Generated client wrapper auth behavior', () => {
 
     const twentyClient = new TwentyClass({
       url: 'https://example.com/graphql',
-      fetch: fetchMock as unknown as typeof globalThis.fetch,
+      fetch: fetchMock,
     });
 
     await twentyClient.query({ record: { id: true } });
@@ -260,7 +141,7 @@ describe('Generated client wrapper auth behavior', () => {
     process.env.TWENTY_API_KEY = 'legacy-api-key-token';
 
     const capturedAuthorizationHeaders: string[] = [];
-    const fetchMock = vi.fn(
+    const fetchMock = vi.fn<typeof globalThis.fetch>(
       async (_url: string | URL | Request, requestInit?: RequestInit) => {
         const authorizationHeaderValue =
           getAuthorizationHeaderValue(requestInit);
@@ -277,7 +158,7 @@ describe('Generated client wrapper auth behavior', () => {
 
     const twentyClient = new TwentyClass({
       url: 'https://example.com/graphql',
-      fetch: fetchMock as unknown as typeof globalThis.fetch,
+      fetch: fetchMock,
     });
 
     await twentyClient.query({ record: { id: true } });
@@ -300,7 +181,7 @@ describe('Generated client wrapper auth behavior', () => {
         requestAccessTokenRefresh,
       };
 
-    const fetchMock = vi.fn(
+    const fetchMock = vi.fn<typeof globalThis.fetch>(
       async (_url: string | URL | Request, requestInit?: RequestInit) => {
         const authorizationHeaderValue =
           getAuthorizationHeaderValue(requestInit);
@@ -326,7 +207,7 @@ describe('Generated client wrapper auth behavior', () => {
 
     const twentyClient = new TwentyClass({
       url: 'https://example.com/graphql',
-      fetch: fetchMock as unknown as typeof globalThis.fetch,
+      fetch: fetchMock,
     });
 
     const queryResult = await twentyClient.query({ record: { id: true } });
@@ -354,7 +235,7 @@ describe('Generated client wrapper auth behavior', () => {
         requestAccessTokenRefresh,
       };
 
-    const fetchMock = vi.fn(
+    const fetchMock = vi.fn<typeof globalThis.fetch>(
       async (_url: string | URL | Request, requestInit?: RequestInit) => {
         const authorizationHeaderValue =
           getAuthorizationHeaderValue(requestInit);
@@ -380,7 +261,7 @@ describe('Generated client wrapper auth behavior', () => {
 
     const twentyClient = new TwentyClass({
       url: 'https://example.com/graphql',
-      fetch: fetchMock as unknown as typeof globalThis.fetch,
+      fetch: fetchMock,
     });
 
     await Promise.all([
@@ -404,8 +285,12 @@ describe('Generated client wrapper auth behavior', () => {
         requestAccessTokenRefresh,
       };
 
-    const fetchMock = vi.fn(
+    const fetchMock = vi.fn<typeof globalThis.fetch>(
       async (_url: string | URL | Request, requestInit?: RequestInit) => {
+        if (requestInit?.method === 'PUT') {
+          return new Response(null, { status: 200 });
+        }
+
         const authorizationHeaderValue =
           getAuthorizationHeaderValue(requestInit);
 
@@ -417,10 +302,25 @@ describe('Generated client wrapper auth behavior', () => {
           });
         }
 
+        if (String(requestInit?.body).includes('createFileUpload')) {
+          return createJsonResponse({
+            body: {
+              data: {
+                createFileUpload: {
+                  fileId: 'uploaded-file-id',
+                  uploadUrl:
+                    'https://storage.example.com/pending/uploaded-file-id',
+                  contentType: 'application/octet-stream',
+                },
+              },
+            },
+          });
+        }
+
         return createJsonResponse({
           body: {
             data: {
-              uploadFilesFieldFileByUniversalIdentifier: {
+              completeFileUpload: {
                 id: 'uploaded-file-id',
                 path: 'test/path.txt',
                 size: 10,
@@ -435,19 +335,20 @@ describe('Generated client wrapper auth behavior', () => {
 
     const twentyClient = new TwentyClass({
       url: 'https://example.com/graphql',
-      fetch: fetchMock as unknown as typeof globalThis.fetch,
+      fetch: fetchMock,
     });
 
-    const uploadResult = await twentyClient.uploadFile(
-      Buffer.from('content'),
-      'test.txt',
-      'text/plain',
-      'field-uuid',
-    );
+    const uploadResult = await twentyClient.uploadFile({
+      fileBuffer: Buffer.from('content'),
+      filename: 'test.txt',
+      fieldMetadataUniversalIdentifier: 'field-uuid',
+    });
 
     expect(uploadResult.id).toBe('uploaded-file-id');
     expect(requestAccessTokenRefresh).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(
+      fetchMock.mock.calls.map(([, requestInit]) => requestInit?.method),
+    ).toEqual(['POST', 'POST', 'PUT', 'POST']);
   });
 
   it('bubbles auth error when refresh callback throws', async () => {
@@ -466,7 +367,7 @@ describe('Generated client wrapper auth behavior', () => {
       .spyOn(console, 'error')
       .mockImplementation(() => undefined);
 
-    const fetchMock = vi.fn(async () => {
+    const fetchMock = vi.fn<typeof globalThis.fetch>(async () => {
       return createJsonResponse({
         body: { message: 'Unauthorized' },
         status: 401,
@@ -476,7 +377,7 @@ describe('Generated client wrapper auth behavior', () => {
 
     const twentyClient = new TwentyClass({
       url: 'https://example.com/graphql',
-      fetch: fetchMock as unknown as typeof globalThis.fetch,
+      fetch: fetchMock,
     });
 
     await expect(twentyClient.query({ record: { id: true } })).rejects.toThrow(
@@ -504,7 +405,7 @@ describe('Generated client wrapper auth behavior', () => {
         requestAccessTokenRefresh,
       };
 
-    const fetchMock = vi.fn(async () => {
+    const fetchMock = vi.fn<typeof globalThis.fetch>(async () => {
       return createJsonResponse({
         body: { message: 'Unauthorized' },
         status: 401,
@@ -514,7 +415,7 @@ describe('Generated client wrapper auth behavior', () => {
 
     const twentyClient = new TwentyClass({
       url: 'https://example.com/graphql',
-      fetch: fetchMock as unknown as typeof globalThis.fetch,
+      fetch: fetchMock,
     });
 
     await expect(twentyClient.query({ record: { id: true } })).rejects.toThrow(
@@ -527,7 +428,7 @@ describe('Generated client wrapper auth behavior', () => {
   it('bubbles auth error without retry when refresh callback is unavailable', async () => {
     process.env.TWENTY_APP_ACCESS_TOKEN = 'stale-token';
 
-    const fetchMock = vi.fn(async () => {
+    const fetchMock = vi.fn<typeof globalThis.fetch>(async () => {
       return createJsonResponse({
         body: { message: 'Unauthorized' },
         status: 401,
@@ -537,7 +438,7 @@ describe('Generated client wrapper auth behavior', () => {
 
     const twentyClient = new TwentyClass({
       url: 'https://example.com/graphql',
-      fetch: fetchMock as unknown as typeof globalThis.fetch,
+      fetch: fetchMock,
     });
 
     await expect(twentyClient.query({ record: { id: true } })).rejects.toThrow(
@@ -552,7 +453,7 @@ describe('Generated client wrapper auth behavior', () => {
     const originalFetch = globalThis.fetch;
     const capturedFetchThisValues: unknown[] = [];
 
-    const fetchMock = vi.fn(function (
+    const fetchMock = vi.fn<typeof globalThis.fetch>(function (
       this: unknown,
       _url: string | URL | Request,
       _requestInit?: RequestInit,
@@ -564,7 +465,7 @@ describe('Generated client wrapper auth behavior', () => {
           body: { data: { record: { id: 'record-id' } } },
         }),
       );
-    }) as unknown as typeof globalThis.fetch;
+    });
 
     globalThis.fetch = fetchMock;
 

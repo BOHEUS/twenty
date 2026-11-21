@@ -1,18 +1,15 @@
-import { useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
-
-import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
+import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
-import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
-import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useMutation } from '@apollo/client/react';
+import { useToast } from 'twenty-ui/components/feedback';
+import { LightIconButton } from 'twenty-ui/components/input';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { IconDotsVertical, IconLogout } from 'twenty-ui/icon';
-import { LightIconButton } from 'twenty-ui/components';
-import { MenuItem } from 'twenty-ui/primitives/navigation';
 import {
   CurrentUserSessionsDocument,
   RevokeUserSessionDocument,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsDeviceSessionRowDropdownMenuProps = {
   userSessionId: string;
@@ -21,50 +18,44 @@ type SettingsDeviceSessionRowDropdownMenuProps = {
 export const SettingsDeviceSessionRowDropdownMenu = ({
   userSessionId,
 }: SettingsDeviceSessionRowDropdownMenuProps) => {
+  const { t } = useLingui();
   const dropdownId = `settings-device-session-row-${userSessionId}`;
-
   const { enqueueToast } = useToast();
-  const { closeDropdown } = useCloseDropdown();
 
   const [revokeUserSession] = useMutation(RevokeUserSessionDocument, {
     refetchQueries: [CurrentUserSessionsDocument],
   });
 
   const handleRevokeSession = async () => {
-    closeDropdown(dropdownId);
-
     try {
       await revokeUserSession({ variables: { userSessionId } });
-      enqueueToast({ variant: 'success', children: t`Device logged out` });
+      enqueueToast({ status: 'success', children: t`Device logged out` });
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to log out this device`,
       });
     }
   };
 
   return (
-    <Dropdown
-      dropdownId={dropdownId}
-      dropdownPlacement="bottom-end"
-      clickableComponent={
-        <LightIconButton emphasis="subtle" aria-label={t`More options`}>
-          <IconDotsVertical />
-        </LightIconButton>
-      }
-      dropdownComponents={
-        <DropdownContent>
-          <DropdownMenuItemsContainer>
-            <MenuItem
-              accent="danger"
-              LeftIcon={IconLogout}
-              text={t`Log out`}
-              onClick={handleRevokeSession}
-            />
-          </DropdownMenuItemsContainer>
-        </DropdownContent>
-      }
-    />
+    <DropdownRoot type="menu" dropdownId={dropdownId}>
+      <Dropdown.Trigger
+        render={
+          <LightIconButton emphasis="subtle" aria-label={t`More options`}>
+            <IconDotsVertical />
+          </LightIconButton>
+        }
+      />
+      <DropdownContent side="bottom" align="end">
+        <Dropdown.Section>
+          <Dropdown.ActionItem
+            color="danger"
+            startIcon={<IconLogout />}
+            onClick={handleRevokeSession}
+          >{t`Log out`}</Dropdown.ActionItem>
+        </Dropdown.Section>
+      </DropdownContent>
+    </DropdownRoot>
   );
 };

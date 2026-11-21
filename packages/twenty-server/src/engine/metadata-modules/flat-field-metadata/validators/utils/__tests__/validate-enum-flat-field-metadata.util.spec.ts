@@ -10,6 +10,9 @@ import { type FlatFieldMetadataTypeValidationArgs } from 'src/engine/metadata-mo
 import { validateEnumSelectFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/validators/utils/validate-enum-flat-field-metadata.util';
 import { type WorkspaceMigrationBuilderAdditionalCacheDataMaps } from 'src/engine/workspace-manager/workspace-migration/types/workspace-migration-builder-additional-cache-data-maps.type';
 
+const WORKSPACE_CUSTOM_APPLICATION_UNIVERSAL_IDENTIFIER =
+  '7f1c2b9e-6a1d-4c55-9a2e-1a6f0d6c2b11';
+
 const OPTION_WITHOUT_COLOR = {
   id: '2c73ce21-d19f-4b37-935e-48c351e2bb1b',
   label: 'Car Repairs and Servicing',
@@ -21,10 +24,12 @@ const validateOptionColor = ({
   type,
   colorProperties,
   update,
+  additionalOptions = [],
 }: {
   type: EnumFieldMetadataType;
   colorProperties: { color?: unknown };
   update?: FlatFieldMetadataTypeValidationArgs<EnumFieldMetadataType>['update'];
+  additionalOptions?: (typeof OPTION_WITHOUT_COLOR)[];
 }) => {
   const flatFieldMetadata = getFlatFieldMetadataMock({
     type,
@@ -47,11 +52,13 @@ const validateOptionColor = ({
           ...OPTION_WITHOUT_COLOR,
           ...colorProperties,
         },
+        ...additionalOptions,
       ],
     },
     additionalCacheDataMaps: {
       featureFlagsMap:
         {} as WorkspaceMigrationBuilderAdditionalCacheDataMaps['featureFlagsMap'],
+      billingEntitlements: {},
     },
     optimisticFlatEntityMapsAndRelatedFlatEntityMaps:
       createEmptyAllFlatEntityMaps(),
@@ -61,6 +68,9 @@ const validateOptionColor = ({
       isSystemBuild: false,
       applicationUniversalIdentifier:
         flatFieldMetadata.applicationUniversalIdentifier,
+      workspaceCustomApplicationUniversalIdentifier:
+        WORKSPACE_CUSTOM_APPLICATION_UNIVERSAL_IDENTIFIER,
+      flatApplicationMaps: { byId: {}, idByUniversalIdentifier: {} },
     },
   });
 };
@@ -132,6 +142,39 @@ describe('validateEnumSelectFlatFieldMetadata', () => {
           update: { label: 'Updated category' },
         }),
       ).toEqual([]);
+    });
+  });
+
+  describe('option positions', () => {
+    const optionAtSamePosition = {
+      id: '7a2f1c3e-58b4-4d6e-9f0a-1b2c3d4e5f60',
+      label: 'Fuel',
+      value: 'FUEL',
+      position: OPTION_WITHOUT_COLOR.position,
+    };
+
+    it('allows an unrelated update to a field whose options of different applications share a position', () => {
+      expect(
+        validateOptionColor({
+          type: FieldMetadataType.SELECT,
+          colorProperties: {},
+          additionalOptions: [optionAtSamePosition],
+          update: { label: 'Updated category' },
+        }),
+      ).toEqual([]);
+    });
+
+    it('rejects writing options that share a position', () => {
+      expect(
+        validateOptionColor({
+          type: FieldMetadataType.SELECT,
+          colorProperties: {},
+          additionalOptions: [optionAtSamePosition],
+          update: { options: [OPTION_WITHOUT_COLOR, optionAtSamePosition] },
+        }),
+      ).toEqual([
+        expect.objectContaining({ message: 'Duplicated option position' }),
+      ]);
     });
   });
 

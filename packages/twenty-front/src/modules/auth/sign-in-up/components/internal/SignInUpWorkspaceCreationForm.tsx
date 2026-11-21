@@ -1,26 +1,27 @@
 import { useSignUpInNewWorkspace } from '@/auth/sign-in-up/hooks/useSignUpInNewWorkspace';
-import { OnboardingAnimatedReveal } from '@/onboarding/components/OnboardingAnimatedReveal';
-import { OnboardingStepAnimatedItem } from '@/onboarding/components/OnboardingStepAnimatedItem';
-import { ONBOARDING_CONTENT_BLOCK_WIDTH } from '@/onboarding/constants/OnboardingContentBlockWidth';
 import { useWorkspaceSubdomainField } from '@/auth/sign-in-up/hooks/useWorkspaceSubdomainField';
 import { isCreatingWorkspaceState } from '@/auth/states/isCreatingWorkspaceState';
 import { isMultiWorkspaceEnabledState } from '@/client-config/states/isMultiWorkspaceEnabledState';
 import { domainConfigurationState } from '@/domain-manager/states/domainConfigurationState';
+import { OnboardingAnimatedReveal } from '@/onboarding/components/OnboardingAnimatedReveal';
+import { OnboardingStepAnimatedItem } from '@/onboarding/components/OnboardingStepAnimatedItem';
+import { ONBOARDING_CONTENT_BLOCK_WIDTH } from '@/onboarding/constants/OnboardingContentBlockWidth';
 import { TextInput } from '@/ui/input/components/TextInput';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
+import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useEffect, useRef, useState } from 'react';
 import { Key } from 'ts-key-enum';
+import { WORKSPACE_DISPLAY_NAME_MAX_LENGTH } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
-import { MainButton, LightIconButton } from 'twenty-ui/components';
-import { Avatar } from 'twenty-ui/primitives/data-display';
+import { LightIconButton, MainButton } from 'twenty-ui/components/input';
 import { IconTrash, IconUpload } from 'twenty-ui/icon';
+import { Avatar } from 'twenty-ui/primitives/data-display';
 import { Button } from 'twenty-ui/primitives/input';
-
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledContentContainer = styled.div`
   display: flex;
@@ -61,11 +62,6 @@ const StyledLogoRow = styled.div`
   align-items: center;
   display: flex;
   gap: ${themeCssVariables.spacing[2]};
-`;
-
-const StyledLogoAvatar = styled(Avatar)`
-  height: ${themeCssVariables.spacing[8]};
-  width: ${themeCssVariables.spacing[8]};
 `;
 
 const StyledLogoButtons = styled.div`
@@ -251,13 +247,20 @@ export const SignInUpWorkspaceCreationForm = () => {
       <StyledFormSection>
         <OnboardingStepAnimatedItem index={2}>
           <StyledLogoRow>
-            <StyledLogoAvatar
+            <Avatar
               src={logoPreviewUrl}
               name={isNonEmptyString(workspaceName) ? workspaceName : '?'}
-              colorSeed={workspaceName}
+              colorSeed={getWorkspaceAvatarColorSeed(workspaceName)}
               shape="square"
               size="xl"
-              onClick={openFilePicker}
+              variant="outline"
+              render={
+                <button
+                  type="button"
+                  aria-label={t`Upload logo`}
+                  onClick={openFilePicker}
+                />
+              }
             />
             <StyledHiddenFileInput
               type="file"
@@ -297,6 +300,7 @@ export const SignInUpWorkspaceCreationForm = () => {
             placeholder={t`Apple`}
             onChange={handleWorkspaceNameChange}
             onKeyDown={handleKeyDown}
+            maxLength={WORKSPACE_DISPLAY_NAME_MAX_LENGTH}
             fullWidth
           />
         </OnboardingStepAnimatedItem>

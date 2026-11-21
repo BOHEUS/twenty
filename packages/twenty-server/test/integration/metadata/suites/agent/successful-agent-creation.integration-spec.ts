@@ -43,9 +43,7 @@ describe('Agent creation should succeed', () => {
       modelId: TEST_AI_MODEL_ID,
       responseFormat: { type: 'text' },
       roleId: null,
-      isCustom: true,
       modelConfiguration: null,
-      evaluationInputs: [],
     });
   });
 
@@ -71,7 +69,6 @@ describe('Agent creation should succeed', () => {
           configuration: {},
         },
       },
-      evaluationInputs: ['test input 1', 'test input 2'],
     } as const satisfies CreateAgentInput;
     const { data } = await createOneAgent({
       expectToFail: false,
@@ -207,12 +204,9 @@ describe('Agent creation should succeed', () => {
       prompt: 'Agent with role assignment',
       modelId: TEST_AI_MODEL_ID,
       roleId: createdRoleId,
-      isCustom: true,
     });
 
-    // Delete the agent first so its role_target is removed; otherwise
-    // deleting the role would refuse to orphan the agent (the workspace
-    // default role isn't agent-assignable).
+    // Deleting the role first would refuse to orphan the agent, since the default role isn't agent-assignable.
     await deleteOneAgent({
       expectToFail: false,
       input: { id: createdAgentId },

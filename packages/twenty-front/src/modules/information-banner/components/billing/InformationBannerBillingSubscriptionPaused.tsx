@@ -1,21 +1,23 @@
 import { ToastOnQueryErrorEffect } from '@/apollo/components/ToastOnQueryErrorEffect';
 import { useRedirect } from '@/domain-manager/hooks/useRedirect';
 import { InformationBanner } from '@/information-banner/components/InformationBanner';
-import { usePermissionFlagMap } from '@/settings/roles/hooks/usePermissionFlagMap';
+import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
 import {
   BillingPortalSessionDocument,
   PermissionFlagType,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 export const InformationBannerBillingSubscriptionPaused = () => {
+  const { t } = useLingui();
   const { redirect } = useRedirect();
 
-  const { [PermissionFlagType.BILLING]: hasPermissionToUpdateBillingDetails } =
-    usePermissionFlagMap();
+  const hasPermissionToUpdateBillingDetails = useHasPermissionFlag(
+    PermissionFlagType.BILLING,
+  );
 
   const { data, loading, error } = useQuery(BillingPortalSessionDocument, {
     variables: {
@@ -35,8 +37,8 @@ export const InformationBannerBillingSubscriptionPaused = () => {
       <ToastOnQueryErrorEffect error={error} />
       <InformationBanner
         componentInstanceId="information-banner-billing-subscription-paused"
-        color="danger"
-        variant="secondary"
+        status="error"
+        variant="soft"
         message={
           hasPermissionToUpdateBillingDetails
             ? t`Trial expired. Please update your billing details.`

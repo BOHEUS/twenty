@@ -1,18 +1,21 @@
-import { t } from '@lingui/core/macro';
 import { BubbleMenuIconButton } from '@/advanced-text-editor/components/BubbleMenuIconButton';
-import { EditLinkPopover } from '@/advanced-text-editor/components/EditLinkPopover';
+import { EditLinkDropdown } from '@/advanced-text-editor/components/EditLinkDropdown';
 import { StyledBubbleMenuContainer } from '@/advanced-text-editor/components/StyledBubbleMenuContainer';
 import { useLiveEditorState } from '@/advanced-text-editor/hooks/useLiveEditorState';
+import { getEditLinkDropdownId } from '@/advanced-text-editor/utils/getEditLinkDropdownId';
 import { type Editor } from '@tiptap/core';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { IconExternalLink, IconLinkOff } from 'twenty-ui/icon';
 import { getSafeUrl } from 'twenty-shared/utils';
+import { openUrlInNewTab } from '~/utils/openUrlInNewTab';
+import { useLingui } from '@lingui/react/macro';
 
 type LinkBubbleMenuProps = {
   editor: Editor;
 };
 
 export const LinkBubbleMenu = ({ editor }: LinkBubbleMenuProps) => {
+  const { t } = useLingui();
   const state = useLiveEditorState(editor, (currentEditor) => {
     return {
       linkHref: currentEditor.getAttributes('link').href || '',
@@ -31,7 +34,7 @@ export const LinkBubbleMenu = ({ editor }: LinkBubbleMenuProps) => {
         const safeHref = getSafeUrl(state.linkHref);
 
         if (safeHref) {
-          window.open(safeHref, '_blank', 'noopener,noreferrer');
+          openUrlInNewTab(safeHref);
         }
       },
     },
@@ -51,7 +54,14 @@ export const LinkBubbleMenu = ({ editor }: LinkBubbleMenuProps) => {
       updateDelay={0}
     >
       <StyledBubbleMenuContainer>
-        <EditLinkPopover defaultValue={state.linkHref} editor={editor} />
+        <EditLinkDropdown
+          dropdownId={getEditLinkDropdownId({
+            editorInstanceId: editor.instanceId,
+            bubbleMenuType: 'link',
+          })}
+          defaultValue={state.linkHref}
+          editor={editor}
+        />
         {menuActions.map(({ label, Icon, onClick }) => {
           return (
             <BubbleMenuIconButton

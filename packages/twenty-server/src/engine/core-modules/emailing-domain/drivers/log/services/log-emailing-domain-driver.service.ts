@@ -9,7 +9,8 @@ import {
   EmailingDomainDriverException,
   EmailingDomainDriverExceptionCode,
 } from 'src/engine/core-modules/emailing-domain/drivers/exceptions/emailing-domain-driver.exception';
-import { UNSUBSCRIBE_HOSTNAME_PREFIX } from 'src/engine/core-modules/emailing-domain/constants/unsubscribe-hostname-prefix.constant';
+import { RECIPIENT_LINKS_HOSTNAME_PREFIX } from 'src/engine/core-modules/emailing-domain/constants/recipient-links-hostname-prefix.constant';
+import { buildLogDriverUnsubscribeBaseUrl } from 'src/engine/core-modules/emailing-domain/drivers/log/utils/build-log-driver-unsubscribe-base-url.util';
 import {
   type EmailingDomainDriverInterface,
   type EmailingDomainResourceInput,
@@ -94,13 +95,13 @@ export class LogEmailingDomainDriver implements EmailingDomainDriverInterface {
       },
       {
         type: 'CNAME',
-        key: `${UNSUBSCRIBE_HOSTNAME_PREFIX}.${domain}`,
+        key: `${RECIPIENT_LINKS_HOSTNAME_PREFIX}.${domain}`,
         value: `app.localhost`,
         status: 'pending',
       },
       {
         type: 'CNAME',
-        key: `_acme-challenge.${UNSUBSCRIBE_HOSTNAME_PREFIX}.${domain}`,
+        key: `_acme-challenge.${RECIPIENT_LINKS_HOSTNAME_PREFIX}.${domain}`,
         value: `${domain}.dcv.cloudflare.example`,
         status: 'error',
       },
@@ -109,6 +110,10 @@ export class LogEmailingDomainDriver implements EmailingDomainDriverInterface {
 
   async registerDomain(input: EmailingDomainResourceInput): Promise<void> {
     this.logger.log(`[log-driver] registerDomain(${input.domain})`);
+  }
+
+  async retryVerification(input: EmailingDomainResourceInput): Promise<void> {
+    this.logger.log(`[log-driver] retryVerification(${input.domain})`);
   }
 
   async cleanupDomain(input: EmailingDomainResourceInput): Promise<void> {
@@ -227,12 +232,12 @@ export class LogEmailingDomainDriver implements EmailingDomainDriverInterface {
       return null;
     }
 
-    const baseUrl = new URL(this.twentyConfigService.get('SERVER_URL'));
-
-    baseUrl.hostname = this.twentyConfigService.get('IS_MULTIWORKSPACE_ENABLED')
-      ? `${UNSUBSCRIBE_HOSTNAME_PREFIX}.${workspace.subdomain}.${baseUrl.hostname}`
-      : `${UNSUBSCRIBE_HOSTNAME_PREFIX}.${baseUrl.hostname}`;
-
-    return baseUrl.origin;
+    return buildLogDriverUnsubscribeBaseUrl({
+      serverUrl: this.twentyConfigService.get('SERVER_URL'),
+      isMultiWorkspaceEnabled: this.twentyConfigService.get(
+        'IS_MULTIWORKSPACE_ENABLED',
+      ),
+      subdomain: workspace.subdomain,
+    });
   }
 }

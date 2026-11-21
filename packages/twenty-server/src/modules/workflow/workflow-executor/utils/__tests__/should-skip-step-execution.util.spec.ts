@@ -3,6 +3,7 @@ import { StepStatus } from 'twenty-shared/workflow';
 import {
   createMockCodeStep,
   createMockIfElseStep,
+  createMockIteratorStep,
 } from 'src/modules/workflow/workflow-executor/utils/create-mock-workflow-steps.util';
 import { shouldSkipStepExecution } from 'src/modules/workflow/workflow-executor/utils/should-skip-step-execution.util';
 import { type WorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
@@ -195,26 +196,6 @@ describe('shouldSkipStepExecution', () => {
     expect(result).toBe(true);
   });
 
-  it('should handle undefined steps gracefully', () => {
-    const steps = [
-      createMockCodeStep('step-1', ['step-2']),
-      undefined as unknown as WorkflowAction,
-      createMockCodeStep('step-2', []),
-    ];
-    const stepInfos = {
-      'step-1': { status: StepStatus.SKIPPED },
-      'step-2': { status: StepStatus.NOT_STARTED },
-    };
-
-    const result = shouldSkipStepExecution({
-      step: steps[2],
-      steps,
-      stepInfos,
-    });
-
-    expect(result).toBe(true);
-  });
-
   it('should return false when parent step status is pending', () => {
     const steps = [
       createMockCodeStep('step-1', ['step-2']),
@@ -358,5 +339,35 @@ describe('shouldSkipStepExecution', () => {
     });
 
     expect(result).toBe(false);
+  });
+  it('should return false for a loop body whose iterator is skipped, in both the overlapping and the well-formed graph', () => {
+    const overlappingIterator = createMockIteratorStep(
+      'iterator',
+      ['body'],
+      ['body'],
+    );
+    const wellFormedIterator = createMockIteratorStep('iterator', [], ['body']);
+    const body = createMockCodeStep('body', ['iterator']);
+    const stepInfos = {
+      iterator: { status: StepStatus.SKIPPED },
+      body: { status: StepStatus.NOT_STARTED },
+    };
+
+    const overlappingSteps: WorkflowAction[] = [overlappingIterator, body];
+    const wellFormedSteps: WorkflowAction[] = [wellFormedIterator, body];
+
+    const overlappingResult = shouldSkipStepExecution({
+      step: body,
+      steps: overlappingSteps,
+      stepInfos,
+    });
+    const wellFormedResult = shouldSkipStepExecution({
+      step: body,
+      steps: wellFormedSteps,
+      stepInfos,
+    });
+
+    expect(overlappingResult).toBe(false);
+    expect(wellFormedResult).toBe(false);
   });
 });

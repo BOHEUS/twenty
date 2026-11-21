@@ -4,7 +4,7 @@ import { settingsDataModelFieldSettingsFormSchema } from '@/settings/data-model/
 import { isDefined } from 'twenty-shared/utils';
 import { z } from 'zod';
 import { FieldMetadataType } from '~/generated-metadata/graphql';
-import { settingsDataModelFieldTypeFormSchema } from '~/pages/settings/data-model/new-field/SettingsObjectNewFieldSelect';
+import { settingsDataModelFieldTypeFormSchema } from '@/settings/data-model/fields/forms/validation-schemas/settingsDataModelFieldTypeFormSchema';
 
 type SettingsFieldFormSchemaOptions = {
   existingOtherLabels?: string[];
@@ -29,17 +29,23 @@ export const settingsFieldFormSchema = (
         type?: FieldMetadataType;
         morphRelationObjectMetadataIds?: string[];
       };
-      if (formData.type !== FieldMetadataType.MORPH_RELATION) return true;
-      if (!isDefined(sourceObjectMetadataId)) return true;
+      if (formData.type !== FieldMetadataType.MORPH_RELATION) {
+        return true;
+      }
+      if (!isDefined(sourceObjectMetadataId)) {
+        return true;
+      }
       if (
         !isDefined(formData.morphRelationObjectMetadataIds) ||
         formData.morphRelationObjectMetadataIds.length <= 1
-      )
+      ) {
         return true;
+      }
       if (
         formData.morphRelationObjectMetadataIds.includes(sourceObjectMetadataId)
-      )
+      ) {
         return false;
+      }
       return true;
     });
 

@@ -9,6 +9,7 @@
 - **A per-meeting on/off switch**
 - **Customizable in-meeting recording notices**
 - **AI meeting summaries**
+- **Call participants and recordings on record pages**
 - **Built for AI & automation**
 
 ## 💳 Billing
@@ -16,6 +17,12 @@
 Metered in Twenty credits based on the bot's actual recording time, prorated by
 duration — **$1.00 per recording-hour** (1 credit). No recording — opted out,
 canceled, or no-show — means no charge.
+
+When the workspace cannot spend credits, each meeting is skipped shortly before
+its bot would join: the bot is canceled, or never created, and the recording is
+marked `NOT_RECORDED` with the reason. Later meetings are recorded again once
+credits are available; the skipped meeting itself is not retried. A call that
+is already being recorded is never cut short for credits.
 
 AI summaries use workspace AI credits, billed on the model's token usage — the
 cost scales with how much was said in the meeting, typically **$0.02–$0.06 per
@@ -26,9 +33,22 @@ variable to `false` to turn summaries off.
 
 Each calendar event has a **Recording Bot** field. It starts blank and the app
 sets it to On when it actually schedules the recorder for that meeting, which
-happens once the meeting is within the seven-day scheduling window. Set it to
-Off to skip a meeting. Past meetings the recorder never joined simply stay
-blank.
+happens once the meeting is less than a day away. Set it to Off to skip a
+meeting. Past meetings the recorder never joined simply stay blank.
+
+## 👥 Calls on record pages
+
+The app provides two record page widgets. Both read the meeting the recording
+belongs to, so nothing is copied onto the recording.
+
+- **Call participants** is added to the Home tab of call recording pages. It
+  shows the meeting's attendees.
+  People in your CRM open their record when clicked; workspace members are
+  shown by name. Attendees that match no one are shown by name, or by email
+  when the invite has no name.
+- **Call recordings** lists the 20 most recent recordings of meetings linked
+  to a person, company or opportunity. To show it, edit that record page's
+  layout and add the widget from the layout editor.
 
 ## 🗓️ Pausing the recorder
 

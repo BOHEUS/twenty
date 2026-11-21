@@ -6,11 +6,12 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { FileUploadProvider } from '@/file-upload/components/FileUploadProvider';
 import { RecordTargetsInlineCell } from '@/object-record/record-field/ui/components/RecordTargetsInlineCell';
+import { RecordCreationFormProvider } from '@/object-record/record-form/components/RecordCreationFormProvider';
+import { RecordUpdateFormProvider } from '@/object-record/record-form/components/RecordUpdateFormProvider';
 import { recordStoreFamilyState } from '@/object-record/record-store/states/recordStoreFamilyState';
 import { getJestMetadataAndApolloMocksWrapper } from '~/testing/jest/getJestMetadataAndApolloMocksWrapper';
 
-// Opening the picker performs a record search over the network, which is out of
-// scope here and unreachable through MockedProvider.
+// Opening the picker searches records over the network, unreachable through MockedProvider.
 jest.mock(
   '@/object-record/record-picker/multiple-record-picker/hooks/useMultipleRecordPickerPerformSearch',
   () => ({
@@ -37,12 +38,16 @@ const renderCell = (objectNameSingular: string) => {
     <I18nProvider i18n={i18n}>
       <MemoryRouter>
         <FileUploadProvider>
-          <RecordTargetsInlineCell
-            objectNameSingular={objectNameSingular}
-            recordId={NOTE_ID}
-            instanceIdPrefix="test-relations"
-            showLabel
-          />
+          <RecordCreationFormProvider>
+            <RecordUpdateFormProvider>
+              <RecordTargetsInlineCell
+                objectNameSingular={objectNameSingular}
+                recordId={NOTE_ID}
+                instanceIdPrefix="test-relations"
+                showLabel
+              />
+            </RecordUpdateFormProvider>
+          </RecordCreationFormProvider>
         </FileUploadProvider>
       </MemoryRouter>
     </I18nProvider>,

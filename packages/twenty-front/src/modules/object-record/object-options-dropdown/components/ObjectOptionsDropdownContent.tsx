@@ -6,7 +6,9 @@ import { ObjectOptionsDropdownHiddenFieldsContent } from '@/object-record/object
 import { ObjectOptionsDropdownHiddenRecordGroupsContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownHiddenRecordGroupsContent';
 import { ObjectOptionsDropdownLayoutContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownLayoutContent';
 import { ObjectOptionsDropdownMenuContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownMenuContent';
+import { ObjectOptionsDropdownRecordGroupDisplayContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownRecordGroupDisplayContent';
 import { ObjectOptionsDropdownRecordGroupFieldsContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownRecordGroupFieldsContent';
+import { ObjectOptionsDropdownRecordGroupLoadLimitContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownRecordGroupLoadLimitContent';
 import { ObjectOptionsDropdownRecordGroupsContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownRecordGroupsContent';
 import { ObjectOptionsDropdownRecordGroupSortContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownRecordGroupSortContent';
 import { ObjectOptionsDropdownVisibilityContent } from '@/object-record/object-options-dropdown/components/ObjectOptionsDropdownVisibilityContent';
@@ -28,6 +30,10 @@ export const ObjectOptionsDropdownContent = () => {
       return <ObjectOptionsDropdownRecordGroupFieldsContent />;
     case 'recordGroupSort':
       return <ObjectOptionsDropdownRecordGroupSortContent />;
+    case 'recordGroupLoadLimit':
+      return <ObjectOptionsDropdownRecordGroupLoadLimitContent />;
+    case 'recordGroupDisplay':
+      return <ObjectOptionsDropdownRecordGroupDisplayContent />;
     case 'hiddenRecordGroups':
       return <ObjectOptionsDropdownHiddenRecordGroupsContent />;
     case 'addRecordGroup':

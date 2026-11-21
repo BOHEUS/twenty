@@ -2,10 +2,8 @@ import { ApplicationDisplay } from '@/applications/components/ApplicationDisplay
 import { useApolloAdminClient } from '@/settings/admin-panel/apollo/hooks/useApolloAdminClient';
 import { SettingsEmptyPlaceholder } from '@/settings/components/SettingsEmptyPlaceholder';
 import { StyledNameTableCell } from '@/settings/data-model/object-details/components/SettingsObjectItemTableRowStyledComponents';
-import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
-import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
-import { DropdownMenuSectionLabel } from '@/ui/layout/dropdown/components/DropdownMenuSectionLabel';
+import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableBody } from '@/ui/layout/table/components/TableBody';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
@@ -13,15 +11,18 @@ import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { type ReactNode, useContext, useState } from 'react';
+import { msg } from '@lingui/core/macro';
+import { type MessageDescriptor } from '@lingui/core';
+import { isString } from '@sniptt/guards';
+import { useState } from 'react';
 import { SettingsPath } from 'twenty-shared/types';
-import {
-  assertUnreachable,
-  getSettingsPath,
-  isDefined,
-} from 'twenty-shared/utils';
-import { SettingsRow, Section } from 'twenty-ui/components';
+import { getSettingsPath, isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { useToast } from 'twenty-ui/components/feedback';
+import { SearchInput } from 'twenty-ui/components/input';
+import { Section } from 'twenty-ui/components/layout';
+import { Dropdown } from 'twenty-ui/components/navigation';
+import { SettingsRow } from 'twenty-ui/components/settings';
 import {
   IconChevronRight,
   IconDotsVertical,
@@ -29,16 +30,20 @@ import {
   IconRefresh,
 } from 'twenty-ui/icon';
 import { Tag } from 'twenty-ui/primitives/data-display';
-import { useToast } from 'twenty-ui/primitives/feedback';
-import { Button, SearchInput } from 'twenty-ui/primitives/input';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { Button } from 'twenty-ui/primitives/input';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { useDebounce } from 'use-debounce';
 import {
-  type ApplicationRegistrationFragmentFragment,
   ApplicationRegistrationSourceType,
   FindAllApplicationRegistrationsDocument,
+  type FindAllApplicationRegistrationsQuery,
   SyncMarketplaceCatalogDocument,
 } from '~/generated-admin/graphql';
+import { SettingsSearchFilterTrigger } from '@/settings/components/SettingsSearchFilterTrigger';
+import { useLingui } from '@lingui/react/macro';
+
+type AdminApplicationRegistration =
+  FindAllApplicationRegistrationsQuery['findAllApplicationRegistrations']['registrations'][number];
 
 const StyledTableContainer = styled.div`
   border-bottom: 1px solid ${themeCssVariables.border.color.light};
@@ -51,21 +56,35 @@ const StyledShowMoreContainer = styled.div`
   margin-top: ${themeCssVariables.spacing[2]};
 `;
 
-const TABLE_GRID = '1fr 100px 100px 100px 40px';
-const TABLE_GRID_MOBILE = '3fr 3fr 1fr 1fr 40px';
+const TABLE_GRID = '1fr 120px 100px 120px 100px 40px';
+const TABLE_GRID_MOBILE = '3fr 2fr 2fr 2fr 2fr 40px';
 const PAGE_SIZE = 25;
 
 const SOURCE_TYPE_FILTER_OPTIONS: {
   sourceType: ApplicationRegistrationSourceType;
-  label: string;
+  label: string | MessageDescriptor;
 }[] = [
-  { sourceType: ApplicationRegistrationSourceType.NPM, label: 'NPM' },
-  { sourceType: ApplicationRegistrationSourceType.TARBALL, label: 'Tarball' },
-  { sourceType: ApplicationRegistrationSourceType.OAUTH_ONLY, label: 'OAuth' },
-  { sourceType: ApplicationRegistrationSourceType.LOCAL, label: 'Local' },
+  {
+    sourceType: ApplicationRegistrationSourceType.NPM,
+    label: doNotTranslate('NPM'),
+  },
+  {
+    sourceType: ApplicationRegistrationSourceType.TARBALL,
+    label: msg`Tarball`,
+  },
+  {
+    sourceType: ApplicationRegistrationSourceType.OAUTH_ONLY,
+    label: doNotTranslate('OAuth'),
+  },
+  {
+    sourceType: ApplicationRegistrationSourceType.BUNDLED,
+    label: msg`Bundled`,
+  },
+  { sourceType: ApplicationRegistrationSourceType.LOCAL, label: msg`Local` },
 ];
 
 export const SettingsAdminApps = () => {
+  const { t } = useLingui();
   const apolloAdminClient = useApolloAdminClient();
   const { enqueueToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
@@ -120,12 +139,12 @@ export const SettingsAdminApps = () => {
     try {
       await syncMarketplaceCatalog();
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Marketplace catalog synchronization started.`,
       });
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to synchronize the marketplace catalog.`,
       });
     }
@@ -162,27 +181,6 @@ export const SettingsAdminApps = () => {
     });
   };
 
-  const getFormattedSource = (
-    registration: ApplicationRegistrationFragmentFragment,
-  ) => {
-    switch (registration.sourceType) {
-      case ApplicationRegistrationSourceType.TARBALL: {
-        return 'Tarball';
-      }
-      case ApplicationRegistrationSourceType.NPM: {
-        return 'NPM';
-      }
-      case ApplicationRegistrationSourceType.OAUTH_ONLY: {
-        return 'OAuth';
-      }
-      case ApplicationRegistrationSourceType.LOCAL: {
-        return 'Local';
-      }
-      default:
-        return assertUnreachable(registration.sourceType);
-    }
-  };
-
   return (
     <>
       <Section.Root>
@@ -207,74 +205,76 @@ export const SettingsAdminApps = () => {
         <SearchInput
           placeholder={t`Search registrations...`}
           value={searchQuery}
-          onChange={setSearchQuery}
-          filterDropdown={(filterButton: ReactNode) => (
-            <Dropdown
+          onValueChange={setSearchQuery}
+          actions={
+            <DropdownRoot
               dropdownId="settings-admin-apps-filter-dropdown"
-              dropdownPlacement="bottom-end"
-              dropdownOffset={{ x: 0, y: 8 }}
-              clickableComponent={filterButton}
-              dropdownComponents={
-                <DropdownContent>
-                  <DropdownMenuItemsContainer>
+              type="panel"
+            >
+              <SettingsSearchFilterTrigger />
+              <DropdownContent align="end" sideOffset={8}>
+                <Dropdown.Section>
+                  <SettingsRow
+                    startElement={<IconPinned />}
+                    onCheckedChange={() =>
+                      setShowPreInstalledOnly(!showPreInstalledOnly)
+                    }
+                    checked={showPreInstalledOnly}
+                  >{t`Pre-installed only`}</SettingsRow>
+                </Dropdown.Section>
+                <Dropdown.Separator />
+                <Dropdown.Section label={t`Source`}>
+                  {SOURCE_TYPE_FILTER_OPTIONS.map(({ sourceType, label }) => (
                     <SettingsRow
-                      startIcon={<IconPinned />}
-                      onCheckedChange={() =>
-                        setShowPreInstalledOnly(!showPreInstalledOnly)
-                      }
-                      checked={showPreInstalledOnly}
-                    >{t`Pre-installed only`}</SettingsRow>
-                    <DropdownMenuSectionLabel label={t`Source`} />
-                    {SOURCE_TYPE_FILTER_OPTIONS.map(({ sourceType, label }) => (
-                      <SettingsRow
-                        key={sourceType}
-                        onCheckedChange={() =>
-                          toggleSourceTypeFilter(sourceType)
-                        }
-                        checked={sourceTypeFilters.includes(sourceType)}
-                      >
-                        {label}
-                      </SettingsRow>
-                    ))}
-                    <DropdownMenuSectionLabel label={t`Listed`} />
-                    <SettingsRow
-                      onCheckedChange={() =>
-                        setIsListedFilter(
-                          isListedFilter === true ? undefined : true,
-                        )
-                      }
-                      checked={isListedFilter === true}
-                    >{t`Listed`}</SettingsRow>
-                    <SettingsRow
-                      onCheckedChange={() =>
-                        setIsListedFilter(
-                          isListedFilter === false ? undefined : false,
-                        )
-                      }
-                      checked={isListedFilter === false}
-                    >{t`Not listed`}</SettingsRow>
-                    <DropdownMenuSectionLabel label={t`Configured`} />
-                    <SettingsRow
-                      onCheckedChange={() =>
-                        setIsConfiguredFilter(
-                          isConfiguredFilter === true ? undefined : true,
-                        )
-                      }
-                      checked={isConfiguredFilter === true}
-                    >{t`Configured`}</SettingsRow>
-                    <SettingsRow
-                      onCheckedChange={() =>
-                        setIsConfiguredFilter(
-                          isConfiguredFilter === false ? undefined : false,
-                        )
-                      }
-                      checked={isConfiguredFilter === false}
-                    >{t`Not configured`}</SettingsRow>
-                  </DropdownMenuItemsContainer>
-                </DropdownContent>
-              }
-            />
-          )}
+                      key={sourceType}
+                      onCheckedChange={() => toggleSourceTypeFilter(sourceType)}
+                      checked={sourceTypeFilters.includes(sourceType)}
+                    >
+                      {isString(label) ? label : t(label)}
+                    </SettingsRow>
+                  ))}
+                </Dropdown.Section>
+                <Dropdown.Separator />
+                <Dropdown.Section label={t`Listed`}>
+                  <SettingsRow
+                    onCheckedChange={() =>
+                      setIsListedFilter(
+                        isListedFilter === true ? undefined : true,
+                      )
+                    }
+                    checked={isListedFilter === true}
+                  >{t`Listed`}</SettingsRow>
+                  <SettingsRow
+                    onCheckedChange={() =>
+                      setIsListedFilter(
+                        isListedFilter === false ? undefined : false,
+                      )
+                    }
+                    checked={isListedFilter === false}
+                  >{t`Not listed`}</SettingsRow>
+                </Dropdown.Section>
+                <Dropdown.Separator />
+                <Dropdown.Section label={t`Configured`}>
+                  <SettingsRow
+                    onCheckedChange={() =>
+                      setIsConfiguredFilter(
+                        isConfiguredFilter === true ? undefined : true,
+                      )
+                    }
+                    checked={isConfiguredFilter === true}
+                  >{t`Configured`}</SettingsRow>
+                  <SettingsRow
+                    onCheckedChange={() =>
+                      setIsConfiguredFilter(
+                        isConfiguredFilter === false ? undefined : false,
+                      )
+                    }
+                    checked={isConfiguredFilter === false}
+                  >{t`Not configured`}</SettingsRow>
+                </Dropdown.Section>
+              </DropdownContent>
+            </DropdownRoot>
+          }
         />
         {loading && registrations.length === 0 ? (
           <SettingsEmptyPlaceholder>{t`Loading apps...`}</SettingsEmptyPlaceholder>
@@ -288,8 +288,9 @@ export const SettingsAdminApps = () => {
                 mobileGridAutoColumns={TABLE_GRID_MOBILE}
               >
                 <TableHeader>{t`Name`}</TableHeader>
-                <TableHeader align="right">{t`Source`}</TableHeader>
+                <TableHeader>{t`Author`}</TableHeader>
                 <TableHeader align="right">{t`Listed`}</TableHeader>
+                <TableHeader align="right">{t`Installs`}</TableHeader>
                 <TableHeader align="right">{t`Configured`}</TableHeader>
                 <TableHeader></TableHeader>
               </TableRow>
@@ -298,7 +299,6 @@ export const SettingsAdminApps = () => {
                   <SettingsAdminAppsTableRow
                     key={registration.id}
                     registration={registration}
-                    getFormattedSource={getFormattedSource}
                   />
                 ))}
               </TableBody>
@@ -322,17 +322,14 @@ export const SettingsAdminApps = () => {
 };
 
 type SettingsAdminAppsTableRowProps = {
-  registration: ApplicationRegistrationFragmentFragment;
-  getFormattedSource: (
-    registration: ApplicationRegistrationFragmentFragment,
-  ) => string;
+  registration: AdminApplicationRegistration;
 };
 
 const SettingsAdminAppsTableRow = ({
   registration,
-  getFormattedSource,
 }: SettingsAdminAppsTableRowProps) => {
-  const { theme } = useContext(ThemeContext);
+  const { t } = useLingui();
+  const theme = useTheme();
 
   return (
     <TableRow
@@ -352,12 +349,11 @@ const SettingsAdminAppsTableRow = ({
           }}
         />
       </StyledNameTableCell>
-      <TableCell overflow="hidden" align="right">
-        {getFormattedSource(registration)}
-      </TableCell>
+      <TableCell overflow="hidden">{registration.author ?? '—'}</TableCell>
       <TableCell align="right">
         {registration.isListed ? t`Yes` : t`No`}
       </TableCell>
+      <TableCell align="right">{registration.installCount}</TableCell>
       <TableCell align="right">
         <Tag color={registration.isConfigured ? 'green' : 'red'}>
           {registration.isConfigured ? t`Yes` : t`No`}

@@ -7,6 +7,6 @@
  *                              |___/
  */
 
-export { VisibilityHidden } from './components/VisibilityHidden';
-export { VisibilityHiddenInput } from './components/VisibilityHiddenInput';
+export { VisuallyHidden } from './components/VisuallyHidden';
+export type { VisuallyHiddenProps } from './types/VisuallyHiddenProps';
 export { handleClickableElementKeyDown } from './utils/handleClickableElementKeyDown';

@@ -131,6 +131,7 @@ describe('JWT Legacy HS256 no-kid fallback (integration)', () => {
       workspaceId: sharedLoginPayload.workspaceId,
       authProvider:
         sharedLoginPayload.authProvider ?? AuthProviderEnum.Password,
+      jti: randomUUID(),
     };
 
     const forgedToken = forgeLegacyHs256Token(
@@ -302,12 +303,7 @@ describe('JWT Legacy HS256 no-kid fallback - seeded-workspace tokens (integratio
       userWorkspaceId: sessionAccessTokenPayload.userWorkspaceId,
     };
 
-    const forgedToken = forgeLegacyHs256Token(
-      forgedPayload as unknown as Record<string, unknown> & {
-        type: JwtTokenTypeEnum;
-      },
-      seededWorkspaceId,
-    );
+    const forgedToken = forgeLegacyHs256Token(forgedPayload, seededWorkspaceId);
 
     const decoded = decodeJwtCompleteOrThrow(forgedToken);
 

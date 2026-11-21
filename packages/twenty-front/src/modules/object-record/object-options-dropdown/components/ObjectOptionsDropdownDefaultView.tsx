@@ -1,6 +1,9 @@
+import { ListItemButton } from 'twenty-ui/components/navigation';
+import { ListItem } from 'twenty-ui/primitives/navigation';
+import { SelectOptionIcon } from '@/ui/input/components/SelectOptionIcon';
 import { useObjectOptionsDropdown } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsDropdown';
 import { visibleRecordFieldsComponentSelector } from '@/object-record/record-field/states/visibleRecordFieldsComponentSelector';
-import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
+import { LegacyDropdownContent } from '@/ui/layout/dropdown/components/LegacyDropdownContent';
 import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
 import { DropdownMenuSeparator } from '@/ui/layout/dropdown/components/DropdownMenuSeparator';
 import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
@@ -17,10 +20,10 @@ import {
   IconLayout,
   IconListDetails,
   IconLock,
-  useIcons,
 } from 'twenty-ui/icon';
-import { MenuItem } from 'twenty-ui/primitives/navigation';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { useCopyToClipboard } from '~/hooks/useCopyToClipboard';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const ObjectOptionsDropdownDefaultView = () => {
   const { t } = useLingui();
@@ -36,11 +39,11 @@ export const ObjectOptionsDropdownDefaultView = () => {
 
   const visibleFieldsCount = visibleRecordFields.length;
 
-  const selectableItemIdArray = [
+  const selectableItemIdArray = doNotTranslate([
     'Fields',
     'Copy link to view',
     'Create custom view',
-  ];
+  ]);
 
   const selectedItemId = useAtomComponentStateValue(
     selectedItemIdComponentState,
@@ -62,14 +65,13 @@ export const ObjectOptionsDropdownDefaultView = () => {
   const MainIcon = getIcon(currentView?.icon);
 
   return (
-    <DropdownContent>
+    <LegacyDropdownContent>
       <DropdownMenuItemsContainer scrollable={false}>
-        <MenuItem
-          text={t`Default View`}
-          LeftIcon={MainIcon}
-          RightIcon={IconLock}
+        <ListItem
+          startIcon={<SelectOptionIcon Icon={MainIcon} />}
+          endIcon={<IconLock />}
           disabled={true}
-        />
+        >{t`Default View`}</ListItem>
       </DropdownMenuItemsContainer>
       <DropdownMenuSeparator />
       <SelectableList
@@ -82,15 +84,14 @@ export const ObjectOptionsDropdownDefaultView = () => {
             itemId="Fields"
             onEnter={() => onContentChange('fields')}
           >
-            <MenuItem
+            <ListItemButton
               focused={selectedItemId === 'Fields'}
               onClick={() => onContentChange('fields')}
-              LeftIcon={IconListDetails}
-              text={t`Fields`}
-              contextualText={t`${visibleFieldsCount} selected`}
-              contextualTextPosition="right"
-              hasSubMenu
-            />
+              startIcon={<IconListDetails />}
+              description={t`${visibleFieldsCount} selected`}
+              descriptionPlacement="end"
+              hasSubmenu
+            >{t`Fields`}</ListItemButton>
           </SelectableListItem>
         </DropdownMenuItemsContainer>
         <DropdownMenuSeparator />
@@ -102,30 +103,27 @@ export const ObjectOptionsDropdownDefaultView = () => {
               copyToClipboard(currentUrl, t`Link copied to clipboard`);
             }}
           >
-            <MenuItem
+            <ListItemButton
               focused={selectedItemId === 'Copy link to view'}
               onClick={() => {
                 const currentUrl = window.location.href;
                 copyToClipboard(currentUrl, t`Link copied to clipboard`);
               }}
-              LeftIcon={IconCopy}
-              text={t`Copy link to view`}
-            />
+              startIcon={<IconCopy />}
+            >{t`Copy link to view`}</ListItemButton>
           </SelectableListItem>
           <SelectableListItem
             itemId="Create custom view"
             onEnter={handleCreateCustomView}
           >
-            <MenuItem
+            <ListItemButton
               focused={selectedItemId === 'Create custom view'}
               onClick={handleCreateCustomView}
-              LeftIcon={IconLayout}
-              text={t`Create custom view`}
-              contextualTextPosition="right"
-            />
+              startIcon={<IconLayout />}
+            >{t`Create custom view`}</ListItemButton>
           </SelectableListItem>
         </DropdownMenuItemsContainer>
       </SelectableList>
-    </DropdownContent>
+    </LegacyDropdownContent>
   );
 };

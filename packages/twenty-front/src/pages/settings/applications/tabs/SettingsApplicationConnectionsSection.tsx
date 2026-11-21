@@ -1,38 +1,25 @@
-import { styled } from '@linaria/react';
-import { isNonEmptyString } from '@sniptt/guards';
 import { useLingui } from '@lingui/react/macro';
-import { useContext } from 'react';
+import { SETTINGS_APPLICATION_CONNECTIONS_SECTION_ID } from 'twenty-shared/application';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
 
+import { SettingsApplicationAddConnectionButton } from '@/settings/applications/components/SettingsApplicationAddConnectionButton';
+import { SettingsApplicationConnectionProviderSection } from '@/settings/applications/components/SettingsApplicationConnectionProviderSection';
+import { SettingsApplicationConnectionName } from '@/settings/applications/components/SettingsApplicationConnectionName';
+import { SettingsApplicationConnectionStatus } from '@/settings/applications/components/SettingsApplicationConnectionStatus';
+import { SettingsApplicationConnectionTableRows } from '@/settings/applications/components/SettingsApplicationConnectionTableRows';
+import { canStartConnectionProviderAuthorization } from '@/settings/applications/utils/canStartConnectionProviderAuthorization';
+import { SettingsSectionAnchor } from '@/settings/components/SettingsSectionAnchor';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
-import { Section } from 'twenty-ui/components';
-import { Avatar, Status } from 'twenty-ui/primitives/data-display';
-import { Info } from 'twenty-ui/primitives/feedback';
-import { IconChevronRight, IconPlus } from 'twenty-ui/icon';
-import { Button } from 'twenty-ui/primitives/input';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
-import { useFindApplicationConnectionProviders } from '~/pages/settings/applications/hooks/useFindApplicationConnectionProviders';
+import { IconChevronRight } from 'twenty-ui/icon';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { useApplicationConnectedAccounts } from '~/pages/settings/applications/hooks/useApplicationConnectedAccounts';
-import { useTriggerAppOAuth } from '~/pages/settings/applications/hooks/useTriggerAppOAuth';
-import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
+import { useFindApplicationConnectionProviders } from '~/pages/settings/applications/hooks/useFindApplicationConnectionProviders';
 
-const CONNECTION_TABLE_ROW_GRID_TEMPLATE_COLUMNS =
-  'minmax(0, 1fr) 160px 180px 36px';
-
-const StyledFooter = styled.div`
-  display: flex;
-  justify-content: flex-start;
-  margin-top: ${themeCssVariables.spacing[2]};
-`;
-
-const StyledTableRowsContainer = styled.div`
-  border-bottom: 1px solid ${themeCssVariables.border.color.light};
-  padding: ${themeCssVariables.spacing[2]} 0;
-`;
+const CONNECTION_TABLE_ROW_GRID_TEMPLATE_COLUMNS = 'minmax(0, 1fr) 160px 36px';
 
 export const SettingsApplicationConnectionsSection = ({
   applicationId,
@@ -40,50 +27,39 @@ export const SettingsApplicationConnectionsSection = ({
   applicationId: string;
 }) => {
   const { t } = useLingui();
-  const { theme } = useContext(ThemeContext);
-  const { triggerAppOAuth } = useTriggerAppOAuth();
+  const theme = useTheme();
   const { connectionProviders, loading } =
     useFindApplicationConnectionProviders(applicationId);
   const { accounts: connectedAccounts, loading: accountsLoading } =
     useApplicationConnectedAccounts(applicationId);
 
-  if (loading || accountsLoading || connectionProviders.length === 0) {
+  const workspaceConnectionProviders = connectionProviders.filter(
+    (provider) => provider.scope === 'WORKSPACE',
+  );
+
+  if (loading || accountsLoading || workspaceConnectionProviders.length === 0) {
     return null;
   }
 
   return (
-    <>
-      {connectionProviders.map((provider) => {
-        const isOAuth = provider.type === 'oauth';
-        const isClientCredentialsConfigured =
-          provider.oauth?.isClientCredentialsConfigured ?? false;
-
+    <SettingsSectionAnchor
+      sectionId={SETTINGS_APPLICATION_CONNECTIONS_SECTION_ID}
+    >
+      {workspaceConnectionProviders.map((provider) => {
+        const canStartAuthorization =
+          canStartConnectionProviderAuthorization(provider);
         const providerConnections = connectedAccounts.filter(
           (account) => account.connectionProviderId === provider.id,
         );
 
         return (
-          <Section.Root key={provider.id}>
-            <Section.Header
-              title={provider.displayName}
-              description={t`Manage connections used by this app to call ${provider.displayName}.`}
-              adornment={
-                isNonEmptyString(provider.logoUrl) ? (
-                  <Avatar
-                    shape="square"
-                    variant="outline"
-                    src={getAbsoluteImageUrl(provider.logoUrl)}
-                    name={provider.displayName}
-                  />
-                ) : undefined
-              }
-            />
-            {isOAuth && !isClientCredentialsConfigured && (
-              <Info
-                accent="danger"
-                text={t`${provider.displayName} OAuth is not yet set up by your server administrator. They need to fill in the OAuth client ID and secret on the application registration before you can add a connection.`}
-              />
-            )}
+          <SettingsApplicationConnectionProviderSection
+            key={provider.id}
+            providerDisplayName={provider.displayName}
+            providerLogoUrl={provider.logoUrl}
+            description={t`Manage connections used by this app to call ${provider.displayName}.`}
+            shouldShowMissingCredentialsBanner={!canStartAuthorization}
+          >
             {providerConnections.length > 0 && (
               <Table>
                 <TableRow
@@ -93,10 +69,9 @@ export const SettingsApplicationConnectionsSection = ({
                 >
                   <TableHeader>{t`Connection`}</TableHeader>
                   <TableHeader>{t`Status`}</TableHeader>
-                  <TableHeader>{t`Visibility`}</TableHeader>
                   <TableHeader />
                 </TableRow>
-                <StyledTableRowsContainer>
+                <SettingsApplicationConnectionTableRows>
                   {providerConnections.map((connection) => (
                     <TableRow
                       key={connection.id}
@@ -119,27 +94,14 @@ export const SettingsApplicationConnectionsSection = ({
                         textOverflow="ellipsis"
                         whiteSpace="nowrap"
                       >
-                        {connection.name ?? connection.handle}
+                        <SettingsApplicationConnectionName
+                          connection={connection}
+                        />
                       </TableCell>
                       <TableCell clickable>
-                        {connection.authFailedAt ? (
-                          <Status color="red">{t`Reconnect needed`}</Status>
-                        ) : (
-                          <Status color="green">{t`Connected`}</Status>
-                        )}
-                      </TableCell>
-                      <TableCell clickable>
-                        <Status
-                          color={
-                            connection.visibility === 'workspace'
-                              ? 'blue'
-                              : 'gray'
-                          }
-                        >
-                          {connection.visibility === 'workspace'
-                            ? t`Workspace shared`
-                            : t`Just for me`}
-                        </Status>
+                        <SettingsApplicationConnectionStatus
+                          connection={connection}
+                        />
                       </TableCell>
                       <TableCell
                         align="right"
@@ -154,28 +116,19 @@ export const SettingsApplicationConnectionsSection = ({
                       </TableCell>
                     </TableRow>
                   ))}
-                </StyledTableRowsContainer>
+                </SettingsApplicationConnectionTableRows>
               </Table>
             )}
-            {isClientCredentialsConfigured && (
-              <StyledFooter>
-                <Button
-                  startIcon={<IconPlus />}
-                  size="sm"
-                  onClick={() =>
-                    triggerAppOAuth({
-                      applicationId,
-                      providerName: provider.name,
-                      visibility: 'workspace',
-                    })
-                  }
-                  variant="outline"
-                >{t`Add connection`}</Button>
-              </StyledFooter>
+            {canStartAuthorization && (
+              <SettingsApplicationAddConnectionButton
+                applicationId={applicationId}
+                connectionProviderName={provider.name}
+                connectionProviderType={provider.type}
+              />
             )}
-          </Section.Root>
+          </SettingsApplicationConnectionProviderSection>
         );
       })}
-    </>
+    </SettingsSectionAnchor>
   );
 };

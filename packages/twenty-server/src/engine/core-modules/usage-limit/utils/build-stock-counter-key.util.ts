@@ -1,25 +1,17 @@
 import { isNonEmptyString } from '@sniptt/guards';
 
-import { type SpenderType } from 'src/engine/core-modules/usage-limit/types/spender-type.type';
-import { type StockMeter } from 'src/engine/core-modules/usage-limit/types/stock-meter.type';
-import { type UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
-import { type UsageResourceType } from 'src/engine/core-modules/usage/enums/usage-resource-type.enum';
+import { type StockCounter } from 'src/engine/core-modules/usage-limit/types/stock-counter.type';
 
 const ABSENT = '-';
 
 export const buildStockCounterKey = ({
   workspaceId,
-  resourceType,
-  operationType,
-  spenderType,
-  spenderId,
-  meter,
+  counter,
 }: {
   workspaceId: string;
-  resourceType: UsageResourceType;
-  operationType: UsageOperationType;
-  spenderType: SpenderType;
-  spenderId?: string | null;
-  meter: StockMeter;
+  counter: Pick<
+    StockCounter,
+    'resourceType' | 'operationType' | 'spenderType' | 'spenderId' | 'unit'
+  >;
 }): string =>
-  `{${workspaceId}}:stock:${resourceType}:${operationType}:${spenderType}:${isNonEmptyString(spenderId) ? spenderId : ABSENT}:${meter}`;
+  `{${workspaceId}}:stock-held:${counter.resourceType}:${counter.operationType}:${counter.spenderType}:${isNonEmptyString(counter.spenderId) ? counter.spenderId : ABSENT}:${counter.unit}`;

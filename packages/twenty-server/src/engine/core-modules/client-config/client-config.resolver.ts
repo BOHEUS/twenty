@@ -10,11 +10,24 @@ import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/re
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
-import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
-@UseGuards(WorkspaceAuthGuard, UserAuthGuard)
+@UseGuards(
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: false,
+      oauthClient: false,
+      application: false,
+    },
+    requiredPermissionFlags: [],
+  }),
+)
 @UsePipes(ResolverValidationPipe)
 @UseFilters(
   PreventNestToAutoLogGraphqlErrorsFilter,
@@ -27,7 +40,6 @@ export class ClientConfigResolver {
   ) {}
 
   @Query(() => Boolean)
-  @UseGuards(NoPermissionGuard)
   async isMaintenanceModeBannerDismissed(
     @AuthUser() user: AuthContextUser,
     @AuthWorkspace() workspace: WorkspaceEntity,
@@ -39,7 +51,6 @@ export class ClientConfigResolver {
   }
 
   @Mutation(() => Boolean)
-  @UseGuards(NoPermissionGuard)
   async dismissMaintenanceModeBanner(
     @AuthUser() user: AuthContextUser,
     @AuthWorkspace() workspace: WorkspaceEntity,

@@ -1,5 +1,5 @@
-import { type ComponentProps, useState } from 'react';
 import { type Meta, type StoryObj } from '@storybook/react-vite';
+import { type ComponentProps, useState } from 'react';
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test';
 import { Button } from 'twenty-ui/primitives/input';
 import { Dialog } from 'twenty-ui/primitives/surfaces';
@@ -26,8 +26,8 @@ const DialogInstanceExample = (props: DialogInstanceExampleProps) => {
     <>
       <Button onClick={() => openDialog(DIALOG_ID)}>Open dialog</Button>
       <DialogInstance {...props} dialogId={DIALOG_ID}>
-        {({ container, backdrop, viewportProps, onKeyDown }) => (
-          <Dialog.Popup {...{ container, backdrop, viewportProps, onKeyDown }}>
+        {({ onKeyDown }) => (
+          <Dialog.Popup onKeyDown={onKeyDown}>
             <Dialog.Header>
               <Dialog.Title>Workspace preferences</Dialog.Title>
               <Dialog.Description>Choose a preference.</Dialog.Description>
@@ -42,7 +42,6 @@ const DialogInstanceExample = (props: DialogInstanceExampleProps) => {
                   { value: 'first', label: 'First option' },
                   { value: 'second', label: 'Second option' },
                 ]}
-                isDropdownInModal
               />
             </Dialog.Body>
             <Dialog.Footer>

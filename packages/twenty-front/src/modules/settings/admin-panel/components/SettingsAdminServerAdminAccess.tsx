@@ -1,29 +1,25 @@
+import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
+import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { useApolloAdminClient } from '@/settings/admin-panel/apollo/hooks/useApolloAdminClient';
-import { TwoFactorAuthenticationVerificationCodeDash } from '@/settings/two-factor-authentication/components/TwoFactorAuthenticationVerificationCodeDash';
-import { TwoFactorAuthenticationVerificationCodeSlot } from '@/settings/two-factor-authentication/components/TwoFactorAuthenticationVerificationCodeSlot';
-import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
-import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
-import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
-import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
+import { TwoFactorAuthenticationOtpInput } from '@/settings/two-factor-authentication/components/TwoFactorAuthenticationOtpInput';
 import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDialog';
 import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { OTPInput } from 'input-otp';
 import { useState } from 'react';
+import { useToast } from 'twenty-ui/components/feedback';
+import { LightIconButton } from 'twenty-ui/components/input';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { IconDotsVertical } from 'twenty-ui/icon';
 import { Status } from 'twenty-ui/primitives/data-display';
-import { useToast } from 'twenty-ui/primitives/feedback';
-import { LightIconButton } from 'twenty-ui/components';
-import { MenuItem } from 'twenty-ui/primitives/navigation';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   GetServerAdminsDocument,
   UpdateServerAdminAccessDocument,
 } from '~/generated-admin/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type ServerAdminAccessUpdate = {
   canAccessFullAdminPanel?: boolean;
@@ -64,11 +60,6 @@ const StyledConfirmationContent = styled.div`
   gap: ${themeCssVariables.spacing[4]};
 `;
 
-const StyledOTPContainer = styled.div`
-  display: flex;
-  gap: ${themeCssVariables.spacing[1]};
-`;
-
 export const SettingsAdminServerAdminAccess = ({
   userId,
   userLabel,
@@ -76,10 +67,10 @@ export const SettingsAdminServerAdminAccess = ({
   userId: string;
   userLabel: string;
 }) => {
+  const { t } = useLingui();
   const dropdownId = `server-admin-access-${userId}`;
   const apolloAdminClient = useApolloAdminClient();
   const { openDialog } = useDialog();
-  const { closeDropdown } = useCloseDropdown();
   const { enqueueToast } = useToast();
 
   const [pendingChange, setPendingChange] =
@@ -108,7 +99,6 @@ export const SettingsAdminServerAdminAccess = ({
   const hasFullAccess = canAccessFullAdminPanel && canImpersonate;
 
   const requestChange = (change: PendingServerAdminChange) => {
-    closeDropdown(dropdownId);
     setOtp('');
     setPendingChange(change);
     openDialog(SERVER_ADMIN_ACCESS_CONFIRMATION_MODAL_ID);
@@ -129,7 +119,7 @@ export const SettingsAdminServerAdminAccess = ({
       });
       await refetch();
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Server administrator access updated.`,
       });
     } catch (error) {
@@ -137,7 +127,7 @@ export const SettingsAdminServerAdminAccess = ({
         CombinedGraphQLErrors.is(error)
           ? getToastOptionsFromError({ error })
           : {
-              variant: 'error',
+              status: 'error',
               children: t`Failed to update server administrator access.`,
             },
       );
@@ -162,67 +152,62 @@ export const SettingsAdminServerAdminAccess = ({
         ) : (
           <StyledNoAccess>{t`No access`}</StyledNoAccess>
         )}
-        <Dropdown
-          dropdownId={dropdownId}
-          dropdownPlacement="right-start"
-          clickableComponent={
-            <LightIconButton emphasis="subtle" aria-label={t`More options`}>
-              <IconDotsVertical />
-            </LightIconButton>
-          }
-          dropdownComponents={
-            <DropdownContent>
-              <DropdownMenuItemsContainer>
-                <MenuItem
-                  text={
-                    canAccessFullAdminPanel
-                      ? t`Revoke admin panel access`
-                      : t`Grant admin panel access`
-                  }
-                  disabled={isLastFullAdmin}
+        <DropdownRoot type="menu" dropdownId={dropdownId}>
+          <Dropdown.Trigger
+            render={
+              <LightIconButton emphasis="subtle" aria-label={t`More options`}>
+                <IconDotsVertical />
+              </LightIconButton>
+            }
+          />
+          <DropdownContent side="right" align="start">
+            <Dropdown.Section>
+              <Dropdown.ActionItem
+                disabled={isLastFullAdmin}
+                onClick={() =>
+                  requestChange({
+                    description: t`full admin panel access`,
+                    isRevoking: canAccessFullAdminPanel,
+                    update: {
+                      canAccessFullAdminPanel: !canAccessFullAdminPanel,
+                    },
+                  })
+                }
+              >
+                {canAccessFullAdminPanel
+                  ? t`Revoke admin panel access`
+                  : t`Grant admin panel access`}
+              </Dropdown.ActionItem>
+              <Dropdown.ActionItem
+                onClick={() =>
+                  requestChange({
+                    description: t`impersonation`,
+                    isRevoking: canImpersonate,
+                    update: { canImpersonate: !canImpersonate },
+                  })
+                }
+              >
+                {canImpersonate
+                  ? t`Disable impersonation`
+                  : t`Enable impersonation`}
+              </Dropdown.ActionItem>
+              {!hasFullAccess && (
+                <Dropdown.ActionItem
                   onClick={() =>
                     requestChange({
-                      description: t`full admin panel access`,
-                      isRevoking: canAccessFullAdminPanel,
+                      description: t`full server access`,
+                      isRevoking: false,
                       update: {
-                        canAccessFullAdminPanel: !canAccessFullAdminPanel,
+                        canAccessFullAdminPanel: true,
+                        canImpersonate: true,
                       },
                     })
                   }
-                />
-                <MenuItem
-                  text={
-                    canImpersonate
-                      ? t`Disable impersonation`
-                      : t`Enable impersonation`
-                  }
-                  onClick={() =>
-                    requestChange({
-                      description: t`impersonation`,
-                      isRevoking: canImpersonate,
-                      update: { canImpersonate: !canImpersonate },
-                    })
-                  }
-                />
-                {!hasFullAccess && (
-                  <MenuItem
-                    text={t`Grant full access`}
-                    onClick={() =>
-                      requestChange({
-                        description: t`full server access`,
-                        isRevoking: false,
-                        update: {
-                          canAccessFullAdminPanel: true,
-                          canImpersonate: true,
-                        },
-                      })
-                    }
-                  />
-                )}
-              </DropdownMenuItemsContainer>
-            </DropdownContent>
-          }
-        />
+                >{t`Grant full access`}</Dropdown.ActionItem>
+              )}
+            </Dropdown.Section>
+          </DropdownContent>
+        </DropdownRoot>
       </StyledValue>
       <ConfirmationDialog
         dialogId={SERVER_ADMIN_ACCESS_CONFIRMATION_MODAL_ID}
@@ -242,35 +227,7 @@ export const SettingsAdminServerAdminAccess = ({
                 : t`This will grant ${pendingChange?.description ?? ''} to ${userLabel}.`}
             </div>
             <div>{t`Enter your two-factor authentication code to confirm.`}</div>
-            <OTPInput
-              maxLength={6}
-              value={otp}
-              onChange={setOtp}
-              autoFocus
-              render={({ slots }) => (
-                <StyledOTPContainer>
-                  {slots.slice(0, 3).map((slot, index) => (
-                    <TwoFactorAuthenticationVerificationCodeSlot
-                      key={index}
-                      char={slot.char}
-                      placeholderChar={slot.placeholderChar}
-                      isActive={slot.isActive}
-                      hasFakeCaret={slot.hasFakeCaret}
-                    />
-                  ))}
-                  <TwoFactorAuthenticationVerificationCodeDash />
-                  {slots.slice(3).map((slot, index) => (
-                    <TwoFactorAuthenticationVerificationCodeSlot
-                      key={index + 3}
-                      char={slot.char}
-                      placeholderChar={slot.placeholderChar}
-                      isActive={slot.isActive}
-                      hasFakeCaret={slot.hasFakeCaret}
-                    />
-                  ))}
-                </StyledOTPContainer>
-              )}
-            />
+            <TwoFactorAuthenticationOtpInput value={otp} onChange={setOtp} />
           </StyledConfirmationContent>
         }
       />

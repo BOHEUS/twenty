@@ -1,10 +1,20 @@
-import { type NumericConfigVariableKey } from 'src/engine/core-modules/twenty-config/types/numeric-config-variable-key.type';
+import { type OptionalNumericConfigVariableKey } from 'src/engine/core-modules/twenty-config/types/optional-numeric-config-variable-key.type';
 import { type SpenderType } from 'src/engine/core-modules/usage-limit/types/spender-type.type';
-import { type StockMeter } from 'src/engine/core-modules/usage-limit/types/stock-meter.type';
+import { type UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
+import { type UsageResourceType } from 'src/engine/core-modules/usage/enums/usage-resource-type.enum';
+import { type UsageUnit } from 'src/engine/core-modules/usage/enums/usage-unit.enum';
 
-export type StockLimitDefaultDefinition = {
+export type StockLimitDefaultDefinition<
+  TResourceType extends UsageResourceType = UsageResourceType,
+> = {
+  resourceType: TResourceType;
+  operationType: UsageOperationType;
+  limitKind: 'stock';
   spenderType: SpenderType;
-  meter: StockMeter;
+  spenderId: '';
+  unit: UsageUnit;
+  periodUnit: 'lifetime';
+  periodCount: 1;
+  limitValueConfigVariable: OptionalNumericConfigVariableKey;
   isOverridable: boolean;
-  limitValueConfigVariable: NumericConfigVariableKey;
 };

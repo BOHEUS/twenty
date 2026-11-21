@@ -43,7 +43,7 @@ type Assertions = [
       | 'isAuditLogged'
       | 'isLabelSyncedWithName'
       | 'isUIEditable'
-      | 'writability'
+      | 'disabledFieldPermissionActions'
       | 'isNullable'
       | 'universalSettings'
     >
@@ -66,7 +66,9 @@ type Assertions = [
       | 'calendarEndFieldMetadataUniversalIdentifier'
       | 'mainGroupByFieldMetadataUniversalIdentifier'
       | 'shouldHideEmptyGroups'
+      | 'shouldDisplayGroupsAsTabs'
       | 'kanbanColumnWidth'
+      | 'groupLoadLimit'
       | 'anyFieldFilterValue'
       | 'visibility'
       | 'createdByUserWorkspaceId'

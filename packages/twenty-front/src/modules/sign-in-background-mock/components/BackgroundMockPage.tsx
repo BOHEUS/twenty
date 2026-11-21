@@ -1,6 +1,6 @@
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { TintedIconTile } from 'twenty-ui/primitives/data-display';
+import { TintedIconTile } from 'twenty-ui/components/data-display';
+import { LightIconButton } from 'twenty-ui/components/input';
 import {
   IconBuildingSkyscraper,
   IconDotsVertical,
@@ -8,12 +8,13 @@ import {
   IconPlus,
 } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
-import { LightIconButton } from 'twenty-ui/components';
+import { useTheme } from 'twenty-ui/theme';
 
 import { BackgroundMockTable } from '@/sign-in-background-mock/components/BackgroundMockTable';
 import { BackgroundMockViewBar } from '@/sign-in-background-mock/components/BackgroundMockViewBar';
 import { PageCardHeader } from '@/ui/layout/page/components/PageCardHeader';
 import { PageCardLayout } from '@/ui/layout/page/components/PageCardLayout';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledTableContainer = styled.div`
   display: flex;
@@ -25,11 +26,19 @@ const StyledTableContainer = styled.div`
 `;
 
 export const BackgroundMockPage = () => {
+  const { t } = useLingui();
+  const theme = useTheme();
+
   return (
     <PageCardLayout
       header={
         <PageCardHeader
-          icon={<TintedIconTile Icon={IconBuildingSkyscraper} color="blue" />}
+          icon={
+            <TintedIconTile
+              icon={<IconBuildingSkyscraper size={theme.icon.size.md} />}
+              color="blue"
+            />
+          }
           title={t`Companies`}
           actionButton={
             <>

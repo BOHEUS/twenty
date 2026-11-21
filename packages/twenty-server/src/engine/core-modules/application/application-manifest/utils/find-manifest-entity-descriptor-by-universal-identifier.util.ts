@@ -1,6 +1,10 @@
 import {
   getRoleTargetUniversalIdentifier,
+  getRecordsPermissionsFromRoleManifest,
+  getRowLevelPermissionPredicatesFromRoleManifest,
   type Manifest,
+  type RoleManifest,
+  normalizeLegacyCompliantRoleManifest,
 } from 'twenty-shared/application';
 import { type AllMetadataName } from 'twenty-shared/metadata';
 import { isDefined } from 'twenty-shared/utils';
@@ -21,6 +25,14 @@ type ManifestEntityRegistryEntry = {
 };
 
 const NO_MANIFEST_CANDIDATES: ManifestEntityCandidate[] = [];
+
+const getNormalizedRoles = (manifest: Manifest): RoleManifest[] =>
+  (manifest.roles ?? []).map((role) =>
+    normalizeLegacyCompliantRoleManifest({
+      role,
+      applicationUniversalIdentifier: manifest.application.universalIdentifier,
+    }),
+  );
 
 const toCandidates = <T extends { universalIdentifier?: string }>(
   entities: T[] | undefined,
@@ -84,12 +96,28 @@ export const MANIFEST_ENTITY_REGISTRY: Record<
         (connectionProvider) => connectionProvider.displayName,
       ),
   },
+  messagingProvider: {
+    entityKind: 'messaging provider',
+    getCandidates: (manifest) =>
+      toCandidates(
+        manifest.messagingProviders,
+        (messagingProvider) => messagingProvider.displayName,
+      ),
+  },
   timelineActivityType: {
     entityKind: 'timeline activity type',
     getCandidates: (manifest) =>
       toCandidates(
         manifest.timelineActivityTypes,
         (timelineActivityType) => timelineActivityType.label,
+      ),
+  },
+  settingsMenuItem: {
+    entityKind: 'settings menu item',
+    getCandidates: (manifest) =>
+      toCandidates(
+        manifest.settingsMenuItems,
+        (settingsMenuItem) => settingsMenuItem.title,
       ),
   },
   view: {
@@ -212,29 +240,42 @@ export const MANIFEST_ENTITY_REGISTRY: Record<
   objectPermission: {
     entityKind: 'object permission',
     getCandidates: (manifest) =>
-      (manifest.roles ?? []).flatMap((role) =>
-        toCandidates(role.objectPermissions, () => undefined),
+      getNormalizedRoles(manifest).flatMap((role) =>
+        toCandidates(
+          getRecordsPermissionsFromRoleManifest({ role }).objectPermissions,
+          () => undefined,
+        ),
       ),
   },
   fieldPermission: {
     entityKind: 'field permission',
     getCandidates: (manifest) =>
-      (manifest.roles ?? []).flatMap((role) =>
-        toCandidates(role.fieldPermissions, () => undefined),
+      getNormalizedRoles(manifest).flatMap((role) =>
+        toCandidates(
+          getRecordsPermissionsFromRoleManifest({ role }).fieldPermissions,
+          () => undefined,
+        ),
       ),
   },
   rowLevelPermissionPredicate: {
     entityKind: 'row-level permission predicate',
     getCandidates: (manifest) =>
-      (manifest.roles ?? []).flatMap((role) =>
-        toCandidates(role.rowLevelPermissionPredicates, () => undefined),
+      getNormalizedRoles(manifest).flatMap((role) =>
+        toCandidates(
+          getRowLevelPermissionPredicatesFromRoleManifest({ role }).predicates,
+          () => undefined,
+        ),
       ),
   },
   rowLevelPermissionPredicateGroup: {
     entityKind: 'row-level permission predicate group',
     getCandidates: (manifest) =>
-      (manifest.roles ?? []).flatMap((role) =>
-        toCandidates(role.rowLevelPermissionPredicateGroups, () => undefined),
+      getNormalizedRoles(manifest).flatMap((role) =>
+        toCandidates(
+          getRowLevelPermissionPredicatesFromRoleManifest({ role })
+            .predicateGroups,
+          () => undefined,
+        ),
       ),
   },
   roleTarget: {
@@ -259,12 +300,58 @@ export const MANIFEST_ENTITY_REGISTRY: Record<
     entityKind: 'webhook',
     getCandidates: () => NO_MANIFEST_CANDIDATES,
   },
+  mcpServer: {
+    entityKind: 'MCP server',
+    getCandidates: (manifest) =>
+      toCandidates(manifest.mcpServers, (mcpServer) => mcpServer.label),
+  },
   applicationVariable: {
     entityKind: 'application variable',
     getCandidates: () => NO_MANIFEST_CANDIDATES,
   },
   searchFieldMetadata: {
     entityKind: 'search field',
+    getCandidates: () => NO_MANIFEST_CANDIDATES,
+  },
+  workflow: {
+    entityKind: 'workflow',
+    getCandidates: () => NO_MANIFEST_CANDIDATES,
+  },
+  workflowVersion: {
+    entityKind: 'workflow version',
+    getCandidates: () => NO_MANIFEST_CANDIDATES,
+  },
+  rowLevelPermissionRule: {
+    entityKind: 'row-level permission rule',
+    getCandidates: (manifest) =>
+      getNormalizedRoles(manifest).flatMap((role) =>
+        toCandidates(
+          getRecordsPermissionsFromRoleManifest({ role })
+            .rowLevelPermissionRules,
+          () => undefined,
+        ),
+      ),
+  },
+  fieldMetadataOption: {
+    entityKind: 'field option',
+    getCandidates: () => NO_MANIFEST_CANDIDATES,
+  },
+  relatedRecordPath: {
+    entityKind: 'related record path',
+    getCandidates: (manifest) =>
+      toCandidates(manifest.relatedRecordPaths, () => undefined),
+  },
+  validationRule: {
+    entityKind: 'validation rule',
+    getCandidates: (manifest) =>
+      toCandidates(manifest.validationRules, (rule) => rule.name),
+  },
+  agentChatChannel: {
+    entityKind: 'chat channel',
+    getCandidates: () => NO_MANIFEST_CANDIDATES,
+  },
+  agentChatChannelRole: {
+    entityKind: 'chat channel role',
     getCandidates: () => NO_MANIFEST_CANDIDATES,
   },
 };

@@ -16,13 +16,24 @@ import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.ent
 import { AuthApplication } from 'src/engine/decorators/auth/auth-application.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
-import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
 @UseGuards(
-  WorkspaceAuthGuard,
-  SettingsPermissionGuard(PermissionFlagType.APPLICATIONS),
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: true,
+      oauthClient: true,
+      application: true,
+    },
+    requiredPermissionFlags: [PermissionFlagType.APPLICATIONS],
+  }),
 )
 @MetadataResolver(() => ApplicationVariableEntityDTO)
 @UseFilters(

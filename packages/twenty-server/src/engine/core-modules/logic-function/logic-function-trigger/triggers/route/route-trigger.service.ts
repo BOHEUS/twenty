@@ -10,8 +10,9 @@ import { HTTPMethod } from 'twenty-shared/types';
 import { WorkspaceActivationStatus } from 'twenty-shared/workspace';
 
 import { AuthException } from 'src/engine/core-modules/auth/auth.exception';
+import { isUsageRefusedError } from 'src/engine/core-modules/billing/utils/is-usage-refused-error.util';
 import { AccessTokenService } from 'src/engine/core-modules/auth/token/services/access-token.service';
-import { type AuthContext } from 'src/engine/core-modules/auth/types/auth-context.type';
+import { type RawAuthContext } from 'src/engine/core-modules/auth/types/raw-auth-context.type';
 import { WorkspaceDomainsService } from 'src/engine/core-modules/domain/workspace-domains/services/workspace-domains.service';
 import { type WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
@@ -43,8 +44,8 @@ type RouteTriggerWorkspace = Pick<
 type RouteTriggerRequestContext = {
   workspace: RouteTriggerWorkspace;
   applicationId: string | null;
-  isIsolatedOrigin: boolean;
-  authenticationContext: AuthContext | undefined;
+  isPublicDomain: boolean;
+  authenticationContext: RawAuthContext | undefined;
 };
 
 @Injectable()
@@ -66,7 +67,7 @@ export class RouteTriggerService {
   }: {
     request: Request;
     workspaceFromHost: RouteTriggerWorkspace | undefined;
-  }): Promise<AuthContext | undefined> {
+  }): Promise<RawAuthContext | undefined> {
     if (
       isDefined(workspaceFromHost) ||
       !isNonEmptyString(request.headers.authorization)
@@ -93,7 +94,7 @@ export class RouteTriggerService {
     const {
       workspace: workspaceFromHost,
       publicDomain,
-      isIsolatedOrigin,
+      isPublicDomain,
     } = await this.workspaceDomainsService.resolveWorkspaceAndPublicDomain(
       host,
     );
@@ -124,7 +125,7 @@ export class RouteTriggerService {
     return {
       workspace,
       applicationId: publicDomain?.applicationId ?? null,
-      isIsolatedOrigin,
+      isPublicDomain,
       authenticationContext,
     };
   }
@@ -173,13 +174,13 @@ export class RouteTriggerService {
   private assertLegacyRouteIsServableOrThrow({
     logicFunction,
     workspace,
-    isIsolatedOrigin,
+    isPublicDomain,
   }: {
     logicFunction: LogicFunctionEntity;
     workspace: RouteTriggerWorkspace;
-    isIsolatedOrigin: boolean;
+    isPublicDomain: boolean;
   }) {
-    if (isIsolatedOrigin) {
+    if (isPublicDomain) {
       return;
     }
 
@@ -240,6 +241,8 @@ export class RouteTriggerService {
           return RouteTriggerExceptionCode.LOGIC_FUNCTION_NOT_FOUND;
         case LogicFunctionExceptionCode.LOGIC_FUNCTION_DISABLED:
           return RouteTriggerExceptionCode.FORBIDDEN_EXCEPTION;
+        case LogicFunctionExceptionCode.LOGIC_FUNCTION_WORKSPACE_SUSPENDED:
+          return RouteTriggerExceptionCode.WORKSPACE_SUSPENDED;
         case LogicFunctionExceptionCode.LOGIC_FUNCTION_DEPENDENCIES_SIZE_EXCEEDED:
           return RouteTriggerExceptionCode.LOGIC_FUNCTION_DEPENDENCIES_SIZE_EXCEEDED;
       }
@@ -254,13 +257,9 @@ export class RouteTriggerService {
   }: {
     request: Request;
     httpMethod: HTTPMethod;
-  }): Promise<{ response: RouteTriggerResponse; isIsolatedOrigin: boolean }> {
-    const {
-      workspace,
-      applicationId,
-      isIsolatedOrigin,
-      authenticationContext,
-    } = await this.resolveRouteTriggerRequestContextOrFail(request);
+  }): Promise<{ response: RouteTriggerResponse; isPublicDomain: boolean }> {
+    const { workspace, applicationId, isPublicDomain, authenticationContext } =
+      await this.resolveRouteTriggerRequestContextOrFail(request);
 
     const logicFunctionsWithHttpRouteTrigger =
       await this.logicFunctionRepository.find(workspace.id, {
@@ -280,7 +279,7 @@ export class RouteTriggerService {
     this.assertLegacyRouteIsServableOrThrow({
       logicFunction,
       workspace,
-      isIsolatedOrigin,
+      isPublicDomain,
     });
 
     const httpRouteSettings = logicFunction.httpRouteTriggerSettings;
@@ -307,6 +306,14 @@ export class RouteTriggerService {
         );
       }
 
+      // Routes authenticate the caller themselves, behind no AccessPolicyGuard
+      if (isDefined(routeAuthenticationContext.agentId)) {
+        throw new RouteTriggerException(
+          'This token is only accepted by MCP',
+          RouteTriggerExceptionCode.FORBIDDEN_EXCEPTION,
+        );
+      }
+
       userWorkspaceId = routeAuthenticationContext.userWorkspaceId ?? null;
       userId = routeAuthenticationContext.user?.id ?? null;
     }
@@ -320,12 +327,15 @@ export class RouteTriggerService {
         pathParameters: pathParams,
         forwardedRequestHeaders:
           httpRouteSettings?.forwardedRequestHeaders ?? [],
-        forwardAllHeaders: isIsolatedOrigin,
+        forwardAllHeaders: isPublicDomain,
         userId,
         userWorkspaceId,
       });
     } catch (error) {
-      if (error instanceof RouteTriggerException) {
+      if (
+        error instanceof RouteTriggerException ||
+        isUsageRefusedError(error)
+      ) {
         throw error;
       }
 
@@ -355,6 +365,6 @@ export class RouteTriggerService {
       );
     }
 
-    return { response: outcome.response, isIsolatedOrigin };
+    return { response: outcome.response, isPublicDomain };
   }
 }

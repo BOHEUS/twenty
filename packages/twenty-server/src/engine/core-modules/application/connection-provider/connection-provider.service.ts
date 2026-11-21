@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { isDefined } from 'twenty-shared/utils';
+import { type ConnectionProviderScope } from 'twenty-shared/application';
+import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 import { In, Repository } from 'typeorm';
 
 import { ApplicationRegistrationVariableEntity } from 'src/engine/core-modules/application/application-registration-variable/application-registration-variable.entity';
@@ -9,6 +10,7 @@ import { ApplicationEntity } from 'src/engine/core-modules/application/applicati
 import { ConnectionProviderExceptionCode } from 'src/engine/core-modules/application/connection-provider/connection-provider-exception-code.enum';
 import { ConnectionProviderEntity } from 'src/engine/core-modules/application/connection-provider/connection-provider.entity';
 import { ConnectionProviderException } from 'src/engine/core-modules/application/connection-provider/connection-provider.exception';
+import { type ApplicationConnectionProviderDTO } from 'src/engine/core-modules/application/connection-provider/dtos/application-connection-provider.dto';
 import { assertOAuthProvider } from 'src/engine/core-modules/application/connection-provider/utils/assert-oauth-provider.util';
 import { SecretEncryptionService } from 'src/engine/core-modules/secret-encryption/secret-encryption.service';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
@@ -19,8 +21,8 @@ export class ConnectionProviderService {
   constructor(
     @InjectWorkspaceScopedRepository(ConnectionProviderEntity)
     private readonly connectionProviderRepository: WorkspaceScopedRepository<ConnectionProviderEntity>,
-    @InjectRepository(ApplicationEntity)
-    private readonly applicationRepository: Repository<ApplicationEntity>,
+    @InjectWorkspaceScopedRepository(ApplicationEntity)
+    private readonly applicationRepository: WorkspaceScopedRepository<ApplicationEntity>,
     @InjectRepository(ApplicationRegistrationVariableEntity)
     private readonly registrationVariableRepository: Repository<ApplicationRegistrationVariableEntity>,
     private readonly secretEncryptionService: SecretEncryptionService,
@@ -31,9 +33,10 @@ export class ConnectionProviderService {
   ): Promise<{ clientId: string; clientSecret: string }> {
     assertOAuthProvider(provider);
 
-    const application = await this.applicationRepository.findOneBy({
-      id: provider.applicationId,
-    });
+    const application = await this.applicationRepository.findOneBy(
+      provider.workspaceId,
+      { id: provider.applicationId },
+    );
 
     if (!isDefined(application?.applicationRegistrationId)) {
       throw new ConnectionProviderException(
@@ -74,14 +77,21 @@ export class ConnectionProviderService {
   async areClientCredentialsConfigured(
     provider: ConnectionProviderEntity,
   ): Promise<boolean> {
-    const result = await this.areClientCredentialsConfiguredBatch([provider]);
+    const result = await this.areClientCredentialsConfiguredBatch({
+      providers: [provider],
+      workspaceId: provider.workspaceId,
+    });
 
     return result.get(provider.id) ?? false;
   }
 
-  async areClientCredentialsConfiguredBatch(
-    providers: ConnectionProviderEntity[],
-  ): Promise<Map<string, boolean>> {
+  async areClientCredentialsConfiguredBatch({
+    providers,
+    workspaceId,
+  }: {
+    providers: ConnectionProviderEntity[];
+    workspaceId: string;
+  }): Promise<Map<string, boolean>> {
     const result = new Map<string, boolean>();
 
     if (providers.length === 0) {
@@ -103,7 +113,7 @@ export class ConnectionProviderService {
     const applicationIds = [
       ...new Set(oauthProviders.map((p) => p.applicationId)),
     ];
-    const applications = await this.applicationRepository.find({
+    const applications = await this.applicationRepository.find(workspaceId, {
       where: { id: In(applicationIds) },
     });
     const registrationIdByApplicationId = new Map(
@@ -209,15 +219,51 @@ export class ConnectionProviderService {
     return provider;
   }
 
-  async findManyByApplication({
-    applicationId,
+  async findManyDtosByApplications({
+    applicationIds,
     workspaceId,
+    scope,
   }: {
-    applicationId: string;
+    applicationIds: string[];
     workspaceId: string;
-  }): Promise<ConnectionProviderEntity[]> {
-    return this.connectionProviderRepository.find(workspaceId, {
-      where: { applicationId },
-    });
+    scope?: ConnectionProviderScope;
+  }): Promise<ApplicationConnectionProviderDTO[]> {
+    if (!isNonEmptyArray(applicationIds)) {
+      return [];
+    }
+
+    const providers = await this.connectionProviderRepository.find(
+      workspaceId,
+      {
+        where: {
+          applicationId: In(applicationIds),
+          ...(isDefined(scope) ? { scope } : {}),
+        },
+      },
+    );
+
+    const credentialsConfiguredByProviderId =
+      await this.areClientCredentialsConfiguredBatch({
+        providers,
+        workspaceId,
+      });
+
+    return providers.map((provider) => ({
+      id: provider.id,
+      applicationId: provider.applicationId,
+      type: provider.type,
+      name: provider.name,
+      displayName: provider.displayName,
+      scope: provider.scope,
+      logo: provider.logo,
+      oauth:
+        provider.type === 'oauth' && isDefined(provider.oauthConfig)
+          ? {
+              scopes: provider.oauthConfig.scopes,
+              isClientCredentialsConfigured:
+                credentialsConfiguredByProviderId.get(provider.id) ?? false,
+            }
+          : null,
+    }));
   }
 }

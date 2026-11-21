@@ -1,14 +1,14 @@
-import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
 import { TabListHiddenMeasurements } from '@/ui/layout/tab-list/components/TabListHiddenMeasurements';
 import { TAB_LIST_HEIGHT } from '@/ui/layout/tab-list/constants/TabListHeight';
 import { useScrollActiveTabIntoView } from '@/ui/layout/tab-list/hooks/useScrollActiveTabIntoView';
+import { useTabListActiveTabId } from '@/ui/layout/tab-list/hooks/useTabListActiveTabId';
 import { useTabListMeasurements } from '@/ui/layout/tab-list/hooks/useTabListMeasurements';
 import { activeTabIdComponentState } from '@/ui/layout/tab-list/states/activeTabIdComponentState';
 import { TabListComponentInstanceContext } from '@/ui/layout/tab-list/states/contexts/TabListComponentInstanceContext';
 import { type TabListProps } from '@/ui/layout/tab-list/types/TabListProps';
 import { NodeDimension } from '@/ui/utilities/dimensions/components/NodeDimension';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
-import { useIsMobile } from '@/ui/utilities/responsive/hooks/useIsMobile';
+import { useIsMobile } from 'twenty-ui/utilities';
 import { useAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentState';
 import { styled } from '@linaria/react';
 import { useCallback, useMemo } from 'react';
@@ -16,7 +16,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { isDefined } from 'twenty-shared/utils';
 import { TabListRow } from '@/ui/layout/tab-list/components/TabListRow';
 import { TabListItem } from '@/ui/layout/tab-list/components/TabListItem';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { TabListDropdown } from './TabListDropdown';
 import { TabListSelectionSyncEffect } from '@/ui/layout/tab-list/components/TabListSelectionSyncEffect';
 
@@ -71,7 +71,9 @@ export const TabList = ({
   behaveAsLinks = true,
   className,
   componentInstanceId,
+  defaultActiveTabId,
   onChangeTab,
+  onClickTab,
   rightComponent,
   centerTabs = false,
 }: TabListProps) => {
@@ -86,17 +88,12 @@ export const TabList = ({
     componentInstanceId,
   );
 
-  const activeTabExists = visibleTabs.some((tab) => tab.id === activeTabId);
-  const routeTabId = location.hash.replace('#', '');
-  const shouldSelectRouteTab =
-    behaveAsLinks &&
-    workspaceSurface.ownsRouteLocation &&
-    visibleTabs.some((tab) => tab.id === routeTabId);
-  const nextActiveTabId = shouldSelectRouteTab
-    ? routeTabId
-    : activeTabExists
-      ? activeTabId
-      : (visibleTabs[0]?.id ?? null);
+  const nextActiveTabId = useTabListActiveTabId({
+    componentInstanceId,
+    visibleTabIds: visibleTabs.map((tab) => tab.id),
+    defaultTabId: defaultActiveTabId,
+    behaveAsLinks,
+  });
 
   const {
     visibleTabCount,
@@ -123,15 +120,18 @@ export const TabList = ({
   });
 
   const dropdownId = `tab-overflow-${componentInstanceId}`;
-  const { closeDropdown } = useCloseDropdown();
 
   const isActiveTabHidden = useMemo(() => {
-    if (!hasHiddenTabs) return false;
+    if (!hasHiddenTabs) {
+      return false;
+    }
     return hiddenTabs.some((tab) => tab.id === activeTabId);
   }, [hasHiddenTabs, hiddenTabs, activeTabId]);
 
   const handleTabSelect = useCallback(
     (tabId: string) => {
+      onClickTab?.(tabId);
+
       if (tabId === activeTabId) {
         return;
       }
@@ -139,7 +139,7 @@ export const TabList = ({
       setActiveTabId(tabId);
       onChangeTab?.(tabId);
     },
-    [activeTabId, setActiveTabId, onChangeTab],
+    [activeTabId, setActiveTabId, onChangeTab, onClickTab],
   );
 
   const handleTabSelectFromDropdown = useCallback(
@@ -222,9 +222,6 @@ export const TabList = ({
                 <StyledDropdownContainer>
                   <TabListDropdown
                     dropdownId={dropdownId}
-                    onClose={() => {
-                      closeDropdown(dropdownId);
-                    }}
                     overflow={{
                       hiddenTabsCount,
                       isActiveTabHidden,

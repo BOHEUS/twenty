@@ -30,13 +30,15 @@ export const MultiSelectDisplay = ({
     ? options?.filter((option) => values.includes(option.value))
     : [];
 
-  if (!isDefined(selectedOptions)) return null;
+  if (!isDefined(selectedOptions)) {
+    return null;
+  }
 
   return (
     <StyledContainer className={className}>
       {selectedOptions.map((selectedOption, index) => (
         <Tag
-          preventShrink
+          truncate={false}
           key={index}
           color={selectedOption.color ?? 'transparent'}
           startIcon={

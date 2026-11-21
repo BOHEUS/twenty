@@ -1,8 +1,9 @@
 import { FieldMetadataType } from 'twenty-shared/types';
 
 import { WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/query-builder/workspace-select-query-builder';
-import { compileNamedParameters } from 'src/engine/twenty-orm/sql/utils/compile-named-parameters.util';
+import { compileNamedParameters } from 'src/engine/workspace-query-executor/utils/compile-named-parameters.util';
 import { type WorkspaceTableShape } from 'src/engine/twenty-orm/table-shape/types/workspace-table-shape.type';
+import { NO_RECORD_READ_RESTRICTIONS } from 'src/engine/permissions/constants/no-record-read-restrictions.constant';
 
 const HOSTILE_VALUES = [
   "'; DROP TABLE company; --",
@@ -43,7 +44,7 @@ const buildQueryBuilder = (columnNames = ['id', 'name', 'deletedAt']) =>
   new WorkspaceSelectQueryBuilder('person', {
     tableShape: buildTableShape(columnNames),
     executor: { execute: async () => [] },
-    objectRecordsPermissions: {},
+    recordReadRestrictions: NO_RECORD_READ_RESTRICTIONS,
     tableShapeByObjectMetadataId: () => buildTableShape(columnNames),
     onBeforeExecute: () => undefined,
     formatResult: (records) => records as never,
@@ -108,12 +109,14 @@ describe('ORM v2 SQL injection invariants', () => {
       (hostileValue) => {
         const queryBuilder = buildQueryBuilder(['id', 'name', 'deletedAt']);
 
-        const [text, values] = queryBuilder
-          .where('"person"."id" = :id', { id: 'id-1' })
-          .update()
-          .set({ name: hostileValue })
-          .returning(['id'])
-          .getQueryAndParameters();
+        const [text, values] =
+          WorkspaceSelectQueryBuilder.toMutationQueryBuilder(
+            queryBuilder.where('"person"."id" = :id', { id: 'id-1' }),
+            'update',
+          )
+            .set({ name: hostileValue })
+            .returning(['id'])
+            .getQueryAndParameters();
 
         expect(text).not.toContain(hostileValue);
         expect(text).toContain('$1');
@@ -125,9 +128,10 @@ describe('ORM v2 SQL injection invariants', () => {
       const queryBuilder = buildQueryBuilder(['id', 'name', 'deletedAt']);
 
       expect(() =>
-        queryBuilder
-          .where('"person"."id" = :id', { id: 'id-1' })
-          .update()
+        WorkspaceSelectQueryBuilder.toMutationQueryBuilder(
+          queryBuilder.where('"person"."id" = :id', { id: 'id-1' }),
+          'update',
+        )
           .set({ "name\" = ''); DROP TABLE person; --": 'x' })
           .returning(['id'])
           .getQuery(),

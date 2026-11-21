@@ -9,6 +9,7 @@
   --tw-button-padding-inline: 0;
 
   inline-size: var(--tw-button-size, var(--t-spacing-8));
+  max-inline-size: none;
 
   &[data-size='sm'] {
     inline-size: var(--tw-button-size, var(--t-spacing-6));
@@ -20,6 +21,12 @@
 // Mirrors useIsTouchDevice.
 @mixin hover-capable {
   @media (hover: hover) {
+    @content;
+  }
+}
+
+@mixin hover-capable-without-touch {
+  @media (hover: hover) and (not (any-pointer: coarse)) {
     @content;
   }
 }
