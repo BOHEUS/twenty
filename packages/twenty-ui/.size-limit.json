@@ -13,7 +13,12 @@
   {
     "name": "components",
     "path": "dist/components.mjs",
-    "limit": "95 kB"
+    "limit": "256 kB"
+  },
+  {
+    "name": "components/code-editor",
+    "path": "dist/components/code-editor.mjs",
+    "limit": "15 kB"
   },
   {
     "name": "primitives",
@@ -41,9 +46,16 @@
     "limit": "230 kB"
   },
   {
-    "name": "primitives/json-visualizer",
-    "path": "dist/primitives/json-visualizer.mjs",
-    "limit": "30 kB"
+    "name": "components (DatePicker)",
+    "path": "dist/components.mjs",
+    "limit": "150 kB",
+    "import": "{ DatePicker }"
+  },
+  {
+    "name": "components (JsonTree)",
+    "path": "dist/components.mjs",
+    "limit": "30 kB",
+    "import": "{ JsonTree }"
   },
   {
     "name": "primitives/layout",
@@ -73,17 +85,17 @@
   {
     "name": "icon",
     "path": "dist/icon.mjs",
+    "limit": "70 kB"
+  },
+  {
+    "name": "icon/provider",
+    "path": "dist/icon/provider.mjs",
     "limit": "290 kB"
   },
   {
     "name": "theme",
     "path": "dist/theme.mjs",
-    "limit": "25 kB"
-  },
-  {
-    "name": "theme-constants",
-    "path": "dist/theme-constants.mjs",
-    "limit": "12 kB"
+    "limit": "37 kB"
   },
   {
     "name": "utilities",

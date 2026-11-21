@@ -9,6 +9,7 @@ import {
   FieldMetadataType,
   PageLayoutTabLayoutMode,
   PageLayoutType,
+  WidgetType,
 } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 
@@ -153,6 +154,7 @@ const allPetsView: FlatView = {
   viewFilterIds: [],
   viewGroupIds: [],
   viewFilterGroupIds: [],
+  navigationMenuItemIds: [],
   viewSortIds: [],
 };
 
@@ -172,6 +174,7 @@ const frontComponent: FlatFrontComponent = {
   id: `${FRONT_COMPONENT_UID}-id`,
   workspaceId: WORKSPACE_ID,
   applicationId: APP_ID,
+  widgetAvailability: [],
 };
 
 const buildFlatPageLayout = ({
@@ -192,6 +195,7 @@ const buildFlatPageLayout = ({
     ? `${pageLayoutManifest.objectUniversalIdentifier}-id`
     : null,
   defaultTabToFocusOnMobileAndSidePanelId: null,
+  navigationMenuItemIds: [],
   tabIds: [],
   ...flatPageLayoutProperties,
 });
@@ -260,7 +264,7 @@ const companyPage = buildFlatPageLayout({
   pageLayoutManifest: {
     universalIdentifier: COMPANY_PAGE_UID,
     name: 'Default Company Layout',
-    type: 'RECORD_PAGE',
+    type: PageLayoutType.RECORD_PAGE,
   },
   applicationUniversalIdentifier:
     TWENTY_STANDARD_APPLICATION_UNIVERSAL_IDENTIFIER,
@@ -325,14 +329,14 @@ const reconstruct = ({
 const PET_PAGE_MANIFEST: PageLayoutManifest = {
   universalIdentifier: PET_PAGE_UID,
   name: 'Pet page',
-  type: 'RECORD_PAGE',
+  type: PageLayoutType.RECORD_PAGE,
   objectUniversalIdentifier: PET_UID,
 };
 
 const ENGINE_PAGE_MANIFEST: PageLayoutManifest = {
   universalIdentifier: ENGINE_PAGE_UID,
   name: 'Default Pet Layout',
-  type: 'RECORD_PAGE',
+  type: PageLayoutType.RECORD_PAGE,
   objectUniversalIdentifier: PET_UID,
 };
 
@@ -356,7 +360,7 @@ const buildNotesWidgetManifest = (
 ): PageLayoutWidgetManifest => ({
   universalIdentifier,
   title: 'Notes',
-  type: 'NOTES',
+  type: WidgetType.NOTES,
   objectUniversalIdentifier: PET_UID,
   position: { layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST, index: 0 },
   configuration: { configurationType: 'NOTES' },
@@ -365,7 +369,7 @@ const buildNotesWidgetManifest = (
 const FIELDS_WIDGET_MANIFEST: PageLayoutWidgetManifest = {
   universalIdentifier: 'fields-widget',
   title: 'Fields',
-  type: 'FIELDS',
+  type: WidgetType.FIELDS,
   objectUniversalIdentifier: PET_UID,
   position: { layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST, index: 1 },
   configuration: {
@@ -374,6 +378,11 @@ const FIELDS_WIDGET_MANIFEST: PageLayoutWidgetManifest = {
     newFieldDefaultVisibility: true,
   },
 };
+
+const withoutPosition = ({
+  position: _position,
+  ...pageLayoutWidgetManifest
+}: PageLayoutWidgetManifest) => pageLayoutWidgetManifest;
 
 const statusOf = (
   coverage: ReturnType<typeof reconstructPageLayoutsManifest>['coverage'],
@@ -387,7 +396,48 @@ const reasonOf = (
 ) => statusOf(coverage, universalIdentifier)?.reason;
 
 describe('reconstructPageLayoutsManifest', () => {
-  it('should nest tabs and widgets under an exported page layout and order every collection by universal identifier', () => {
+  it('exports a widget referencing an exported app-owned front component', () => {
+    const applicationAllFlatEntityMaps = buildMaps({
+      frontComponents: [frontComponent],
+      pageLayoutWidgets: [
+        buildFlatPageLayoutWidget({
+          pageLayoutWidgetManifest: {
+            ...buildNotesWidgetManifest('component-widget'),
+            type: WidgetType.FRONT_COMPONENT,
+            configuration: {
+              configurationType: 'FRONT_COMPONENT',
+              frontComponentUniversalIdentifier: FRONT_COMPONENT_UID,
+            },
+          },
+          pageLayoutTabUniversalIdentifier: COMPANY_HOME_TAB_UID,
+        }),
+      ],
+    });
+    const result = reconstructPageLayoutsManifest({
+      applicationAllFlatEntityMaps,
+      allFlatEntityMaps,
+      exportedObjectUniversalIdentifiers: EXPORTED_OBJECT_UNIVERSAL_IDENTIFIERS,
+      exportedFrontComponentUniversalIdentifiers: new Set([
+        FRONT_COMPONENT_UID,
+      ]),
+    });
+    expect(result.pageLayoutWidgets).toEqual([
+      expect.objectContaining({
+        universalIdentifier: 'component-widget',
+        configuration: expect.objectContaining({
+          frontComponentUniversalIdentifier: FRONT_COMPONENT_UID,
+        }),
+      }),
+    ]);
+    expect(result.coverage).toContainEqual(
+      expect.objectContaining({
+        metadataName: 'pageLayoutWidget',
+        universalIdentifier: 'component-widget',
+        status: 'EXPORTED',
+      }),
+    );
+  });
+  it('should nest tabs and widgets under an exported page layout, order tabs by universal identifier and let the order of vertical-list widgets carry their position', () => {
     const { pageLayouts, pageLayoutTabs, pageLayoutWidgets, coverage } =
       reconstruct({
         applicationAllFlatEntityMaps: buildMaps({
@@ -427,8 +477,8 @@ describe('reconstructPageLayoutsManifest', () => {
           {
             ...OVERVIEW_TAB_MANIFEST,
             widgets: [
-              FIELDS_WIDGET_MANIFEST,
-              buildNotesWidgetManifest('notes-widget'),
+              withoutPosition(buildNotesWidgetManifest('notes-widget')),
+              withoutPosition(FIELDS_WIDGET_MANIFEST),
             ],
           },
         ],
@@ -442,6 +492,43 @@ describe('reconstructPageLayoutsManifest', () => {
         ({ status }) => status === ApplicationExportCoverageStatus.EXPORTED,
       ),
     ).toBe(true);
+  });
+
+  it('should keep explicit positions when the vertical-list indices of a tab have a gap', () => {
+    const lastWidgetManifest: PageLayoutWidgetManifest = {
+      ...buildNotesWidgetManifest('a-last-widget'),
+      position: { layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST, index: 2 },
+    };
+
+    const { pageLayouts } = reconstruct({
+      applicationAllFlatEntityMaps: buildMaps({
+        objects: [petObject],
+        pageLayouts: [
+          buildFlatPageLayout({ pageLayoutManifest: PET_PAGE_MANIFEST }),
+        ],
+        pageLayoutTabs: [
+          buildFlatPageLayoutTab({
+            pageLayoutTabManifest: OVERVIEW_TAB_MANIFEST,
+            pageLayoutUniversalIdentifier: PET_PAGE_UID,
+          }),
+        ],
+        pageLayoutWidgets: [
+          buildFlatPageLayoutWidget({
+            pageLayoutWidgetManifest: buildNotesWidgetManifest('notes-widget'),
+            pageLayoutTabUniversalIdentifier: OVERVIEW_TAB_UID,
+          }),
+          buildFlatPageLayoutWidget({
+            pageLayoutWidgetManifest: lastWidgetManifest,
+            pageLayoutTabUniversalIdentifier: OVERVIEW_TAB_UID,
+          }),
+        ],
+      }),
+    });
+
+    expect(pageLayouts[0].tabs?.[0].widgets).toEqual([
+      lastWidgetManifest,
+      buildNotesWidgetManifest('notes-widget'),
+    ]);
   });
 
   it('should hide an engine-derived page layout, export a tab added to it standalone with its widgets, and export a widget added to an engine-derived tab standalone', () => {
@@ -498,7 +585,7 @@ describe('reconstructPageLayoutsManifest', () => {
         title: 'Extra',
         position: 60,
         layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
-        widgets: [buildNotesWidgetManifest('extra-widget')],
+        widgets: [withoutPosition(buildNotesWidgetManifest('extra-widget'))],
       },
     ]);
     expect(statusOf(coverage, ENGINE_PAGE_UID)?.status).toBe(
@@ -573,7 +660,7 @@ describe('reconstructPageLayoutsManifest', () => {
       COMPANY_PAGE_UID,
     );
     expect(pageLayoutTabs[0].widgets).toEqual([
-      buildNotesWidgetManifest('company-widget'),
+      withoutPosition(buildNotesWidgetManifest('company-widget')),
     ]);
     expect(statusOf(coverage, 'company-widget')?.status).toBe(
       ApplicationExportCoverageStatus.EXPORTED,
@@ -817,7 +904,7 @@ describe('reconstructPageLayoutsManifest', () => {
           buildFlatPageLayoutWidget({
             pageLayoutWidgetManifest: {
               ...buildNotesWidgetManifest('view-widget'),
-              type: 'VIEW',
+              type: WidgetType.VIEW,
             },
             pageLayoutTabUniversalIdentifier: OVERVIEW_TAB_UID,
           }),
@@ -827,6 +914,14 @@ describe('reconstructPageLayoutsManifest', () => {
             ),
             pageLayoutTabUniversalIdentifier: OVERVIEW_TAB_UID,
             position: null,
+          }),
+          buildFlatPageLayoutWidget({
+            pageLayoutWidgetManifest: buildNotesWidgetManifest(
+              'unconfigured-widget',
+            ),
+            pageLayoutTabUniversalIdentifier: OVERVIEW_TAB_UID,
+            universalConfiguration:
+              null as unknown as FlatPageLayoutWidget['universalConfiguration'],
           }),
           buildFlatPageLayoutWidget({
             pageLayoutWidgetManifest: {
@@ -869,7 +964,7 @@ describe('reconstructPageLayoutsManifest', () => {
           buildFlatPageLayoutWidget({
             pageLayoutWidgetManifest: {
               ...buildNotesWidgetManifest('missing-field-widget'),
-              type: 'FORM_FIELD',
+              type: WidgetType.FORM_FIELD,
               configuration: {
                 configurationType: 'FORM_FIELD',
                 fieldMetadataId: MISSING_UID,
@@ -880,7 +975,7 @@ describe('reconstructPageLayoutsManifest', () => {
           buildFlatPageLayoutWidget({
             pageLayoutWidgetManifest: {
               ...buildNotesWidgetManifest('chart-widget'),
-              type: 'GRAPH',
+              type: WidgetType.GRAPH,
               configuration: {
                 configurationType: 'AGGREGATE_CHART',
                 aggregateFieldMetadataUniversalIdentifier: null,
@@ -892,7 +987,7 @@ describe('reconstructPageLayoutsManifest', () => {
           buildFlatPageLayoutWidget({
             pageLayoutWidgetManifest: {
               ...buildNotesWidgetManifest('grouped-chart-widget'),
-              type: 'GRAPH',
+              type: WidgetType.GRAPH,
               configuration: {
                 configurationType: 'PIE_CHART',
                 aggregateFieldMetadataUniversalIdentifier: NAME_FIELD_UID,
@@ -912,7 +1007,7 @@ describe('reconstructPageLayoutsManifest', () => {
           buildFlatPageLayoutWidget({
             pageLayoutWidgetManifest: {
               ...buildNotesWidgetManifest('owned-front-component-widget'),
-              type: 'FRONT_COMPONENT',
+              type: WidgetType.FRONT_COMPONENT,
               configuration: {
                 configurationType: 'FRONT_COMPONENT',
                 frontComponentUniversalIdentifier: FRONT_COMPONENT_UID,
@@ -933,7 +1028,7 @@ describe('reconstructPageLayoutsManifest', () => {
           buildFlatPageLayoutWidget({
             pageLayoutWidgetManifest: {
               ...buildNotesWidgetManifest('missing-front-component-widget'),
-              type: 'FRONT_COMPONENT',
+              type: WidgetType.FRONT_COMPONENT,
               configuration: {
                 configurationType: 'FRONT_COMPONENT',
                 frontComponentUniversalIdentifier: MISSING_UID,
@@ -950,6 +1045,9 @@ describe('reconstructPageLayoutsManifest', () => {
     );
     expect(reasonOf(coverage, 'unpositioned-widget')).toBe(
       'page layout widget without a position',
+    );
+    expect(reasonOf(coverage, 'unconfigured-widget')).toBe(
+      'page layout widget without a configuration',
     );
     expect(reasonOf(coverage, 'grid-widget')).toBe(
       'page layout widget positioned for another layout mode than its tab',

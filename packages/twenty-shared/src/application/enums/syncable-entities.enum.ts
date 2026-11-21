@@ -7,6 +7,8 @@ export enum SyncableEntity {
   Skill = 'skill',
   Agent = 'agent',
   ConnectionProvider = 'connectionProvider',
+  MessagingProvider = 'messagingProvider',
+  McpServer = 'mcpServer',
   View = 'view',
   ViewField = 'viewField',
   NavigationMenuItem = 'navigationMenuItem',
@@ -15,4 +17,5 @@ export enum SyncableEntity {
   PageLayoutWidget = 'pageLayoutWidget',
   CommandMenuItem = 'commandMenuItem',
   TimelineActivityType = 'timelineActivityType',
+  SettingsMenuItem = 'settingsMenuItem',
 }

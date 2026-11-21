@@ -1,7 +1,10 @@
 import { useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
+import { type MessageDescriptor } from '@lingui/core';
+import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
+import { Section } from 'twenty-ui/components/layout';
 import { Tag } from 'twenty-ui/primitives/data-display';
 import {
   IconBox,
@@ -17,16 +20,15 @@ import {
   IconTag,
   IconUsers,
 } from 'twenty-ui/icon';
-import { H2Title } from 'twenty-ui/primitives/typography';
-import { Section } from 'twenty-ui/primitives/layout';
-import { type ThemeColor } from 'twenty-ui/theme';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { type ThemeColor, themeCssVariables } from 'twenty-ui/theme';
 
 import { useApolloAdminClient } from '@/settings/admin-panel/apollo/hooks/useApolloAdminClient';
+import { SettingsAdminWorkspaceBillingArrangementsSection } from '@/settings/admin-panel/components/SettingsAdminWorkspaceBillingArrangementsSection';
 import { SettingsAdminWorkspaceCreditGrantModal } from '@/settings/admin-panel/components/SettingsAdminWorkspaceCreditGrantModal';
 import { SettingsAdminWorkspaceCreditGrantsTable } from '@/settings/admin-panel/components/SettingsAdminWorkspaceCreditGrantsTable';
+import { SettingsAdminWorkspaceUsageLimitsSection } from '@/settings/admin-panel/components/SettingsAdminWorkspaceUsageLimitsSection';
 import { formatSubscriptionItemValue } from '@/settings/admin-panel/utils/formatSubscriptionItemValue';
-import { useModal } from '@/ui/layout/modal/hooks/useModal';
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { GET_WORKSPACE_BILLING_ADMIN_PANEL } from '@/settings/admin-panel/graphql/queries/getWorkspaceBillingAdminPanel';
 import { SettingsTableCard } from '@/settings/components/SettingsTableCard';
 import { PlansTags } from '@/settings/billing/components/internal/PlansTags';
@@ -64,10 +66,6 @@ const StyledExternalLink = styled.a`
   display: inline-flex;
   gap: ${themeCssVariables.spacing[1]};
   text-decoration: none;
-
-  &:hover {
-    color: ${themeCssVariables.font.color.primary};
-  }
 `;
 
 const StyledMono = styled.span`
@@ -91,23 +89,21 @@ const STATUS_COLORS: Record<SubscriptionStatus, ThemeColor> = {
   [SubscriptionStatus.IncompleteExpired]: 'gray',
 };
 
-const STATUS_LABELS: Record<SubscriptionStatus, string> = {
-  [SubscriptionStatus.Active]: 'Active',
-  [SubscriptionStatus.Trialing]: 'Trialing',
-  [SubscriptionStatus.PastDue]: 'Past Due',
-  [SubscriptionStatus.Canceled]: 'Canceled',
-  [SubscriptionStatus.Unpaid]: 'Unpaid',
-  [SubscriptionStatus.Paused]: 'Paused',
-  [SubscriptionStatus.Incomplete]: 'Incomplete',
-  [SubscriptionStatus.IncompleteExpired]: 'Incomplete Expired',
+const STATUS_LABELS: Record<SubscriptionStatus, MessageDescriptor> = {
+  [SubscriptionStatus.Active]: msg`Active`,
+  [SubscriptionStatus.Trialing]: msg`Trialing`,
+  [SubscriptionStatus.PastDue]: msg`Past Due`,
+  [SubscriptionStatus.Canceled]: msg`Canceled`,
+  [SubscriptionStatus.Unpaid]: msg`Unpaid`,
+  [SubscriptionStatus.Paused]: msg`Paused`,
+  [SubscriptionStatus.Incomplete]: msg`Incomplete`,
+  [SubscriptionStatus.IncompleteExpired]: msg`Incomplete Expired`,
 };
 
 const toBillingPlanKey = (planKey: string): BillingPlanKey | null =>
-  planKey === BillingPlanKey.PRO
-    ? BillingPlanKey.PRO
-    : planKey === BillingPlanKey.ENTERPRISE
-      ? BillingPlanKey.ENTERPRISE
-      : null;
+  Object.values(BillingPlanKey).find(
+    (billingPlanKey) => billingPlanKey === planKey,
+  ) ?? null;
 
 const StripeLink = ({
   path,
@@ -131,7 +127,7 @@ export const SettingsAdminWorkspaceBillingContent = ({
 }: SettingsAdminWorkspaceBillingContentProps) => {
   const { t } = useLingui();
   const { formatNumber } = useNumberFormat();
-  const { openModal } = useModal();
+  const { openDialog } = useDialog();
   const apolloAdminClient = useApolloAdminClient();
 
   const { data, loading } = useQuery<WorkspaceBillingAdminPanelQuery>(
@@ -156,12 +152,16 @@ export const SettingsAdminWorkspaceBillingContent = ({
   if (!billing) {
     return (
       <StyledContainer>
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Billing`}
             description={t`No billing data is available for this workspace.`}
           />
-        </Section>
+        </Section.Root>
+        <SettingsAdminWorkspaceBillingArrangementsSection
+          workspaceId={workspaceId}
+        />
+        <SettingsAdminWorkspaceUsageLimitsSection workspaceId={workspaceId} />
       </StyledContainer>
     );
   }
@@ -211,23 +211,23 @@ export const SettingsAdminWorkspaceBillingContent = ({
         {
           Icon: IconChartBar,
           label: t`Credits used`,
-          value: `${formatCredits(usage.usedCredits)} / ${formatCredits(usage.totalGrantedCredits)}`,
+          value: `${formatCredits(usage.workspaceCreditsUsed)} / ${formatCredits(usage.workspaceCreditsTotalGranted)}`,
         },
         ...(!isTrialing
           ? [
               {
                 Icon: IconCoins,
                 label: t`Base credits`,
-                value: formatCredits(usage.grantedCredits),
+                value: formatCredits(usage.workspaceCreditsGranted),
               },
             ]
           : []),
-        ...(usage.rolloverCredits > 0
+        ...(usage.workspaceCreditsExtraGranted > 0
           ? [
               {
                 Icon: IconCoins,
                 label: t`Granted credits`,
-                value: formatCredits(usage.rolloverCredits),
+                value: formatCredits(usage.workspaceCreditsExtraGranted),
               },
             ]
           : []),
@@ -265,7 +265,7 @@ export const SettingsAdminWorkspaceBillingContent = ({
           label: t`Status`,
           value: (
             <Tag color={STATUS_COLORS[subscription.status]}>
-              {STATUS_LABELS[subscription.status]}
+              {t(STATUS_LABELS[subscription.status])}
             </Tag>
           ),
         },
@@ -357,20 +357,16 @@ export const SettingsAdminWorkspaceBillingContent = ({
 
   return (
     <StyledContainer>
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title={t`Customer`}
           description={t`Stripe customer linked to this workspace`}
         />
-        <SettingsTableCard
-          rounded
-          items={customerItems}
-          gridAutoColumns="3fr 8fr"
-        />
-      </Section>
+        <SettingsTableCard items={customerItems} gridAutoColumns="3fr 8fr" />
+      </Section.Root>
 
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title={t`Usage`}
           description={
             isDefined(usage)
@@ -379,16 +375,12 @@ export const SettingsAdminWorkspaceBillingContent = ({
           }
         />
         {isDefined(usage) && (
-          <SettingsTableCard
-            rounded
-            items={usageItems}
-            gridAutoColumns="3fr 8fr"
-          />
+          <SettingsTableCard items={usageItems} gridAutoColumns="3fr 8fr" />
         )}
-      </Section>
+      </Section.Root>
 
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title={t`Subscription`}
           description={
             subscription
@@ -398,17 +390,22 @@ export const SettingsAdminWorkspaceBillingContent = ({
         />
         {subscription && (
           <SettingsTableCard
-            rounded
             items={subscriptionItems}
             gridAutoColumns="3fr 8fr"
           />
         )}
-      </Section>
+      </Section.Root>
+
+      <SettingsAdminWorkspaceBillingArrangementsSection
+        workspaceId={workspaceId}
+      />
+
+      <SettingsAdminWorkspaceUsageLimitsSection workspaceId={workspaceId} />
 
       <SettingsAdminWorkspaceCreditGrantsTable
         workspaceId={workspaceId}
         creditGrants={creditGrants}
-        onGrantCreditsClick={() => openModal(GRANT_CREDITS_MODAL_ID)}
+        onGrantCreditsClick={() => openDialog(GRANT_CREDITS_MODAL_ID)}
       />
 
       <SettingsAdminWorkspaceCreditGrantModal

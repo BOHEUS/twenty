@@ -54,6 +54,7 @@ type OpenPurposeBuiltSidePanelPageParams =
       page: SidePanelPages.ViewFrontComponent;
       frontComponentId: string;
       recordId?: string;
+      selectedRecordIds?: string[];
       objectNameSingular?: string;
       pageTitle: string;
       pageIcon?: string;
@@ -120,6 +121,10 @@ export type RequestAccessTokenRefreshFunction = () => Promise<string>;
 
 export type CopyToClipboardFunction = (text: string) => Promise<void>;
 
+export type SetToolCallArgumentsFunction = (
+  toolArguments: Record<string, unknown>,
+) => Promise<void>;
+
 export type UploadedFrontComponentFile = {
   fileId: string;
   path: string;
@@ -129,8 +134,7 @@ export type UploadedFrontComponentFile = {
 };
 
 export type UploadFileParams = {
-  // Uploads target a FILES field so the file can be attached to a record;
-  // anything else would strand it as a temporary orphan.
+  // Must be a FILES field so the file attaches to a record; anything else would strand it as a temporary orphan
   fieldMetadataId: string;
   fileName?: string;
 };
@@ -175,6 +179,7 @@ export type FrontComponentHostCommunicationApiStore = {
   closeSidePanel?: CloseSidePanelFunction;
   updateProgress?: UpdateProgressFunction;
   copyToClipboard?: CopyToClipboardFunction;
+  setToolCallArguments?: SetToolCallArgumentsFunction;
   uploadFile?: UploadFileFunction;
   storageSet?: StorageSetFunction;
   storageDelete?: StorageDeleteFunction;

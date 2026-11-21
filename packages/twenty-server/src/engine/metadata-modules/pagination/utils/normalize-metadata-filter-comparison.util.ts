@@ -67,19 +67,15 @@ export const normalizeMetadataFilterComparison = ({
 
   if (column.type === 'uuid') {
     if (
-      (normalizedComparison.is !== undefined &&
-        normalizedComparison.is !== null) ||
-      (normalizedComparison.isNot !== undefined &&
-        normalizedComparison.isNot !== null)
+      isDefined(normalizedComparison.is) ||
+      isDefined(normalizedComparison.isNot)
     ) {
       throw new UserInputError(
         'UUID is/isNot comparisons only support null values',
       );
     }
 
-    // Postgres compares uuid columns canonically, but the in-memory matcher
-    // compares raw strings, so operands are lowercased to keep both paths
-    // agreeing on differently-cased but equal ids.
+    // Postgres compares uuids case-insensitively but the in-memory matcher compares raw strings
     return lowercaseComparisonOperands(normalizedComparison);
   }
 

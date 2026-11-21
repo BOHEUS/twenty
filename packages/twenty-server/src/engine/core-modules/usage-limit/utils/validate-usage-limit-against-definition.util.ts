@@ -1,11 +1,15 @@
 import { isNonEmptyString } from '@sniptt/guards';
-import { isDefined, isValidUuid } from 'twenty-shared/utils';
+import { isDefined, isNonEmptyArray, isValidUuid } from 'twenty-shared/utils';
 
+import { LIMIT_KIND_RULES } from 'src/engine/core-modules/usage-limit/constants/limit-kind-rules.constant';
 import { type CreateUsageLimitInput } from 'src/engine/core-modules/usage-limit/dtos/create-usage-limit.input';
 import {
   UsageLimitException,
   UsageLimitExceptionCode,
 } from 'src/engine/core-modules/usage-limit/exceptions/usage-limit.exception';
+import { buildUsageLimitScope } from 'src/engine/core-modules/usage-limit/utils/build-usage-limit-scope.util';
+import { findAllowedUsageLimitUnits } from 'src/engine/core-modules/usage-limit/utils/find-allowed-usage-limit-units.util';
+import { findSuppressedUsageLimitDefaults } from 'src/engine/core-modules/usage-limit/utils/find-suppressed-usage-limit-defaults.util';
 import { findUsageLimitDefinition } from 'src/engine/core-modules/usage-limit/utils/find-usage-limit-definition.util';
 import { UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
 
@@ -24,9 +28,14 @@ export const validateUsageLimitAgainstDefinition = (
     );
   }
 
+  const spansEveryOperation = input.operationType === UsageOperationType.ALL;
+
   if (
-    input.operationType !== UsageOperationType.ALL &&
-    !definition.allowedOperationTypes.includes(input.operationType)
+    !spansEveryOperation &&
+    !definition.allowedOperations.some(
+      (allowedOperation) =>
+        allowedOperation.operationType === input.operationType,
+    )
   ) {
     throw new UsageLimitException(
       `${input.resourceType} ${input.limitKind} limits cannot target the ${input.operationType} operation`,
@@ -48,62 +57,33 @@ export const validateUsageLimitAgainstDefinition = (
     );
   }
 
-  if (input.limitKind === 'speed') {
-    if (input.periodUnit !== 'second') {
-      throw new UsageLimitException(
-        'A speed limit needs a rolling window expressed in seconds',
-        UsageLimitExceptionCode.LIMIT_INVALID,
-      );
-    }
-
-    if (input.meter !== 'quantity') {
-      throw new UsageLimitException(
-        'A speed limit counts requests, so it is metered on quantity',
-        UsageLimitExceptionCode.LIMIT_INVALID,
-      );
-    }
+  if (
+    spansEveryOperation &&
+    !LIMIT_KIND_RULES[input.limitKind].isAllOperationTypeAllowed
+  ) {
+    return;
   }
 
-  if (input.limitKind === 'quota') {
-    if (input.periodUnit === 'second') {
-      throw new UsageLimitException(
-        'A quota anchors to a calendar period, not a rolling window',
-        UsageLimitExceptionCode.LIMIT_INVALID,
-      );
-    }
+  if (
+    isNonEmptyArray(
+      findSuppressedUsageLimitDefaults(buildUsageLimitScope(input)),
+    )
+  ) {
+    return;
+  }
 
-    if (input.periodCount !== 1) {
-      throw new UsageLimitException(
-        'A quota covers exactly one period',
-        UsageLimitExceptionCode.LIMIT_INVALID,
-      );
-    }
+  const allowedUnits = findAllowedUsageLimitUnits({
+    limitKind: input.limitKind,
+    definition,
+    operationType: input.operationType,
+  });
 
-    if (isDefined(input.burstValue)) {
-      throw new UsageLimitException(
-        'A quota cannot hold a burst value',
-        UsageLimitExceptionCode.LIMIT_INVALID,
-      );
-    }
-
-    if (
-      'allowedMeters' in definition &&
-      !definition.allowedMeters.includes(input.meter)
-    ) {
-      throw new UsageLimitException(
-        `${input.resourceType} quotas cannot be metered on ${input.meter}`,
-        UsageLimitExceptionCode.LIMIT_INVALID,
-      );
-    }
-
-    if (
-      input.meter === 'quantity' &&
-      input.operationType === UsageOperationType.ALL
-    ) {
-      throw new UsageLimitException(
-        'A quantity quota needs an operation: only credits aggregate across operations',
-        UsageLimitExceptionCode.LIMIT_INVALID,
-      );
-    }
+  if (!allowedUnits.includes(input.unit)) {
+    throw new UsageLimitException(
+      spansEveryOperation
+        ? `A ${input.unit} quota needs an operation: only credits aggregate across operations`
+        : `${input.resourceType} ${input.operationType} ${input.limitKind} limits cannot count ${input.unit}, only ${allowedUnits.join(', ')}`,
+      UsageLimitExceptionCode.LIMIT_INVALID,
+    );
   }
 };

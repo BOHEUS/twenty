@@ -1,5 +1,9 @@
 import { type PageLayoutWidgetManifest } from 'twenty-shared/application';
-import { PageLayoutTabLayoutMode } from 'twenty-shared/types';
+import {
+  PageLayoutTabLayoutMode,
+  PageLayoutWidgetVerticalListHeightBehavior,
+  WidgetType,
+} from 'twenty-shared/types';
 
 import { fromFlatPageLayoutWidgetToPageLayoutWidgetManifest } from 'src/engine/core-modules/application/application-manifest/converters/from-flat-page-layout-widget-to-page-layout-widget-manifest.util';
 import { fromPageLayoutWidgetManifestToUniversalFlatPageLayoutWidget } from 'src/engine/core-modules/application/application-manifest/converters/from-page-layout-widget-manifest-to-universal-flat-page-layout-widget.util';
@@ -18,7 +22,7 @@ const WIDGET_MANIFEST: Required<
 > = {
   universalIdentifier: WIDGET_UID,
   title: 'Fields',
-  type: 'FIELDS',
+  type: WidgetType.FIELDS,
   objectUniversalIdentifier: OBJECT_UID,
   conditionalDisplay: { device: 'DESKTOP' },
   position: { layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST, index: 2 },
@@ -32,7 +36,7 @@ const WIDGET_MANIFEST: Required<
 const MINIMAL_WIDGET_MANIFEST: PageLayoutWidgetManifest = {
   universalIdentifier: WIDGET_UID,
   title: 'Notes',
-  type: 'NOTES',
+  type: WidgetType.NOTES,
   configuration: { configurationType: 'NOTES' },
 };
 
@@ -90,10 +94,51 @@ describe('fromFlatPageLayoutWidgetToPageLayoutWidgetManifest', () => {
     });
   });
 
+  it('should leave the position out and hoist its height behavior when the order of the widgets carries it', () => {
+    const viewportWidgetManifest: PageLayoutWidgetManifest = {
+      ...MINIMAL_WIDGET_MANIFEST,
+      heightBehavior: PageLayoutWidgetVerticalListHeightBehavior.TAB_VIEWPORT,
+    };
+    const flatPageLayoutWidget = forward(viewportWidgetManifest);
+
+    expect(flatPageLayoutWidget.position).toEqual({
+      layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST,
+      index: 0,
+      heightBehavior: 'TAB_VIEWPORT',
+    });
+
+    const pageLayoutWidgetManifest =
+      fromFlatPageLayoutWidgetToPageLayoutWidgetManifest({
+        flatPageLayoutWidget,
+        isPositionImpliedByOrder: true,
+      });
+
+    expect(pageLayoutWidgetManifest).toEqual(viewportWidgetManifest);
+    expect(
+      compareTwoFlatEntity({
+        fromUniversalFlatEntity: flatPageLayoutWidget,
+        toUniversalFlatEntity: forward(pageLayoutWidgetManifest),
+        metadataName: 'pageLayoutWidget',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('should keep a grid position even when the order of the widgets is said to carry it', () => {
+    expect(
+      fromFlatPageLayoutWidgetToPageLayoutWidgetManifest({
+        flatPageLayoutWidget: forward(
+          MINIMAL_WIDGET_MANIFEST,
+          PageLayoutTabLayoutMode.GRID,
+        ),
+        isPositionImpliedByOrder: true,
+      }).position?.layoutMode,
+    ).toBe(PageLayoutTabLayoutMode.GRID);
+  });
+
   it('should keep an explicit null view reference inside the configuration', () => {
     const viewlessFieldsWidgetManifest: PageLayoutWidgetManifest = {
       ...MINIMAL_WIDGET_MANIFEST,
-      type: 'FIELDS',
+      type: WidgetType.FIELDS,
       configuration: {
         configurationType: 'FIELDS',
         viewUniversalIdentifier: null,

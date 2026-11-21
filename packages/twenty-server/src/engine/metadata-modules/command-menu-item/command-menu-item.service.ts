@@ -338,6 +338,68 @@ export class CommandMenuItemService {
     );
   }
 
+  async activate(id: string, workspaceId: string): Promise<CommandMenuItemDTO> {
+    const { workspaceCustomFlatApplication } =
+      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+        { workspaceId },
+      );
+
+    const { flatCommandMenuItemMaps: existingFlatCommandMenuItemMaps } =
+      await this.workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
+        {
+          workspaceId,
+          flatMapsKeys: ['flatCommandMenuItemMaps'],
+        },
+      );
+
+    const existingFlatCommandMenuItem =
+      findFlatEntityByIdInFlatEntityMapsOrThrow({
+        flatEntityId: id,
+        flatEntityMaps: existingFlatCommandMenuItemMaps,
+      });
+
+    const activatedFlatCommandMenuItem = {
+      ...dispatchIsActiveUpdateToAuthoredOverride({
+        metadataName: 'commandMenuItem',
+        flatEntity: existingFlatCommandMenuItem,
+        isActive: true,
+        authorUniversalIdentifier:
+          workspaceCustomFlatApplication.universalIdentifier,
+        workspaceCustomApplicationUniversalIdentifier:
+          workspaceCustomFlatApplication.universalIdentifier,
+      }),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const validateAndBuildResult =
+      await this.workspaceMigrationValidateBuildAndRunService.validateBuildAndRunWorkspaceMigration(
+        {
+          allFlatEntityOperationByMetadataName: {
+            commandMenuItem: {
+              flatEntityToCreate: [],
+              flatEntityToDelete: [],
+              flatEntityToUpdate: [activatedFlatCommandMenuItem],
+            },
+          },
+          workspaceId,
+          isSystemBuild: false,
+          applicationUniversalIdentifier:
+            workspaceCustomFlatApplication.universalIdentifier,
+        },
+      );
+
+    if (validateAndBuildResult.status === 'fail') {
+      throw new WorkspaceMigrationBuilderException(
+        validateAndBuildResult,
+        'Multiple validation errors occurred while activating command menu item',
+      );
+    }
+
+    return fromFlatCommandMenuItemToCommandMenuItemDto(
+      activatedFlatCommandMenuItem,
+    );
+  }
+
   async delete(id: string, workspaceId: string): Promise<CommandMenuItemDTO> {
     const { workspaceCustomFlatApplication } =
       await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
@@ -493,9 +555,7 @@ export class CommandMenuItemService {
       i18nContext,
     });
 
-    // shortLabel and icon are nullable columns, and resolveEffectiveEntityProperty
-    // answers "what string should this be", flattening an absent value to ''.
-    // Handing that straight back would turn every null into an empty string.
+    // resolveEffectiveEntityProperty flattens null to '', which these nullable columns must not get
     const resolvedValue = isNonEmptyString(effectiveValue)
       ? effectiveValue
       : undefined;
@@ -519,8 +579,7 @@ export class CommandMenuItemService {
       commandMenuItem,
       resolvedValue,
       objectMetadata,
-      // The navigated-to object may belong to a different application than the
-      // command menu item pointing at it.
+      // the target object may belong to another application than the item
       objectMetadataI18nContext:
         await this.applicationTranslationCatalogService.buildEffectiveEntityI18nContext(
           {
@@ -533,28 +592,43 @@ export class CommandMenuItemService {
     });
   }
 
+  async findByCoreWorkflowVersionId(
+    coreWorkflowVersionId: string,
+    workspaceId: string,
+  ): Promise<CommandMenuItemDTO | null> {
+    return this.findByWorkflowVersionReference(
+      coreWorkflowVersionId,
+      workspaceId,
+      'coreWorkflowVersionId',
+    );
+  }
+
   async findByWorkflowVersionId(
     workflowVersionId: string,
     workspaceId: string,
   ): Promise<CommandMenuItemDTO | null> {
+    return this.findByWorkflowVersionReference(
+      workflowVersionId,
+      workspaceId,
+      'workflowVersionId',
+    );
+  }
+
+  private async findByWorkflowVersionReference(
+    versionId: string,
+    workspaceId: string,
+    reference: 'workflowVersionId' | 'coreWorkflowVersionId',
+  ): Promise<CommandMenuItemDTO | null> {
     const { flatCommandMenuItemMaps } =
       await this.workspaceManyOrAllFlatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
-        {
-          workspaceId,
-          flatMapsKeys: ['flatCommandMenuItemMaps'],
-        },
+        { workspaceId, flatMapsKeys: ['flatCommandMenuItemMaps'] },
       );
-
     const flatCommandMenuItem = Object.values(
       flatCommandMenuItemMaps.byUniversalIdentifier,
-    ).find(
-      (item) => isDefined(item) && item.workflowVersionId === workflowVersionId,
-    );
+    ).find((item) => isDefined(item) && item[reference] === versionId);
 
-    if (!isDefined(flatCommandMenuItem)) {
-      return null;
-    }
-
-    return fromFlatCommandMenuItemToCommandMenuItemDto(flatCommandMenuItem);
+    return isDefined(flatCommandMenuItem)
+      ? fromFlatCommandMenuItemToCommandMenuItemDto(flatCommandMenuItem)
+      : null;
   }
 }

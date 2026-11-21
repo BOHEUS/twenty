@@ -8,18 +8,18 @@ import { useApolloAdminClient } from '@/settings/admin-panel/apollo/hooks/useApo
 import { useDeleteJobs } from '@/settings/admin-panel/health-status/hooks/useDeleteJobs';
 import { useRetryJobs } from '@/settings/admin-panel/health-status/hooks/useRetryJobs';
 import { Select } from '@/ui/input/components/Select';
-import { useModal } from '@/ui/layout/modal/hooks/useModal';
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableBody } from '@/ui/layout/table/components/TableBody';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
 import { styled } from '@linaria/react';
-import { plural, t } from '@lingui/core/macro';
+import { plural } from '@lingui/core/macro';
 import { useState } from 'react';
 import { IconRefresh, IconTrash } from 'twenty-ui/icon';
 import { Button, Checkbox } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { useQuery } from '@apollo/client/react';
 import {
   JobState,
@@ -27,6 +27,7 @@ import {
   GetQueueJobsDocument,
 } from '~/generated-admin/graphql';
 import { beautifyPastDateRelativeToNow } from '~/utils/date-utils';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsAdminQueueJobsTableProps = {
   queueName: string;
@@ -77,12 +78,13 @@ export const SettingsAdminQueueJobsTable = ({
   queueName,
   onRetentionConfigLoaded,
 }: SettingsAdminQueueJobsTableProps) => {
+  const { t } = useLingui();
   const apolloAdminClient = useApolloAdminClient();
   const [page, setPage] = useState(0);
   const [stateFilter, setStateFilter] = useState<JobState>(JobState.COMPLETED);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(new Set());
-  const { openModal } = useModal();
+  const { openDialog } = useDialog();
 
   const jobStateOptions: { value: JobState; label: string }[] = [
     { value: JobState.COMPLETED, label: t`Completed` },
@@ -170,7 +172,7 @@ export const SettingsAdminQueueJobsTable = ({
   };
 
   const handleRetrySelected = () => {
-    openModal(RETRY_MODAL_ID);
+    openDialog(RETRY_MODAL_ID);
   };
 
   const confirmRetrySelected = async () => {
@@ -180,7 +182,7 @@ export const SettingsAdminQueueJobsTable = ({
   };
 
   const handleDeleteSelected = () => {
-    openModal(DELETE_MODAL_ID);
+    openDialog(DELETE_MODAL_ID);
   };
 
   const confirmDeleteSelected = async () => {
@@ -200,13 +202,17 @@ export const SettingsAdminQueueJobsTable = ({
   };
 
   const formatTimestampRelative = (timestamp?: number | null) => {
-    if (!timestamp) return '-';
+    if (!timestamp) {
+      return '-';
+    }
 
     return beautifyPastDateRelativeToNow(timestamp);
   };
 
   const formatTimestampFull = (timestamp?: number | null) => {
-    if (!timestamp) return '';
+    if (!timestamp) {
+      return '';
+    }
 
     return new Date(timestamp).toLocaleString();
   };

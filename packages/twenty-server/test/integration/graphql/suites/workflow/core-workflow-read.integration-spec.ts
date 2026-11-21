@@ -1,11 +1,29 @@
 import { isDefined } from 'twenty-shared/utils';
 
+import {
+  createCoreWorkflow,
+  deleteCoreWorkflows,
+  linkCoreWorkflowToLegacyWorkspaceIds,
+} from 'test/integration/graphql/suites/workflow/utils/core-workflow.util';
 import { pollWorkflowGraphqlRequest } from 'test/integration/graphql/suites/workflow/utils/poll-workflow-graphql-request.util';
 import { workflowGraphqlRequest } from 'test/integration/graphql/suites/workflow/utils/workflow-graphql-request.util';
 
 const CORE_WORKFLOW_QUERY = `
   query CoreWorkflow($workspaceWorkflowId: UUID!) {
     coreWorkflow(workspaceWorkflowId: $workspaceWorkflowId) {
+      id
+      name
+      statuses
+      lastPublishedVersionId
+      workspaceWorkflowId
+      updatedAt
+    }
+  }
+`;
+
+const CORE_WORKFLOW_BY_ID_QUERY = `
+  query CoreWorkflowById($coreWorkflowId: UUID!) {
+    coreWorkflowById(coreWorkflowId: $coreWorkflowId) {
       id
       name
       statuses
@@ -65,37 +83,26 @@ type CoreWorkflowVersionResult = {
 };
 
 describe('coreWorkflow (e2e)', () => {
-  let workspaceWorkflowId: string;
+  let coreWorkflowId: string;
+  let workspaceWorkflowId: string | null;
 
   beforeAll(async () => {
-    const createResponse = await workflowGraphqlRequest(`
-      mutation {
-        createWorkflow(data: { name: "Core Workflow Read" }) {
-          id
-        }
-      }
-    `);
+    const createdCoreWorkflow = await createCoreWorkflow({
+      name: 'Core Workflow Read',
+    });
 
-    expect(createResponse.body.errors).toBeUndefined();
-
-    workspaceWorkflowId = createResponse.body.data.createWorkflow.id;
+    coreWorkflowId = createdCoreWorkflow.coreWorkflowId;
+    ({ workspaceWorkflowId } = await linkCoreWorkflowToLegacyWorkspaceIds({
+      coreWorkflowId,
+    }));
   });
 
   afterAll(async () => {
-    if (!isDefined(workspaceWorkflowId)) {
+    if (!isDefined(coreWorkflowId)) {
       return;
     }
 
-    await workflowGraphqlRequest(
-      `
-        mutation DestroyWorkflow($id: UUID!) {
-          destroyWorkflow(id: $id) {
-            id
-          }
-        }
-      `,
-      { id: workspaceWorkflowId },
-    );
+    await deleteCoreWorkflows({ coreWorkflowIds: [coreWorkflowId] });
   });
 
   it('should read one workflow by its workspace id', async () => {
@@ -126,6 +133,41 @@ describe('coreWorkflow (e2e)', () => {
 
     expect(response.body.errors).toBeUndefined();
     expect(response.body.data.coreWorkflow).toBeNull();
+  });
+
+  it('should read one workflow by its core id', async () => {
+    const coreWorkflow = await pollWorkflowGraphqlRequest<
+      { coreWorkflow: CoreWorkflowResult | null },
+      CoreWorkflowResult | null | undefined
+    >({
+      query: CORE_WORKFLOW_QUERY,
+      variables: { workspaceWorkflowId },
+      extract: (data) => data?.coreWorkflow,
+      until: isDefined,
+    });
+
+    const response = await workflowGraphqlRequest(CORE_WORKFLOW_BY_ID_QUERY, {
+      coreWorkflowId: coreWorkflow?.id,
+    });
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.coreWorkflowById).toEqual({
+      id: coreWorkflow?.id,
+      name: 'Core Workflow Read',
+      statuses: ['DRAFT'],
+      lastPublishedVersionId: null,
+      workspaceWorkflowId,
+      updatedAt: expect.any(String),
+    });
+  });
+
+  it('should return null for a core id that does not exist', async () => {
+    const response = await workflowGraphqlRequest(CORE_WORKFLOW_BY_ID_QUERY, {
+      coreWorkflowId: '00000000-0000-4000-8000-000000000000',
+    });
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.coreWorkflowById).toBeNull();
   });
 
   it('should expose the version content the show page renders', async () => {

@@ -1,3 +1,4 @@
+import { DEFAULT_VIEW_GROUP_LOAD_LIMIT } from 'twenty-shared/constants';
 import { ViewOpenRecordIn, ViewVisibility } from 'twenty-shared/types';
 import { v4 } from 'uuid';
 
@@ -37,14 +38,15 @@ export const buildBaseUniversalFlatView = ({
     createdAt,
     updatedAt: createdAt,
     deletedAt: null,
-    isCustom: true,
     anyFieldFilterValue: null,
     calendarFieldMetadataUniversalIdentifier: null,
     calendarEndFieldMetadataUniversalIdentifier: null,
     calendarLayout: null,
     isCompact: false,
     shouldHideEmptyGroups: false,
+    shouldDisplayGroupsAsTabs: false,
     kanbanColumnWidth: null,
+    groupLoadLimit: DEFAULT_VIEW_GROUP_LOAD_LIMIT,
     kanbanAggregateOperation: null,
     kanbanAggregateOperationFieldMetadataUniversalIdentifier: null,
     mainGroupByFieldMetadataUniversalIdentifier: null,
@@ -61,6 +63,7 @@ export const buildBaseUniversalFlatView = ({
     viewFilterUniversalIdentifiers: [],
     viewGroupUniversalIdentifiers: [],
     viewFilterGroupUniversalIdentifiers: [],
+    navigationMenuItemUniversalIdentifiers: [],
     viewSortUniversalIdentifiers: [],
     applicationUniversalIdentifier,
   };

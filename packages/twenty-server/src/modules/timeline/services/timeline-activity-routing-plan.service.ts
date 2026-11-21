@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import { isDefined } from 'twenty-shared/utils';
+import { isDefined, readLruEntry, writeLruEntry } from 'twenty-shared/utils';
 
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
@@ -14,7 +14,6 @@ import { buildJunctionTargetShape } from 'src/modules/timeline/utils/build-junct
 import { buildNonAuditLoggedFieldNamesByObjectMetadataId } from 'src/modules/timeline/utils/build-non-audit-logged-field-names-by-object-metadata-id.util';
 import { buildTimelineActivitySelfRule } from 'src/modules/timeline/utils/build-timeline-activity-self-rule.util';
 import { resolveTimelineActivityTypeRouting } from 'src/modules/timeline/utils/resolve-timeline-activity-type-routing.util';
-import { readLruEntry, writeLruEntry } from 'src/utils/lru-map.util';
 import {
   buildTimelineActivityTypeResolution,
   toResolvedTimelineActivityType,
@@ -42,8 +41,7 @@ type TimelineActivityRoutingPlan = {
   resolveTimelineActivityType: TimelineActivityTypeResolver;
 };
 
-// A routing plan holds that workspace's whole flat field metadata maps, so an
-// unbounded map grows with the number of workspaces a worker ever routes for.
+// Each plan holds a workspace's whole flat field metadata maps, so the cache must be bounded
 const MAX_CACHED_WORKSPACES = 128;
 
 @Injectable()
@@ -242,8 +240,7 @@ export class TimelineActivityRoutingPlanService {
                   })?.name,
               )
               .filter(isDefined) ?? null,
-          // A field from another object would make the write path read a value
-          // that is not the source record's own moment, so it is dropped here.
+          // A field from another object is not the source record's own moment
           happensAtFieldName:
             isDefined(happensAtFlatFieldMetadata) &&
             happensAtFlatFieldMetadata.objectMetadataId ===

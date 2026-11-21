@@ -7,8 +7,9 @@
  *                              |___/
  */
 
-export { IconButton } from './IconButton/IconButton';
-export type { IconButtonProps } from './IconButton/types/IconButtonProps';
-export { LightButton } from './LightButton/LightButton';
-export type { LightButtonProps } from './LightButton/types/LightButtonProps';
-export { MainButton } from './MainButton/MainButton';
+export * from './data-display';
+export * from './feedback';
+export * from './input';
+export * from './layout';
+export * from './navigation';
+export * from './settings';

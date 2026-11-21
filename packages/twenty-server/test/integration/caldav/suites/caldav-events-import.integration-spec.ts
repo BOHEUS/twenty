@@ -24,8 +24,7 @@ const PASSWORD = 'radicale-password';
 
 const authorizationHeader = `Basic ${Buffer.from(`${HANDLE}:${PASSWORD}`).toString('base64')}`;
 
-// A sync token the server no longer recognises, which drives the fallback from
-// an incremental sync-collection report to a full re-sync.
+// An unrecognised token forces the fallback from incremental sync to a full re-sync.
 const buildStaleSyncCursor = (collectionUrl: string) =>
   JSON.stringify({
     syncTokens: { [collectionUrl]: 'stale-sync-token' },
@@ -42,6 +41,7 @@ const icalEvent = ({ uid, summary }: { uid: string; summary: string }) =>
     'DTSTART:20231115T100000Z',
     'DTEND:20231115T110000Z',
     `SUMMARY:${summary}`,
+    `ATTENDEE:mailto:guest-${uid}@example.com`,
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n');
@@ -83,8 +83,7 @@ describe('CalDAV calendar events import (integration)', () => {
   };
 
   beforeAll(async () => {
-    // The CalDAV driver wraps its fetch in the SSRF guard, which rejects the
-    // container's private address before the request is made.
+    // The SSRF guard would otherwise reject the container's private address.
     await updateConfigVariable({
       input: { key: 'OUTBOUND_HTTP_ALLOWED_INTERNAL_HOSTS', value: ['*'] },
     });

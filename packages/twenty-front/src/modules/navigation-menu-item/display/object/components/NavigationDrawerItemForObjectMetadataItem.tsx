@@ -1,14 +1,12 @@
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
-import { Fragment, type ReactNode, useContext } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/states/isLayoutCustomizationModeEnabledState';
 import { lastClickedNavigationMenuItemIdState } from '@/navigation-menu-item/common/states/lastClickedNavigationMenuItemIdState';
 import { recordIdentifierToObjectRecordIdentifier } from '@/navigation-menu-item/common/utils/recordIdentifierToObjectRecordIdentifier';
 import { useIdentifyActiveNavigationMenuItems } from '@/navigation-menu-item/display/hooks/useIdentifyActiveNavigationMenuItems';
-import { getNavigationMenuItemComputedLink } from '@/navigation-menu-item/display/utils/getNavigationMenuItemComputedLink';
+import { getObjectDrawerItemNavigationPath } from '@/navigation-menu-item/display/object/utils/getObjectDrawerItemNavigationPath';
 import { getNavigationMenuItemLabel } from '@/navigation-menu-item/display/utils/getNavigationMenuItemLabel';
-import { isCoreWorkflowsObjectNavigationMenuItem } from '@/navigation-menu-item/display/utils/isCoreWorkflowsObjectNavigationMenuItem';
 import { ObjectIconWithViewOverlay } from '@/navigation-menu-item/display/view/components/ObjectIconWithViewOverlay';
 import { lastVisitedViewPerObjectMetadataItemState } from '@/navigation/states/lastVisitedViewPerObjectMetadataItemState';
 import { ObjectMetadataIcon } from '@/object-metadata/components/ObjectMetadataIcon';
@@ -16,7 +14,6 @@ import { objectMetadataItemsSelector } from '@/object-metadata/states/objectMeta
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { getObjectColorWithFallback } from '@/object-metadata/utils/getObjectColorWithFallback';
 import { getObjectPermissionsForObject } from '@/object-metadata/utils/getObjectPermissionsForObject';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import { useObjectPermissions } from '@/object-record/hooks/useObjectPermissions';
 import { NavigationDrawerItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItem';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
@@ -24,17 +21,20 @@ import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomStat
 import { viewsSelector } from '@/views/states/selectors/viewsSelector';
 import { useNavigate } from 'react-router-dom';
 import {
-  AppPath,
-  CoreObjectNameSingular,
-  FeatureFlagKey,
+  StandardObjectNameSingular,
   NavigationMenuItemType,
 } from 'twenty-shared/types';
-import { getAppPath, isDefined } from 'twenty-shared/utils';
+import {
+  canAccessThroughAllRecordsOrRlsPermission,
+  isDefined,
+} from 'twenty-shared/utils';
 import { Avatar } from 'twenty-ui/primitives/data-display';
-import { IconLock, useIcons } from 'twenty-ui/icon';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { IconLock } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { type NavigationMenuItem } from '~/generated-metadata/graphql';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
+import { useLingui } from '@lingui/react/macro';
 
 export type NavigationDrawerItemForObjectMetadataItemProps = {
   objectMetadataItem: EnrichedObjectMetadataItem;
@@ -55,24 +55,25 @@ export const NavigationDrawerItemForObjectMetadataItem = ({
   isDragging = false,
   rightOptions,
 }: NavigationDrawerItemForObjectMetadataItemProps) => {
+  const { t } = useLingui();
   const isLayoutCustomizationModeEnabled = useAtomStateValue(
     isLayoutCustomizationModeEnabledState,
   );
   const { objectPermissionsByObjectMetadataId } = useObjectPermissions();
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const lastVisitedViewPerObjectMetadataItem = useAtomStateValue(
     lastVisitedViewPerObjectMetadataItemState,
   );
   const objectMetadataItems = useAtomStateValue(objectMetadataItemsSelector);
   const views = useAtomStateValue(viewsSelector);
 
-  const canReadObjectRecords = getObjectPermissionsForObject(
-    objectPermissionsByObjectMetadataId,
-    objectMetadataItem.id,
-  ).canReadObjectRecords;
-
-  const lastVisitedViewId =
-    lastVisitedViewPerObjectMetadataItem?.[objectMetadataItem.id];
+  const canReadSomeRecords = canAccessThroughAllRecordsOrRlsPermission({
+    objectRecordsPermissions: getObjectPermissionsForObject(
+      objectPermissionsByObjectMetadataId,
+      objectMetadataItem.id,
+    ),
+    operationType: 'read',
+  });
 
   const { getIcon } = useIcons();
   const objectNavItemColor = getObjectColorWithFallback(objectMetadataItem);
@@ -89,18 +90,13 @@ export const NavigationDrawerItemForObjectMetadataItem = ({
   const isObject = navigationMenuItem?.type === NavigationMenuItemType.OBJECT;
   const hasNavigationMenuItem = isRecord || isView || isObject;
 
-  const navigationPath = hasNavigationMenuItem
-    ? getNavigationMenuItemComputedLink({
-        item: navigationMenuItem!,
-        objectMetadataItems,
-        views,
-        lastVisitedViewPerObjectMetadataItem,
-      })
-    : getAppPath(
-        AppPath.RecordIndexPage,
-        { objectNamePlural: objectMetadataItem.namePlural },
-        lastVisitedViewId ? { viewId: lastVisitedViewId } : undefined,
-      );
+  const navigationPath = getObjectDrawerItemNavigationPath({
+    navigationMenuItem: navigationMenuItem ?? undefined,
+    objectMetadataItem,
+    objectMetadataItems,
+    views,
+    lastVisitedViewPerObjectMetadataItem,
+  });
 
   const isActive = hasNavigationMenuItem
     ? activeNavigationMenuItemIds.includes(navigationMenuItem!.id)
@@ -134,7 +130,7 @@ export const NavigationDrawerItemForObjectMetadataItem = ({
   const needsInaccessibleRecordPlaceholder =
     isLayoutCustomizationModeEnabled &&
     isRecord &&
-    !canReadObjectRecords &&
+    !canReadSomeRecords &&
     !isNonEmptyString(primaryLabel.trim());
 
   const label = needsInaccessibleRecordPlaceholder ? t`Record` : primaryLabel;
@@ -151,7 +147,8 @@ export const NavigationDrawerItemForObjectMetadataItem = ({
     ? () => (
         <Avatar
           shape={
-            objectMetadataItem.nameSingular === CoreObjectNameSingular.Company
+            objectMetadataItem.nameSingular ===
+            StandardObjectNameSingular.Company
               ? 'square'
               : 'circle'
           }
@@ -170,28 +167,14 @@ export const NavigationDrawerItemForObjectMetadataItem = ({
         )
       : () => <ObjectMetadataIcon objectMetadataItem={objectMetadataItem} />;
 
-  const isWorkflowCoreIndexPageEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_WORKFLOW_CORE_INDEX_PAGE_ENABLED,
-  );
-
-  const isCoreWorkflowsIndexItem = isCoreWorkflowsObjectNavigationMenuItem({
-    navigationMenuItemType: navigationMenuItem?.type,
-    objectNameSingular: objectMetadataItem.nameSingular,
-    isWorkflowCoreIndexPageEnabled,
-  });
-
-  const objectSecondaryLabel = isViewWithResolvedView
+  const secondaryLabel = isViewWithResolvedView
     ? objectMetadataItem.labelPlural
     : isRecord
       ? objectMetadataItem.labelSingular
       : undefined;
 
-  const secondaryLabel = isCoreWorkflowsIndexItem
-    ? t`System`
-    : objectSecondaryLabel;
-
   const showInaccessibleLock =
-    isLayoutCustomizationModeEnabled && !canReadObjectRecords;
+    isLayoutCustomizationModeEnabled && !canReadSomeRecords;
 
   return (
     <NavigationDrawerItem

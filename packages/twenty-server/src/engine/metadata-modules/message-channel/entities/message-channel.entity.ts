@@ -24,9 +24,11 @@ import {
   WebhookSubscriptionStatus,
 } from 'twenty-shared/types';
 
+import { ADD_MESSAGING_PROVIDER_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-52/add-messaging-provider-upgrade-command-name.constant';
+import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
 import { ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
 import { type MessageFolderEntity } from 'src/engine/metadata-modules/message-folder/entities/message-folder.entity';
-import { WorkspaceRelatedEntity } from 'src/engine/workspace-manager/types/workspace-related-entity';
+import { WorkspaceRelatedEntity } from 'src/engine/workspace-manager/types/workspace-related-entity.type';
 
 registerEnumType(MessageChannelVisibility, {
   name: 'MessageChannelVisibility',
@@ -59,10 +61,8 @@ registerEnumType(MessageChannelPendingGroupEmailsAction, {
   ['webhookSubscriptionExternalId'],
   { where: '"webhookSubscriptionExternalId" IS NOT NULL' },
 )
-// An app creates its channel from a connect hook, which a provider can retry
-// or run concurrently. The create path reads before it writes, so only the
-// database can actually stop a second row appearing for one handle. Scoped to
-// APP so it makes no claim about the email rows already in this table.
+// connect hooks can retry or run concurrently and the create path reads before writing, so only the DB stops duplicates;
+// scoped to APP so it makes no claim about existing email rows
 @Index(
   'IDX_MESSAGE_CHANNEL_APP_CONNECTED_ACCOUNT_HANDLE_UNIQUE',
   ['workspaceId', 'connectedAccountId', 'handle'],
@@ -172,6 +172,19 @@ export class MessageChannelEntity extends WorkspaceRelatedEntity {
 
   @Column({ type: 'timestamptz', nullable: true })
   webhookSubscriptionExpiresAt: Date | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.52.0_AddParticipantHandleFieldToMessageChannelFastInstanceCommand_1792907887530',
+  })
+  participantHandleFieldUniversalIdentifier: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ADD_MESSAGING_PROVIDER_UPGRADE_COMMAND_NAME,
+  })
+  messagingProviderUniversalIdentifier: string | null;
 
   @Column({ type: 'uuid', nullable: false })
   connectedAccountId: string;

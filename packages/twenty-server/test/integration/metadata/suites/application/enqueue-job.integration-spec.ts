@@ -1,7 +1,3 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
 import { randomUUID } from 'crypto';
 
 import gql from 'graphql-tag';
@@ -11,42 +7,40 @@ import { findManyApplications } from 'test/integration/graphql/utils/find-many-a
 import { getAuthTokensFromLoginToken } from 'test/integration/graphql/utils/get-auth-tokens-from-login-token.util';
 import { signUpInNewWorkspace } from 'test/integration/graphql/utils/sign-up-in-new-workspace.util';
 import { signUp } from 'test/integration/graphql/utils/sign-up.util';
-import { generateApplicationToken } from 'test/integration/metadata/suites/application/utils/generate-application-token.util';
 import { createOneLogicFunction } from 'test/integration/metadata/suites/logic-function/utils/create-logic-function.util';
 import { deleteLogicFunction } from 'test/integration/metadata/suites/logic-function/utils/delete-logic-function.util';
 import { executeLogicFunction } from 'test/integration/metadata/suites/logic-function/utils/execute-logic-function.util';
 import { updateLogicFunctionSource } from 'test/integration/metadata/suites/logic-function/utils/update-logic-function-source.util';
-import { makeMetadataAPIRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
+import { makeMetadataApiRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
 import { expectEventually } from 'test/integration/utils/expect-eventually.util';
+import { generateApplicationTokenPair } from 'test/integration/utils/generate-application-token-pair.util';
+import { generateAppleAdminApplicationTokenPair } from 'test/integration/utils/generate-apple-admin-application-token-pair.util';
+import { type MarkerServer } from 'test/integration/types/marker-server.type';
+import { startMarkerServer } from 'test/integration/utils/start-marker-server.util';
 import { waitForAllJobsToFinish } from 'test/integration/utils/wait-for-all-jobs-to-finish.util';
 import { isDefined } from 'twenty-shared/utils';
 import { v4 as uuidv4 } from 'uuid';
 
 import { WORKSPACE_CUSTOM_APPLICATION_NAME } from 'src/engine/core-modules/application/constants/workspace-custom-application.constant';
+import { AUTH_PRINCIPAL_REFUSED_MESSAGE } from 'src/engine/guards/constants/auth-principal-refused-message.constant';
 import { TWENTY_STANDARD_APPLICATION } from 'src/engine/workspace-manager/twenty-standard-application/constants/twenty-standard-applications';
 
-const MARKER_DIRECTORY = join(tmpdir(), `enqueue-job-${uuidv4()}`);
+let markerServer: MarkerServer;
 
-const TARGET_SOURCE_CODE = `import { writeFileSync } from 'node:fs';
-
-export const main = async (params: { markerPath: string }): Promise<object> => {
-  writeFileSync(params.markerPath, 'ran', 'utf-8');
+const TARGET_SOURCE_CODE = `export const main = async (params: { markerUrl: string }): Promise<object> => {
+  await fetch(params.markerUrl, { method: 'POST', body: 'ran' });
 
   return { ok: true };
 };`;
 
-const APPENDING_TARGET_SOURCE_CODE = `import { appendFileSync } from 'node:fs';
-
-export const main = async (params: { markerPath: string }): Promise<object> => {
-  appendFileSync(params.markerPath, 'ran\\n', 'utf-8');
+const APPENDING_TARGET_SOURCE_CODE = `export const main = async (params: { markerUrl: string }): Promise<object> => {
+  await fetch(params.markerUrl, { method: 'POST', body: 'ran\\n' });
 
   return { ok: true };
 };`;
 
-const RETRYABLE_TARGET_SOURCE_CODE = `import { appendFileSync } from 'node:fs';
-
-type RetryableTargetParams = {
-  markerPath: string;
+const RETRYABLE_TARGET_SOURCE_CODE = `type RetryableTargetParams = {
+  markerUrl: string;
   shouldRetry: boolean;
 };
 
@@ -59,11 +53,10 @@ export const main = async (
   params: RetryableTargetParams,
   context: RetryContext,
 ): Promise<object> => {
-  appendFileSync(
-    params.markerPath,
-    context.retryCount + '/' + context.maxRetries + '\\n',
-    'utf-8',
-  );
+  await fetch(params.markerUrl, {
+    method: 'POST',
+    body: context.retryCount + '/' + context.maxRetries + '\\n',
+  });
 
   if (params.shouldRetry) {
     const retryableError = new Error('Dependency is temporarily unavailable');
@@ -93,6 +86,11 @@ const ENQUEUE_JOBS = gql`
       logicFunctionUniversalIdentifier
       enqueuedJobsCount
       jobIds
+      jobs {
+        jobId
+        sizeBytes
+      }
+      availableBytes
     }
   }
 `;
@@ -172,17 +170,16 @@ describe('enqueueJob (e2e)', () => {
 
     expect(otherWorkspaceApplication).toBeDefined();
 
-    const { data: tokenData } = await generateApplicationToken({
+    const tokenPair = await generateApplicationTokenPair({
+      workspaceId: newWorkspaceData.signUpInNewWorkspace.workspace.id,
       applicationId: otherWorkspaceApplication!.id,
-      expectToFail: false,
-      token: workspaceAccessToken,
     });
 
-    return tokenData.generateApplicationToken.applicationAccessToken.token;
+    return tokenPair.applicationAccessToken.token;
   };
 
   beforeAll(async () => {
-    mkdirSync(MARKER_DIRECTORY, { recursive: true });
+    markerServer = await startMarkerServer();
 
     const { data } = await findManyApplications({ expectToFail: false });
 
@@ -198,22 +195,17 @@ describe('enqueueJob (e2e)', () => {
     expect(customApplication).toBeDefined();
     expect(standardApplication).toBeDefined();
 
-    const [{ data: customTokenData }, { data: standardTokenData }] =
-      await Promise.all([
-        generateApplicationToken({
-          applicationId: customApplication!.id,
-          expectToFail: false,
-        }),
-        generateApplicationToken({
-          applicationId: standardApplication!.id,
-          expectToFail: false,
-        }),
-      ]);
+    const [customTokenPair, standardTokenPair] = await Promise.all([
+      generateAppleAdminApplicationTokenPair({
+        applicationId: customApplication!.id,
+      }),
+      generateAppleAdminApplicationTokenPair({
+        applicationId: standardApplication!.id,
+      }),
+    ]);
 
-    customApplicationToken =
-      customTokenData.generateApplicationToken.applicationAccessToken.token;
-    standardApplicationToken =
-      standardTokenData.generateApplicationToken.applicationAccessToken.token;
+    customApplicationToken = customTokenPair.applicationAccessToken.token;
+    standardApplicationToken = standardTokenPair.applicationAccessToken.token;
 
     const { data: createData } = await createOneLogicFunction({
       input: { name: `enqueue-job-target-${uuidv4()}` },
@@ -269,7 +261,7 @@ describe('enqueueJob (e2e)', () => {
       input: {
         id: retryableLogicFunctionId,
         payload: {
-          markerPath: join(MARKER_DIRECTORY, 'retryable-build.txt'),
+          markerUrl: markerServer.markerUrl('retryable-build'),
           shouldRetry: false,
         },
       },
@@ -282,7 +274,7 @@ describe('enqueueJob (e2e)', () => {
       input: {
         id: appendingLogicFunctionId,
         payload: {
-          markerPath: join(MARKER_DIRECTORY, 'appending-build.txt'),
+          markerUrl: markerServer.markerUrl('appending-build'),
         },
       },
       expectToFail: false,
@@ -314,21 +306,24 @@ describe('enqueueJob (e2e)', () => {
       await deleteUser({ accessToken: otherWorkspaceUserAccessToken });
     }
 
-    rmSync(MARKER_DIRECTORY, { recursive: true, force: true });
+    await markerServer.close();
   });
 
   it('rejects requests that do not carry an APPLICATION_ACCESS token', async () => {
-    const response = await makeMetadataAPIRequest({
+    const response = await makeMetadataApiRequest({
       query: ENQUEUE_JOB,
       variables: { input: { logicFunctionUniversalIdentifier } },
     });
 
     expect(response.body.errors).toBeDefined();
-    expect(response.body.errors[0].message).toContain('APPLICATION_ACCESS');
+    expect(response.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    expect(response.body.errors[0].message).toBe(
+      AUTH_PRINCIPAL_REFUSED_MESSAGE,
+    );
   });
 
   it('enqueues a logic function owned by the calling application and the worker runs it', async () => {
-    const markerPath = join(MARKER_DIRECTORY, 'enqueued.txt');
+    const markerUrl = markerServer.markerUrl('enqueued');
 
     await updateLogicFunctionSource({
       input: {
@@ -341,18 +336,18 @@ describe('enqueueJob (e2e)', () => {
     const { data: buildData } = await executeLogicFunction({
       input: {
         id: logicFunctionId,
-        payload: { markerPath: join(MARKER_DIRECTORY, 'build.txt') },
+        payload: { markerUrl: markerServer.markerUrl('build') },
       },
       expectToFail: false,
     });
 
     expect(buildData.executeOneLogicFunction.error).toBeNull();
 
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOB,
         variables: {
-          input: { logicFunctionUniversalIdentifier, payload: { markerPath } },
+          input: { logicFunctionUniversalIdentifier, payload: { markerUrl } },
         },
       },
       customApplicationToken,
@@ -368,21 +363,21 @@ describe('enqueueJob (e2e)', () => {
     await waitForAllJobsToFinish();
 
     await expectEventually(() => {
-      expect(existsSync(markerPath)).toBe(true);
+      expect(markerServer.hasMarker(markerUrl)).toBe(true);
     });
   });
 
   it('caps application-requested retries independently from the overall queue budget', async () => {
-    const markerPath = join(MARKER_DIRECTORY, 'application-retry-cap.txt');
+    const markerUrl = markerServer.markerUrl('application-retry-cap');
 
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOB,
         variables: {
           input: {
             logicFunctionUniversalIdentifier:
               retryableLogicFunctionUniversalIdentifier,
-            payload: { markerPath, shouldRetry: true },
+            payload: { markerUrl, shouldRetry: true },
             retryLimit: 10,
           },
         },
@@ -395,7 +390,7 @@ describe('enqueueJob (e2e)', () => {
 
     await waitForAllJobsToFinish();
 
-    expect(readFileSync(markerPath, 'utf-8').trim().split('\n')).toEqual([
+    expect(markerServer.readMarker(markerUrl).trim().split('\n')).toEqual([
       '0/3',
       '1/3',
       '2/3',
@@ -404,16 +399,16 @@ describe('enqueueJob (e2e)', () => {
   }, 60_000);
 
   it('uses a smaller overall queue budget as the application retry maximum', async () => {
-    const markerPath = join(MARKER_DIRECTORY, 'queue-retry-cap.txt');
+    const markerUrl = markerServer.markerUrl('queue-retry-cap');
 
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOB,
         variables: {
           input: {
             logicFunctionUniversalIdentifier:
               retryableLogicFunctionUniversalIdentifier,
-            payload: { markerPath, shouldRetry: true },
+            payload: { markerUrl, shouldRetry: true },
             retryLimit: 1,
           },
         },
@@ -426,14 +421,14 @@ describe('enqueueJob (e2e)', () => {
 
     await waitForAllJobsToFinish();
 
-    expect(readFileSync(markerPath, 'utf-8').trim().split('\n')).toEqual([
+    expect(markerServer.readMarker(markerUrl).trim().split('\n')).toEqual([
       '0/1',
       '1/1',
     ]);
   }, 60_000);
 
   it('rejects a logic function that belongs to another application', async () => {
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOB,
         variables: {
@@ -448,7 +443,7 @@ describe('enqueueJob (e2e)', () => {
   });
 
   it('rejects an unknown logic function', async () => {
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOB,
         variables: {
@@ -463,18 +458,18 @@ describe('enqueueJob (e2e)', () => {
   });
 
   it('enqueues a batch of payloads in a single call and the worker runs them all', async () => {
-    const markerPaths = [
-      join(MARKER_DIRECTORY, 'batch-0.txt'),
-      join(MARKER_DIRECTORY, 'batch-1.txt'),
+    const markerUrls = [
+      markerServer.markerUrl('batch-0'),
+      markerServer.markerUrl('batch-1'),
     ];
 
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOBS,
         variables: {
           input: {
             logicFunctionUniversalIdentifier,
-            payloads: markerPaths.map((markerPath) => ({ markerPath })),
+            payloads: markerUrls.map((markerUrl) => ({ markerUrl })),
           },
         },
       },
@@ -485,21 +480,26 @@ describe('enqueueJob (e2e)', () => {
     expect(response.body.data.enqueueJobs).toEqual({
       enqueued: true,
       logicFunctionUniversalIdentifier,
-      enqueuedJobsCount: markerPaths.length,
-      jobIds: markerPaths.map(() => expect.any(String)),
+      enqueuedJobsCount: markerUrls.length,
+      jobIds: markerUrls.map(() => expect.any(String)),
+      jobs: markerUrls.map(() => ({
+        jobId: expect.any(String),
+        sizeBytes: expect.any(Number),
+      })),
+      availableBytes: null,
     });
 
     await waitForAllJobsToFinish();
 
     await expectEventually(() => {
-      for (const markerPath of markerPaths) {
-        expect(existsSync(markerPath)).toBe(true);
+      for (const markerUrl of markerUrls) {
+        expect(markerServer.hasMarker(markerUrl)).toBe(true);
       }
     });
   });
 
   it('rejects a batch targeting an unknown logic function', async () => {
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOBS,
         variables: {
@@ -517,7 +517,7 @@ describe('enqueueJob (e2e)', () => {
   });
 
   it('rejects an empty batch', async () => {
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOBS,
         variables: {
@@ -532,16 +532,16 @@ describe('enqueueJob (e2e)', () => {
   });
 
   it('reports a caller-supplied job id as completed once the worker ran it', async () => {
-    const markerPath = join(MARKER_DIRECTORY, 'job-status.txt');
+    const markerUrl = markerServer.markerUrl('job-status');
     const jobId = `job-status-${uuidv4()}`;
 
-    const enqueueResponse = await makeMetadataAPIRequest(
+    const enqueueResponse = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOBS,
         variables: {
           input: {
             logicFunctionUniversalIdentifier,
-            jobs: [{ payload: { markerPath }, jobId }],
+            jobs: [{ payload: { markerUrl }, jobId }],
           },
         },
       },
@@ -553,7 +553,7 @@ describe('enqueueJob (e2e)', () => {
 
     await waitForAllJobsToFinish();
 
-    const statusResponse = await makeMetadataAPIRequest(
+    const statusResponse = await makeMetadataApiRequest(
       { query: GET_JOBS, variables: { jobIds: [jobId] } },
       customApplicationToken,
     );
@@ -567,7 +567,7 @@ describe('enqueueJob (e2e)', () => {
   });
 
   it('omits unknown job ids instead of failing the whole read', async () => {
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       { query: GET_JOBS, variables: { jobIds: [uuidv4()] } },
       customApplicationToken,
     );
@@ -577,17 +577,17 @@ describe('enqueueJob (e2e)', () => {
   });
 
   it('does not run a caller-supplied job id a second time', async () => {
-    const markerPath = join(MARKER_DIRECTORY, 'idempotent.txt');
+    const markerUrl = markerServer.markerUrl('idempotent');
     const jobId = `idempotent-${uuidv4()}`;
     const variables = {
       input: {
         logicFunctionUniversalIdentifier:
           appendingLogicFunctionUniversalIdentifier,
-        jobs: [{ payload: { markerPath }, jobId }],
+        jobs: [{ payload: { markerUrl }, jobId }],
       },
     };
 
-    const firstResponse = await makeMetadataAPIRequest(
+    const firstResponse = await makeMetadataApiRequest(
       { query: ENQUEUE_JOBS, variables },
       customApplicationToken,
     );
@@ -598,10 +598,10 @@ describe('enqueueJob (e2e)', () => {
     await waitForAllJobsToFinish();
 
     await expectEventually(() => {
-      expect(existsSync(markerPath)).toBe(true);
+      expect(markerServer.hasMarker(markerUrl)).toBe(true);
     });
 
-    const secondResponse = await makeMetadataAPIRequest(
+    const secondResponse = await makeMetadataApiRequest(
       { query: ENQUEUE_JOBS, variables },
       customApplicationToken,
     );
@@ -611,22 +611,22 @@ describe('enqueueJob (e2e)', () => {
 
     await waitForAllJobsToFinish();
 
-    expect(readFileSync(markerPath, 'utf-8').trim().split('\n')).toEqual([
+    expect(markerServer.readMarker(markerUrl).trim().split('\n')).toEqual([
       'ran',
     ]);
   }, 60_000);
 
   it('does not expose a job to another workspace', async () => {
-    const markerPath = join(MARKER_DIRECTORY, 'cross-workspace.txt');
+    const markerUrl = markerServer.markerUrl('cross-workspace');
     const jobId = `cross-workspace-${uuidv4()}`;
 
-    const enqueueResponse = await makeMetadataAPIRequest(
+    const enqueueResponse = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOBS,
         variables: {
           input: {
             logicFunctionUniversalIdentifier,
-            jobs: [{ payload: { markerPath }, jobId }],
+            jobs: [{ payload: { markerUrl }, jobId }],
           },
         },
       },
@@ -638,10 +638,10 @@ describe('enqueueJob (e2e)', () => {
     await waitForAllJobsToFinish();
 
     await expectEventually(() => {
-      expect(existsSync(markerPath)).toBe(true);
+      expect(markerServer.hasMarker(markerUrl)).toBe(true);
     });
 
-    const ownWorkspaceResponse = await makeMetadataAPIRequest(
+    const ownWorkspaceResponse = await makeMetadataApiRequest(
       { query: GET_JOBS, variables: { jobIds: [jobId] } },
       customApplicationToken,
     );
@@ -652,7 +652,7 @@ describe('enqueueJob (e2e)', () => {
     const otherWorkspaceApplicationToken =
       await createOtherWorkspaceApplicationToken();
 
-    const otherWorkspaceResponse = await makeMetadataAPIRequest(
+    const otherWorkspaceResponse = await makeMetadataApiRequest(
       { query: GET_JOBS, variables: { jobIds: [jobId] } },
       otherWorkspaceApplicationToken,
     );
@@ -664,7 +664,7 @@ describe('enqueueJob (e2e)', () => {
   it('rejects a batch that repeats a caller-supplied job id', async () => {
     const jobId = `duplicate-${uuidv4()}`;
 
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOBS,
         variables: {
@@ -685,7 +685,7 @@ describe('enqueueJob (e2e)', () => {
   });
 
   it('rejects a batch that sets both payloads and jobs', async () => {
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOBS,
         variables: {
@@ -704,7 +704,7 @@ describe('enqueueJob (e2e)', () => {
   });
 
   it('rejects job options outside of their allowed range', async () => {
-    const response = await makeMetadataAPIRequest(
+    const response = await makeMetadataApiRequest(
       {
         query: ENQUEUE_JOB,
         variables: {

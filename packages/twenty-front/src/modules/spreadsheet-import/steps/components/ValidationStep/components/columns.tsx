@@ -1,8 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { styled } from '@linaria/react';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { type Column, useRowSelection } from 'react-data-grid';
-import { createPortal } from 'react-dom';
 
 import {
   type ImportedStructuredRow,
@@ -12,9 +11,10 @@ import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 
 import camelCase from 'lodash.camelcase';
 import { isDefined } from 'twenty-shared/utils';
-import { AppTooltip, TooltipDelay } from 'twenty-ui/primitives/surfaces';
+import { Tooltip } from 'twenty-ui/primitives/surfaces';
 import { Checkbox, Switch } from 'twenty-ui/primitives/input';
 import { type ImportedStructuredRowMetadata } from '@/spreadsheet-import/steps/components/ValidationStep/types';
+import { TooltipDelay } from '@/ui/layout/tooltip/constants/TooltipDelay';
 
 const StyledHeaderContainer = styled.div`
   align-items: center;
@@ -45,10 +45,6 @@ const StyledSwitchContainer = styled.div`
   align-items: center;
   display: flex;
   height: 100%;
-`;
-
-const StyledSwitch = styled(Switch)`
-  align-self: center;
 `;
 
 const StyledInputContainer = styled.div`
@@ -90,7 +86,7 @@ export const generateColumns = (
     resizable: false,
     sortable: false,
     frozen: true,
-    renderCell: (props: any) => {
+    renderCell: (props) => {
       // oxlint-disable-next-line  react-hooks/rules-of-hooks
       const { isRowSelected, onRowSelectionChange } = useRowSelection();
 
@@ -124,25 +120,22 @@ export const generateColumns = (
       resizable: true,
       renderHeaderCell: () => (
         <StyledHeaderContainer>
-          <StyledHeaderLabel id={formatSafeId(column.key)}>
-            {column.label}
-          </StyledHeaderLabel>
-          <>
-            {column.description &&
-              createPortal(
-                <AppTooltip
-                  anchorSelect={`#${formatSafeId(column.key)}`}
-                  place="top"
-                  title={column.description}
-                />,
-                document.body,
-              )}
-          </>
+          <Tooltip
+            side="top"
+            content={column.description}
+            delay={TooltipDelay.mediumDelay}
+            disabled={!column.description}
+          >
+            <StyledHeaderLabel id={formatSafeId(column.key)}>
+              {column.label}
+            </StyledHeaderLabel>
+          </Tooltip>
+          <></>
         </StyledHeaderContainer>
       ),
       editable: column.fieldType.type !== 'checkbox',
       // Todo: remove usage of react-data-grid
-      renderEditCell: ({ row, onRowChange, onClose }: any) => {
+      renderEditCell: ({ row, onRowChange, onClose }) => {
         const columnKey = column.key as keyof (ImportedStructuredRow &
           ImportedStructuredRowMetadata);
         let component;
@@ -173,7 +166,7 @@ export const generateColumns = (
         return <StyledInputContainer>{component}</StyledInputContainer>;
       },
       // Todo: remove usage of react-data-grid
-      renderCell: ({ row, onRowChange }: { row: any; onRowChange: any }) => {
+      renderCell: ({ row, onRowChange }) => {
         const columnKey = column.key as keyof (ImportedStructuredRow &
           ImportedStructuredRowMetadata);
         let component;
@@ -187,13 +180,13 @@ export const generateColumns = (
                   event.stopPropagation();
                 }}
               >
-                <StyledSwitch
+                <Switch
                   aria-label={column.label}
                   checked={row[columnKey] as boolean}
                   onCheckedChange={() => {
                     onRowChange({
                       ...row,
-                      [columnKey]: !row[columnKey],
+                      [columnKey]: Boolean(row[columnKey]) === false,
                     });
                   }}
                 />
@@ -223,18 +216,13 @@ export const generateColumns = (
 
         if (isDefined(row.__errors?.[columnKey])) {
           return (
-            <>
+            <Tooltip
+              content={row.__errors?.[columnKey]?.message}
+              side="top"
+              delay={TooltipDelay.shortDelay}
+            >
               {component}
-              {createPortal(
-                <AppTooltip
-                  anchorSelect={`#${formatSafeId(`${columnKey}-${row.__index}`)}`}
-                  place="top"
-                  title={row.__errors?.[columnKey]?.message}
-                  delay={TooltipDelay.shortDelay}
-                />,
-                document.body,
-              )}
-            </>
+            </Tooltip>
           );
         }
 

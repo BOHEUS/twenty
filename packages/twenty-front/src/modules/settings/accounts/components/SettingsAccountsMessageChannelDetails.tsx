@@ -1,17 +1,14 @@
 import { useMutation } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-
 import {
   type MessageChannelContactAutoCreationPolicy,
   MessageChannelType,
   type MessageFolderImportPolicy,
 } from 'twenty-shared/types';
+import { Section } from 'twenty-ui/components/layout';
 import { IconBriefcase, IconUsers } from 'twenty-ui/icon';
-import { H2Title } from 'twenty-ui/primitives/typography';
-import { Section } from 'twenty-ui/primitives/layout';
 import { Card } from 'twenty-ui/primitives/surfaces';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 import { type MessageChannel } from '@/accounts/types/MessageChannel';
 import { SettingsAccountsMessageAutoCreationCard } from '@/settings/accounts/components/SettingsAccountsMessageAutoCreationCard';
@@ -19,7 +16,8 @@ import { SettingsAccountsMessageFolderCard } from '@/settings/accounts/component
 import { SettingsAccountsMessageVisibilityCard } from '@/settings/accounts/components/SettingsAccountsMessageVisibilityCard';
 import { UPDATE_MESSAGE_CHANNEL } from '@/settings/accounts/graphql/mutations/updateMessageChannel';
 import { SettingsOptionCardContentSwitch } from '@/settings/components/SettingsOptions/SettingsOptionCardContentSwitch';
-import { type MessageChannelVisibility } from '~/generated/graphql';
+import { type MessageChannelVisibility } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsAccountsMessageChannelDetailsProps = {
   messageChannel: Pick<
@@ -52,6 +50,7 @@ const StyledDetailsContainer = styled.div`
 export const SettingsAccountsMessageChannelDetails = ({
   messageChannel,
 }: SettingsAccountsMessageChannelDetailsProps) => {
+  const { t } = useLingui();
   const [updateMessageChannel] = useMutation(UPDATE_MESSAGE_CHANNEL);
 
   const updateChannel = (update: MessageChannelUpdateInput) => {
@@ -92,8 +91,8 @@ export const SettingsAccountsMessageChannelDetails = ({
   return (
     <StyledDetailsContainer>
       {supportsFolderImportPolicy && (
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Import`}
             description={t`Emails from the blocklist will be ignored. Manage blocklist on the "Accounts" setting page.`}
           />
@@ -101,11 +100,11 @@ export const SettingsAccountsMessageChannelDetails = ({
             onChange={handleMessageFolderImportPolicyChange}
             value={messageChannel.messageFolderImportPolicy}
           />
-        </Section>
+        </Section.Root>
       )}
       {!isGroupMailbox && (
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Visibility`}
             description={t`Define what will be visible to other users in your workspace`}
           />
@@ -113,10 +112,10 @@ export const SettingsAccountsMessageChannelDetails = ({
             value={messageChannel.visibility}
             onChange={handleVisibilityChange}
           />
-        </Section>
+        </Section.Root>
       )}
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title={t`Contact auto-creation`}
           description={t`Automatically create People records when receiving or sending emails`}
         />
@@ -124,13 +123,13 @@ export const SettingsAccountsMessageChannelDetails = ({
           value={messageChannel.contactAutoCreationPolicy}
           onChange={handleContactAutoCreationChange}
         />
-      </Section>
-      <Section>
-        <H2Title
+      </Section.Root>
+      <Section.Root>
+        <Section.Header
           title={t`Options`}
           description={t`Configure what emails should get synced`}
         />
-        <Card rounded>
+        <Card.Root>
           <SettingsOptionCardContentSwitch
             Icon={IconUsers}
             title={t`Exclude group emails`}
@@ -154,8 +153,8 @@ export const SettingsAccountsMessageChannelDetails = ({
               );
             }}
           />
-        </Card>
-      </Section>
+        </Card.Root>
+      </Section.Root>
     </StyledDetailsContainer>
   );
 };

@@ -21,6 +21,9 @@ export const THEME_LIGHT = {
       sm: {
         width: '300px',
       },
+      compact: {
+        width: '360px',
+      },
       md: {
         width: '400px',
       },
@@ -104,6 +107,7 @@ export const THEME_LIGHT = {
     invertedPrimary: 'color(display-p3 0.2 0.2 0.2)',
     invertedSecondary: 'color(display-p3 0.4 0.4 0.4)',
     danger: 'color(display-p3 0.985 0.925 0.925)',
+    dangerSolid: 'color(display-p3 0.744 0.234 0.222)',
     transparent: {
       primary: 'color(display-p3 1 1 1 / 0.5)',
       secondary: 'color(display-p3 1 1 1 / 0.4)',
@@ -148,6 +152,7 @@ export const THEME_LIGHT = {
       md: '8px',
       smRound: '4px',
       mdRound: '8px',
+      lgRound: '12px',
       lg: '16px',
       xl: '20px',
       xxl: '40px',
@@ -160,6 +165,7 @@ export const THEME_LIGHT = {
     light:
       '0px 2px 4px 0px color(display-p3 0 0 0 / 0.039), 0px 0px 4px 0px color(display-p3 0 0 0 / 0.078)',
     sidebar: '-4px 4px 4px 0px rgba(0, 0, 0, 0.005)',
+    bottomPanel: '0px 0px 20px 0px color(display-p3 0 0 0 / 0.1)',
     strong:
       '2px 4px 16px 0px color(display-p3 0 0 0 / 0.161), 0px 2px 4px 0px color(display-p3 0 0 0 / 0.078)',
     underline: '0px 1px 0px 0px color(display-p3 0 0 0 / 0.361)',
@@ -174,6 +180,7 @@ export const THEME_LIGHT = {
       light: 'color(display-p3 0.702 0.702 0.702)',
       extraLight: 'color(display-p3 0.8 0.8 0.8)',
       inverted: 'color(display-p3 1 1 1)',
+      onAccent: 'color(display-p3 1 1 1)',
       danger: 'color(display-p3 0.83 0.329 0.324)',
     },
     size: {

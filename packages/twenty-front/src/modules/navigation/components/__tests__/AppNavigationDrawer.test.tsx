@@ -1,24 +1,37 @@
 import { AppNavigationDrawer } from '@/navigation/components/AppNavigationDrawer';
 import { useIsSettingsDrawer } from '@/navigation/hooks/useIsSettingsDrawer';
-import { useIsMobile } from '@/ui/utilities/responsive/hooks/useIsMobile';
+import { useIsMobile } from 'twenty-ui/utilities';
 import { render, screen } from '@testing-library/react';
 import { type ReactNode } from 'react';
 
 jest.mock('@/navigation/hooks/useIsSettingsDrawer');
-jest.mock('@/ui/utilities/responsive/hooks/useIsMobile');
+jest.mock('twenty-ui/utilities', () => ({
+  ...jest.requireActual('twenty-ui/utilities'),
+  useIsMobile: jest.fn(),
+}));
+
+jest.mock('@/getting-started/components/GettingStartedSidebarCard', () => ({
+  GettingStartedSidebarCard: () => null,
+}));
 
 jest.mock('@/navigation/components/MainNavigationDrawerContent', () => ({
   MainNavigationDrawerContent: () => <div>Main content</div>,
 }));
 
-jest.mock('@/navigation/components/MainNavigationDrawerModeSwitcher', () => ({
-  MainNavigationDrawerModeSwitcher: () => (
+jest.mock('@/navigation/components/MainNavigationDrawerTabSwitcher', () => ({
+  MainNavigationDrawerTabSwitcher: () => (
     <button type="button">Navigation modes</button>
   ),
 }));
 
 jest.mock('@/navigation/components/SettingsNavigationDrawerContent', () => ({
   SettingsNavigationDrawerContent: () => <div>Settings content</div>,
+}));
+
+jest.mock('@/navigation/components/NavigationDrawerModeTransition', () => ({
+  NavigationDrawerModeTransition: ({ children }: { children: ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 jest.mock(

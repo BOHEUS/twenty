@@ -2,9 +2,18 @@ import { type CoreApiClient } from 'twenty-client-sdk/core';
 
 import { chunk } from 'src/utils/chunk';
 import { executeWithRetry } from 'src/utils/execute-with-retry';
-import { type InteractionKind } from 'src/utils/update-person-last-contact';
+import {
+  type InteractionKind,
+  type PersonLastContactState,
+  type RelatedLastContact,
+} from 'src/utils/update-person-last-contact';
+import {
+  type RecordUpsert,
+  upsertRecordsInBatches,
+} from 'src/utils/upsert-records-in-batches';
 
 const PAGE_SIZE = 200;
+const NESTED_RELATION_MAX_RECORDS = 60;
 
 export type RelatedInteraction = {
   occurredAt: string;
@@ -12,12 +21,10 @@ export type RelatedInteraction = {
   kind: InteractionKind;
 };
 
-const recencyGuard = (occurredAt: string) => ({
-  or: [
-    { lastContactAt: { is: 'NULL' } },
-    { lastContactAt: { lt: occurredAt } },
-  ],
-});
+const isNewer = (
+  candidate: string,
+  current: string | null | undefined,
+): boolean => !current || current < candidate;
 
 const buildData = ({
   occurredAt,
@@ -29,48 +36,11 @@ const buildData = ({
   lastContactItemCalendarEventId: kind === 'meeting' ? itemId : null,
 });
 
-const collectCompanyIdByPersonId = async (
-  client: CoreApiClient,
+const collectOpportunitiesByPointOfContactId = async (
+  client: Pick<CoreApiClient, 'query' | 'mutation'>,
   personIds: string[],
-): Promise<Map<string, string>> => {
-  const companyIdByPersonId = new Map<string, string>();
-
-  for (const ids of chunk(personIds, PAGE_SIZE)) {
-    let after: string | undefined;
-
-    do {
-      const { people } = await executeWithRetry(() =>
-        client.query({
-          people: {
-            __args: { filter: { id: { in: ids } }, first: PAGE_SIZE, after },
-            edges: { node: { id: true, companyId: true } },
-            pageInfo: { hasNextPage: true, endCursor: true },
-          },
-        }),
-      );
-
-      for (const edge of people?.edges ?? []) {
-        const { id, companyId } = edge.node;
-
-        if (id && companyId) {
-          companyIdByPersonId.set(id, companyId);
-        }
-      }
-
-      after = people?.pageInfo.hasNextPage
-        ? (people.pageInfo.endCursor ?? undefined)
-        : undefined;
-    } while (after);
-  }
-
-  return companyIdByPersonId;
-};
-
-const collectPointOfContactIds = async (
-  client: CoreApiClient,
-  personIds: string[],
-): Promise<Set<string>> => {
-  const pointOfContactIds = new Set<string>();
+): Promise<Map<string, RelatedLastContact[]>> => {
+  const opportunitiesByPersonId = new Map<string, RelatedLastContact[]>();
 
   for (const ids of chunk(personIds, PAGE_SIZE)) {
     let after: string | undefined;
@@ -84,17 +54,32 @@ const collectPointOfContactIds = async (
               first: PAGE_SIZE,
               after,
             },
-            edges: { node: { id: true, pointOfContactId: true } },
+            edges: {
+              node: {
+                id: true,
+                pointOfContactId: true,
+                lastContactAt: true,
+              },
+            },
             pageInfo: { hasNextPage: true, endCursor: true },
           },
         }),
       );
 
       for (const edge of opportunities?.edges ?? []) {
-        const { pointOfContactId } = edge.node;
+        const { id, pointOfContactId, lastContactAt } = edge.node;
 
-        if (pointOfContactId) {
-          pointOfContactIds.add(pointOfContactId);
+        if (!id || !pointOfContactId) {
+          continue;
+        }
+
+        const opportunity = { id, lastContactAt: lastContactAt ?? null };
+        const existing = opportunitiesByPersonId.get(pointOfContactId);
+
+        if (existing) {
+          existing.push(opportunity);
+        } else {
+          opportunitiesByPersonId.set(pointOfContactId, [opportunity]);
         }
       }
 
@@ -104,15 +89,54 @@ const collectPointOfContactIds = async (
     } while (after);
   }
 
-  return pointOfContactIds;
+  return opportunitiesByPersonId;
+};
+
+const resolveOpportunitiesByPersonId = async (
+  client: Pick<CoreApiClient, 'query' | 'mutation'>,
+  stateByPersonId: Map<string, PersonLastContactState>,
+  personIds: string[],
+): Promise<Map<string, RelatedLastContact[]>> => {
+  const opportunitiesByPersonId = new Map<string, RelatedLastContact[]>();
+  const truncatedPersonIds: string[] = [];
+
+  for (const personId of personIds) {
+    const connection =
+      stateByPersonId.get(personId)?.pointOfContactForOpportunities;
+    const opportunities = (connection?.edges ?? []).map(({ node }) => node);
+
+    const isTruncated =
+      opportunities.length >= NESTED_RELATION_MAX_RECORDS ||
+      (connection?.totalCount ?? 0) > opportunities.length;
+
+    if (isTruncated) {
+      truncatedPersonIds.push(personId);
+    } else {
+      opportunitiesByPersonId.set(personId, opportunities);
+    }
+  }
+
+  if (truncatedPersonIds.length > 0) {
+    const fetched = await collectOpportunitiesByPointOfContactId(
+      client,
+      truncatedPersonIds,
+    );
+
+    for (const personId of truncatedPersonIds) {
+      opportunitiesByPersonId.set(personId, fetched.get(personId) ?? []);
+    }
+  }
+
+  return opportunitiesByPersonId;
 };
 
 // Companies and opportunities surface emails and meetings from their related
 // people, so their last contact mirrors the most recent contact of any person
 // connected to them.
 export const updateRelatedLastContactForPeople = async (
-  client: CoreApiClient,
+  client: Pick<CoreApiClient, 'query' | 'mutation'>,
   contactByPersonId: Map<string, RelatedInteraction>,
+  stateByPersonId: Map<string, PersonLastContactState>,
 ): Promise<void> => {
   const personIds = [...contactByPersonId.keys()];
 
@@ -120,69 +144,59 @@ export const updateRelatedLastContactForPeople = async (
     return;
   }
 
-  const companyIdByPersonId = await collectCompanyIdByPersonId(
-    client,
-    personIds,
-  );
   const contactByCompanyId = new Map<string, RelatedInteraction>();
+  const lastContactAtByCompanyId = new Map<string, string | null>();
 
   for (const [personId, contact] of contactByPersonId) {
-    const companyId = companyIdByPersonId.get(personId);
+    const company = stateByPersonId.get(personId)?.company;
 
-    if (!companyId) {
+    if (!company?.id) {
       continue;
     }
 
-    const current = contactByCompanyId.get(companyId);
+    lastContactAtByCompanyId.set(company.id, company.lastContactAt ?? null);
+
+    const current = contactByCompanyId.get(company.id);
 
     if (!current || contact.occurredAt > current.occurredAt) {
-      contactByCompanyId.set(companyId, contact);
+      contactByCompanyId.set(company.id, contact);
     }
   }
 
+  const companyUpserts: RecordUpsert[] = [];
+
   for (const [companyId, contact] of contactByCompanyId) {
-    await executeWithRetry(() =>
-      client.mutation({
-        updateCompanies: {
-          __args: {
-            data: buildData(contact),
-            filter: {
-              and: [
-                { id: { eq: companyId } },
-                recencyGuard(contact.occurredAt),
-              ],
-            },
-          },
-          id: true,
-        },
-      }),
-    );
+    if (isNewer(contact.occurredAt, lastContactAtByCompanyId.get(companyId))) {
+      companyUpserts.push({ id: companyId, ...buildData(contact) });
+    }
   }
 
-  const pointOfContactIds = await collectPointOfContactIds(client, personIds);
+  await upsertRecordsInBatches(client, 'createCompanies', companyUpserts);
 
-  for (const personId of pointOfContactIds) {
+  const opportunitiesByPersonId = await resolveOpportunitiesByPersonId(
+    client,
+    stateByPersonId,
+    personIds,
+  );
+  const opportunityUpserts: RecordUpsert[] = [];
+
+  for (const [personId, opportunities] of opportunitiesByPersonId) {
     const contact = contactByPersonId.get(personId);
 
     if (!contact) {
       continue;
     }
 
-    await executeWithRetry(() =>
-      client.mutation({
-        updateOpportunities: {
-          __args: {
-            data: buildData(contact),
-            filter: {
-              and: [
-                { pointOfContactId: { eq: personId } },
-                recencyGuard(contact.occurredAt),
-              ],
-            },
-          },
-          id: true,
-        },
-      }),
-    );
+    for (const { id, lastContactAt } of opportunities) {
+      if (isNewer(contact.occurredAt, lastContactAt)) {
+        opportunityUpserts.push({ id, ...buildData(contact) });
+      }
+    }
   }
+
+  await upsertRecordsInBatches(
+    client,
+    'createOpportunities',
+    opportunityUpserts,
+  );
 };

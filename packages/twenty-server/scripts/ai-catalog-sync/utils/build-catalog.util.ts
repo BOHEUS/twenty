@@ -31,7 +31,7 @@ const EXCLUDED_MODEL_PREFIXES = [
 
 const EXCLUDED_MODEL_SUFFIXES = ['-audio-preview', '-realtime-preview'];
 
-const LONG_CONTEXT_THRESHOLD_TOKENS = 200000;
+const LEGACY_LONG_CONTEXT_THRESHOLD_TOKENS = 200000;
 
 const isLanguageModel = (modelId: string): boolean => {
   const lowerId = modelId.toLowerCase();
@@ -67,7 +67,11 @@ const extractCost = ({
   model.cachedInputCostPerMillionTokens = cost.cache_read;
   model.cacheCreationCostPerMillionTokens = cost.cache_write;
 
-  const longContextCost = cost.context_over_200k;
+  const contextTier = (cost.tiers ?? [])
+    .filter((costTier) => costTier.tier.type === 'context')
+    .sort((left, right) => left.tier.size - right.tier.size)[0];
+
+  const longContextCost = contextTier ?? cost.context_over_200k;
 
   if (!isDefined(longContextCost?.input)) {
     return;
@@ -77,7 +81,8 @@ const extractCost = ({
     inputCostPerMillionTokens: longContextCost.input,
     outputCostPerMillionTokens:
       longContextCost.output ?? model.outputCostPerMillionTokens ?? 0,
-    thresholdTokens: LONG_CONTEXT_THRESHOLD_TOKENS,
+    thresholdTokens:
+      contextTier?.tier.size ?? LEGACY_LONG_CONTEXT_THRESHOLD_TOKENS,
     cachedInputCostPerMillionTokens: longContextCost.cache_read,
     cacheCreationCostPerMillionTokens: longContextCost.cache_write,
   };
@@ -122,8 +127,7 @@ const buildModel = ({
   return model;
 };
 
-// Which vendors we carry is a deployment decision, so it is read from the
-// spec that states it rather than inferred from how the SDK names a package.
+// Carried vendors are a deployment decision, read from the spec rather than inferred from SDK package names
 export const buildCatalog = ({
   data,
   vendors,

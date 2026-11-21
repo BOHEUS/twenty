@@ -1,4 +1,3 @@
-import { useToast } from 'twenty-ui/primitives/feedback';
 import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
 import { ResourceCreditPackagePickerModal } from '@/settings/billing/components/internal/ResourceCreditPackagePickerModal';
 import { BILLING_MODAL_IDS } from '@/settings/billing/constants/BillingModalIds';
@@ -6,14 +5,14 @@ import { useApplyCurrentWorkspaceBillingUpdate } from '@/settings/billing/hooks/
 import { useBillingWording } from '@/settings/billing/hooks/useBillingWording';
 import { useCurrentResourceCredit } from '@/settings/billing/hooks/useCurrentResourceCredit';
 import { useGetResourceCreditUsage } from '@/settings/billing/hooks/useGetResourceCreditUsage';
-import { ConfirmationModal } from '@/ui/layout/modal/components/ConfirmationModal';
-import { useModal } from '@/ui/layout/modal/hooks/useModal';
+import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDialog';
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { useMemo, useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   IconAdjustments,
   IconArrowUp,
@@ -21,12 +20,13 @@ import {
   IconCreditCard,
 } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   SetResourceCreditSubscriptionPriceDocument,
   SubscriptionInterval,
   type BillingPriceLicensed,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 const PREDEFINED_RESOURCE_CREDIT_PACKAGE_MULTIPLIERS = [2, 4];
 
@@ -63,6 +63,7 @@ export const ResourceCreditPriceSelector = ({
   canCancelCreditPackSwitch?: boolean;
   onCancelCreditPackSwitch?: () => void;
 }) => {
+  const { t } = useLingui();
   const {
     currentResourceCreditBillingPrice,
     currentResourceCreditSubscriptionItem,
@@ -79,8 +80,7 @@ export const ResourceCreditPriceSelector = ({
 
   const currentResourceCreditPrice = currentResourceCreditBillingPrice;
 
-  // The catalog price is gone once the workspace's package is archived, so
-  // identity and the amount it pays both come from the subscription first.
+  // An archived package's catalog price is gone, so read from the subscription first.
   const currentResourceCreditStripePriceId =
     currentResourceCreditSubscriptionItem?.stripePriceId ??
     currentResourceCreditPrice?.stripePriceId;
@@ -181,9 +181,7 @@ export const ResourceCreditPriceSelector = ({
     (price) => price.stripePriceId !== currentResourceCreditStripePriceId,
   );
 
-  // Compared against the subscription's own package: the catalog price is gone
-  // once it is archived, which would otherwise confirm every change as a
-  // downgrade.
+  // Against the subscription's package: an archived catalog price would read every change as a downgrade.
   const isUpgrade = () => {
     if (!isChanged || !isDefined(selectedPrice)) {
       return false;
@@ -245,7 +243,7 @@ export const ResourceCreditPriceSelector = ({
   const formatAnimatedRolloverLimit = (value: number) =>
     formatNumber(Math.max(0, Math.round(value)), { decimals: 2 });
 
-  const { openModal, closeModal } = useModal();
+  const { openDialog, closeDialog } = useDialog();
 
   const redirectToRequiredBillingAction = () => {
     if (shouldRedirectToUpdatePayment) {
@@ -269,7 +267,7 @@ export const ResourceCreditPriceSelector = ({
     }
 
     setSelectedPriceId(price.stripePriceId);
-    openModal(BILLING_MODAL_IDS.confirmResourceCreditPriceChange);
+    openDialog(BILLING_MODAL_IDS.confirmResourceCreditPriceChange);
   };
 
   const handleOpenCreditPackagePicker = () => {
@@ -278,7 +276,7 @@ export const ResourceCreditPriceSelector = ({
     }
 
     setSelectedPriceId(defaultResourceCreditPriceForPicker?.stripePriceId);
-    openModal(BILLING_MODAL_IDS.creditPackagePicker);
+    openDialog(BILLING_MODAL_IDS.creditPackagePicker);
   };
 
   const handleSliderValueChange = (value: number) => {
@@ -294,8 +292,8 @@ export const ResourceCreditPriceSelector = ({
       return;
     }
 
-    closeModal(BILLING_MODAL_IDS.creditPackagePicker);
-    openModal(BILLING_MODAL_IDS.confirmResourceCreditPriceChange);
+    closeDialog(BILLING_MODAL_IDS.creditPackagePicker);
+    openDialog(BILLING_MODAL_IDS.confirmResourceCreditPriceChange);
   };
 
   const handleConfirmClick = async () => {
@@ -310,13 +308,13 @@ export const ResourceCreditPriceSelector = ({
         },
       );
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Resource credits updated.`,
       });
       setSelectedPriceId(undefined);
     } catch (error) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to update resource credits.`,
       });
 
@@ -345,7 +343,7 @@ export const ResourceCreditPriceSelector = ({
     }
 
     if (isTrialing) {
-      openModal(BILLING_MODAL_IDS.endTrialPeriod);
+      openDialog(BILLING_MODAL_IDS.endTrialPeriod);
       return;
     }
 
@@ -425,7 +423,7 @@ export const ResourceCreditPriceSelector = ({
         isUpdating={isUpdating}
         newRolloverLimit={newRolloverLimit}
         newRolloverLimitValue={newRolloverLimitValue}
-        onCancel={() => closeModal(BILLING_MODAL_IDS.creditPackagePicker)}
+        onCancel={() => closeDialog(BILLING_MODAL_IDS.creditPackagePicker)}
         onConfirm={handleConfirmPackagePicker}
         onSliderValueChange={handleSliderValueChange}
         priceCount={sortedResourceCreditPrices.length}
@@ -433,8 +431,8 @@ export const ResourceCreditPriceSelector = ({
         selectedPriceAmountValue={selectedPriceAmountValue}
         selectedPriceIndex={selectedPriceIndex}
       />
-      <ConfirmationModal
-        modalInstanceId={BILLING_MODAL_IDS.confirmResourceCreditPriceChange}
+      <ConfirmationDialog
+        dialogId={BILLING_MODAL_IDS.confirmResourceCreditPriceChange}
         title={isUpgrade() ? t`Confirm upgrade` : t`Confirm downgrade`}
         subtitle={
           isDefined(selectedCreditAmountDisplay) &&

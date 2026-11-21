@@ -4,8 +4,9 @@ import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
+import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
 import { Tag } from 'twenty-ui/primitives/data-display';
-import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/surfaces';
 import { type ThemeColor } from 'twenty-ui/theme';
 
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
@@ -21,9 +22,9 @@ import {
   type CollapsedCreditGrant,
 } from '@/settings/admin-panel/utils/collapseCreditGrantChains';
 import { SettingsTableListSection } from '@/settings/components/SettingsTableListSection';
-import { ConfirmationModal } from '@/ui/layout/modal/components/ConfirmationModal';
-import { useModal } from '@/ui/layout/modal/hooks/useModal';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDialog';
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
+
 import { type WorkspaceBillingAdminPanelQuery } from '~/generated-admin/graphql';
 import { beautifyExactDate } from '~/utils/date-utils';
 
@@ -37,10 +38,7 @@ type SettingsAdminWorkspaceCreditGrantsTableProps = {
   onGrantCreditsClick: () => void;
 };
 
-// Every row is its own grid, so a fr track is sized by that row's own content
-// and a wide tag pushes the columns after it out of line with the rows above.
-// Fixed widths for all but the reason, which takes what is left because its
-// cell hides the overflow.
+// Each row is its own grid, so fr tracks would misalign rows; only the overflow-hidden reason flexes.
 const CREDIT_GRANTS_GRID_AUTO_COLUMNS = '88px 140px 88px 108px 108px 1fr 36px';
 const REVOKE_CREDIT_GRANT_MODAL_ID = 'revoke-credit-grant-modal';
 const EM_DASH = '—';
@@ -70,7 +68,7 @@ export const SettingsAdminWorkspaceCreditGrantsTable = ({
   const { formatNumber } = useNumberFormat();
   const { enqueueToast } = useToast();
   const apolloAdminClient = useApolloAdminClient();
-  const { openModal } = useModal();
+  const { openDialog } = useDialog();
 
   const [grantPendingRevocation, setGrantPendingRevocation] =
     useState<CreditGrant | null>(null);
@@ -91,13 +89,11 @@ export const SettingsAdminWorkspaceCreditGrantsTable = ({
 
   const handleRevokeClick = (creditGrant: CreditGrant) => {
     setGrantPendingRevocation(creditGrant);
-    openModal(REVOKE_CREDIT_GRANT_MODAL_ID);
+    openDialog(REVOKE_CREDIT_GRANT_MODAL_ID);
   };
 
   const handleRevoke = async (creditGrantId: string) => {
-    // The refetch that clears the row lands well after the mutation resolves,
-    // so without this the button stays live and a second click revokes an
-    // already revoked grant.
+    // The refetch removing the row lands well after the mutation, so block a second revoke.
     setIsRevoking(true);
 
     try {
@@ -105,7 +101,7 @@ export const SettingsAdminWorkspaceCreditGrantsTable = ({
         variables: { workspaceId, creditGrantId },
       });
 
-      enqueueToast({ variant: 'success', children: t`Credit grant revoked.` });
+      enqueueToast({ status: 'success', children: t`Credit grant revoked.` });
     } catch (error) {
       enqueueToast(getToastOptionsFromError({ error }));
     } finally {
@@ -181,8 +177,8 @@ export const SettingsAdminWorkspaceCreditGrantsTable = ({
         onFooterButtonClick={onGrantCreditsClick}
       />
 
-      <ConfirmationModal
-        modalInstanceId={REVOKE_CREDIT_GRANT_MODAL_ID}
+      <ConfirmationDialog
+        dialogId={REVOKE_CREDIT_GRANT_MODAL_ID}
         title={t`Revoke credit grant`}
         subtitle={
           isDefined(grantPendingRevocation)

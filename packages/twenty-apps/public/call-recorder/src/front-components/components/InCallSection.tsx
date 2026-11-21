@@ -1,29 +1,22 @@
-import { useId, useState } from 'react';
-import { Section } from 'twenty-ui/layout';
-import { H2Title } from 'twenty-ui/typography';
+import { useState } from 'react';
+import { Section } from 'twenty-ui/components/layout';
+import { Field, Textarea } from 'twenty-ui/primitives/input';
+import { Card } from 'twenty-ui/primitives/surfaces';
 
-import { LabelledSettingsField } from 'src/front-components/components/LabelledSettingsField';
-import { SettingsOptionCardContentToggle } from 'src/front-components/components/SettingsOptionCardContentToggle';
-import { StyledDimmable } from 'src/front-components/components/StyledDimmable';
-import { StyledSettingsCard } from 'src/front-components/components/StyledSettingsCard';
+import { SettingsOptionCardContentSwitch } from 'src/front-components/components/SettingsOptionCardContentSwitch';
 import { StyledSettingsSectionStack } from 'src/front-components/components/StyledSettingsSectionStack';
-import { StyledSettingsTextArea } from 'src/front-components/components/StyledSettingsTextArea';
 import { TimingCounterRow } from 'src/front-components/components/TimingCounterRow';
 import {
   CALL_RECORDER_RECORDING_NOTICE_MESSAGE_FIELD,
   CALL_RECORDER_RECORDING_NOTICE_ROW,
   CALL_RECORDER_TIMING_ROWS,
 } from 'src/front-components/constants/call-recorder-settings-layout.constant';
+import { SETTINGS_TEXTAREA_ROWS } from 'src/front-components/constants/settings-textarea-rows.constant';
 import { useAutosaveApplicationVariable } from 'src/front-components/hooks/use-autosave-application-variable';
 import { getApplicationVariableValue } from 'src/front-components/utils/get-application-variable-value.util';
 import { truncateRecordingNoticeMessage } from 'src/logic-functions/utils/truncate-recording-notice-message.util';
 
-type InCallSectionProps = {
-  frontComponentId: string;
-};
-
-export const InCallSection = ({ frontComponentId }: InCallSectionProps) => {
-  const noticeMessageInputId = useId();
+export const InCallSection = () => {
   const [isNoticeEnabled, setIsNoticeEnabled] = useState(
     () =>
       getApplicationVariableValue(
@@ -38,12 +31,10 @@ export const InCallSection = ({ frontComponentId }: InCallSectionProps) => {
 
   const { saveImmediately: saveNoticeEnabledImmediately } =
     useAutosaveApplicationVariable({
-      frontComponentId,
       variableKey: CALL_RECORDER_RECORDING_NOTICE_ROW.variableKey,
     });
   const { saveDebounced: saveNoticeMessageDebounced } =
     useAutosaveApplicationVariable({
-      frontComponentId,
       variableKey: CALL_RECORDER_RECORDING_NOTICE_MESSAGE_FIELD.variableKey,
     });
 
@@ -62,17 +53,16 @@ export const InCallSection = ({ frontComponentId }: InCallSectionProps) => {
   };
 
   return (
-    <Section>
-      <H2Title
+    <Section.Root>
+      <Section.Header
         title="In the call"
         description="What the recorder does while it is in your meetings."
       />
       <StyledSettingsSectionStack>
-        <StyledSettingsCard>
+        <Card.Root fullWidth>
           {CALL_RECORDER_TIMING_ROWS.map((row) => (
             <TimingCounterRow
               key={row.variableKey}
-              frontComponentId={frontComponentId}
               variableKey={row.variableKey}
               title={row.title}
               description={row.description}
@@ -81,33 +71,31 @@ export const InCallSection = ({ frontComponentId }: InCallSectionProps) => {
               persistedValue={getApplicationVariableValue(row.variableKey)}
             />
           ))}
-          <SettingsOptionCardContentToggle
+          <SettingsOptionCardContentSwitch
             Icon={CALL_RECORDER_RECORDING_NOTICE_ROW.Icon}
             title={CALL_RECORDER_RECORDING_NOTICE_ROW.title}
             description={CALL_RECORDER_RECORDING_NOTICE_ROW.description}
             checked={isNoticeEnabled}
             onChange={handleNoticeEnabledChange}
           />
-        </StyledSettingsCard>
-        <StyledDimmable $dimmed={!isNoticeEnabled}>
-          <LabelledSettingsField
-            label={CALL_RECORDER_RECORDING_NOTICE_MESSAGE_FIELD.label}
-            inputId={noticeMessageInputId}
-            hint={CALL_RECORDER_RECORDING_NOTICE_MESSAGE_FIELD.hint}
-          >
-            <StyledSettingsTextArea
-              id={noticeMessageInputId}
-              placeholder="Value"
-              disabled={!isNoticeEnabled}
-              value={noticeMessageValue}
-              onChange={(event) =>
-                handleNoticeMessageChange(event.target.value)
-              }
-              onBlur={() => saveNoticeMessageDebounced.flush()}
-            />
-          </LabelledSettingsField>
-        </StyledDimmable>
+        </Card.Root>
+        <Field.Root disabled={!isNoticeEnabled}>
+          <Field.Label>
+            {CALL_RECORDER_RECORDING_NOTICE_MESSAGE_FIELD.label}
+          </Field.Label>
+          <Textarea
+            autoResize
+            rows={SETTINGS_TEXTAREA_ROWS}
+            placeholder="Value"
+            value={noticeMessageValue}
+            onValueChange={handleNoticeMessageChange}
+            onBlur={() => saveNoticeMessageDebounced.flush()}
+          />
+          <Field.Description>
+            {CALL_RECORDER_RECORDING_NOTICE_MESSAGE_FIELD.hint}
+          </Field.Description>
+        </Field.Root>
       </StyledSettingsSectionStack>
-    </Section>
+    </Section.Root>
   );
 };

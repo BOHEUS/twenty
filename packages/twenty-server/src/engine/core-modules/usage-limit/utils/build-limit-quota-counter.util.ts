@@ -1,4 +1,4 @@
-import { type FlatUsageLimit } from 'src/engine/core-modules/usage-limit/types/flat-usage-limit.type';
+import { type FlatQuotaLimit } from 'src/engine/core-modules/usage-limit/types/flat-quota-limit.type';
 import { type LimitQuotaCounter } from 'src/engine/core-modules/usage-limit/types/limit-quota-counter.type';
 import { type UsagePeriod } from 'src/engine/core-modules/usage-limit/types/usage-period.type';
 import { buildQuotaCounterKey } from 'src/engine/core-modules/usage-limit/utils/build-quota-counter-key.util';
@@ -10,30 +10,22 @@ export const buildLimitQuotaCounter = ({
   period,
 }: {
   workspaceId: string;
-  limit: Omit<
-    FlatUsageLimit,
-    'id' | 'limitKind' | 'periodCount' | 'burstValue'
-  >;
+  limit: Omit<FlatQuotaLimit, 'limitKind' | 'periodCount' | 'burstValue'>;
   period: UsagePeriod;
-}): LimitQuotaCounter => ({
-  kind: 'limit',
-  key: buildQuotaCounterKey({
-    workspaceId,
+}): LimitQuotaCounter => {
+  const counter: Omit<LimitQuotaCounter, 'key'> = {
+    kind: 'limit',
+    isDefault: false,
+    limitValue: limit.limitValue,
+    unit: limit.unit,
     resourceType: limit.resourceType,
-    operationType: limit.operationType,
-    spenderType: limit.spenderType,
-    spenderId: limit.spenderId,
-    meter: limit.meter,
     periodUnit: limit.periodUnit,
     periodStart: period.periodStart,
-  }),
-  limitValue: limit.limitValue,
-  meter: limit.meter,
-  resourceType: limit.resourceType,
-  periodUnit: limit.periodUnit,
-  periodStart: period.periodStart,
-  periodEnd: period.periodEnd,
-  spenderType: limit.spenderType,
-  spenderId: normalizeSpenderId(limit.spenderId),
-  operationType: limit.operationType,
-});
+    periodEnd: period.periodEnd,
+    spenderType: limit.spenderType,
+    spenderId: normalizeSpenderId(limit.spenderId),
+    operationTypes: [limit.operationType],
+  };
+
+  return { ...counter, key: buildQuotaCounterKey({ workspaceId, counter }) };
+};

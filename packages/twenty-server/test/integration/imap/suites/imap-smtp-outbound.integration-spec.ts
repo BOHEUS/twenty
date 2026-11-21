@@ -13,6 +13,7 @@ import {
   type GreenmailServer,
   startGreenmailContainer,
 } from 'test/integration/utils/start-greenmail-container.util';
+import { serializeEmailBody } from 'test/integration/utils/serialize-email-body.util';
 
 const PASSWORD = 'greenmail-password';
 const HANDLE = `imap-smtp-outbound-${randomUUID()}@acme.test`;
@@ -92,7 +93,10 @@ describe('IMAP/SMTP outbound messaging (integration)', () => {
       cc: HANDLE,
       bcc: HANDLE,
       subject,
-      body: '<p>SMTP reply body</p>',
+      body: serializeEmailBody({
+        type: 'html',
+        html: '<p>SMTP reply body</p>',
+      }),
       inReplyTo: '<smtp-parent@example.com>',
     });
 
@@ -146,14 +150,15 @@ describe('IMAP/SMTP outbound messaging (integration)', () => {
       fromHandle: 'not-my-alias@acme.test',
       to: HANDLE,
       subject,
-      body: '<p>SMTP rejected body</p>',
+      body: serializeEmailBody({
+        type: 'html',
+        html: '<p>SMTP rejected body</p>',
+      }),
     });
 
     expect(result).toMatchObject({
       success: false,
-      error: expect.stringContaining(
-        'is not the connected account handle nor one of its verified aliases',
-      ),
+      error: 'You cannot send from this address.',
     });
     expect(
       await findRecordNodesByFilter<{ id: string }>(

@@ -1,8 +1,8 @@
 import { ObjectMetadataIcon } from '@/object-metadata/components/ObjectMetadataIcon';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { isDefined } from 'twenty-shared/utils';
-import { useIcons } from 'twenty-ui/icon';
-import { useTheme } from 'twenty-ui/theme-constants';
+import { useIcons } from 'twenty-ui/icon/provider';
+import { useTheme } from 'twenty-ui/theme';
 
 export const EventIconDynamicComponent = ({
   eventIcon,

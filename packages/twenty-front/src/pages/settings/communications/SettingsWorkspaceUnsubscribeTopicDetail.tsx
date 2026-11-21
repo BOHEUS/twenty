@@ -7,24 +7,21 @@ import { useDeleteUnsubscribeTopic } from '@/settings/unsubscribe-topics/hooks/u
 import { useUpdateUnsubscribeTopic } from '@/settings/unsubscribe-topics/hooks/useUpdateUnsubscribeTopic';
 import { SETTINGS_UNSUBSCRIBE_TAB_IDS } from '@/settings/unsubscribers/constants/SettingsUnsubscribeTabIds';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
-import { ConfirmationModal } from '@/ui/layout/modal/components/ConfirmationModal';
-import { useModal } from '@/ui/layout/modal/hooks/useModal';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
+import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDialog';
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { useLingui } from '@lingui/react/macro';
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { FeatureFlagKey, SettingsPath } from 'twenty-shared/types';
+import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { IconEye, IconTrash } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
-import { Section } from 'twenty-ui/primitives/layout';
 import { Card } from 'twenty-ui/primitives/surfaces';
-import { H2Title } from 'twenty-ui/primitives/typography';
 import { UnsubscribeTopicVisibility } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
 import { NotFound } from '~/pages/not-found/NotFound';
-
-import { useToast } from 'twenty-ui/primitives/feedback';
 
 const DELETE_UNSUBSCRIBE_TOPIC_MODAL_ID = 'delete-unsubscribe-topic-modal';
 
@@ -33,14 +30,11 @@ export const SettingsWorkspaceUnsubscribeTopicDetail = () => {
   const navigateSettings = useNavigateSettings();
   const { unsubscribeTopicId } = useParams<{ unsubscribeTopicId: string }>();
   const { unsubscribeTopics, loading } = useUnsubscribeTopics();
-  const { openModal } = useModal();
+  const { openDialog } = useDialog();
   const { enqueueToast } = useToast();
   const { updateUnsubscribeTopic } = useUpdateUnsubscribeTopic();
   const { deleteUnsubscribeTopic, loading: deleting } =
     useDeleteUnsubscribeTopic();
-  const isMessageCampaignEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED,
-  );
 
   const unsubscribeTopic = unsubscribeTopics.find(
     (topic) => topic.id === unsubscribeTopicId,
@@ -62,7 +56,7 @@ export const SettingsWorkspaceUnsubscribeTopicDetail = () => {
     return <SettingsSkeletonLoader />;
   }
 
-  if (!isMessageCampaignEnabled || !isDefined(unsubscribeTopic)) {
+  if (!isDefined(unsubscribeTopic)) {
     return <NotFound />;
   }
 
@@ -76,7 +70,7 @@ export const SettingsWorkspaceUnsubscribeTopicDetail = () => {
       await updateUnsubscribeTopic(input);
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to update unsubscribe topic.`,
       });
     }
@@ -115,7 +109,7 @@ export const SettingsWorkspaceUnsubscribeTopicDetail = () => {
       );
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to delete unsubscribe topic.`,
       });
     }
@@ -151,47 +145,49 @@ export const SettingsWorkspaceUnsubscribeTopicDetail = () => {
           startIcon={<IconTrash />}
           size="sm"
           disabled={deleting}
-          onClick={() => openModal(DELETE_UNSUBSCRIBE_TOPIC_MODAL_ID)}
+          onClick={() => openDialog(DELETE_UNSUBSCRIBE_TOPIC_MODAL_ID)}
           variant="outline"
           color="danger"
         >{t`Delete`}</Button>
       }
     >
       <SettingsPageContainer>
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Name`}
             description={t`The name recipients see for this topic.`}
           />
           <SettingsTextInput
             instanceId="unsubscribe-topic-name"
             label={t`Name`}
+            placeholder={t`Newsletters`}
             value={name}
             onChange={setName}
             onBlur={handleNameBlur}
             fullWidth
           />
-        </Section>
-        <Section>
-          <H2Title
+        </Section.Root>
+        <Section.Root>
+          <Section.Header
             title={t`Description`}
             description={t`Optional context shown to recipients on the preferences page.`}
           />
           <SettingsTextInput
             instanceId="unsubscribe-topic-description"
             label={t`Description`}
+            placeholder={t`Product news and tips, once a month`}
             value={description}
             onChange={setDescription}
             onBlur={handleDescriptionBlur}
             fullWidth
           />
-        </Section>
-        <Section>
-          <H2Title
+        </Section.Root>
+        <Section.Root>
+          <Section.Header
             title={t`Visibility`}
             description={t`Control whether recipients can find and manage this topic.`}
           />
-          <Card rounded>
+          <Card.Root>
             <SettingsOptionCardContentSwitch
               Icon={IconEye}
               title={t`Listed on the unsubscribe page`}
@@ -199,11 +195,11 @@ export const SettingsWorkspaceUnsubscribeTopicDetail = () => {
               checked={isPublic}
               onChange={handleVisibilityChange}
             />
-          </Card>
-        </Section>
+          </Card.Root>
+        </Section.Root>
       </SettingsPageContainer>
-      <ConfirmationModal
-        modalInstanceId={DELETE_UNSUBSCRIBE_TOPIC_MODAL_ID}
+      <ConfirmationDialog
+        dialogId={DELETE_UNSUBSCRIBE_TOPIC_MODAL_ID}
         title={t`Delete unsubscribe topic`}
         subtitle={t`Are you sure you want to delete ${topicName}? Recipients will no longer be able to opt out of this category.`}
         onConfirmClick={handleDelete}

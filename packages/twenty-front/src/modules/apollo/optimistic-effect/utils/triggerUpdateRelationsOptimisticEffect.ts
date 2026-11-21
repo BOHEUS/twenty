@@ -2,10 +2,9 @@ import { triggerAttachRelationOptimisticEffect } from '@/apollo/optimistic-effec
 import { triggerDestroyRecordsOptimisticEffect } from '@/apollo/optimistic-effect/utils/triggerDestroyRecordsOptimisticEffect';
 import { triggerDetachRelationOptimisticEffect } from '@/apollo/optimistic-effect/utils/triggerDetachRelationOptimisticEffect';
 import {
-  CoreObjectNameSingular,
   FieldMetadataType,
+  type ObjectRecordsPermissions,
   RelationType,
-  type ObjectPermissions,
 } from 'twenty-shared/types';
 import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
 import { type FieldMetadataItemRelation } from '@/object-metadata/types/FieldMetadataItemRelation';
@@ -24,6 +23,7 @@ import {
   CustomError,
   isDefined,
 } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { isDeeplyEqual } from '~/utils/isDeeplyEqual';
 
 type TriggerUpdateRelationsOptimisticEffectArgs = {
@@ -32,15 +32,13 @@ type TriggerUpdateRelationsOptimisticEffectArgs = {
   currentSourceRecord: RecordGqlNode | null;
   updatedSourceRecord: RecordGqlNode | null;
   objectMetadataItems: EnrichedObjectMetadataItem[];
-  objectPermissionsByObjectMetadataId: Record<
-    string,
-    ObjectPermissions & { objectMetadataId: string }
-  >;
+  objectPermissionsByObjectMetadataId: Record<string, ObjectRecordsPermissions>;
   upsertRecordsInStore: (props: { partialRecords: ObjectRecord[] }) => void;
 };
 
-// A junction record only exists to link its two sides, so detaching one destroys it.
-// Comments are the one remaining relation that cascades without being a junction.
+const COMMENT_OBJECT_NAME_SINGULAR = 'comment';
+
+// A junction only links its two sides, so detaching destroys it; comments are the one non-junction cascade.
 const shouldCascadeDeleteOnDetach = ({
   targetObjectMetadata,
   junctionObjectMetadataIds,
@@ -49,7 +47,7 @@ const shouldCascadeDeleteOnDetach = ({
   junctionObjectMetadataIds: ReadonlySet<string>;
 }) =>
   junctionObjectMetadataIds.has(targetObjectMetadata.id) ||
-  targetObjectMetadata.nameSingular === CoreObjectNameSingular.Comment;
+  targetObjectMetadata.nameSingular === COMMENT_OBJECT_NAME_SINGULAR;
 
 export const triggerUpdateRelationsOptimisticEffect = ({
   cache,
@@ -126,10 +124,7 @@ const triggerUpdateRelationOptimisticEffect = ({
   cache: ApolloCache;
   isDeletion: boolean;
   upsertRecordsInStore: (props: { partialRecords: ObjectRecord[] }) => void;
-  objectPermissionsByObjectMetadataId: Record<
-    string,
-    ObjectPermissions & { objectMetadataId: string }
-  >;
+  objectPermissionsByObjectMetadataId: Record<string, ObjectRecordsPermissions>;
   junctionObjectMetadataIds: ReadonlySet<string>;
 }) => {
   const fieldDoesNotExist =
@@ -154,7 +149,7 @@ const triggerUpdateRelationOptimisticEffect = ({
     });
   if (!targetFieldMetadataFullObject) {
     throw new CustomError(
-      'Target field metadata full object not found',
+      doNotTranslate('Target field metadata full object not found'),
       'TARGET_FIELD_METADATA_FULL_OBJECT_NOT_FOUND',
     );
   }
@@ -282,10 +277,7 @@ const triggerUpdateMorphRelationOptimisticEffect = ({
   cache: ApolloCache;
   isDeletion: boolean;
   upsertRecordsInStore: (props: { partialRecords: ObjectRecord[] }) => void;
-  objectPermissionsByObjectMetadataId: Record<
-    string,
-    ObjectPermissions & { objectMetadataId: string }
-  >;
+  objectPermissionsByObjectMetadataId: Record<string, ObjectRecordsPermissions>;
   junctionObjectMetadataIds: ReadonlySet<string>;
 }) => {
   const morphRelations = fieldMetadataItemOnSourceRecord.morphRelations;
@@ -310,7 +302,7 @@ const triggerUpdateMorphRelationOptimisticEffect = ({
       });
     if (!targetFieldMetadataFullObject) {
       throw new CustomError(
-        'Target field metadata full object not found',
+        doNotTranslate('Target field metadata full object not found'),
         'TARGET_FIELD_METADATA_FULL_OBJECT_NOT_FOUND',
       );
     }
@@ -422,14 +414,13 @@ const extractTargetRecordsFromRelation = (
   value: RecordGqlConnectionEdgesRequired | RecordGqlNode | null,
   relation: FieldMetadataItemRelation,
 ): RecordGqlNode[] => {
-  // TODO investigate on the root cause of array injection here, should never occurs
-  // Cache might be corrupted somewhere due to ObjectRecord and RecordGqlNode inclusion
+  // TODO: find why arrays get injected here; ObjectRecord/RecordGqlNode mixing may corrupt the cache.
 
   if (!isDefined(value) || isArray(value)) {
     return [];
   }
   if (!isDefined(relation)) {
-    throw new Error('Relation found is undefined');
+    throw new Error(doNotTranslate('Relation found is undefined'));
   }
   if (relation.type === RelationType.ONE_TO_MANY) {
     return value.edges.map(({ node }: { node: RecordGqlNode }) => node);

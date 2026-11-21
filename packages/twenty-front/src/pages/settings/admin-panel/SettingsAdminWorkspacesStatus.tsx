@@ -5,18 +5,18 @@ import { SettingsPageContainer } from '@/settings/components/SettingsPageContain
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { plural, t } from '@lingui/core/macro';
+import { plural } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { Button } from 'twenty-ui/primitives/input';
-import { Section } from 'twenty-ui/primitives/layout';
-import { H2Title } from 'twenty-ui/primitives/typography';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   GetInstanceAndAllWorkspacesUpgradeStatusDocument,
   RefreshUpgradeStatusDocument,
 } from '~/generated-admin/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledRefreshButtonContainer = styled.div`
   display: flex;
@@ -26,12 +26,13 @@ const StyledRefreshButtonContainer = styled.div`
 `;
 
 const StyledAccordionCardsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: minmax(0, 1fr);
 `;
 
 export const SettingsAdminWorkspacesStatus = () => {
+  const { t } = useLingui();
   const apolloAdminClient = useApolloAdminClient();
   const { enqueueToast } = useToast();
 
@@ -57,12 +58,12 @@ export const SettingsAdminWorkspacesStatus = () => {
       await refreshUpgradeStatus();
       await refetch();
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Upgrade status refreshed`,
       });
     } catch (error) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children:
           error instanceof Error
             ? error.message
@@ -88,8 +89,8 @@ export const SettingsAdminWorkspacesStatus = () => {
       ]}
     >
       <SettingsPageContainer>
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Workspaces status`}
             description={t`Upgrade health across all workspaces`}
           />
@@ -105,9 +106,9 @@ export const SettingsAdminWorkspacesStatus = () => {
               variant="outline"
             >{t`Refresh status`}</Button>
           </StyledRefreshButtonContainer>
-        </Section>
-        <Section>
-          <H2Title
+        </Section.Root>
+        <Section.Root>
+          <Section.Header
             title={t`Detail per workspace`}
             description={t`Workspace lists by upgrade status`}
           />
@@ -130,7 +131,7 @@ export const SettingsAdminWorkspacesStatus = () => {
               workspaces={upgradeStatus?.workspacesFailed ?? []}
             />
           </StyledAccordionCardsContainer>
-        </Section>
+        </Section.Root>
       </SettingsPageContainer>
     </SettingsPageLayout>
   );

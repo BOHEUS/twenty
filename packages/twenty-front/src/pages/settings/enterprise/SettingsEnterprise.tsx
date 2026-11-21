@@ -20,8 +20,8 @@ import { SET_ENTERPRISE_KEY } from '@/settings/enterprise/graphql/mutations/setO
 import { ENTERPRISE_PORTAL_SESSION } from '@/settings/enterprise/graphql/queries/enterprisePortalSession';
 import { ENTERPRISE_SUBSCRIPTION_STATUS } from '@/settings/enterprise/graphql/queries/enterpriseSubscriptionStatus';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
-import { ConfirmationModal } from '@/ui/layout/modal/components/ConfirmationModal';
-import { useModal } from '@/ui/layout/modal/hooks/useModal';
+import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDialog';
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useLoadCurrentUser } from '@/users/hooks/useLoadCurrentUser';
 import { useLazyQuery, useMutation } from '@apollo/client/react';
@@ -32,7 +32,8 @@ import {
 } from 'twenty-shared/constants';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import {
   IconCalendarRepeat,
   IconCheck,
@@ -42,10 +43,9 @@ import {
   IconUser,
 } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
-import { Section } from 'twenty-ui/primitives/layout';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
-import { H2Title } from 'twenty-ui/primitives/typography';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { isGraphqlErrorOfType } from '~/utils/is-graphql-error-of-type.util';
+import { openUrlInNewTab } from '~/utils/openUrlInNewTab';
 
 const RELEASE_ENTERPRISE_BINDING_CONFIRMATION_MODAL_ID =
   'release-enterprise-binding-confirmation-modal';
@@ -142,7 +142,7 @@ export const SettingsEnterprise = ({
   const [isRefreshingToken, setIsRefreshingToken] = useState(false);
   const [isReleasing, setIsReleasing] = useState(false);
   const [isBoundToAnotherServer, setIsBoundToAnotherServer] = useState(false);
-  const { openModal } = useModal();
+  const { openDialog } = useDialog();
   const { enqueueToast } = useToast();
   const { loadCurrentUser } = useLoadCurrentUser();
 
@@ -266,7 +266,9 @@ export const SettingsEnterprise = ({
     : t`Renews on`;
 
   const handleActivate = useCallback(async () => {
-    if (!enterpriseKey.trim()) return;
+    if (!enterpriseKey.trim()) {
+      return;
+    }
 
     setIsActivating(true);
 
@@ -277,7 +279,7 @@ export const SettingsEnterprise = ({
 
       if (result.data?.setEnterpriseKey.isValid === true) {
         enqueueToast({
-          variant: 'success',
+          status: 'success',
           children: t`Organization license activated successfully`,
         });
         setEnterpriseKey('');
@@ -287,7 +289,7 @@ export const SettingsEnterprise = ({
         await loadCurrentUser();
       } else {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Failed to activate Organization license. Please check your key or contact support.`,
         });
       }
@@ -313,7 +315,7 @@ export const SettingsEnterprise = ({
         enqueueToast(getToastOptionsFromError({ error, duration: 10000 }));
       } else {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Error activating Organization license`,
         });
       }
@@ -341,25 +343,25 @@ export const SettingsEnterprise = ({
 
       const portalUrl = data?.enterprisePortalSession;
 
-      if (portalUrl !== null && portalUrl !== undefined) {
-        window.open(portalUrl, '_blank', 'noopener');
+      if (isDefined(portalUrl)) {
+        openUrlInNewTab(portalUrl);
       } else {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Could not open billing portal. Please check your Organization key is present, or contact support.`,
         });
       }
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Error opening billing portal`,
       });
     }
   }, [fetchPortalSession, enqueueToast, t, returnUrlPath]);
 
   const openCheckoutModal = useCallback(() => {
-    openModal(ENTERPRISE_PLAN_MODAL_ID);
-  }, [openModal]);
+    openDialog(ENTERPRISE_PLAN_MODAL_ID);
+  }, [openDialog]);
 
   const handleRefreshValidityToken = useCallback(async () => {
     setIsRefreshingToken(true);
@@ -370,13 +372,13 @@ export const SettingsEnterprise = ({
       if (data?.refreshEnterpriseValidityToken === true) {
         setIsBoundToAnotherServer(false);
         enqueueToast({
-          variant: 'success',
+          status: 'success',
           children: t`Validity token refreshed successfully`,
         });
         await loadCurrentUser();
       } else {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Could not refresh validity token. Please contact support.`,
         });
       }
@@ -399,7 +401,7 @@ export const SettingsEnterprise = ({
         enqueueToast(getToastOptionsFromError({ error, duration: 10000 }));
       } else {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Error refreshing validity token. Please contact support.`,
         });
       }
@@ -417,7 +419,7 @@ export const SettingsEnterprise = ({
       if (result.data?.releaseEnterpriseServerBinding.isValid === true) {
         setIsBoundToAnotherServer(false);
         enqueueToast({
-          variant: 'success',
+          status: 'success',
           children: t`Organization key transferred to this server`,
         });
         const { data: statusData } = await fetchSubscriptionStatus();
@@ -426,19 +428,19 @@ export const SettingsEnterprise = ({
         await loadCurrentUser();
       } else {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Could not transfer the Organization key. Please contact support.`,
         });
       }
     } catch (error) {
       if (isGraphqlErrorOfType(error, 'ENTERPRISE_RELEASE_RATE_LIMITED')) {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`You have reached the maximum number of server transfers allowed in the last 30 days for this Organization key. Please try again later or contact support.`,
         });
       } else {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Error transferring the Organization key`,
         });
       }
@@ -472,7 +474,7 @@ export const SettingsEnterprise = ({
         await loadCurrentUser();
 
         enqueueToast({
-          variant: 'success',
+          status: 'success',
           children:
             nextInstanceType === ENTERPRISE_INSTANCE_TYPE.DEVELOPMENT
               ? t`Registered as a development instance. This instance will not be billed.`
@@ -484,7 +486,7 @@ export const SettingsEnterprise = ({
       } catch {
         if (!instanceUpdateSuccess) {
           enqueueToast({
-            variant: 'error',
+            status: 'error',
             children: t`Could not update the instance type`,
           });
         }
@@ -500,12 +502,12 @@ export const SettingsEnterprise = ({
             setIsInstanceTypeFromDb(previousIsInstanceTypeFromDb);
             await loadCurrentUser();
             enqueueToast({
-              variant: 'error',
+              status: 'error',
               children: t`Could not refresh validity token - reverted the instance type change.`,
             });
           } catch {
             enqueueToast({
-              variant: 'error',
+              status: 'error',
               children: t`Could not refresh validity token and could not revert the instance type change.`,
             });
           }
@@ -526,8 +528,8 @@ export const SettingsEnterprise = ({
   );
 
   const activateKeySection = (
-    <Section>
-      <H2Title
+    <Section.Root>
+      <Section.Header
         title={t`Activate Organization Key`}
         description={t`Paste your Organization key below to activate. Keep a copy of this key somewhere safe: the same key is reused to set up a development instance or to move your license to a replacement server.`}
       />
@@ -554,19 +556,19 @@ export const SettingsEnterprise = ({
           </Button>
         </StyledActivateButtonWrapper>
       </StyledInputContainer>
-    </Section>
+    </Section.Root>
   );
 
   const transferSection = (
-    <Section>
-      <H2Title
+    <Section.Root>
+      <Section.Header
         title={t`Key in use on another server`}
         description={t`This Organization key is already bound to a different server instance. Releasing it here will transfer the license to this server and stop counting seats on the previous one.`}
       />
       <Button
         startIcon={<IconKey />}
         onClick={() =>
-          openModal(RELEASE_ENTERPRISE_BINDING_CONFIRMATION_MODAL_ID)
+          openDialog(RELEASE_ENTERPRISE_BINDING_CONFIRMATION_MODAL_ID)
         }
         disabled={isReleasing}
         variant="outline"
@@ -576,21 +578,21 @@ export const SettingsEnterprise = ({
           ? t`Transferring...`
           : t`Release & transfer to this server`}
       </Button>
-    </Section>
+    </Section.Root>
   );
 
   const enterpriseKeyInfoSection = (
-    <Section>
-      <H2Title
+    <Section.Root>
+      <Section.Header
         title={t`Your Organization key`}
         description={t`This server has an Organization key configured. Make sure you keep a copy of it somewhere safe: you need the same key to activate a development instance or to move your license to a replacement server. If you no longer have access to your key, contact support.`}
       />
-    </Section>
+    </Section.Root>
   );
 
   const instanceTypeSection = (
-    <Section>
-      <H2Title
+    <Section.Root>
+      <Section.Header
         title={t`Development instance`}
         description={
           instanceType === ENTERPRISE_INSTANCE_TYPE.DEVELOPMENT
@@ -623,7 +625,7 @@ export const SettingsEnterprise = ({
             : t`Register as development instance`}
         </Button>
       )}
-    </Section>
+    </Section.Root>
   );
 
   const renderContent = () => {
@@ -634,8 +636,8 @@ export const SettingsEnterprise = ({
     if (hasOrphanedValidityToken) {
       return (
         <>
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Organization License`}
               description={t`Your premium features are active but your Organization key is missing or invalid. This may be expected, but if not, please set a valid signed Organization key to manage your subscription, or contact support.`}
             />
@@ -644,7 +646,7 @@ export const SettingsEnterprise = ({
               onClick={openCheckoutModal}
               variant="outline"
             >{t`Get Organization Key`}</Button>
-          </Section>
+          </Section.Root>
           {activateKeySection}
         </>
       );
@@ -653,8 +655,8 @@ export const SettingsEnterprise = ({
     if (!hasSignedEnterpriseKey) {
       return (
         <>
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Get Organization`}
               description={t`Unlock premium features like SSO, row-level security, and audit logs.`}
             />
@@ -663,7 +665,7 @@ export const SettingsEnterprise = ({
               onClick={openCheckoutModal}
               variant="outline"
             >{t`Get Organization Key`}</Button>
-          </Section>
+          </Section.Root>
           {activateKeySection}
         </>
       );
@@ -672,8 +674,8 @@ export const SettingsEnterprise = ({
     if (isSubscriptionActiveOrTrialing && !hasValidityToken) {
       return (
         <>
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Organization License`}
               description={t`Your subscription is active but your validity token is invalid or has expired. Try reloading it or contact support.`}
             />
@@ -717,10 +719,10 @@ export const SettingsEnterprise = ({
                 />
               )}
             </SubscriptionInfoContainer>
-          </Section>
+          </Section.Root>
           {isBoundToAnotherServer && transferSection}
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Manage billing information`}
               description={t`Edit payment method, see your invoices and more`}
             />
@@ -729,7 +731,7 @@ export const SettingsEnterprise = ({
               onClick={openBillingPortal}
               variant="outline"
             >{t`View billing details`}</Button>
-          </Section>
+          </Section.Root>
         </>
       );
     }
@@ -737,8 +739,8 @@ export const SettingsEnterprise = ({
     if (isSubscriptionActiveOrTrialing) {
       return (
         <>
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Organization License`}
               description={
                 isCancelScheduled
@@ -785,9 +787,9 @@ export const SettingsEnterprise = ({
                 {cancellationMessage}
               </StyledCancellationNotice>
             )}
-          </Section>
-          <Section>
-            <H2Title
+          </Section.Root>
+          <Section.Root>
+            <Section.Header
               title={t`Manage billing information`}
               description={t`Edit payment method, see your invoices and more`}
             />
@@ -796,10 +798,10 @@ export const SettingsEnterprise = ({
               onClick={openBillingPortal}
               variant="outline"
             >{t`View billing details`}</Button>
-          </Section>
+          </Section.Root>
           {!isCancelScheduled && (
-            <Section>
-              <H2Title
+            <Section.Root>
+              <Section.Header
                 title={t`Cancel your subscription`}
                 description={t`Your premium features will be disabled`}
               />
@@ -809,7 +811,7 @@ export const SettingsEnterprise = ({
                 variant="outline"
                 color="danger"
               >{t`Cancel Plan`}</Button>
-            </Section>
+            </Section.Root>
           )}
         </>
       );
@@ -818,8 +820,8 @@ export const SettingsEnterprise = ({
     if (isCanceled) {
       return (
         <>
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Organization License`}
               description={t`Your Organization subscription has been canceled.`}
             />
@@ -846,9 +848,9 @@ export const SettingsEnterprise = ({
                 }
               />
             </SubscriptionInfoContainer>
-          </Section>
-          <Section>
-            <H2Title
+          </Section.Root>
+          <Section.Root>
+            <Section.Header
               title={t`Get Organization`}
               description={t`Start a new Organization subscription to re-enable premium features.`}
             />
@@ -857,7 +859,7 @@ export const SettingsEnterprise = ({
               onClick={openCheckoutModal}
               variant="outline"
             >{t`Get Organization Key`}</Button>
-          </Section>
+          </Section.Root>
           {activateKeySection}
         </>
       );
@@ -866,8 +868,8 @@ export const SettingsEnterprise = ({
     if (isPastDue) {
       return (
         <>
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Organization License`}
               description={
                 hasValidityToken
@@ -912,9 +914,9 @@ export const SettingsEnterprise = ({
                 {t`Update your payment method before ${licenseExpiresAtDate} to avoid losing access.`}
               </StyledCancellationNotice>
             )}
-          </Section>
-          <Section>
-            <H2Title
+          </Section.Root>
+          <Section.Root>
+            <Section.Header
               title={t`Update payment method`}
               description={
                 hasValidityToken
@@ -928,7 +930,7 @@ export const SettingsEnterprise = ({
               variant="outline"
               color="accent"
             >{t`Go to billing portal`}</Button>
-          </Section>
+          </Section.Root>
         </>
       );
     }
@@ -936,8 +938,8 @@ export const SettingsEnterprise = ({
     if (isIncomplete) {
       return (
         <>
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Organization License`}
               description={t`Your subscription setup was not completed.`}
             />
@@ -953,9 +955,9 @@ export const SettingsEnterprise = ({
                 }
               />
             </SubscriptionInfoContainer>
-          </Section>
-          <Section>
-            <H2Title
+          </Section.Root>
+          <Section.Root>
+            <Section.Header
               title={t`Get Organization`}
               description={t`Start a new Organization subscription.`}
             />
@@ -963,7 +965,7 @@ export const SettingsEnterprise = ({
               startIcon={<IconKey />}
               onClick={openCheckoutModal}
             >{t`Get Organization Key`}</Button>
-          </Section>
+          </Section.Root>
           {activateKeySection}
         </>
       );
@@ -971,8 +973,8 @@ export const SettingsEnterprise = ({
 
     return (
       <>
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Organization License`}
             description={(() => {
               const statusLabel = stripeStatus ?? 'unknown';
@@ -985,7 +987,7 @@ export const SettingsEnterprise = ({
             onClick={openBillingPortal}
             variant="outline"
           >{t`Go to billing portal`}</Button>
-        </Section>
+        </Section.Root>
         {activateKeySection}
       </>
     );
@@ -996,8 +998,8 @@ export const SettingsEnterprise = ({
   const innerContent = (
     <>
       <EnterprisePlanModal />
-      <ConfirmationModal
-        modalInstanceId={RELEASE_ENTERPRISE_BINDING_CONFIRMATION_MODAL_ID}
+      <ConfirmationDialog
+        dialogId={RELEASE_ENTERPRISE_BINDING_CONFIRMATION_MODAL_ID}
         title={t`Release & transfer Organization key`}
         subtitle={t`This Organization key is currently bound to a different server instance. Transferring it here will release it from the previous server and stop counting seats on it. Are you sure you want to continue?`}
         confirmButtonText={t`Release & transfer`}

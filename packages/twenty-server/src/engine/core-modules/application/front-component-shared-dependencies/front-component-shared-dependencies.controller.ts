@@ -26,14 +26,32 @@ import {
   FileStorageExceptionCode,
 } from 'src/engine/core-modules/file-storage/interfaces/file-storage-exception';
 import { PRESIGNED_URL_NO_STORE_CACHE_CONTROL } from 'src/engine/core-modules/file/interfaces/file-folder.interface';
-import { setFileResponseHeaders } from 'src/engine/core-modules/file/utils/set-file-response-headers.utils';
+import { setFileResponseHeaders } from 'src/engine/core-modules/file/utils/set-file-response-headers.util';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
+import { ApplicationTargetParam } from 'src/engine/decorators/auth/application-target-param.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { AllowSuspendedWorkspace } from 'src/engine/decorators/auth/allow-suspended-workspace.decorator';
+import { ApplicationTargetGuard } from 'src/engine/guards/application-target.guard';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
 @Controller(`${ApiPath.Rest}/front-component-shared-dependencies`)
-@UseGuards(WorkspaceAuthGuard)
+@AllowSuspendedWorkspace()
+@UseGuards(
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: true,
+      oauthClient: true,
+      application: true,
+    },
+    requiredPermissionFlags: [],
+  }),
+)
 @UseFilters(ApplicationRestApiExceptionFilter)
 export class FrontComponentSharedDependenciesController {
   private readonly logger = new Logger(
@@ -45,10 +63,14 @@ export class FrontComponentSharedDependenciesController {
   ) {}
 
   @Get([':applicationId', ':applicationId/:cacheKey'])
-  @UseGuards(NoPermissionGuard)
+  @UseGuards(ApplicationTargetGuard)
   async getBuiltSharedDependencies(
     @Res() res: Response,
-    @Param('applicationId') applicationId: string,
+    @ApplicationTargetParam('applicationId', {
+      kind: 'applicationId',
+      requireApplicationRegistrationOwnership: false,
+    })
+    applicationId: string,
     @AuthWorkspace() workspace: WorkspaceEntity,
     @Param('cacheKey') cacheKey?: string,
   ) {

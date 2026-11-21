@@ -85,7 +85,8 @@ const pageLayoutWithTranscriptWidget: PageLayout = {
       applicationId: '',
       universalIdentifier: '20202020-0000-0000-0000-000000000002',
       id: CALL_RECORDING_TAB_ID,
-      title: 'Call Recording',
+      title: 'Transcript',
+      icon: 'IconBlockquote',
       position: 0,
       pageLayoutId: PAGE_LAYOUT_TEST_INSTANCE_ID,
       widgets: [transcriptWidget],
@@ -258,6 +259,11 @@ const audioCallRecording: WidgetCallRecordingCandidate = {
       url: MOCK_CALL_RECORDING_AUDIO_DATA_URI,
     },
   ],
+};
+
+const recordedPendingTranscriptCallRecording: WidgetCallRecordingCandidate = {
+  ...recordedCallRecording,
+  transcript: { status: 'PENDING' },
 };
 
 const unplayableRecordedCallRecording: WidgetCallRecordingCandidate = {
@@ -470,6 +476,22 @@ export const WithVideo: Story = {
         canvasElement.querySelector('[aria-current="true"]'),
       ).not.toBeInTheDocument(),
     );
+  },
+};
+
+export const WithVideoPendingTranscript: Story = {
+  args: {
+    callRecording: recordedPendingTranscriptCallRecording,
+    loading: false,
+    error: undefined,
+    restriction: undefined,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    await canvas.findByText('Preparing Transcript');
+
+    expect(canvasElement.querySelector('video')).toBeInTheDocument();
   },
 };
 
@@ -812,9 +834,7 @@ export const Loading: Story = {
   },
   play: async ({ canvasElement }) => {
     await waitFor(() => {
-      expect(
-        canvasElement.querySelector('.react-loading-skeleton'),
-      ).toBeVisible();
+      expect(canvasElement.querySelector('[aria-busy="true"]')).toBeVisible();
     });
   },
 };
@@ -871,7 +891,7 @@ export const NoRecording: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
 
-    await canvas.findByText('No Call Recording');
+    await canvas.findByText('No Transcript');
   },
 };
 

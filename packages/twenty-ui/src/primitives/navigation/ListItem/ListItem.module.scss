@@ -4,8 +4,11 @@
   --tw-list-item-hover-background: var(--t-background-transparent-light);
 
   align-items: center;
+  appearance: none;
   background: var(--tw-list-item-background);
+  border: 0;
   border-radius: calc(var(--t-border-radius-md) - var(--t-spacing-1));
+  box-sizing: border-box;
   color: var(--tw-list-item-color);
   cursor: pointer;
   display: flex;
@@ -18,6 +21,8 @@
   padding-block: 0;
   padding-inline: var(--t-spacing-1);
   position: relative;
+  text-align: start;
+  text-decoration: none;
   transition: background duration(instant) ease;
   user-select: none;
 
@@ -29,9 +34,15 @@
     }
   }
 
+  &[data-active],
   &[data-highlighted],
   &[data-selected][data-indicator='none'] {
     --tw-list-item-background: var(--t-background-transparent-light);
+  }
+
+  &[data-selected][data-selection-appearance='accent'] {
+    --tw-list-item-background: var(--t-accent-tertiary);
+    --tw-list-item-hover-background: var(--t-accent-tertiary);
   }
 
   &[data-color='danger'] {
@@ -45,6 +56,12 @@
 
     cursor: default;
     transition: none;
+
+    // Hidden rather than removed so a disabled row keeps the same trailing
+    // width as its enabled siblings in the same menu.
+    .submenuIcon {
+      visibility: hidden;
+    }
   }
 }
 
@@ -53,6 +70,10 @@
   align-items: center;
   display: inline-flex;
   flex: none;
+
+  &:empty {
+    display: none;
+  }
 
   > svg {
     block-size: calc(var(--t-icon-size-md) * 1px);
@@ -72,6 +93,7 @@
 }
 
 .text {
+  display: block;
   flex-shrink: 0;
   max-inline-size: 100%;
   overflow: hidden;
@@ -92,6 +114,7 @@
 }
 
 .endDescription {
+  color: var(--t-font-color-light);
   flex-shrink: 1;
   text-align: end;
 }
@@ -109,14 +132,28 @@
   transition: opacity duration(instant) ease;
 }
 
-@include hover-capable {
+@include hover-capable-without-touch {
   .actions {
     opacity: 0;
   }
 
+  .root[data-actions-visibility='always'] .actions,
   .root:hover .actions,
   .root:focus-within .actions {
     opacity: 1;
+  }
+
+  .root[data-actions-placement='end'][data-actions-visibility='hover'] {
+    > .actions {
+      inset-block-start: 0;
+      inset-inline-end: var(--t-spacing-1);
+      position: absolute;
+    }
+
+    &:hover > .actions,
+    &:focus-within > .actions {
+      position: static;
+    }
   }
 }
 
@@ -124,7 +161,7 @@
   block-size: calc(var(--t-icon-size-md) * 1px);
   flex: none;
   inline-size: calc(var(--t-icon-size-md) * 1px);
-  stroke-width: var(--t-icon-stroke-sm);
+  stroke-width: var(--t-icon-stroke-md);
 }
 
 .submenuIcon {
@@ -132,5 +169,59 @@
   color: var(--t-font-color-light);
   flex: none;
   inline-size: calc(var(--t-icon-size-sm) * 1px);
-  stroke-width: var(--t-icon-stroke-sm);
+  stroke-width: var(--t-icon-stroke-md);
+
+  &:dir(rtl) {
+    transform: scaleX(-1);
+  }
+}
+
+.root[data-description-placement='below'] {
+  align-items: flex-start;
+  container-type: inline-size;
+  flex-wrap: wrap;
+  padding-block: var(--t-spacing-2);
+
+  .label {
+    align-items: stretch;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .text {
+    min-inline-size: 0;
+    overflow: visible;
+  }
+
+  .description {
+    overflow: visible;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+    max-inline-size: 50%;
+  }
+}
+
+.root[data-description-placement='below'][data-actions-placement='end'] {
+  flex-wrap: nowrap;
+
+  .label {
+    gap: var(--t-spacing-0_5);
+  }
+
+  .actions {
+    flex-wrap: nowrap;
+    max-inline-size: none;
+  }
+}
+
+@container (max-width: 480px) {
+  .root[data-description-placement='below']:not([data-actions-placement='end'])
+    > .actions {
+    flex-basis: 100%;
+    max-inline-size: 100%;
+  }
 }

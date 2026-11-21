@@ -1,23 +1,20 @@
 import { defineFrontComponent } from 'twenty-sdk/define';
+import { AvatarGroup } from 'twenty-ui/components/data-display';
+import { IconStar } from 'twenty-ui/icon';
+
+import { CommandBlockExample } from './command-block-example';
+import { TintedIconTileExample } from './tinted-icon-tile-example';
 import {
-  AnimatedCheckmark,
-  AvatarGroup,
-  AvatarOrIcon,
-  Checkmark,
-  ColorSample,
-  CommandBlock,
-  LinkChip,
-  NotificationCounter,
-  Pill,
-  StyledTintedIconTileContainer,
-  TintedIconTile,
   Avatar,
+  Badge,
   Chip,
+  ColorSample,
   Status,
   Tag,
 } from 'twenty-ui/primitives/data-display';
-import { IconStar } from 'twenty-ui/icon';
-import { ThemeProvider } from 'twenty-ui/theme-constants';
+import { isDefined } from 'twenty-shared/utils';
+import 'twenty-ui/style.css';
+import { ThemeProvider } from 'twenty-ui/theme';
 
 import {
   ComponentGallery,
@@ -25,10 +22,6 @@ import {
 } from '../shared/front-components/component-gallery';
 
 const DATA_DISPLAY_ENTRIES: GalleryEntry[] = [
-  {
-    name: 'AnimatedCheckmark',
-    node: <AnimatedCheckmark isAnimating size={28} />,
-  },
   {
     name: 'Avatar',
     node: <Avatar name="John Doe" size="md" shape="circle" />,
@@ -45,51 +38,66 @@ const DATA_DISPLAY_ENTRIES: GalleryEntry[] = [
     ),
   },
   {
-    name: 'AvatarOrIcon',
-    node: <AvatarOrIcon name="Jane" Icon={IconStar} />,
-  },
-  {
-    name: 'Checkmark',
-    node: <Checkmark />,
-  },
-  {
     name: 'Chip',
     node: <Chip>Chip label</Chip>,
   },
   {
     name: 'ColorSample',
-    node: <ColorSample colorName="blue" />,
+    node: (
+      <ColorSample
+        colorName="blue"
+        role="img"
+        aria-label="Brand blue"
+        className="custom-swatch"
+        style={{ width: 24 }}
+        render={<span data-composed="true" />}
+        ref={(element) => {
+          if (isDefined(element)) {
+            element.dataset.refTag = element.tagName;
+          }
+        }}
+      />
+    ),
+  },
+  {
+    name: 'DecorativeColorSample',
+    node: <ColorSample colorName="red" aria-hidden="true" />,
+  },
+  {
+    name: 'CircleColorSample',
+    node: (
+      <ColorSample
+        colorName="green"
+        variant="circle"
+        role="img"
+        aria-label="Green"
+      />
+    ),
   },
   {
     name: 'CommandBlock',
-    node: <CommandBlock commands={['npm install', 'npm run start']} />,
-  },
-  // KNOWN ISSUE (TDD): LinkChip renders a react-router Link and crashes
-  // because the sandbox provides no router context. Expected fix: SDK-injected
-  // Router whose navigator bridges to the host navigate API.
-  {
-    name: 'LinkChip',
-    node: <LinkChip to="/example">Link chip</LinkChip>,
+    node: <CommandBlockExample />,
   },
   {
-    name: 'NotificationCounter',
-    node: <NotificationCounter count={3} />,
+    name: 'CountBadge',
+    node: (
+      <Badge size="xs" color="primary" shape="circle">
+        3
+      </Badge>
+    ),
   },
   {
-    name: 'Pill',
-    node: <Pill label="Pill" Icon={IconStar} />,
+    name: 'Badge',
+    node: (
+      <Badge>
+        <IconStar size={12} />
+        Badge
+      </Badge>
+    ),
   },
   {
     name: 'Status',
     node: <Status color="green">Active</Status>,
-  },
-  {
-    name: 'StyledTintedIconTileContainer',
-    node: (
-      <StyledTintedIconTileContainer $dimension="32px">
-        <IconStar size={16} />
-      </StyledTintedIconTileContainer>
-    ),
   },
   {
     name: 'Tag',
@@ -97,7 +105,7 @@ const DATA_DISPLAY_ENTRIES: GalleryEntry[] = [
   },
   {
     name: 'TintedIconTile',
-    node: <TintedIconTile Icon={IconStar} />,
+    node: <TintedIconTileExample />,
   },
 ];
 

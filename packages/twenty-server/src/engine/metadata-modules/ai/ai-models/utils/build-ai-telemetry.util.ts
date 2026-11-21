@@ -1,10 +1,11 @@
 import { isNonEmptyString } from '@sniptt/guards';
 import { type TelemetryOptions } from 'ai';
 
-import { AI_TELEMETRY_CONFIG } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-telemetry.const';
+import { AI_TELEMETRY_CONFIG } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-telemetry.constant';
 
 type BuildAiTelemetryArgs = {
   functionId: string;
+  isContentRecordingAllowed: boolean;
   workspaceId?: string;
   userWorkspaceId?: string | null;
   agentId?: string | null;
@@ -18,10 +19,10 @@ type AiTelemetryCallOptions = {
   runtimeContext: Record<string, string>;
 };
 
-// Identifiers travel as runtime context and are opted into telemetry one by
-// one, which is how a telemetry integration receives per-call attributes.
+// telemetry integrations only receive per-call attributes opted in from runtime context
 export const buildAiTelemetry = ({
   functionId,
+  isContentRecordingAllowed,
   ...identifiers
 }: BuildAiTelemetryArgs): AiTelemetryCallOptions => {
   const runtimeContext = Object.fromEntries(
@@ -31,6 +32,8 @@ export const buildAiTelemetry = ({
   return {
     telemetry: {
       ...AI_TELEMETRY_CONFIG,
+      recordInputs: isContentRecordingAllowed,
+      recordOutputs: isContentRecordingAllowed,
       functionId,
       includeRuntimeContext: Object.fromEntries(
         Object.keys(runtimeContext).map((key) => [key, true]),

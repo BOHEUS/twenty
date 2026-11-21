@@ -1,5 +1,5 @@
 import {
-  type CoreObjectNameSingular,
+  type StandardObjectNameSingular,
   type RecordGqlOperationOrderBy,
 } from 'twenty-shared/types';
 
@@ -21,7 +21,9 @@ export const useActivityTargetsForTargetableObjects = ({
   activityTargetsOrderByVariables,
   limit,
 }: {
-  objectNameSingular: CoreObjectNameSingular.Note | CoreObjectNameSingular.Task;
+  objectNameSingular:
+    | StandardObjectNameSingular.Note
+    | StandardObjectNameSingular.Task;
   targetableObjects: Pick<
     ActivityTargetableObject,
     'id' | 'targetObjectNameSingular'
@@ -55,9 +57,7 @@ export const useActivityTargetsForTargetableObjects = ({
     objectMetadataItems,
   });
 
-  // TODO: We want to optimistically remove from this request
-  //   If we are on a show page and we remove the current show page object corresponding activity target
-  //   See also if we need to update useTimelineActivities
+  // TODO: optimistically remove the current show page's activity target here (and in useTimelineActivities).
   const {
     records: activityTargets,
     loading: loadingActivityTargets,

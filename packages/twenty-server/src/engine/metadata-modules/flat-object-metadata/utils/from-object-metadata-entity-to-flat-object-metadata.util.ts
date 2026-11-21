@@ -81,6 +81,8 @@ export const fromObjectMetadataEntityToFlatObjectMetadata = (
     ),
     fieldPermissionIds:
       objectMetadataEntity.fieldPermissions?.map(({ id }) => id) ?? [],
+    rowLevelPermissionRuleIds:
+      objectMetadataEntity.rowLevelPermissionRules?.map(({ id }) => id) ?? [],
     pageLayoutIds: objectMetadataEntity.pageLayouts.map(({ id }) => id),
     fieldUniversalIdentifiers: objectMetadataEntity.fields.map(
       ({ universalIdentifier }) => universalIdentifier,
@@ -103,6 +105,10 @@ export const fromObjectMetadataEntityToFlatObjectMetadata = (
       objectMetadataEntity.fieldPermissions?.map(
         ({ universalIdentifier }) => universalIdentifier,
       ) ?? [],
+    rowLevelPermissionRuleUniversalIdentifiers:
+      objectMetadataEntity.rowLevelPermissionRules?.map(
+        ({ universalIdentifier }) => universalIdentifier,
+      ) ?? [],
     pageLayoutUniversalIdentifiers: objectMetadataEntity.pageLayouts.map(
       ({ universalIdentifier }) => universalIdentifier,
     ),
@@ -110,6 +116,12 @@ export const fromObjectMetadataEntityToFlatObjectMetadata = (
       objectMetadataEntity.commandMenuItems?.map(({ id }) => id) ?? [],
     commandMenuItemUniversalIdentifiers:
       objectMetadataEntity.commandMenuItems?.map(
+        ({ universalIdentifier }) => universalIdentifier,
+      ) ?? [],
+    navigationMenuItemIds:
+      objectMetadataEntity.navigationMenuItems?.map(({ id }) => id) ?? [],
+    navigationMenuItemUniversalIdentifiers:
+      objectMetadataEntity.navigationMenuItems?.map(
         ({ universalIdentifier }) => universalIdentifier,
       ) ?? [],
   };

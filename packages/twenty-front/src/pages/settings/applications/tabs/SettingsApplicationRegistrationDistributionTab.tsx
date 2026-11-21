@@ -1,22 +1,23 @@
 import { useLingui } from '@lingui/react/macro';
-import { CommandBlock, Tag } from 'twenty-ui/primitives/data-display';
-import { IconCopy } from 'twenty-ui/icon';
-import { H2Title } from 'twenty-ui/primitives/typography';
-import { Button } from 'twenty-ui/primitives/input';
-import { Section } from 'twenty-ui/primitives/layout';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { CommandBlock } from 'twenty-ui/components/data-display';
+import { Section } from 'twenty-ui/components/layout';
+import { IconCopy } from 'twenty-ui/icon';
+import { Tag } from 'twenty-ui/primitives/data-display';
+import { Button } from 'twenty-ui/primitives/input';
 import { ApplicationRegistrationSourceType } from '~/generated-metadata/graphql';
 import { useCopyToClipboard } from '~/hooks/useCopyToClipboard';
-import { type ApplicationRegistrationData } from '~/pages/settings/applications/tabs/types/ApplicationRegistrationData';
 import { SettingsApplicationRegistrationShareLinkButtons } from '~/pages/settings/applications/components/SettingsApplicationRegistrationShareLinkButtons';
+import { type ApplicationRegistrationData } from '~/pages/settings/applications/tabs/types/ApplicationRegistrationData';
 
 export const SettingsApplicationRegistrationDistributionTab = ({
   registration,
-  fromAdmin,
+  isAdminView,
 }: {
   registration: ApplicationRegistrationData;
-  fromAdmin?: boolean;
+  isAdminView?: boolean;
 }) => {
   const { t } = useLingui();
 
@@ -32,27 +33,28 @@ export const SettingsApplicationRegistrationDistributionTab = ({
     availableApplicationId: registration.universalIdentifier,
   });
 
-  const publishCommands = ['yarn twenty app:publish'];
+  const publishCommands = [doNotTranslate('twenty app publish')];
 
   return (
     <>
-      {isNpmSource && fromAdmin !== true && (
-        <Section>
-          <H2Title
+      {isNpmSource && isAdminView !== true && (
+        <Section.Root>
+          <Section.Header
             title={t`Ownership`}
             description={t`This application's registration is claimed by your workspace`}
           />
           <Tag color="green">{t`Claimed by this workspace`}</Tag>
-        </Section>
+        </Section.Root>
       )}
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title={t`Public`}
           description={t`Publish your app to the marketplace so others can install it`}
         />
         {isNpmSource && (
           <SettingsApplicationRegistrationShareLinkButtons
             shareLink={shareLink}
+            universalIdentifier={registration.universalIdentifier}
             isNpmSource
             withCopyButton
           />
@@ -60,7 +62,7 @@ export const SettingsApplicationRegistrationDistributionTab = ({
         {isTarballSource && (
           <CommandBlock
             commands={publishCommands}
-            button={
+            actions={
               <Button
                 onClick={() => {
                   copyToClipboard(
@@ -74,18 +76,19 @@ export const SettingsApplicationRegistrationDistributionTab = ({
             }
           />
         )}
-      </Section>
+      </Section.Root>
       {isTarballSource && (
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Private`}
             description={t`Share your app to other workspaces without pushing it on the marketplace`}
           />
           <SettingsApplicationRegistrationShareLinkButtons
             shareLink={shareLink}
+            universalIdentifier={registration.universalIdentifier}
             withCopyButton
           />
-        </Section>
+        </Section.Root>
       )}
     </>
   );

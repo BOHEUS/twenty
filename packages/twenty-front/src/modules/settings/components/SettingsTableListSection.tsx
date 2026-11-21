@@ -4,15 +4,15 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { styled } from '@linaria/react';
 
+import { SettingsSectionSkeletonLoader } from '@/settings/components/SettingsSectionSkeletonLoader';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
+import { Section } from 'twenty-ui/components/layout';
 import { IconChevronRight, IconPlus } from 'twenty-ui/icon';
-import { H2Title } from 'twenty-ui/primitives/typography';
 import { Button } from 'twenty-ui/primitives/input';
-import { Section } from 'twenty-ui/primitives/layout';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledTableRows = styled.div`
   padding-bottom: ${themeCssVariables.spacing[2]};
@@ -60,10 +60,12 @@ type SettingsTableListSectionProps<Item extends { id: string }> = {
   items: Item[];
   columns: SettingsTableListSectionColumn<Item>[];
   gridAutoColumns: string;
+  isLoading?: boolean;
   showRowChevron?: boolean;
   onRowClick?: (item: Item) => void;
   footerButtonLabel?: string;
   onFooterButtonClick?: () => void;
+  isFooterButtonDisabled?: boolean;
 };
 
 export const SettingsTableListSection = <
@@ -76,24 +78,27 @@ export const SettingsTableListSection = <
   items,
   columns,
   gridAutoColumns,
+  isLoading = false,
   showRowChevron = false,
   onRowClick,
   footerButtonLabel,
   onFooterButtonClick,
+  isFooterButtonDisabled,
 }: SettingsTableListSectionProps<Item>) => {
   const resolvedGridAutoColumns = showRowChevron
     ? `${gridAutoColumns} ${CHEVRON_COLUMN_WIDTH}`
     : gridAutoColumns;
 
   return (
-    <Section>
-      <H2Title
+    <Section.Root>
+      <Section.Header
         title={title}
         description={description}
-        adornment={headerAdornment}
+        actions={headerAdornment}
       />
       {isDefined(toolbar) && toolbar}
-      {items.length > 0 && (
+      {isLoading && <SettingsSectionSkeletonLoader />}
+      {!isLoading && items.length > 0 && (
         <Table>
           <TableRow gridAutoColumns={resolvedGridAutoColumns}>
             {columns.map((column) => (
@@ -144,11 +149,12 @@ export const SettingsTableListSection = <
             size="sm"
             onClick={onFooterButtonClick}
             variant="outline"
+            disabled={isFooterButtonDisabled}
           >
             {footerButtonLabel}
           </Button>
         </StyledFooter>
       )}
-    </Section>
+    </Section.Root>
   );
 };

@@ -1,39 +1,30 @@
 import { useState } from 'react';
-import { t } from 'twenty-sdk/front-component';
 
 import { createSaveQueue } from 'src/front-components/utils/create-save-queue.util';
-import { saveGranolaFolderSelectionOrThrow } from 'src/front-components/utils/save-granola-folder-selection-or-throw.util';
 
 type UseAutosaveGranolaFolderSelectionParams = {
-  onSaveStart: () => void;
+  saveFolderSelection: (folderIds: string[]) => Promise<string[]>;
   onSaveSuccess: (folderIds: string[]) => void;
-  onSaveError: (message: string) => void;
+  onSaveError: () => void;
 };
 
 export const useAutosaveGranolaFolderSelection = ({
-  onSaveStart,
+  saveFolderSelection,
   onSaveSuccess,
   onSaveError,
 }: UseAutosaveGranolaFolderSelectionParams) => {
   const [saveQueue] = useState(() =>
     createSaveQueue<string[]>({
       saveValue: async (folderIds, isSupersededValue) => {
-        onSaveStart();
-
         try {
-          const savedFolderIds =
-            await saveGranolaFolderSelectionOrThrow(folderIds);
+          const savedFolderIds = await saveFolderSelection(folderIds);
 
           if (!isSupersededValue()) {
             onSaveSuccess(savedFolderIds);
           }
-        } catch (error) {
+        } catch {
           if (!isSupersededValue()) {
-            onSaveError(
-              error instanceof Error
-                ? error.message
-                : t('Could not save the folder selection. Try again.'),
-            );
+            onSaveError();
           }
         }
       },

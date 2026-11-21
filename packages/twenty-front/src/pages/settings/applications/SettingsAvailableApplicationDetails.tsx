@@ -1,49 +1,50 @@
 import { AppChip } from '@/applications/components/AppChip';
 import { CurrentApplicationContext } from '@/applications/contexts/CurrentApplicationContext';
+import { getCustomApplicationDescription } from '@/applications/utils/getCustomApplicationDescription';
+import { getCustomApplicationReadme } from '@/applications/utils/getCustomApplicationReadme';
+import { getStandardApplicationDescription } from '@/applications/utils/getStandardApplicationDescription';
+import { getStandardApplicationReadme } from '@/applications/utils/getStandardApplicationReadme';
+import { isTwentyStandardApplication } from '@/applications/utils/isTwentyStandardApplication';
+import { isWorkspaceCustomApplication } from '@/applications/utils/isWorkspaceCustomApplication';
+import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { SettingsApplicationInstallPermissionValidationModal } from '@/marketplace/components/SettingsApplicationInstallPermissionValidationModal';
 import { useCopyMarketplaceAppLink } from '@/marketplace/hooks/useCopyMarketplaceAppLink';
 import { useInstallMarketplaceAppWithPermissionValidation } from '@/marketplace/hooks/useInstallMarketplaceAppWithPermissionValidation';
-import { useUpgradeApplication } from '@/marketplace/hooks/useUpgradeApplication';
 import { getMarketplaceAppDefaultRoleManifest } from '@/marketplace/utils/getMarketplaceAppDefaultRoleManifest';
+import { useMarketplaceApplicationContentLink } from '@/settings/applications/hooks/useMarketplaceApplicationContentLink';
 import { SettingsApplicationActionButton } from '@/settings/applications/components/SettingsApplicationActionButton';
+import { SettingsMarketplaceAppConnectButton } from '@/settings/applications/components/SettingsMarketplaceAppConnectButton';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
 import { SettingsSectionSkeletonLoader } from '@/settings/components/SettingsSectionSkeletonLoader';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
-import { SettingsTabBar } from '@/settings/components/layout/SettingsTabBar';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
-import { activeTabIdComponentState } from '@/ui/layout/tab-list/states/activeTabIdComponentState';
-import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { isNonEmptyString } from '@sniptt/guards';
 import { useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { type Manifest } from 'twenty-shared/application';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { InlineBanner } from 'twenty-ui/primitives/feedback';
-import {
-  IconBox,
-  IconEyeOff,
-  IconInfoSquareRounded,
-  IconLock,
-} from 'twenty-ui/icon';
+import { InlineBanner } from 'twenty-ui/components/feedback';
+import { IconEyeOff, IconShoppingBag } from 'twenty-ui/icon';
 import {
   ApplicationRegistrationSourceType,
   FindMarketplaceAppDetailDocument,
-  FindMarketplaceAppManifestDocument,
   FindOneApplicationByUniversalIdentifierDocument,
   PermissionFlagType,
 } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
-import { SettingsApplicationDetailAboutTab } from '~/pages/settings/applications/tabs/SettingsApplicationDetailAboutTab';
-import { SettingsApplicationDetailContentTab } from '~/pages/settings/applications/tabs/SettingsApplicationDetailContentTab';
-import { SettingsApplicationPermissionsTab } from '~/pages/settings/applications/tabs/SettingsApplicationPermissionsTab';
-import { isNewerSemver } from '~/pages/settings/applications/utils/isNewerSemver';
-import { isUpgradableApplicationSourceType } from '~/pages/settings/applications/utils/isUpgradableApplicationSourceType';
-
-const AVAILABLE_APPLICATION_DETAIL_ID = 'available-application-detail';
+import { SettingsApplicationDetailAbout } from '~/pages/settings/applications/components/SettingsApplicationDetailAbout';
+import { SettingsApplicationLoadErrorBanner } from '@/settings/applications/components/SettingsApplicationLoadErrorBanner';
+import { SettingsApplicationNotFound } from '~/pages/settings/applications/components/SettingsApplicationNotFound';
+import { CUSTOM_APPLICATION_ILLUSTRATIONS } from '@/settings/applications/constants/CustomApplicationIllustrations';
+import { STANDARD_APPLICATION_ILLUSTRATIONS } from '@/settings/applications/constants/StandardApplicationIllustrations';
+import { getApplicationLookupStatus } from '~/pages/settings/applications/utils/getApplicationLookupStatus';
+import { isUuidFormat } from '~/pages/settings/applications/utils/isUuidFormat';
+import { useLingui } from '@lingui/react/macro';
 
 export const SettingsAvailableApplicationDetails = () => {
+  const { t } = useLingui();
   const { availableApplicationId = '' } = useParams<{
     availableApplicationId: string;
   }>();
@@ -57,12 +58,16 @@ export const SettingsAvailableApplicationDetails = () => {
     },
     [navigateSettings],
   );
-  const { requestInstall, install, isInstalling, modalInstanceId } =
-    useInstallMarketplaceAppWithPermissionValidation({
-      universalIdentifier: availableApplicationId,
-      onCompleted: handleInstallCompleted,
-    });
-  const { upgrade, isUpgrading } = useUpgradeApplication();
+  const {
+    requestInstall,
+    install,
+    isInstalling,
+    installProgress,
+    modalInstanceId,
+  } = useInstallMarketplaceAppWithPermissionValidation({
+    universalIdentifier: availableApplicationId,
+    onCompleted: handleInstallCompleted,
+  });
   const { copyMarketplaceAppLink } = useCopyMarketplaceAppLink();
 
   const canInstallMarketplaceApps = useHasPermissionFlag(
@@ -73,126 +78,171 @@ export const SettingsAvailableApplicationDetails = () => {
     FindOneApplicationByUniversalIdentifierDocument,
     {
       variables: { universalIdentifier: availableApplicationId },
-      skip: !availableApplicationId,
+      skip: !isUuidFormat(availableApplicationId),
     },
   );
 
-  const { data: detailData } = useQuery(FindMarketplaceAppDetailDocument, {
+  const {
+    data: detailData,
+    error: detailError,
+    loading: isDetailLoading,
+    refetch: refetchDetail,
+  } = useQuery(FindMarketplaceAppDetailDocument, {
     variables: { universalIdentifier: availableApplicationId },
-    skip: !availableApplicationId,
-  });
-
-  const { data: manifestData } = useQuery(FindMarketplaceAppManifestDocument, {
-    variables: { universalIdentifier: availableApplicationId },
-    skip: !availableApplicationId,
+    skip: !isUuidFormat(availableApplicationId),
   });
 
   const application = applicationData?.findOneApplication;
 
+  const contentLink = useMarketplaceApplicationContentLink(
+    isUuidFormat(availableApplicationId) ? availableApplicationId : undefined,
+  );
+
   const detail = detailData?.findMarketplaceAppDetail;
-  const manifest = manifestData?.findMarketplaceAppDetail?.manifest as
-    | Manifest
-    | undefined;
+
+  const detailLookupStatus = getApplicationLookupStatus({
+    identifier: availableApplicationId,
+    isLoading: isDetailLoading,
+    error: detailError,
+    result: detail,
+  });
+  const isNotFound = detailLookupStatus === 'not-found';
+  const isUnavailable = detailLookupStatus === 'unavailable';
 
   const displayName = detail?.name ?? t`Application details`;
 
   const currentVersion = application?.version;
   const latestAvailableVersion = detail?.latestAvailableVersion;
 
-  const sourceType = detail?.sourceType;
-  const isNpmApp = sourceType === ApplicationRegistrationSourceType.NPM;
-  const registrationId = detail?.id;
+  const isNpmApp = detail?.sourceType === ApplicationRegistrationSourceType.NPM;
   const sourcePackageUrl =
     isNpmApp && detail?.sourcePackage
       ? `https://www.npmjs.com/package/${detail.sourcePackage}`
       : undefined;
 
-  const isUnlisted = isDefined(detail) && !detail.isListed;
-  const isAlreadyInstalled = isDefined(application);
+  const currentWorkspace = useAtomStateValue(currentWorkspaceState);
+
+  // Read from the workspace state so built-in apps are known before the application query resolves
+  const installedApplication = currentWorkspace?.installedApplications.find(
+    (workspaceApplication) =>
+      workspaceApplication.universalIdentifier === availableApplicationId,
+  );
+
+  const getBuiltInApplicationContent = () => {
+    if (isTwentyStandardApplication(installedApplication)) {
+      return {
+        description: getStandardApplicationDescription(),
+        readme: getStandardApplicationReadme(),
+        illustrations: STANDARD_APPLICATION_ILLUSTRATIONS,
+      };
+    }
+
+    if (isWorkspaceCustomApplication(installedApplication, currentWorkspace)) {
+      return {
+        description: getCustomApplicationDescription(),
+        readme: getCustomApplicationReadme(),
+        illustrations: CUSTOM_APPLICATION_ILLUSTRATIONS,
+      };
+    }
+
+    return undefined;
+  };
+
+  const builtInApplicationContent = getBuiltInApplicationContent();
+
+  const isUnlisted =
+    isDefined(detail) &&
+    !detail.isListed &&
+    !isDefined(builtInApplicationContent);
 
   const defaultRole = getMarketplaceAppDefaultRoleManifest(detail);
 
-  const hasUpdate =
-    isUpgradableApplicationSourceType(sourceType) &&
-    isDefined(latestAvailableVersion) &&
-    isDefined(currentVersion) &&
-    isNewerSemver(latestAvailableVersion, currentVersion);
-
-  const handleUpgrade = async () => {
-    if (!isDefined(registrationId) || !isDefined(latestAvailableVersion)) {
-      return;
+  const renderContent = () => {
+    if (isUnavailable) {
+      return (
+        <SettingsApplicationLoadErrorBanner
+          onRetry={() => refetchDetail().catch(() => undefined)}
+        />
+      );
     }
 
-    await upgrade({
-      appRegistrationId: registrationId,
-      targetVersion: latestAvailableVersion,
-    });
-  };
+    if (isNotFound) {
+      return (
+        <SettingsApplicationNotFound
+          message={t`This application is not available on the marketplace. It may have been removed or the link is incorrect.`}
+          linkTo={getSettingsPath(
+            SettingsPath.Applications,
+            undefined,
+            undefined,
+            'marketplace',
+          )}
+          linkLabel={t`Browse the marketplace`}
+          LinkIcon={IconShoppingBag}
+        />
+      );
+    }
 
-  const activeTabId = useAtomComponentStateValue(
-    activeTabIdComponentState,
-    AVAILABLE_APPLICATION_DETAIL_ID,
-  );
-
-  const tabs = [
-    { id: 'about', title: t`About`, Icon: IconInfoSquareRounded },
-    { id: 'content', title: t`Content`, Icon: IconBox },
-    { id: 'permissions', title: t`Permissions`, Icon: IconLock },
-  ];
-
-  const renderActiveTabContent = () => {
     if (!isDefined(detail)) {
       return <SettingsSectionSkeletonLoader />;
     }
 
-    switch (activeTabId) {
-      case 'about':
-        return (
-          <SettingsApplicationDetailAboutTab
-            applicationId={application?.id}
-            logoUrl={detail.logoUrl}
-            displayName={displayName}
-            description={detail.description ?? undefined}
-            aboutDescription={detail.aboutDescription ?? undefined}
-            pricingDescription={detail.pricingDescription ?? undefined}
-            screenshots={detail.galleryImages}
-            author={detail.author ?? undefined}
-            version={currentVersion ?? latestAvailableVersion ?? undefined}
-            installCount={detail.installCount}
-            category={detail.category ?? undefined}
-            developerLinks={{
-              websiteUrl: detail.websiteUrl ?? undefined,
-              termsUrl: detail.termsUrl ?? undefined,
-              emailSupport: detail.emailSupport ?? undefined,
-              issueReportUrl: detail.issueReportUrl ?? undefined,
-              sourcePackageUrl,
-            }}
-            onShare={() => copyMarketplaceAppLink(detail.universalIdentifier)}
-          />
-        );
-      case 'content':
-        return (
-          <SettingsApplicationDetailContentTab
-            applicationId={detail.universalIdentifier}
-            manifestContent={manifest}
-            applicationInfo={{
-              name: displayName,
-              logoUrl: detail.logoUrl,
-              universalIdentifier: detail.universalIdentifier,
-            }}
-          />
-        );
-      case 'permissions':
-        return (
-          <SettingsApplicationPermissionsTab
-            marketplaceAppDefaultRole={defaultRole}
-            marketplaceAppObjects={manifest?.objects}
-          />
-        );
+    return (
+      <SettingsApplicationDetailAbout
+        applicationId={application?.id}
+        logoUrl={detail.logoUrl}
+        displayName={displayName}
+        description={
+          builtInApplicationContent?.description ??
+          detail.description ??
+          undefined
+        }
+        aboutDescription={
+          builtInApplicationContent?.readme ??
+          detail.aboutDescription ??
+          undefined
+        }
+        pricingDescription={detail.pricingDescription ?? undefined}
+        billsCredits={detail.billsCredits}
+        screenshots={
+          builtInApplicationContent?.illustrations ?? detail.galleryImages
+        }
+        author={detail.author ?? undefined}
+        version={currentVersion ?? latestAvailableVersion ?? undefined}
+        installCount={detail.installCount}
+        category={detail.category ?? undefined}
+        developerLinks={{
+          websiteUrl: detail.websiteUrl ?? undefined,
+          termsUrl: detail.termsUrl ?? undefined,
+          emailSupport: detail.emailSupport ?? undefined,
+          issueReportUrl: detail.issueReportUrl ?? undefined,
+          sourcePackageUrl,
+        }}
+        contentLink={contentLink}
+        onShare={() => copyMarketplaceAppLink(detail.universalIdentifier)}
+      />
+    );
+  };
 
-      default:
-        return null;
+  const renderActionButton = () => {
+    if (!isDefined(detail)) {
+      return undefined;
     }
+
+    if (isNonEmptyString(detail.connectUrl)) {
+      return (
+        <SettingsMarketplaceAppConnectButton connectUrl={detail.connectUrl} />
+      );
+    }
+
+    return (
+      <SettingsApplicationActionButton
+        installedApplicationId={application?.id}
+        canInstallMarketplaceApps={canInstallMarketplaceApps}
+        onInstall={requestInstall}
+        isInstalling={isInstalling}
+        installProgress={installProgress}
+      />
+    );
   };
 
   return (
@@ -223,35 +273,16 @@ export const SettingsAvailableApplicationDetails = () => {
             />
           ) : undefined
         }
-        actionButton={
-          isDefined(detail) ? (
-            <SettingsApplicationActionButton
-              isInstalled={isAlreadyInstalled}
-              canInstallMarketplaceApps={canInstallMarketplaceApps}
-              onInstall={requestInstall}
-              isInstalling={isInstalling}
-              hasUpdate={hasUpdate}
-              latestAvailableVersion={latestAvailableVersion ?? undefined}
-              onUpgrade={handleUpgrade}
-              isUpgrading={isUpgrading}
-            />
-          ) : undefined
-        }
-        secondaryBar={
-          <SettingsTabBar
-            tabs={tabs}
-            componentInstanceId={AVAILABLE_APPLICATION_DETAIL_ID}
-          />
-        }
+        actionButton={renderActionButton()}
       >
         <SettingsPageContainer overflow="visible">
           {isUnlisted && (
             <InlineBanner
-              LeftIcon={IconEyeOff}
-              message={t`Application not listed on the marketplace. It was shared via a direct link`}
-            />
+              status="warning"
+              icon={<IconEyeOff aria-hidden="true" />}
+            >{t`This application is not listed on the marketplace and has not been reviewed by Twenty. Use at your own risk.`}</InlineBanner>
           )}
-          {renderActiveTabContent()}
+          {renderContent()}
         </SettingsPageContainer>
       </SettingsPageLayout>
       <SettingsApplicationInstallPermissionValidationModal
@@ -259,6 +290,13 @@ export const SettingsAvailableApplicationDetails = () => {
         appDisplayName={displayName}
         appLogoUrl={detail?.logoUrl ?? undefined}
         defaultRole={defaultRole}
+        appObjects={detail?.objects ?? undefined}
+        requestedCapabilities={detail?.requestedCapabilities}
+        requestedIframeMediaPermissions={
+          detail?.requestedIframeMediaPermissions
+        }
+        billsCredits={detail?.billsCredits}
+        isListed={detail?.isListed}
         onAuthorize={install}
         isInstalling={isInstalling}
       />

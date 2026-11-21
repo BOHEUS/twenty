@@ -1,44 +1,33 @@
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
-import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { SaveAndCancelButtons } from '@/settings/components/SaveAndCancelButtons/SaveAndCancelButtons';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
+import { SettingsSectionSkeletonLoader } from '@/settings/components/SettingsSectionSkeletonLoader';
+import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { CheckPublicDomainValidRecordsEffect } from '@/settings/domains/components/CheckPublicDomainValidRecordsEffect';
 import { SettingsDomainRecords } from '@/settings/domains/components/SettingsDomainRecords';
 import { useCheckPublicDomainValidRecords } from '@/settings/domains/hooks/useCheckPublicDomainValidRecords';
-import { selectedApplicationIdForPublicDomainState } from '@/settings/domains/states/selectedApplicationIdForPublicDomainState';
-import { selectedPublicDomainState } from '@/settings/domains/states/selectedPublicDomainState';
 import { getDomainValidationSchema } from '@/settings/domains/utils/getDomainValidationSchema';
 import { TextInput } from '@/ui/input/components/TextInput';
-import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
 import { Trans, useLingui } from '@lingui/react/macro';
+import { isNonEmptyString } from '@sniptt/guards';
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { IconReload, IconTrash } from 'twenty-ui/icon';
-import { useToast } from 'twenty-ui/primitives/feedback';
 import { Button, ButtonGroup } from 'twenty-ui/primitives/input';
-import { Section } from 'twenty-ui/primitives/layout';
-import { H2Title } from 'twenty-ui/primitives/typography';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   CreatePublicDomainDocument,
   DeletePublicDomainDocument,
   FindManyPublicDomainsDocument,
+  FindOneApplicationNameDocument,
 } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
-
-const StyledButtonGroupContainer = styled.div`
-  > * > :not(:first-of-type) > button {
-    border-left: none;
-  }
-`;
-
-const StyledButtonContainer = styled.div`
-  align-self: flex-start;
-`;
 
 const StyledDomainFormWrapper = styled.div`
   display: flex;
@@ -54,12 +43,11 @@ const StyledRecordsWrapper = styled.div`
 `;
 
 export const SettingPublicDomain = () => {
-  const [selectedPublicDomain, setSelectedPublicDomain] = useAtomState(
-    selectedPublicDomainState,
-  );
-  const selectedApplicationIdForPublicDomain = useAtomStateValue(
-    selectedApplicationIdForPublicDomainState,
-  );
+  const { applicationId = '', publicDomainId } = useParams<{
+    applicationId: string;
+    publicDomainId: string;
+  }>();
+
   const { t } = useLingui();
   const navigate = useNavigateSettings();
   const { enqueueToast } = useToast();
@@ -68,22 +56,55 @@ export const SettingPublicDomain = () => {
     CreatePublicDomainDocument,
   );
 
+  const {
+    data: publicDomainsData,
+    loading: publicDomainsLoading,
+    refetch: refetchPublicDomains,
+  } = useQuery(FindManyPublicDomainsDocument);
+
+  const isEditingPublicDomain = isDefined(publicDomainId);
+
+  // The query is workspace-wide, so scope to the URL application or other apps' domains become editable here
+  const selectedPublicDomain = isEditingPublicDomain
+    ? publicDomainsData?.findManyPublicDomains?.find(
+        (publicDomain) =>
+          publicDomain.id === publicDomainId &&
+          publicDomain.applicationId === applicationId,
+      )
+    : undefined;
+
+  const isLoadingSelectedPublicDomain =
+    isEditingPublicDomain && publicDomainsLoading;
+  const isPublicDomainNotFound =
+    isEditingPublicDomain &&
+    !publicDomainsLoading &&
+    !isDefined(selectedPublicDomain);
+
+  const { data: applicationData } = useQuery(FindOneApplicationNameDocument, {
+    variables: { id: applicationId },
+    skip: !applicationId,
+  });
+
+  const applicationName =
+    applicationData?.findOneApplication?.name ?? t`Application`;
+
   const [newPublicDomain, setNewPublicDomain] = useState<string | undefined>(
-    selectedPublicDomain?.domain ?? '',
+    '',
   );
 
   const [newPublicDomainError, setNewPublicDomainError] = useState<
     string | undefined
   >(undefined);
 
-  const { refetch: refetchPublicDomains } = useQuery(
-    FindManyPublicDomainsDocument,
-  );
-
   const [deletePublicDomain] = useMutation(DeletePublicDomainDocument);
 
   const { isLoading, publicDomainRecords, checkPublicDomainRecords } =
     useCheckPublicDomainValidRecords();
+
+  // Also navigates after the create and delete mutations resolve, so it cannot be a Link
+  // oxlint-disable-next-line twenty/no-navigate-prefer-link
+  const navigateToApplication = () =>
+    navigate(SettingsPath.ApplicationDetail, { applicationId });
 
   const onDelete = async () => {
     if (!selectedPublicDomain) {
@@ -92,13 +113,13 @@ export const SettingPublicDomain = () => {
 
     await deletePublicDomain({
       variables: { domain: selectedPublicDomain.domain },
-      onCompleted: () => {
+      onCompleted: async () => {
         enqueueToast({
-          variant: 'success',
+          status: 'success',
           children: t`Custom domain successfully deleted`,
         });
-        navigate(SettingsPath.Applications);
-        refetchPublicDomains();
+        await refetchPublicDomains();
+        navigateToApplication();
       },
       onError: (error) => enqueueToast(getToastOptionsFromError({ error })),
     });
@@ -107,10 +128,7 @@ export const SettingPublicDomain = () => {
   const validationSchema = getDomainValidationSchema();
 
   const onCreate = async () => {
-    if (
-      !isDefined(newPublicDomain) ||
-      !isDefined(selectedApplicationIdForPublicDomain)
-    ) {
+    if (!isDefined(newPublicDomain) || !isNonEmptyString(applicationId)) {
       return;
     }
 
@@ -126,20 +144,89 @@ export const SettingPublicDomain = () => {
     await createPublicDomain({
       variables: {
         domain: newPublicDomain,
-        applicationId: selectedApplicationIdForPublicDomain,
+        applicationId,
       },
-      onCompleted: (data) => {
-        setSelectedPublicDomain(data.createPublicDomain);
+      onCompleted: async () => {
         enqueueToast({
-          variant: 'success',
+          status: 'success',
           children: t`Custom domain successfully created`,
         });
+        await refetchPublicDomains();
+        navigateToApplication();
       },
       onError: (error) => {
         setNewPublicDomainError(error.message);
         enqueueToast(getToastOptionsFromError({ error }));
       },
     });
+  };
+
+  const renderContent = () => {
+    if (isLoadingSelectedPublicDomain) {
+      return <SettingsSectionSkeletonLoader />;
+    }
+
+    if (isPublicDomainNotFound) {
+      return (
+        <Section.Root>
+          <Section.Header
+            title={t`Custom domain not found`}
+            description={t`This custom domain does not exist or does not belong to this application.`}
+          />
+        </Section.Root>
+      );
+    }
+
+    return (
+      <Section.Root>
+        <Section.Header
+          title={t`Custom Domain`}
+          description={t`Set the name of your custom domain and configure your DNS records.`}
+        />
+        {isDefined(selectedPublicDomain) && (
+          <CheckPublicDomainValidRecordsEffect
+            publicDomain={selectedPublicDomain}
+          />
+        )}
+        <StyledDomainFormWrapper>
+          <TextInput
+            value={selectedPublicDomain?.domain ?? newPublicDomain}
+            onChange={setNewPublicDomain}
+            error={newPublicDomainError}
+            type="text"
+            disabled={isDefined(selectedPublicDomain)}
+            placeholder="app.yourdomain.com"
+            fullWidth
+          />
+          {isDefined(selectedPublicDomain) && (
+            <ButtonGroup>
+              <Button
+                loading={isLoading}
+                startIcon={<IconReload />}
+                onClick={() =>
+                  checkPublicDomainRecords(selectedPublicDomain.domain)
+                }
+                type="button"
+                variant="outline"
+              >{t`Reload`}</Button>
+              <Button
+                startIcon={<IconTrash />}
+                aria-label={t`Delete`}
+                onClick={onDelete}
+                variant="outline"
+              />
+            </ButtonGroup>
+          )}
+        </StyledDomainFormWrapper>
+        {isDefined(selectedPublicDomain) && publicDomainRecords?.domain && (
+          <StyledRecordsWrapper>
+            {isDefined(publicDomainRecords.records) && (
+              <SettingsDomainRecords records={publicDomainRecords.records} />
+            )}
+          </StyledRecordsWrapper>
+        )}
+      </Section.Root>
+    );
   };
 
   return (
@@ -154,72 +241,23 @@ export const SettingPublicDomain = () => {
           children: <Trans>Apps</Trans>,
           href: getSettingsPath(SettingsPath.Applications),
         },
+        {
+          children: applicationName,
+          href: getSettingsPath(SettingsPath.ApplicationDetail, {
+            applicationId,
+          }),
+        },
         { children: <Trans>Custom Domain</Trans> },
       ]}
       actionButton={
         <SaveAndCancelButtons
-          onCancel={() => navigate(SettingsPath.Applications)}
-          isSaveDisabled={loading || isDefined(selectedPublicDomain)}
+          onCancel={navigateToApplication}
+          isSaveDisabled={loading || isEditingPublicDomain}
           onSave={onCreate}
         />
       }
     >
-      <SettingsPageContainer>
-        <Section>
-          <H2Title
-            title={t`Custom Domain`}
-            description={t`Set the name of your custom domain and configure your DNS records.`}
-          />
-          {isDefined(selectedPublicDomain) && (
-            <CheckPublicDomainValidRecordsEffect
-              publicDomain={selectedPublicDomain}
-            />
-          )}
-          <StyledDomainFormWrapper>
-            <TextInput
-              value={newPublicDomain}
-              onChange={setNewPublicDomain}
-              error={newPublicDomainError}
-              type="text"
-              disabled={isDefined(selectedPublicDomain)}
-              placeholder="app.yourdomain.com"
-              fullWidth
-            />
-            {isDefined(selectedPublicDomain) && (
-              <StyledButtonGroupContainer>
-                <ButtonGroup>
-                  <StyledButtonContainer>
-                    <Button
-                      loading={isLoading}
-                      startIcon={<IconReload />}
-                      onClick={() =>
-                        checkPublicDomainRecords(selectedPublicDomain.domain)
-                      }
-                      type="button"
-                      variant="outline"
-                    >{t`Reload`}</Button>
-                  </StyledButtonContainer>
-                  <StyledButtonContainer>
-                    <Button
-                      startIcon={<IconTrash />}
-                      aria-label={t`Delete`}
-                      onClick={onDelete}
-                      variant="outline"
-                    />
-                  </StyledButtonContainer>
-                </ButtonGroup>
-              </StyledButtonGroupContainer>
-            )}
-          </StyledDomainFormWrapper>
-          {isDefined(selectedPublicDomain) && publicDomainRecords?.domain && (
-            <StyledRecordsWrapper>
-              {isDefined(publicDomainRecords.records) && (
-                <SettingsDomainRecords records={publicDomainRecords.records} />
-              )}
-            </StyledRecordsWrapper>
-          )}
-        </Section>
-      </SettingsPageContainer>
+      <SettingsPageContainer>{renderContent()}</SettingsPageContainer>
     </SettingsPageLayout>
   );
 };

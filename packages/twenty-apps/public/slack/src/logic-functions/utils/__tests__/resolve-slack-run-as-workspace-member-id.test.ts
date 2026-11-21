@@ -1,4 +1,3 @@
-import { type WebClient } from '@slack/web-api';
 import { type CoreApiClient } from 'twenty-client-sdk/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -48,7 +47,11 @@ vi.mock('src/logic-functions/data/update-slack-user-link', () => ({
 const client = {} as CoreApiClient;
 
 const authTestMock = vi.fn();
-const slackClient = { auth: { test: authTestMock } } as unknown as WebClient;
+const SLACK_CONNECTION_ID = 'connection-1';
+const slackClient = {
+  auth: { test: authTestMock },
+  users: { info: vi.fn() },
+};
 
 const IDENTITY: SlackUserIdentity = {
   slackUserId: 'U0123456789',
@@ -91,7 +94,12 @@ const expectNoEmailMatchConsulted = () =>
   });
 
 const runAs = (identity: SlackUserIdentity = IDENTITY) =>
-  resolveSlackRunAsWorkspaceMemberId({ client, slackClient, identity });
+  resolveSlackRunAsWorkspaceMemberId({
+    client,
+    slackClient,
+    slackConnectionId: SLACK_CONNECTION_ID,
+    identity,
+  });
 
 describe('resolveSlackRunAsWorkspaceMemberId', () => {
   beforeEach(() => {

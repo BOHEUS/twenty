@@ -29,7 +29,9 @@ export type View = {
   kanbanAggregateOperationFieldMetadataId?: string | null;
   mainGroupByFieldMetadataId?: string | null;
   shouldHideEmptyGroups: boolean;
+  shouldDisplayGroupsAsTabs?: boolean | null;
   kanbanColumnWidth?: number | null;
+  groupLoadLimit?: number | null;
   calendarFieldMetadataId?: string | null;
   calendarEndFieldMetadataId?: string | null;
   calendarLayout?: ViewCalendarLayout | null;
@@ -38,5 +40,7 @@ export type View = {
   anyFieldFilterValue?: string | null;
   visibility: ViewVisibility;
   createdByUserWorkspaceId?: string | null;
+  applicationId?: string;
+  universalIdentifier?: string;
   isActive: boolean;
 };

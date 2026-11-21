@@ -1,56 +1,86 @@
-import { useState } from 'react';
+import { Dropdown, useDropdownPage } from 'twenty-ui/components/navigation';
 import { FOLDER_ICON_DEFAULT } from '@/navigation-menu-item/common/constants/FolderIconDefault';
 import { DEFAULT_NAVIGATION_MENU_ITEM_COLOR_FOLDER } from '@/navigation-menu-item/common/constants/NavigationMenuItemDefaultColorFolder';
 import { useLingui } from '@lingui/react/macro';
 import { NavigationMenuItemType } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
 import {
   IconChevronUp,
   IconChevronDown,
   IconHierarchy2,
-  useIcons,
   IconFolderSymlink,
+  IconLayoutList,
   IconRowInsertTop,
   IconRowInsertBottom,
   IconTrash,
-  IconChevronLeft,
 } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { ColoredIcon } from '@/ui/icon/components/ColoredIcon';
 import { type NavigationMenuItem } from '~/generated-metadata/graphql';
-import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
-import { DropdownMenuHeader } from '@/ui/layout/dropdown/components/DropdownMenuHeader/DropdownMenuHeader';
-import { DropdownMenuHeaderLeftComponent } from '@/ui/layout/dropdown/components/DropdownMenuHeader/internal/DropdownMenuHeaderLeftComponent';
-import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
-import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
-import { SelectableList } from '@/ui/layout/selectable-list/components/SelectableList';
 import { useNavigationMenuItemMoveRemove } from '@/navigation-menu-item/edit/hooks/useNavigationMenuItemMoveRemove';
 import { type NavigationMenuItemSection } from '@/navigation-menu-item/common/types/NavigationMenuItemSection';
-import { type NavigationMenuItemAddTarget } from '@/navigation-menu-item/edit/components/NavigationMenuItemMenu';
-import {
-  NavigationMenuItemSelectableItem,
-  type NavigationMenuItemOption,
-} from '@/navigation-menu-item/edit/components/NavigationMenuItemSelectableItem';
+import { type NavigationMenuItemAddTarget } from '@/navigation-menu-item/edit/types/NavigationMenuItemAddTarget';
+import { getNavigationMenuContainersInDisplayOrder } from '@/navigation-menu-item/common/utils/getNavigationMenuContainersInDisplayOrder';
+import { getNavigationMenuItemContainerId } from '@/navigation-menu-item/common/utils/getNavigationMenuItemContainerId';
+import { isNavigationMenuItemBuiltInSection } from '@/navigation-menu-item/common/utils/isNavigationMenuItemBuiltInSection';
+import { useNavigationMenuItemsData } from '@/navigation-menu-item/display/hooks/useNavigationMenuItemsData';
+import { useWorkspaceNavigationMenuContainers } from '@/navigation-menu-item/display/hooks/useWorkspaceNavigationMenuContainers';
+import { NavigationMenuItemSelectableItem } from '@/navigation-menu-item/edit/components/NavigationMenuItemSelectableItem';
+import { type NavigationMenuItemOption } from '@/navigation-menu-item/edit/types/NavigationMenuItemOption';
 
 type NavigationMenuItemActionsProps = {
   item: NavigationMenuItem;
   section: NavigationMenuItemSection;
   onAdd: (target: NavigationMenuItemAddTarget) => void;
-  dropdownId: string;
   onClose: () => void;
 };
 export const NavigationMenuItemActions = ({
   item,
   section,
   onAdd,
-  dropdownId,
   onClose,
 }: NavigationMenuItemActionsProps) => {
   const { t } = useLingui();
   const { getIcon } = useIcons();
+  const { workspaceNavigationMenuItems } = useNavigationMenuItemsData();
+  const containerId =
+    section === 'workspace'
+      ? getNavigationMenuItemContainerId({
+          item,
+          items: workspaceNavigationMenuItems,
+        })
+      : null;
   const { items, getSortedSiblings, moveUp, moveDown, moveToFolder, remove } =
-    useNavigationMenuItemMoveRemove(section);
-  const [page, setPage] = useState<'actions' | 'folders'>('actions');
+    useNavigationMenuItemMoveRemove(section, containerId);
+  const { goToPage } = useDropdownPage();
   const siblings = getSortedSiblings(item.id) ?? [];
+  const homeSections = useWorkspaceNavigationMenuContainers({
+    type: NavigationMenuItemType.SECTION,
+    containerId: null,
+  });
+  const tabs = useWorkspaceNavigationMenuContainers({
+    type: NavigationMenuItemType.TAB,
+    containerId: null,
+  });
+  const sections =
+    section === 'workspace'
+      ? [
+          ...homeSections,
+          ...tabs.flatMap((tab) =>
+            getNavigationMenuContainersInDisplayOrder({
+              navigationMenuItems: workspaceNavigationMenuItems,
+              type: NavigationMenuItemType.SECTION,
+              containerId: tab.id,
+            }),
+          ),
+        ].filter(
+          (candidate) =>
+            !isNavigationMenuItemBuiltInSection(candidate) &&
+            candidate.id !== containerId,
+        )
+      : [];
+  const getTabName = (tabId: string | null | undefined) =>
+    tabs.find((tab) => tab.id === tabId)?.name ?? t`Home`;
+  const moveToLabel = sections.length > 0 ? t`Move to` : t`Move to folder`;
   const index = siblings.findIndex((sibling) => sibling.id === item.id);
   const run = (action: () => Promise<void>) => {
     void action();
@@ -73,11 +103,12 @@ export const NavigationMenuItemActions = ({
     },
     {
       id: 'folder',
-      label: t`Move to folder`,
+      label: moveToLabel,
       Icon: IconFolderSymlink,
-      isDisabled: item.type === NavigationMenuItemType.FOLDER,
+      isDisabled:
+        item.type === NavigationMenuItemType.FOLDER && sections.length === 0,
       hasSubMenu: true,
-      onClick: () => setPage('folders'),
+      onClick: () => goToPage('folders'),
     },
     {
       id: 'before',
@@ -85,7 +116,7 @@ export const NavigationMenuItemActions = ({
       Icon: IconRowInsertTop,
       hasSubMenu: true,
       onClick: () =>
-        onAdd({ folderId: item.folderId ?? undefined, position: index }),
+        onAdd({ parentId: item.parentId ?? undefined, position: index }),
     },
     {
       id: 'after',
@@ -93,7 +124,7 @@ export const NavigationMenuItemActions = ({
       Icon: IconRowInsertBottom,
       hasSubMenu: true,
       onClick: () =>
-        onAdd({ folderId: item.folderId ?? undefined, position: index + 1 }),
+        onAdd({ parentId: item.parentId ?? undefined, position: index + 1 }),
     },
     {
       id: 'remove',
@@ -108,11 +139,15 @@ export const NavigationMenuItemActions = ({
       id: 'root',
       label: t`Root level`,
       Icon: IconHierarchy2,
-      isDisabled: !isDefined(item.folderId),
-      onClick: () => run(() => moveToFolder(item.id, null)),
+      isDisabled: (item.parentId ?? null) === containerId,
+      onClick: () => run(() => moveToFolder(item.id, containerId)),
     },
     ...items
-      .filter((folder) => folder.type === NavigationMenuItemType.FOLDER)
+      .filter(
+        (folder) =>
+          folder.type === NavigationMenuItemType.FOLDER &&
+          item.type !== NavigationMenuItemType.FOLDER,
+      )
       .map((folder) => ({
         id: folder.id,
         label: folder.name ?? t`Folder`,
@@ -122,37 +157,34 @@ export const NavigationMenuItemActions = ({
             color={folder.color ?? DEFAULT_NAVIGATION_MENU_ITEM_COLOR_FOLDER}
           />
         ),
-        isDisabled: folder.id === item.folderId,
+        isDisabled: folder.id === item.parentId,
         onClick: () => run(() => moveToFolder(item.id, folder.id)),
       })),
+    ...sections.map((targetSection) => ({
+      id: targetSection.id,
+      label: targetSection.name ?? t`Section`,
+      contextualText: getTabName(targetSection.parentId),
+      Icon: IconLayoutList,
+      onClick: () => run(() => moveToFolder(item.id, targetSection.id)),
+    })),
   ];
-  const options = page === 'folders' ? folders : actions;
   return (
-    <DropdownContent widthInPixels={GenericDropdownContentWidth.Large}>
-      {page === 'folders' && (
-        <DropdownMenuHeader
-          StartComponent={
-            <DropdownMenuHeaderLeftComponent
-              Icon={IconChevronLeft}
-              onClick={() => setPage('actions')}
-            />
-          }
-        >{t`Move to folder`}</DropdownMenuHeader>
-      )}
-      <SelectableList
-        key={page}
-        selectableListInstanceId={`${dropdownId}-actions`}
-        focusId={dropdownId}
-        selectableItemIdArray={options
-          .filter((option) => !option.isDisabled)
-          .map((option) => option.id)}
-      >
-        <DropdownMenuItemsContainer hasMaxHeight={page === 'folders'}>
-          {options.map((option) => (
+    <>
+      <Dropdown.Page id="root">
+        <Dropdown.Section>
+          {actions.map((option) => (
             <NavigationMenuItemSelectableItem key={option.id} item={option} />
           ))}
-        </DropdownMenuItemsContainer>
-      </SelectableList>
-    </DropdownContent>
+        </Dropdown.Section>
+      </Dropdown.Page>
+      <Dropdown.Page id="folders">
+        <Dropdown.Back>{moveToLabel}</Dropdown.Back>
+        <Dropdown.Section scrollable>
+          {folders.map((option) => (
+            <NavigationMenuItemSelectableItem key={option.id} item={option} />
+          ))}
+        </Dropdown.Section>
+      </Dropdown.Page>
+    </>
   );
 };

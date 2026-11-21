@@ -11,10 +11,7 @@ import { RecordBoardComponentInstanceContext } from '@/object-record/record-boar
 import { recordIndexGroupFieldMetadataItemComponentState } from '@/object-record/record-index/states/recordIndexGroupFieldMetadataComponentState';
 
 import { RecordIndexRemoveSortingModal } from '@/object-record/record-index/components/RecordIndexRemoveSortingModal';
-import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
-import { getRecordIndexRemoveSortingModalId } from '@/object-record/record-index/utils/getRecordIndexRemoveSortingModalId';
 
-import { isModalOpenedComponentState } from '@/ui/layout/modal/states/isModalOpenedComponentState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { isDefined } from 'twenty-shared/utils';
 
@@ -56,13 +53,6 @@ export const RecordBoardContainer = ({
       ...args,
     });
 
-  const { recordIndexId } = useRecordIndexContextOrThrow();
-
-  const isModalOpened = useAtomComponentStateValue(
-    isModalOpenedComponentState,
-    getRecordIndexRemoveSortingModalId(recordIndexId),
-  );
-
   if (!isDefined(recordIndexGroupFieldMetadataItem)) {
     return null;
   }
@@ -83,7 +73,7 @@ export const RecordBoardContainer = ({
         value={{ instanceId: recordBoardId }}
       >
         <RecordBoard />
-        {isModalOpened && <RecordIndexRemoveSortingModal />}
+        <RecordIndexRemoveSortingModal />
         <RecordBoardHotkeyEffect />
         <RecordBoardBodyEscapeHotkeyEffect />
       </RecordBoardComponentInstanceContext.Provider>

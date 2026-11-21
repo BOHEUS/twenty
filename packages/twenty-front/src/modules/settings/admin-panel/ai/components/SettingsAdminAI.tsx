@@ -1,54 +1,51 @@
-import { NavigationButton } from '@/ui/input/components/NavigationButton';
-import { useToast } from 'twenty-ui/primitives/feedback';
 import { useMemo, useState } from 'react';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 
 import { useMutation, useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
+import { AI_MODEL_TIERS, type AiModelTier } from 'twenty-shared/ai';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { AI_MODEL_TIERS, type AiModelTier } from 'twenty-shared/ai';
-import { IconMessage } from 'twenty-ui/icon';
-import { H2Title } from 'twenty-ui/primitives/typography';
-import { Section } from 'twenty-ui/primitives/layout';
 import { Card } from 'twenty-ui/primitives/surfaces';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
-import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
-import { billingState } from '@/client-config/states/billingState';
-import { useClientConfig } from '@/client-config/hooks/useClientConfig';
 import { getAiModelTierLabel } from '@/ai/utils/getAiModelTierLabel';
-import { useApolloAdminClient } from '@/settings/admin-panel/apollo/hooks/useApolloAdminClient';
+import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
+import { useClientConfig } from '@/client-config/hooks/useClientConfig';
+import { billingState } from '@/client-config/states/billingState';
 import { SettingsAdminAiProviderListCard } from '@/settings/admin-panel/ai/components/SettingsAdminAiProviderListCard';
-import { useCustomAiProviderAccess } from '@/settings/admin-panel/ai/hooks/useCustomAiProviderAccess';
 import { AI_PROVIDER_SOURCE } from '@/settings/admin-panel/ai/constants/AiProviderSource';
 import { SET_ADMIN_DEFAULT_AI_MODEL } from '@/settings/admin-panel/ai/graphql/mutations/setAdminDefaultAiModel';
 import { GET_ADMIN_AI_MODELS } from '@/settings/admin-panel/ai/graphql/queries/getAdminAiModels';
 import { GET_ADMIN_AI_USAGE_BY_WORKSPACE } from '@/settings/admin-panel/ai/graphql/queries/getAdminAiUsageByWorkspace';
 import { GET_AI_PROVIDERS } from '@/settings/admin-panel/ai/graphql/queries/getAiProviders';
+import { useCustomAiProviderAccess } from '@/settings/admin-panel/ai/hooks/useCustomAiProviderAccess';
 import { type GetAiProvidersResult } from '@/settings/admin-panel/ai/types/GetAiProvidersResult';
 import { parseProviderItems } from '@/settings/admin-panel/ai/utils/parseProviderItems';
-import { SettingsSectionSkeletonLoader } from '@/settings/components/SettingsSectionSkeletonLoader';
+import { useApolloAdminClient } from '@/settings/admin-panel/apollo/hooks/useApolloAdminClient';
+import { AiModelPinSelect } from '@/ai/components/AiModelPinSelect';
 import { SettingsEnterpriseFeatureGateCard } from '@/settings/components/SettingsEnterpriseFeatureGateCard';
-import { AiModelPinSelect } from '@/settings/ai/components/AiModelPinSelect';
 import { SettingsOptionCardContentSelect } from '@/settings/components/SettingsOptions/SettingsOptionCardContentSelect';
 import { StyledSettingsSelectGroup } from '@/settings/components/SettingsOptions/StyledSettingsSelectGroup';
+import { SettingsSectionSkeletonLoader } from '@/settings/components/SettingsSectionSkeletonLoader';
 import { useUsageValueFormatter } from '@/settings/usage/hooks/useUsageValueFormatter';
 import { getPeriodDates } from '@/settings/usage/utils/getPeriodDates';
 import { getPeriodOptions } from '@/settings/usage/utils/getPeriodOptions';
 import { type PeriodPreset } from '@/settings/usage/utils/periodPreset';
-import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { Select } from '@/ui/input/components/Select';
+import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
-import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
+import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import {
   type AdminAiModelConfig,
   type AdminAiModelTierDefault,
   AiModelTier as GraphqlAiModelTier,
 } from '~/generated-admin/graphql';
-import { OrganizationAdornment } from '~/pages/settings/enterprise/components/OrganizationAdornment';
+import { OrganizationAdornment } from '@/settings/enterprise/components/OrganizationAdornment';
+import { useLingui } from '@lingui/react/macro';
 
 const USAGE_TABLE_GRID_TEMPLATE_COLUMNS = '1fr 120px';
 
@@ -59,6 +56,7 @@ type UsageBreakdownItem = {
 };
 
 export const SettingsAdminAI = () => {
+  const { t } = useLingui();
   const apolloAdminClient = useApolloAdminClient();
   const { enqueueToast } = useToast();
   const { refetch: refetchClientConfig } = useClientConfig();
@@ -133,8 +131,13 @@ export const SettingsAdminAI = () => {
 
   const defaultModelByTier = data?.getAdminAiModels?.defaultModelByTier ?? [];
 
+  // Tier defaults answer chats and agent runs, so the server refuses evaluation models here.
   const enabledModels = models.filter(
-    (model) => model.isAvailable && model.isAdminEnabled && !model.isDeprecated,
+    (model) =>
+      model.kind === 'language' &&
+      model.isAvailable &&
+      model.isAdminEnabled &&
+      !model.isDeprecated,
   );
 
   const handleDefaultModelChange = async (
@@ -149,7 +152,7 @@ export const SettingsAdminAI = () => {
       await refetchClientConfig();
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to update default model`,
       });
     }
@@ -157,8 +160,8 @@ export const SettingsAdminAI = () => {
 
   return (
     <>
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title={t`Providers`}
           description={t`Built-in providers activated by API key. Click to manage models.`}
         />
@@ -167,13 +170,13 @@ export const SettingsAdminAI = () => {
           providers={catalogProviders}
           showAddButton={false}
         />
-      </Section>
+      </Section.Root>
 
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title={t`Custom Providers`}
           description={t`Add custom endpoints, private gateways, or additional regions.`}
-          adornment={
+          actions={
             <OrganizationAdornment
               tooltipContent={customAiProviderTooltipContent}
             />
@@ -192,16 +195,16 @@ export const SettingsAdminAI = () => {
             buttonTitle={t`Activate`}
           />
         )}
-      </Section>
+      </Section.Root>
 
       {enabledModels.length > 0 && (
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Default Models`}
             description={t`The model behind each mode for every workspace. Workspaces can pin their own.`}
           />
 
-          <Card rounded>
+          <Card.Root>
             <StyledSettingsSelectGroup controlWidth={260}>
               {AI_MODEL_TIERS.map((tier, index) => (
                 <SettingsOptionCardContentSelect
@@ -228,28 +231,15 @@ export const SettingsAdminAI = () => {
                 </SettingsOptionCardContentSelect>
               ))}
             </StyledSettingsSelectGroup>
-          </Card>
-        </Section>
+          </Card.Root>
+        </Section.Root>
       )}
 
-      <Section>
-        <H2Title
-          title={t`Chats`}
-          description={t`Browse AI chat threads across all workspaces, including onboarding chats`}
-        />
-        <NavigationButton
-          to={getSettingsPath(SettingsPath.AdminPanelChats)}
-          startIcon={<IconMessage />}
-          size="sm"
-          variant="outline"
-        >{t`View all chats`}</NavigationButton>
-      </Section>
-
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title={t`AI Usage by Workspace`}
           description={t`AI consumption across all workspaces.`}
-          adornment={
+          actions={
             hasEnterpriseAccess ? (
               <Select
                 dropdownId="admin-ai-usage-period"
@@ -289,7 +279,7 @@ export const SettingsAdminAI = () => {
               ))}
             </Table>
           ) : (
-            <Card rounded>
+            <Card.Root>
               <TableRow gridTemplateColumns="1fr">
                 <TableCell
                   color={themeCssVariables.font.color.tertiary}
@@ -298,7 +288,7 @@ export const SettingsAdminAI = () => {
                   {t`No AI usage data recorded yet.`}
                 </TableCell>
               </TableRow>
-            </Card>
+            </Card.Root>
           )
         ) : (
           <SettingsEnterpriseFeatureGateCard
@@ -307,7 +297,7 @@ export const SettingsAdminAI = () => {
             buttonTitle={t`Activate`}
           />
         )}
-      </Section>
+      </Section.Root>
     </>
   );
 };

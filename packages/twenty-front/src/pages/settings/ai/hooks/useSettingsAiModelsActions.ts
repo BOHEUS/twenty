@@ -1,8 +1,7 @@
-import { useToast } from 'twenty-ui/primitives/feedback';
 import { useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { type AiModelTier } from 'twenty-shared/ai';
 import { isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
 
 import {
   currentWorkspaceState,
@@ -13,10 +12,10 @@ import {
   AiModelTier as GraphqlAiModelTier,
   UpdateWorkspaceDocument,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
-// Typed with the generated enum so the same object is both the optimistic
-// workspace patch and the mutation input; the enum's keys are the shared tier
-// literals, which is what makes the lookup below total.
+// Typed with the generated enum so one object is both the optimistic workspace patch and the mutation input;
+// the enum's keys are the shared tier literals, which keeps the GraphqlAiModelTier[tier] lookups total
 type WorkspaceAiModelSettingsChanges = Partial<
   Pick<
     CurrentWorkspace,
@@ -28,6 +27,7 @@ type WorkspaceAiModelSettingsChanges = Partial<
 >;
 
 export const useSettingsAiModelsActions = () => {
+  const { t } = useLingui();
   const { enqueueToast } = useToast();
   const [currentWorkspace, setCurrentWorkspace] = useAtomState(
     currentWorkspaceState,
@@ -37,7 +37,9 @@ export const useSettingsAiModelsActions = () => {
   const updateAiModelSettings = async (
     changes: WorkspaceAiModelSettingsChanges,
   ) => {
-    if (!currentWorkspace?.id) return;
+    if (!currentWorkspace?.id) {
+      return;
+    }
 
     const previousWorkspace = currentWorkspace;
 
@@ -47,7 +49,7 @@ export const useSettingsAiModelsActions = () => {
     } catch {
       setCurrentWorkspace(previousWorkspace);
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to update model settings`,
       });
     }

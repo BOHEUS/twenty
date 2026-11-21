@@ -11,15 +11,17 @@ import { parsePhoneNumberWithError, type CountryCode } from 'libphonenumber-js';
 import { type FieldMetadataSettings } from 'twenty-shared/types';
 import {
   assertUnreachable,
+  convertCurrencyAmountToCurrencyMicros,
+  getLinkUrlNormalizer,
   isDefined,
   isEmptyObject,
-  getLinkUrlNormalizer,
   normalizeUrlOrigin,
+  parseToPlainDateOrThrow,
+  turnJSDateToPlainDate,
 } from 'twenty-shared/utils';
 import { z } from 'zod';
 import { FieldMetadataType, RelationType } from '~/generated-metadata/graphql';
 import { castToString } from '~/utils/castToString';
-import { convertCurrencyAmountToCurrencyMicros } from '~/utils/convertCurrencyToCurrencyMicros';
 import { stripSimpleQuotesFromString } from '~/utils/string/stripSimpleQuotesFromString';
 
 type BuildRecordFromImportedStructuredRowArgs = {
@@ -58,8 +60,9 @@ const buildRelationConnectFieldRecord = (
     Record<FieldMetadataType, Record<string, ((value: any) => any) | undefined>>
   >,
 ) => {
-  if (fieldMetadataItem.relation?.type !== RelationType.MANY_TO_ONE)
+  if (fieldMetadataItem.relation?.type !== RelationType.MANY_TO_ONE) {
     return undefined;
+  }
 
   const relationConnectFields = spreadsheetImportFields.filter(
     (field) =>
@@ -68,12 +71,16 @@ const buildRelationConnectFieldRecord = (
       isNonEmptyString(importedStructuredRow[field.key]),
   );
 
-  if (relationConnectFields.length === 0) return undefined;
+  if (relationConnectFields.length === 0) {
+    return undefined;
+  }
 
   const relationConnectFieldValue = relationConnectFields.reduce(
     (acc, field) => {
       const uniqueFieldMetadataItem = field.uniqueFieldMetadataItem;
-      if (!isDefined(uniqueFieldMetadataItem)) return acc;
+      if (!isDefined(uniqueFieldMetadataItem)) {
+        return acc;
+      }
 
       if (
         isCompositeFieldType(uniqueFieldMetadataItem.type) &&
@@ -106,6 +113,14 @@ const buildRelationConnectFieldRecord = (
   return isEmptyObject(relationConnectFieldValue)
     ? undefined
     : { connect: { where: relationConnectFieldValue } };
+};
+
+const computeDateOnlyImportedValue = (value: string): string => {
+  try {
+    return parseToPlainDateOrThrow(value).toString();
+  } catch {
+    return turnJSDateToPlainDate(new Date(value)).toString();
+  }
 };
 
 export const buildRecordFromImportedStructuredRow = ({
@@ -201,6 +216,7 @@ export const buildRecordFromImportedStructuredRow = ({
     [FieldMetadataType.RICH_TEXT]: {
       blocknote: castToString,
       markdown: castToString,
+      tiptap: castToString,
     },
 
     [FieldMetadataType.EMAILS]: {
@@ -303,11 +319,13 @@ export const buildRecordFromImportedStructuredRow = ({
             );
 
             recordToBuild[field.name] = {
+              ...compositeData,
               primaryPhoneNumber: parsedNumber,
               primaryPhoneCallingCode: `+${parsedCountryCallingCode}`,
             };
           } catch {
             recordToBuild[field.name] = {
+              ...compositeData,
               primaryPhoneNumber,
               primaryPhoneCallingCode:
                 stripSimpleQuotesFromString(
@@ -376,6 +394,14 @@ export const buildRecordFromImportedStructuredRow = ({
         }
         break;
       case FieldMetadataType.DATE:
+        if (
+          isDefined(importedFieldValue) &&
+          isNonEmptyString(importedFieldValue)
+        ) {
+          recordToBuild[field.name] =
+            computeDateOnlyImportedValue(importedFieldValue);
+        }
+        break;
       case FieldMetadataType.DATE_TIME:
         if (
           isDefined(importedFieldValue) &&

@@ -1,8 +1,7 @@
+import { SpreadsheetImportStepBody } from '@/spreadsheet-import/components/SpreadsheetImportStepBody';
 import { t } from '@lingui/core/macro';
 import { useCallback, useState } from 'react';
 import { type WorkBook } from 'xlsx-ugnis';
-
-import { ModalContent } from 'twenty-ui/primitives/surfaces';
 
 import { useComputeColumnSuggestionsAndAutoMatch } from '@/spreadsheet-import/hooks/useComputeColumnSuggestionsAndAutoMatch';
 import { useSpreadsheetImportInternal } from '@/spreadsheet-import/hooks/useSpreadsheetImportInternal';
@@ -14,10 +13,10 @@ import { DropZone } from './components/DropZone';
 
 type UploadStepProps = {
   setUploadedFile: (file: File) => void;
-  setCurrentStepState: (data: any) => void;
+  setCurrentStepState: (data: SpreadsheetImportStep) => void;
   onError: (message: string) => void;
   nextStep: () => void;
-  setPreviousStepState: (data: any) => void;
+  setPreviousStepState: (data: SpreadsheetImportStep) => void;
   currentStepState: SpreadsheetImportStep;
 };
 
@@ -111,8 +110,8 @@ export const UploadStep = ({
   );
 
   return (
-    <ModalContent contentPadding={6}>
+    <SpreadsheetImportStepBody padding="medium">
       <DropZone onContinue={handleOnContinue} isLoading={isLoading} />
-    </ModalContent>
+    </SpreadsheetImportStepBody>
   );
 };

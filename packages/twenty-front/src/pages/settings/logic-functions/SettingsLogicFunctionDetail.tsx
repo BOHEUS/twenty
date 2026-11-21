@@ -10,7 +10,6 @@ import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLay
 import { SettingsTabBar } from '@/settings/components/layout/SettingsTabBar';
 import { activeTabIdComponentState } from '@/ui/layout/tab-list/states/activeTabIdComponentState';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
-import { t } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
 import {
@@ -25,10 +24,12 @@ import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { SettingsLogicFunctionCodeEditorTab } from '@/settings/logic-functions/components/tabs/SettingsLogicFunctionCodeEditorTab';
 import { useExecuteLogicFunction } from '@/logic-functions/hooks/useExecuteLogicFunction';
+import { useLingui } from '@lingui/react/macro';
 
 const LOGIC_FUNCTION_DETAIL_ID = 'logic-function-detail';
 
 export const SettingsLogicFunctionDetail = () => {
+  const { t } = useLingui();
   const { logicFunctionId = '', applicationId } = useParams();
 
   const location = useLocation();
@@ -71,6 +72,8 @@ export const SettingsLogicFunctionDetail = () => {
     logicFunctionId,
   });
 
+  const canTestFunction = logicFunction?.canRunOnDemand ?? false;
+
   const handleTestFunction = async () => {
     navigate(
       { search: location.search, hash: '#test' },
@@ -88,14 +91,20 @@ export const SettingsLogicFunctionDetail = () => {
       hide: isReadonly,
     },
     { id: 'settings', title: t`Settings`, Icon: IconSettings },
-    { id: 'test', title: t`Test`, Icon: IconPlayerPlay },
+    {
+      id: 'test',
+      title: t`Test`,
+      Icon: IconPlayerPlay,
+      disabled: !canTestFunction,
+      hide: !canTestFunction,
+    },
     { id: 'triggers', title: t`Triggers`, Icon: IconBolt },
   ];
 
   const isEditorTab = activeTabId === 'editor';
   const isTriggersTab = activeTabId === 'triggers';
   const isSettingsTab = activeTabId === 'settings';
-  const isTestTab = activeTabId === 'test';
+  const isTestTab = activeTabId === 'test' && canTestFunction;
 
   const breadcrumbLinks = isDefined(applicationId)
     ? (() => {
@@ -154,7 +163,11 @@ export const SettingsLogicFunctionDetail = () => {
         }
         links={breadcrumbLinks}
         secondaryBar={
-          <SettingsTabBar tabs={tabs} componentInstanceId={instanceId} />
+          <SettingsTabBar
+            aria-label={t`Function details`}
+            tabs={tabs}
+            componentInstanceId={instanceId}
+          />
         }
       >
         <SettingsPageContainer>
