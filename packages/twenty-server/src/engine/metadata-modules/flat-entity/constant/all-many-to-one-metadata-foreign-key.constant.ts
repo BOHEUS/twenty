@@ -26,9 +26,11 @@ type ManyToOneRelationConfiguration<
 
 type ManyToOneMetadataRelationsProperties = {
   [TSourceMetadataName in AllMetadataName]: {
-    [TRelationProperty in ExtractEntityManyToOneEntityRelationProperties<
-      MetadataEntity<TSourceMetadataName>
-    >]: ManyToOneRelationConfiguration<TSourceMetadataName, TRelationProperty>;
+    [
+      TRelationProperty in ExtractEntityManyToOneEntityRelationProperties<
+        MetadataEntity<TSourceMetadataName>
+      >
+    ]: ManyToOneRelationConfiguration<TSourceMetadataName, TRelationProperty>;
   };
 };
 
@@ -36,6 +38,7 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
   agent: {
     workspace: null,
     application: null,
+    createdBy: null,
   },
   skill: {
     workspace: null,
@@ -64,14 +67,23 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
     targetObjectMetadata: {
       foreignKey: 'targetObjectMetadataId',
     },
-    folder: {
-      foreignKey: 'folderId',
+    parent: {
+      foreignKey: 'parentId',
     },
     view: {
       foreignKey: 'viewId',
     },
     pageLayout: {
       foreignKey: 'pageLayoutId',
+    },
+    agentChatChannel: {
+      foreignKey: 'agentChatChannelId',
+    },
+    workflow: {
+      foreignKey: 'workflowId',
+    },
+    agent: {
+      foreignKey: 'agentId',
     },
   },
   fieldMetadata: {
@@ -120,6 +132,9 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
     },
     viewFieldGroup: {
       foreignKey: 'viewFieldGroupId',
+    },
+    relationTargetFieldMetadata: {
+      foreignKey: 'relationTargetFieldMetadataId',
     },
     workspace: null,
     application: null,
@@ -177,6 +192,10 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
       foreignKey: 'agentId',
     },
     apiKey: null,
+    webhook: {
+      foreignKey: 'webhookId',
+    },
+    targetApplication: null,
     workspace: null,
     application: null,
   },
@@ -216,6 +235,12 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
     fieldMetadata: {
       foreignKey: 'fieldMetadataId',
     },
+    rowLevelPermissionPredicateGroup: {
+      foreignKey: 'rowLevelPermissionPredicateGroupId',
+    },
+    rowLevelPermissionRule: {
+      foreignKey: 'rowLevelPermissionRuleId',
+    },
   },
   pageLayout: {
     workspace: null,
@@ -252,6 +277,9 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
     fieldMetadata: {
       foreignKey: 'fieldMetadataId',
     },
+    relationFieldMetadata: {
+      foreignKey: 'relationFieldMetadataId',
+    },
     workspaceMemberFieldMetadata: {
       foreignKey: 'workspaceMemberFieldMetadataId',
     },
@@ -262,6 +290,9 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
       foreignKey: 'rowLevelPermissionPredicateGroupId',
     },
     application: null,
+    rowLevelPermissionRule: {
+      foreignKey: 'rowLevelPermissionRuleId',
+    },
   },
   rowLevelPermissionPredicateGroup: {
     objectMetadata: {
@@ -272,6 +303,19 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
     },
     parentRowLevelPermissionPredicateGroup: {
       foreignKey: 'parentRowLevelPermissionPredicateGroupId',
+    },
+    workspace: null,
+    application: null,
+    rowLevelPermissionRule: {
+      foreignKey: 'rowLevelPermissionRuleId',
+    },
+  },
+  rowLevelPermissionRule: {
+    objectMetadata: {
+      foreignKey: 'objectMetadataId',
+    },
+    role: {
+      foreignKey: 'roleId',
     },
     workspace: null,
     application: null,
@@ -294,6 +338,13 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
     workspace: null,
     application: null,
   },
+  mcpServer: {
+    workspace: null,
+    application: null,
+    connectionProvider: {
+      foreignKey: 'connectionProviderId',
+    },
+  },
   applicationVariable: {
     workspace: null,
     application: null,
@@ -304,6 +355,9 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
     fieldMetadata: {
       foreignKey: 'fieldMetadataId',
     },
+    relationTargetFieldMetadata: {
+      foreignKey: 'relationTargetFieldMetadataId',
+    },
     view: {
       foreignKey: 'viewId',
     },
@@ -312,9 +366,20 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
     workspace: null,
     application: null,
   },
+  messagingProvider: {
+    workspace: null,
+    application: null,
+  },
   timelineActivityType: {
     workspace: null,
     application: null,
+  },
+  settingsMenuItem: {
+    workspace: null,
+    application: null,
+    frontComponent: {
+      foreignKey: 'frontComponentId',
+    },
   },
   searchFieldMetadata: {
     workspace: null,
@@ -327,6 +392,65 @@ export const ALL_MANY_TO_ONE_METADATA_FOREIGN_KEY = {
     },
     tsVectorFieldMetadata: {
       foreignKey: 'tsVectorFieldMetadataId',
+    },
+  },
+  fieldMetadataOption: {
+    workspace: null,
+    application: null,
+    fieldMetadata: {
+      foreignKey: 'fieldMetadataId',
+    },
+  },
+  relatedRecordPath: {
+    workspace: null,
+    application: null,
+    objectMetadata: {
+      foreignKey: 'objectMetadataId',
+    },
+    firstFieldMetadata: {
+      foreignKey: 'firstFieldMetadataId',
+    },
+    secondFieldMetadata: {
+      foreignKey: 'secondFieldMetadataId',
+    },
+    thirdFieldMetadata: {
+      foreignKey: 'thirdFieldMetadataId',
+    },
+  },
+  validationRule: {
+    workspace: null,
+    application: null,
+    objectMetadata: {
+      foreignKey: 'objectMetadataId',
+    },
+    errorFieldMetadata: {
+      foreignKey: 'errorFieldMetadataId',
+    },
+  },
+  workflow: {
+    workspace: null,
+    createdBy: null,
+    application: null,
+  },
+  workflowVersion: {
+    workspace: null,
+    application: null,
+    coreWorkflow: {
+      foreignKey: 'coreWorkflowId',
+    },
+  },
+  agentChatChannel: {
+    workspace: null,
+    application: null,
+  },
+  agentChatChannelRole: {
+    workspace: null,
+    application: null,
+    channel: {
+      foreignKey: 'channelId',
+    },
+    role: {
+      foreignKey: 'roleId',
     },
   },
 } as const satisfies ManyToOneMetadataRelationsProperties;

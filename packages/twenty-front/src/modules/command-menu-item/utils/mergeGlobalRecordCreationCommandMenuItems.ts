@@ -1,14 +1,20 @@
 import { type CommandMenuItemDefinition } from '@/command-menu-item/types/CommandMenuItemDefinition';
+import { isDefined } from 'twenty-shared/utils';
 import { EngineComponentKey } from '~/generated-metadata/graphql';
+
+const isCreationCommand = (item: CommandMenuItemDefinition) =>
+  item.engineComponentKey === EngineComponentKey.CREATE_NEW_RECORD;
 
 export const mergeGlobalRecordCreationCommandMenuItems = ({
   commandMenuItems,
   globalRecordCreationCommandMenuItems,
   shouldDisplayGlobalRecordCreationCommands,
+  contextObjectMetadataId,
 }: {
   commandMenuItems: CommandMenuItemDefinition[];
   globalRecordCreationCommandMenuItems: CommandMenuItemDefinition[];
   shouldDisplayGlobalRecordCreationCommands: boolean;
+  contextObjectMetadataId?: string;
 }): CommandMenuItemDefinition[] => {
   const sortedCommandMenuItems = [...commandMenuItems].sort(
     (firstItem, secondItem) => firstItem.position - secondItem.position,
@@ -18,13 +24,32 @@ export const mergeGlobalRecordCreationCommandMenuItems = ({
     return sortedCommandMenuItems;
   }
 
+  const hasCurrentObjectCreationCommand =
+    isDefined(contextObjectMetadataId) &&
+    globalRecordCreationCommandMenuItems.some(
+      (item) => item.creationTargetObjectMetadataId === contextObjectMetadataId,
+    );
+
+  const isPinnedContextualCreationCommand = (item: CommandMenuItemDefinition) =>
+    hasCurrentObjectCreationCommand && isCreationCommand(item) && item.isPinned;
+
+  const hasPinnedContextualCreationCommand = sortedCommandMenuItems.some(
+    isPinnedContextualCreationCommand,
+  );
+
   return [
     ...sortedCommandMenuItems.filter(
       (item) =>
-        item.engineComponentKey !== EngineComponentKey.CREATE_NEW_RECORD &&
-        item.engineComponentKey !== EngineComponentKey.NAVIGATION,
+        isPinnedContextualCreationCommand(item) ||
+        isDefined(item.availabilityCoreObjectName) ||
+        (!isCreationCommand(item) &&
+          item.engineComponentKey !== EngineComponentKey.NAVIGATION),
     ),
-    ...globalRecordCreationCommandMenuItems,
+    ...globalRecordCreationCommandMenuItems.filter(
+      (item) =>
+        !hasPinnedContextualCreationCommand ||
+        item.creationTargetObjectMetadataId !== contextObjectMetadataId,
+    ),
     ...sortedCommandMenuItems.filter(
       (item) => item.engineComponentKey === EngineComponentKey.NAVIGATION,
     ),

@@ -6,20 +6,20 @@ import { isNonEmptyArray, isNonEmptyString } from '@sniptt/guards';
 
 import { SettingsListCard } from '@/settings/components/SettingsListCard';
 import { SettingsDeviceSessionRowRightComponent } from '@/settings/profile/devices/components/SettingsDeviceSessionRowRightComponent';
+import { formatSessionLocation } from '@/settings/profile/devices/utils/formatSessionLocation';
 import { parseUserAgentDescription } from '@/settings/profile/devices/utils/parseUserAgentDescription';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { IconDeviceDesktop, IconLogout } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
-import { Section } from 'twenty-ui/primitives/layout';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
-import { H2Title } from 'twenty-ui/primitives/typography';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   CurrentUserSessionsDocument,
   type CurrentUserSessionsQuery,
   RevokeAllOtherUserSessionsDocument,
 } from '~/generated-metadata/graphql';
-import { dateLocaleState } from '~/localization/states/dateLocaleState';
+import { dateLocaleState } from '@/localization/states/dateLocaleState';
 import { beautifyPastDateRelativeToNow } from '~/utils/date-utils';
 
 type UserSessionListItem =
@@ -31,14 +31,12 @@ const StyledContainer = styled.div`
   gap: ${themeCssVariables.spacing[2]};
 `;
 
-// A flex row so the button keeps its natural width while the card above it
-// stretches to the section.
 const StyledButtonContainer = styled.div`
   display: flex;
 `;
 
 export const SettingsProfileDevicesSection = () => {
-  const { t } = useLingui();
+  const { t, i18n } = useLingui();
   const { localeCatalog } = useAtomStateValue(dateLocaleState);
   const { enqueueToast } = useToast();
 
@@ -61,13 +59,13 @@ export const SettingsProfileDevicesSection = () => {
     try {
       await revokeAllOtherUserSessions();
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Logged out all other devices`,
       });
       await refetch();
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to log out other devices`,
       });
     }
@@ -91,8 +89,17 @@ export const SettingsProfileDevicesSection = () => {
       localeCatalog,
     );
 
-    return isNonEmptyString(session.ipAddress)
-      ? t`Last active ${lastActive} · ${session.ipAddress}`
+    const location = formatSessionLocation({
+      city: session.city,
+      region: session.region,
+      country: session.country,
+      locale: i18n.locale,
+    });
+    const details = [location, session.ipAddress].filter(isNonEmptyString);
+
+    // An expression, not a variable, keeps the "{0}" placeholder and so the existing translations.
+    return isNonEmptyArray(details)
+      ? t`Last active ${lastActive} · ${details.join(' · ')}`
       : t`Last active ${lastActive}`;
   };
 
@@ -100,8 +107,8 @@ export const SettingsProfileDevicesSection = () => {
     <>
       <ToastOnQueryErrorEffect error={error} />
       {(loading || isNonEmptyArray(sessions)) && (
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Devices`}
             description={t`Devices with an active session on your account`}
           />
@@ -126,7 +133,7 @@ export const SettingsProfileDevicesSection = () => {
               </StyledButtonContainer>
             )}
           </StyledContainer>
-        </Section>
+        </Section.Root>
       )}
     </>
   );

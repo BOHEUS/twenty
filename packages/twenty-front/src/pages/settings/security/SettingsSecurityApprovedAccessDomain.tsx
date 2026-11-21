@@ -9,9 +9,8 @@ import { Trans, useLingui } from '@lingui/react/macro';
 import { Controller, useForm } from 'react-hook-form';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/primitives/feedback';
-import { Section } from 'twenty-ui/primitives/layout';
-import { H2Title } from 'twenty-ui/primitives/typography';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { z } from 'zod';
 import { CreateApprovedAccessDomainDocument } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
@@ -64,7 +63,7 @@ export const SettingsSecurityApprovedAccessDomain = () => {
         },
         onCompleted: () => {
           enqueueToast({
-            variant: 'success',
+            status: 'success',
             children: t`Please check your email for a verification link.`,
           });
           navigate(SettingsPath.WorkspaceMembersPage);
@@ -101,8 +100,8 @@ export const SettingsSecurityApprovedAccessDomain = () => {
         ]}
       >
         <SettingsPageContainer>
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Domain`}
               description={t`The name of your Domain`}
             />
@@ -125,9 +124,9 @@ export const SettingsSecurityApprovedAccessDomain = () => {
                 />
               )}
             />
-          </Section>
-          <Section>
-            <H2Title
+          </Section.Root>
+          <Section.Root>
+            <Section.Header
               title={t`Email verification`}
               description={t`We will send you a link to verify domain ownership`}
             />
@@ -149,7 +148,7 @@ export const SettingsSecurityApprovedAccessDomain = () => {
                 />
               )}
             />
-          </Section>
+          </Section.Root>
         </SettingsPageContainer>
       </SettingsPageLayout>
     </form>

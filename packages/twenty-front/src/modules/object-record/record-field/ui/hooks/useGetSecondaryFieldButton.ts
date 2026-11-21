@@ -9,20 +9,22 @@ import { isFieldEmails } from '@/object-record/record-field/ui/types/guards/isFi
 import { isFieldLinks } from '@/object-record/record-field/ui/types/guards/isFieldLinks';
 import { isFieldPhones } from '@/object-record/record-field/ui/types/guards/isFieldPhones';
 import { useRecordFieldValue } from '@/object-record/record-store/hooks/useRecordFieldValue';
-import { t } from '@lingui/core/macro';
 import { useContext } from 'react';
 import { FieldMetadataSettingsOnClickAction } from 'twenty-shared/types';
 import { ensureAbsoluteUrl, isDefined } from 'twenty-shared/utils';
 import { IconArrowUpRight, IconCopy, IconMail } from 'twenty-ui/icon';
 import { useCopyToClipboard } from '~/hooks/useCopyToClipboard';
+import { openUrlInNewTab } from '~/utils/openUrlInNewTab';
+import { useLingui } from '@lingui/react/macro';
 
 export const useGetSecondaryFieldButton = () => {
+  const { t } = useLingui();
   const { fieldDefinition, recordId } = useContext(FieldContext);
   const { copyToClipboard } = useCopyToClipboard();
 
   const isEmailField = isFieldEmails(fieldDefinition);
 
-  const { openEmail } = useOpenEmailInAppOrFallback({ skip: !isEmailField });
+  const { openEmail } = useOpenEmailInAppOrFallback();
 
   const fieldValue = useRecordFieldValue<
     FieldPhonesValue | FieldEmailsValue | FieldLinksValue | undefined
@@ -62,7 +64,7 @@ export const useGetSecondaryFieldButton = () => {
       fieldValue as FieldPhonesValue;
     const phoneNumber = `${primaryPhoneCallingCode}${primaryPhoneNumber}`;
     openLinkOnClick = () => {
-      window.open(`tel:${phoneNumber}`, '_blank');
+      openUrlInNewTab(`tel:${phoneNumber}`);
     };
     copyOnClick = () => {
       copyToClipboard(phoneNumber, t`Phone number copied to clipboard`);
@@ -72,7 +74,7 @@ export const useGetSecondaryFieldButton = () => {
   if (isFieldEmails(fieldDefinition)) {
     const email = (fieldValue as FieldEmailsValue).primaryEmail ?? '';
     openLinkOnClick = () => {
-      window.open(`mailto:${email}`, '_blank');
+      openUrlInNewTab(`mailto:${email}`);
     };
     copyOnClick = () => {
       copyToClipboard(email, t`Email copied to clipboard`);
@@ -85,7 +87,7 @@ export const useGetSecondaryFieldButton = () => {
   if (isFieldLinks(fieldDefinition)) {
     const url = (fieldValue as FieldLinksValue).primaryLinkUrl ?? '';
     openLinkOnClick = () => {
-      window.open(ensureAbsoluteUrl(url), '_blank');
+      openUrlInNewTab(ensureAbsoluteUrl(url));
     };
     copyOnClick = () => {
       copyToClipboard(url, t`Link copied to clipboard`);

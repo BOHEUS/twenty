@@ -10,6 +10,11 @@ import { UpgradeUnavailableEntityWriteException } from 'src/engine/twenty-orm/up
 
 const logger = new Logger('UpgradeAwareRepositoryProxy');
 
+type UpgradeAwareAvailabilityState = Pick<
+  UpgradeAwareRepositoryState,
+  'getHiddenColumnPropertyNames' | 'isEntityAvailable'
+>;
+
 type RepositoryMethodBehavior =
   | {
       kind: 'short-circuit-read';
@@ -111,7 +116,7 @@ const METHODS_THAT_ACCEPT_FIND_OPTIONS = new Set<string>([
 
 const stripUnavailableSelect = (
   entityClass: Function,
-  state: UpgradeAwareRepositoryState,
+  state: UpgradeAwareAvailabilityState,
   options: unknown,
 ): unknown => {
   if (!isDefined(options) || typeof options !== 'object') {
@@ -164,8 +169,7 @@ const stripUnavailableSelect = (
   return options;
 };
 
-// A skipped update never reaches the driver, so the counts TypeORM would have
-// filled in have to be stated rather than left undefined: no rows matched.
+// A skipped update never reaches the driver, so state the no-match counts TypeORM would have filled in
 const buildSkippedUpdateResult = (): UpdateResult => {
   const updateResult = new UpdateResult();
 
@@ -177,7 +181,7 @@ const buildSkippedUpdateResult = (): UpdateResult => {
 
 const stripUnavailableUpdateValues = (
   entityClass: Function,
-  state: UpgradeAwareRepositoryState,
+  state: UpgradeAwareAvailabilityState,
   values: unknown,
 ): unknown => {
   if (
@@ -216,7 +220,7 @@ const stripUnavailableUpdateValues = (
 
 const stripUnavailableRelations = (
   metadata: EntityMetadata,
-  state: UpgradeAwareRepositoryState,
+  state: UpgradeAwareAvailabilityState,
   options: unknown,
 ): unknown => {
   if (!isDefined(options) || typeof options !== 'object') {
@@ -260,7 +264,7 @@ const stripUnavailableRelations = (
 
 const isRelationAvailable = (
   metadata: EntityMetadata,
-  state: UpgradeAwareRepositoryState,
+  state: UpgradeAwareAvailabilityState,
   relationPropertyName: string,
 ): boolean => {
   const relation = metadata.relations.find(
@@ -301,7 +305,7 @@ export const wrapRepositoryWithUpgradeAwareProxy = <Entity extends object>({
 }: {
   repository: Repository<Entity>;
   entityClass: Function;
-  state: UpgradeAwareRepositoryState;
+  state: UpgradeAwareAvailabilityState;
 }): Repository<Entity> =>
   new Proxy(repository, {
     get(target, prop, receiver) {
@@ -343,7 +347,7 @@ const handleRepositoryMethodCall = <Entity extends object>({
   target: Repository<Entity>;
   methodName: string;
   entityClass: Function;
-  state: UpgradeAwareRepositoryState;
+  state: UpgradeAwareAvailabilityState;
   behavior: RepositoryMethodBehavior;
   args: unknown[];
 }): unknown => {
@@ -371,8 +375,7 @@ const handleRepositoryMethodCall = <Entity extends object>({
       args[1],
     );
 
-    // Nothing the caller asked to write exists at this cursor, and TypeORM
-    // rejects an empty value set, so report the no-op instead of running it.
+    // TypeORM rejects an empty value set, so report the no-op instead
     if (
       updateValues !== args[1] &&
       Object.keys(updateValues as Record<string, unknown>).length === 0

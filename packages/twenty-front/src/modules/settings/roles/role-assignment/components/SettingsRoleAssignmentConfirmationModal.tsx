@@ -1,7 +1,7 @@
 import { SettingsRoleAssignmentConfirmationModalSubtitle } from '@/settings/roles/role-assignment/components/SettingsRoleAssignmentConfirmationModalSubtitle';
 import { type SettingsRoleAssignmentConfirmationModalSelectedRoleTarget } from '@/settings/roles/role-assignment/types/SettingsRoleAssignmentConfirmationModalSelectedRoleTarget';
-import { ConfirmationModal } from '@/ui/layout/modal/components/ConfirmationModal';
-import { t } from '@lingui/core/macro';
+import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDialog';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsRoleAssignmentConfirmationModalProps = {
   modalInstanceId: string;
@@ -20,13 +20,14 @@ export const SettingsRoleAssignmentConfirmationModal = ({
   onRoleClick,
   newRoleName,
 }: SettingsRoleAssignmentConfirmationModalProps) => {
+  const { t } = useLingui();
   const roleTargetName = selectedRoleTarget.name;
 
   const title = t`Assign ${roleTargetName}?`;
 
   return (
-    <ConfirmationModal
-      modalInstanceId={modalInstanceId}
+    <ConfirmationDialog
+      dialogId={modalInstanceId}
       title={title}
       subtitle={
         selectedRoleTarget.role ? (

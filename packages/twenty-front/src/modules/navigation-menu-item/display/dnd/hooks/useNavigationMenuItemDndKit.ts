@@ -2,15 +2,15 @@ import { isSortable } from '@dnd-kit/react/sortable';
 import { useCallback, useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 
-import { NavigationSections } from '@/navigation-menu-item/common/constants/NavigationSections.constants';
-import type { DraggableData } from '@/navigation-menu-item/common/types/navigationMenuItemDndKitDraggableData';
-import type { DropDestination } from '@/navigation-menu-item/common/types/navigationMenuItemDndKitDropDestination';
-import type { NavigationMenuItemDropResult } from '@/navigation-menu-item/common/types/navigationMenuItemDropResult';
-import type { SortableTargetDestination } from '@/navigation-menu-item/common/types/navigationMenuItemDndKitSortableTargetDestination';
+import { NavigationSections } from '@/navigation-menu-item/common/constants/NavigationSections';
+import type { DraggableData } from '@/navigation-menu-item/common/types/NavigationMenuItemDndKitDraggableData';
+import type { DropDestination } from '@/navigation-menu-item/common/types/NavigationMenuItemDndKitDropDestination';
+import type { NavigationMenuItemDropResult } from '@/navigation-menu-item/common/types/NavigationMenuItemDropResult';
+import type { SortableTargetDestination } from '@/navigation-menu-item/common/types/NavigationMenuItemDndKitSortableTargetDestination';
 import type { NavigationMenuItemSection } from '@/navigation-menu-item/common/types/NavigationMenuItemSection';
 import { canNavigationMenuItemBeDroppedIn } from '@/navigation-menu-item/common/utils/canNavigationMenuItemBeDroppedIn';
-import { extractFolderIdFromDroppableId } from '@/navigation-menu-item/common/utils/extractFolderIdFromDroppableId';
 import { isNavigationMenuItemFolder } from '@/navigation-menu-item/common/utils/isNavigationMenuItemFolder';
+import { resolveNavigationMenuItemDroppableId } from '@/navigation-menu-item/common/utils/resolveNavigationMenuItemDroppableId';
 import { useHandleNavigationMenuItemDragAndDrop } from '@/navigation-menu-item/display/dnd/hooks/useHandleNavigationMenuItemDragAndDrop';
 import { resolveDropTarget } from '@/navigation-menu-item/display/dnd/utils/navigationMenuItemDndKitResolveDropTarget';
 import { useNavigationMenuItemsData } from '@/navigation-menu-item/display/hooks/useNavigationMenuItemsData';
@@ -58,7 +58,6 @@ export const useNavigationMenuItemDndKit = (
   const [forbiddenDropTargetId, setForbiddenDropTargetId] = useState<
     string | null
   >(null);
-  const [] = useState<DropDestination | null>(null);
 
   const { navigationMenuItems } = useNavigationMenuItemsData();
   const { workspaceNavigationMenuItems } = useNavigationMenuItemsDraftState();
@@ -98,17 +97,18 @@ export const useNavigationMenuItemDndKit = (
         return resolved.effectiveDropTargetId;
       }
 
-      const destFolderId = extractFolderIdFromDroppableId(
-        resolved.destination.droppableId,
-        sectionType,
-      );
-      if (isDefined(destFolderId)) {
+      const destinationKind = resolveNavigationMenuItemDroppableId({
+        droppableId: resolved.destination.droppableId,
+        navigationMenuItemSection: sectionType,
+        getNavigationMenuItemById: getNavItemById,
+      })?.kind;
+      if (destinationKind === 'folder' || destinationKind === 'folderHeader') {
         return resolved.dropTargetId;
       }
 
       return null;
     },
-    [sectionType, isSourceFolderDrag],
+    [sectionType, isSourceFolderDrag, getNavItemById],
   );
 
   const applyWorkspaceReorder = useCallback(
@@ -122,7 +122,7 @@ export const useNavigationMenuItemDndKit = (
         draggableId: id,
         source,
         destination,
-        ...(insertBeforeItemId != null && { insertBeforeItemId }),
+        ...(isDefined(insertBeforeItemId) && { insertBeforeItemId }),
       };
       handleNavigationMenuItemDragAndDrop(result);
     },
@@ -226,7 +226,7 @@ export const useNavigationMenuItemDndKit = (
         index: data?.sourceIndex ?? 0,
       },
       destination,
-      ...(insertBeforeItemId != null && { insertBeforeItemId }),
+      ...(isDefined(insertBeforeItemId) && { insertBeforeItemId }),
     };
 
     if (isWorkspaceSection) {

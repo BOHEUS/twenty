@@ -4,19 +4,18 @@ import { SettingsTableCard } from '@/settings/components/SettingsTableCard';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { IconId } from 'twenty-ui/icon';
-import { useToast } from 'twenty-ui/primitives/feedback';
 import { Button } from 'twenty-ui/primitives/input';
-import { Section } from 'twenty-ui/primitives/layout';
-import { H2Title } from 'twenty-ui/primitives/typography';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   GetInstanceAndAllWorkspacesUpgradeStatusDocument,
   RefreshUpgradeStatusDocument,
 } from '~/generated-admin/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledRefreshButtonContainer = styled.div`
   display: flex;
@@ -26,6 +25,7 @@ const StyledRefreshButtonContainer = styled.div`
 `;
 
 export const SettingsAdminInferredVersion = () => {
+  const { t } = useLingui();
   const apolloAdminClient = useApolloAdminClient();
   const { enqueueToast } = useToast();
 
@@ -51,12 +51,12 @@ export const SettingsAdminInferredVersion = () => {
       await refreshUpgradeStatus();
       await refetch();
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Upgrade status refreshed`,
       });
     } catch (error) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children:
           error instanceof Error
             ? error.message
@@ -82,8 +82,8 @@ export const SettingsAdminInferredVersion = () => {
       ]}
     >
       <SettingsPageContainer>
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title={t`Inferred version`}
             description={t`Detected application version running on this instance`}
           />
@@ -104,7 +104,7 @@ export const SettingsAdminInferredVersion = () => {
               variant="outline"
             >{t`Refresh status`}</Button>
           </StyledRefreshButtonContainer>
-        </Section>
+        </Section.Root>
       </SettingsPageContainer>
     </SettingsPageLayout>
   );

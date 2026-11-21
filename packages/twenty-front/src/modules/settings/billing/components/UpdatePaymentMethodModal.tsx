@@ -2,42 +2,27 @@ import { AddPaymentMethodForm } from '@/settings/billing/components/AddPaymentMe
 import { useMarkBillingPaymentMethodAsAdded } from '@/settings/billing/hooks/useMarkBillingPaymentMethodAsAdded';
 import { useWaitForPaymentRecovery } from '@/settings/billing/hooks/useWaitForPaymentRecovery';
 import { isSubscriptionPaymentOverdue } from '@/settings/billing/utils/isSubscriptionPaymentOverdue';
-import { ModalStatefulWrapper } from '@/ui/layout/modal/components/ModalStatefulWrapper';
-import { useModal } from '@/ui/layout/modal/hooks/useModal';
+import { DialogInstance } from '@/ui/layout/dialog/components/DialogInstance';
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { useSubscriptionStatus } from '@/workspace/hooks/useSubscriptionStatus';
-import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
 import { Button } from 'twenty-ui/primitives/input';
-import {
-  Section,
-  SectionAlignment,
-  SectionFontColor,
-} from 'twenty-ui/primitives/layout';
-import { H1Title, H1TitleFontColor } from 'twenty-ui/primitives/typography';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { Dialog } from 'twenty-ui/primitives/surfaces';
 
 type UpdatePaymentMethodModalProps = {
   modalInstanceId: string;
+  title?: string;
+  description?: string;
 };
-
-const StyledCenteredTitle = styled.div`
-  text-align: center;
-`;
-
-const StyledSectionContainer = styled.div`
-  margin-bottom: ${themeCssVariables.spacing[6]};
-`;
-
-const StyledCancelButtonContainer = styled.div`
-  margin-top: ${themeCssVariables.spacing[4]};
-`;
 
 export const UpdatePaymentMethodModal = ({
   modalInstanceId,
+  title,
+  description,
 }: UpdatePaymentMethodModalProps) => {
   const { t } = useLingui();
-  const { closeModal } = useModal();
+  const { closeDialog } = useDialog();
   const { enqueueToast } = useToast();
   const subscriptionStatus = useSubscriptionStatus();
   const { markBillingPaymentMethodAsAdded } =
@@ -45,17 +30,17 @@ export const UpdatePaymentMethodModal = ({
   const { waitForPaymentRecovery } = useWaitForPaymentRecovery();
 
   const handlePaymentMethodAdded = async () => {
-    closeModal(modalInstanceId);
+    closeDialog(modalInstanceId);
     markBillingPaymentMethodAsAdded();
 
     if (!isSubscriptionPaymentOverdue(subscriptionStatus)) {
-      enqueueToast({ variant: 'success', children: t`Payment method added.` });
+      enqueueToast({ status: 'success', children: t`Payment method added.` });
 
       return;
     }
 
     enqueueToast({
-      variant: 'info',
+      status: 'info',
       children: t`Payment method added. Retrying your payment...`,
     });
 
@@ -63,42 +48,37 @@ export const UpdatePaymentMethodModal = ({
   };
 
   return (
-    <ModalStatefulWrapper
-      modalInstanceId={modalInstanceId}
-      isClosable
-      size="medium"
-      padding="large"
-      overlay="dark"
-      dataGloballyPreventClickOutside
-      renderInDocumentBody
-      smallBorderRadius
-      autoHeight
-    >
-      <StyledCenteredTitle>
-        <H1Title
-          title={t`Update your payment method`}
-          fontColor={H1TitleFontColor.Primary}
-        />
-      </StyledCenteredTitle>
-      <StyledSectionContainer>
-        <Section
-          alignment={SectionAlignment.Center}
-          fontColor={SectionFontColor.Primary}
+    <DialogInstance dialogId={modalInstanceId} dismissible renderInDocumentBody>
+      {({ onKeyDown }) => (
+        <Dialog.Popup
+          onKeyDown={onKeyDown}
+          size="md"
+          data-globally-prevent-click-outside
         >
-          {t`Add a card below to update your billing details and retry your payment.`}
-        </Section>
-      </StyledSectionContainer>
-      <AddPaymentMethodForm
-        onPaymentMethodAdded={handlePaymentMethodAdded}
-        shouldStartSubscriptionAfterPaymentMethod={false}
-      />
-      <StyledCancelButtonContainer>
-        <Button
-          onClick={() => closeModal(modalInstanceId)}
-          fullWidth
-          variant="outline"
-        >{t`Cancel`}</Button>
-      </StyledCancelButtonContainer>
-    </ModalStatefulWrapper>
+          <Dialog.Header>
+            <Dialog.Title>
+              {title ?? t`Update your payment method`}
+            </Dialog.Title>
+            <Dialog.Description>
+              {description ??
+                t`Add a card below to update your billing details and retry your payment.`}
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Body>
+            <AddPaymentMethodForm
+              onPaymentMethodAdded={handlePaymentMethodAdded}
+              shouldStartSubscriptionAfterPaymentMethod={false}
+            />
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Button
+              onClick={() => closeDialog(modalInstanceId)}
+              fullWidth
+              variant="outline"
+            >{t`Cancel`}</Button>
+          </Dialog.Footer>
+        </Dialog.Popup>
+      )}
+    </DialogInstance>
   );
 };

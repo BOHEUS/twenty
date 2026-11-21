@@ -13,7 +13,7 @@ import { gmailMessage } from 'test/integration/google/mocks/gmail-message.util';
 import { setupGoogleMock } from 'test/integration/google/mocks/setup-google-mock.util';
 import { createManyOperationFactory } from 'test/integration/graphql/utils/create-many-operation-factory.util';
 import { deleteOneOperationFactory } from 'test/integration/graphql/utils/delete-one-operation-factory.util';
-import { makeGraphqlAPIRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
+import { makeGraphqlApiRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
 import { mergeManyOperationFactory } from 'test/integration/graphql/utils/merge-many-operation-factory.util';
 import { updateOneOperationFactory } from 'test/integration/graphql/utils/update-one-operation-factory.util';
 import { connectMessagingAccount } from 'test/integration/utils/connect-messaging-account.util';
@@ -35,7 +35,7 @@ describe('Gmail contact auto-creation company domain matching (integration)', ()
   const createdCompanyIds: string[] = [];
 
   const createCompany = async (primaryLinkUrl: string) => {
-    const createResponse = await makeGraphqlAPIRequest(
+    const createResponse = await makeGraphqlApiRequest(
       createManyOperationFactory({
         objectMetadataSingularName: 'company',
         objectMetadataPluralName: 'companies',
@@ -75,7 +75,7 @@ describe('Gmail contact auto-creation company domain matching (integration)', ()
       mergedAwayCompany.id,
     ]);
 
-    const mergeResponse = await makeGraphqlAPIRequest(
+    const mergeResponse = await makeGraphqlApiRequest(
       mergeManyOperationFactory({
         objectMetadataPluralName: 'companies',
         gqlFields: 'id domainName { primaryLinkUrl secondaryLinks }',
@@ -170,7 +170,7 @@ describe('Gmail contact auto-creation company domain matching (integration)', ()
 
     const deletedCompany = await createCompany(domainName);
 
-    await makeGraphqlAPIRequest(
+    await makeGraphqlApiRequest(
       deleteOneOperationFactory({
         objectMetadataSingularName: 'company',
         gqlFields: 'id',
@@ -180,7 +180,7 @@ describe('Gmail contact auto-creation company domain matching (integration)', ()
 
     const liveCompany = await createCompany(`live-${randomUUID()}.com`);
 
-    await makeGraphqlAPIRequest(
+    await makeGraphqlApiRequest(
       updateOneOperationFactory({
         objectMetadataSingularName: 'company',
         gqlFields: 'id domainName { secondaryLinks }',
@@ -195,6 +195,52 @@ describe('Gmail contact auto-creation company domain matching (integration)', ()
     );
 
     expect(await syncMessageFrom(`sender@${domainName}`)).toBe(liveCompany.id);
+  }, 120000);
+
+  it('leaves a matched live company untouched', async () => {
+    const domainName = `untouched-${randomUUID()}.com`;
+
+    const company = await createCompany(domainName);
+
+    const findCompanyUpdatedAt = async () => {
+      const [companyNode] = await findRecordNodesByFilter<{
+        updatedAt: string;
+      }>('company', 'companies', 'updatedAt', { id: { eq: company.id } });
+
+      return companyNode.updatedAt;
+    };
+
+    const updatedAtBeforeSync = await findCompanyUpdatedAt();
+
+    expect(await syncMessageFrom(`sender@${domainName}`)).toBe(company.id);
+    expect(await findCompanyUpdatedAt()).toBe(updatedAtBeforeSync);
+  }, 120000);
+
+  it('restores a deleted company matched on its domain', async () => {
+    const domainName = `restored-${randomUUID()}.com`;
+
+    const deletedCompany = await createCompany(domainName);
+
+    await makeGraphqlApiRequest(
+      deleteOneOperationFactory({
+        objectMetadataSingularName: 'company',
+        gqlFields: 'id',
+        recordId: deletedCompany.id,
+      }),
+    );
+
+    expect(await syncMessageFrom(`sender@${domainName}`)).toBe(
+      deletedCompany.id,
+    );
+
+    const [restoredCompany] = await findRecordNodesByFilter<{ id: string }>(
+      'company',
+      'companies',
+      'id',
+      { id: { eq: deletedCompany.id } },
+    );
+
+    expect(restoredCompany?.id).toBe(deletedCompany.id);
   }, 120000);
 
   it('attaches a contact to the surviving company on its primary domain', async () => {

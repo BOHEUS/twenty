@@ -7,16 +7,16 @@
  *                              |___/
  */
 
-export { H1TitleFontColor, H1Title } from './H1Title/H1Title';
-export { H2Title } from './H2Title/H2Title';
-export { H3Title } from './H3Title/H3Title';
-export type { LabelVariant } from './Label/Label';
-export { Label } from './Label/Label';
-export { LinkifiedText } from './LinkifiedText/LinkifiedText';
-export { SeparatorLineText } from './SeparatorLineText/SeparatorLineText';
-export {
-  StyledTextContent,
-  StyledTextWrapper,
-  StyledText,
-} from './StyledText/StyledText';
+export { Heading } from './Heading/Heading';
+export type { HeadingProps } from './Heading/types/HeadingProps';
+export { OverflowingTextTooltipModeProvider } from './OverflowingTextWithTooltip/OverflowingTextTooltipModeProvider';
+export { OverflowingTextWithTooltip } from './OverflowingTextWithTooltip/OverflowingTextWithTooltip';
+export type { OverflowingTextTooltipMode } from './OverflowingTextWithTooltip/types/OverflowingTextTooltipMode';
+export type { OverflowingTextWithTooltipProps } from './OverflowingTextWithTooltip/types/OverflowingTextWithTooltipProps';
+export { formatShortcut } from './Shortcut/formatShortcut';
+export { Shortcut } from './Shortcut/Shortcut';
+export type { ShortcutDefinition } from './Shortcut/types/ShortcutDefinition';
+export type { ShortcutFormatOptions } from './Shortcut/types/ShortcutFormatOptions';
+export type { ShortcutProps } from './Shortcut/types/ShortcutProps';
 export { Text } from './Text/Text';
+export type { TextProps } from './Text/types/TextProps';

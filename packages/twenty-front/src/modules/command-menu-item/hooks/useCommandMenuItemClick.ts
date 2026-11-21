@@ -2,15 +2,21 @@ import { type CommandMenuItemDefinition } from '@/command-menu-item/types/Comman
 import { CommandMenuContext } from '@/command-menu-item/contexts/CommandMenuContext';
 import { useMountCommand } from '@/command-menu-item/engine-command/hooks/useMountCommand';
 import { isPathCommandMenuItemPayload } from '@/command-menu-item/engine-command/utils/isPathCommandMenuItemPayload';
-import { isEngineCommandMountedFamilySelector } from '@/command-menu-item/engine-command/selectors/isEngineCommandMountedFamilySelector';
+import { isEngineCommandMountedFamilySelector } from '@/command-menu-item/engine-command/states/selectors/isEngineCommandMountedFamilySelector';
 import { useCloseCommandMenu } from '@/command-menu-item/hooks/useCloseCommandMenu';
 import { commandMenuItemProgressFamilyState } from '@/command-menu-item/states/commandMenuItemProgressFamilyState';
 import { ContextStoreComponentInstanceContext } from '@/context-store/states/contexts/ContextStoreComponentInstanceContext';
+import { contextStoreTargetedRecordsRuleComponentState } from '@/context-store/states/contextStoreTargetedRecordsRuleComponentState';
+import { computeContextStoreGraphqlFilterFromStore } from '@/context-store/utils/computeContextStoreGraphqlFilterFromStore';
 import { useOpenFrontComponentInSidePanel } from '@/side-panel/hooks/useOpenFrontComponentInSidePanel';
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
-import { useContext } from 'react';
+import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
+import { useStore } from 'jotai';
+import { isValidElement, useContext } from 'react';
+import { ENGINE_COMPONENT_KEY_COMPONENT_MAP } from '@/command-menu-item/engine-command/constants/EngineComponentKeyHeadlessComponentMap';
+import { ExportRecordsCommand } from '@/command-menu-item/engine-command/record/components/ExportRecordsCommand';
 import { isDefined } from 'twenty-shared/utils';
 import { type IconComponent } from 'twenty-ui/icon';
 
@@ -25,10 +31,15 @@ export const useCommandMenuItemClick = ({
 }) => {
   const { commandMenuContextApi } = useContext(CommandMenuContext);
   const mountCommand = useMountCommand();
+  const store = useStore();
   const { openFrontComponentInSidePanel } = useOpenFrontComponentInSidePanel();
 
   const contextStoreInstanceId = useAvailableComponentInstanceIdOrThrow(
     ContextStoreComponentInstanceContext,
+  );
+  const contextStoreTargetedRecordsRule = useAtomComponentStateValue(
+    contextStoreTargetedRecordsRuleComponentState,
+    contextStoreInstanceId,
   );
 
   const isMounted = useAtomFamilySelectorValue(
@@ -71,7 +82,15 @@ export const useCommandMenuItemClick = ({
         return;
       }
 
-      closeCommandMenu();
+      const engineComponent = isDefined(item.engineComponentKey)
+        ? ENGINE_COMPONENT_KEY_COMPONENT_MAP[item.engineComponentKey]
+        : undefined;
+      const isExport =
+        isValidElement(engineComponent) &&
+        engineComponent.type === ExportRecordsCommand;
+      if (!isExport) {
+        closeCommandMenu();
+      }
 
       await mountCommand({
         engineCommandId: item.id,
@@ -79,6 +98,7 @@ export const useCommandMenuItemClick = ({
         engineComponentKey: item.engineComponentKey,
         frontComponentId: item.frontComponentId ?? undefined,
         workflowVersionId: item.workflowVersionId ?? undefined,
+        coreWorkflowVersionId: item.coreWorkflowVersionId ?? undefined,
         availabilityType: item.availabilityType,
         availabilityObjectMetadataId: item.availabilityObjectMetadataId,
         payload:
@@ -94,10 +114,7 @@ export const useCommandMenuItemClick = ({
     }
 
     if (isFrontComponent && isDefined(item.frontComponentId)) {
-      const { selectedRecords, objectMetadataItem } = commandMenuContextApi;
-
-      const recordId =
-        selectedRecords.length === 1 ? selectedRecords[0].id : undefined;
+      const { objectMetadataItem } = commandMenuContextApi;
 
       const objectNameSingular = objectMetadataItem.nameSingular as
         | string
@@ -109,10 +126,19 @@ export const useCommandMenuItemClick = ({
         frontComponentId: item.frontComponentId,
         pageTitle: label,
         pageIcon: Icon,
-        recordContext:
-          isDefined(recordId) && isDefined(objectNameSingular)
-            ? { recordId, objectNameSingular }
-            : undefined,
+        recordContext: isDefined(objectNameSingular)
+          ? {
+              objectNameSingular,
+              selectedRecordIds:
+                contextStoreTargetedRecordsRule.mode === 'selection'
+                  ? contextStoreTargetedRecordsRule.selectedRecordIds
+                  : [],
+              selectedRecordsFilter: computeContextStoreGraphqlFilterFromStore({
+                store,
+                contextStoreInstanceId,
+              }),
+            }
+          : undefined,
       });
     }
   };

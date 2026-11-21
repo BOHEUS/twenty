@@ -1,12 +1,11 @@
-import { Section } from 'twenty-ui/primitives/layout';
+import { Section } from 'twenty-ui/components/layout';
 import { Card } from 'twenty-ui/primitives/surfaces';
 import { SettingsOptionCardContentSwitch } from '@/settings/components/SettingsOptions/SettingsOptionCardContentSwitch';
-import { IconArrowBarToDown, IconPinned, IconShield } from 'twenty-ui/icon';
-import { H2Title } from 'twenty-ui/primitives/typography';
+import { IconArrowBarToDown, IconPinned } from 'twenty-ui/icon';
 import { type ApplicationRegistration } from '~/generated-metadata/graphql';
 import { UpdateAdminApplicationRegistrationDocument } from '~/generated-admin/graphql';
 import { styled } from '@linaria/react';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { useMutation } from '@apollo/client/react';
 import { useLingui } from '@lingui/react/macro';
 import { useApolloAdminClient } from '@/settings/admin-panel/apollo/hooks/useApolloAdminClient';
@@ -31,14 +30,14 @@ export const SettingsAdminApplicationRegistrationGeneralSwitches = ({
   );
 
   return (
-    <Section>
-      <H2Title title={t`Installation`} />
+    <Section.Root>
+      <Section.Header title={t`Installation`} />
       <StyledSwitchContainer>
-        <Card rounded fullWidth>
+        <Card.Root fullWidth>
           <SettingsOptionCardContentSwitch
             Icon={IconArrowBarToDown}
-            title={t`Allow installation`}
-            description={t`Display this app in the NPM packages list`}
+            title={t`Listed on the marketplace`}
+            description={t`Mark this app as reviewed and show it in the marketplace`}
             checked={registration.isListed}
             onChange={(checked) =>
               updateRegistration({
@@ -51,26 +50,8 @@ export const SettingsAdminApplicationRegistrationGeneralSwitches = ({
               })
             }
           />
-        </Card>
-        <Card rounded fullWidth>
-          <SettingsOptionCardContentSwitch
-            Icon={IconShield}
-            title={t`Vetted`}
-            description={t`Mark this app as reviewed and approved`}
-            checked={registration.isVetted}
-            onChange={(checked) =>
-              updateRegistration({
-                variables: {
-                  input: {
-                    id: registration.id,
-                    update: { isVetted: checked },
-                  },
-                },
-              })
-            }
-          />
-        </Card>
-        <Card rounded fullWidth>
+        </Card.Root>
+        <Card.Root fullWidth>
           <SettingsOptionCardContentSwitch
             Icon={IconPinned}
             title={t`Pre-install on new workspaces`}
@@ -87,8 +68,8 @@ export const SettingsAdminApplicationRegistrationGeneralSwitches = ({
               })
             }
           />
-        </Card>
+        </Card.Root>
       </StyledSwitchContainer>
-    </Section>
+    </Section.Root>
   );
 };

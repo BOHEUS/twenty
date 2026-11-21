@@ -4,10 +4,16 @@ import {
   type QueueCronJobOptions,
   type QueueJobOptions,
   type QueueJobRecipient,
+  type QueueJobScope,
+  type QueueJobSettings,
 } from 'src/engine/core-modules/message-queue/drivers/interfaces/job-options.interface';
-import { type MessageQueueJobData } from 'src/engine/core-modules/message-queue/interfaces/message-queue-job.interface';
+import {
+  type MessageQueueJob,
+  type MessageQueueJobData,
+} from 'src/engine/core-modules/message-queue/interfaces/message-queue-job.interface';
 import { type MessageQueueWorkerOptions } from 'src/engine/core-modules/message-queue/interfaces/message-queue-worker-options.interface';
 
+import { type JobMemoryReconciliation } from 'src/engine/core-modules/message-queue/drivers/memory/job-memory-limiter';
 import { type MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 
 export interface MessageQueueDriver {
@@ -15,17 +21,18 @@ export interface MessageQueueDriver {
     queueName: MessageQueue,
     jobName: string,
     data: T,
-    options?: QueueJobOptions,
+    options: QueueJobOptions,
   ): Promise<string | undefined>;
+  // All or nothing across tenants: fan-outs should enqueue one batch per workspace
   bulkAdd<T extends MessageQueueJobData>(
     queueName: MessageQueue,
     jobName: string,
     jobs: QueueJobToAdd<T>[],
-    options?: QueueJobOptions,
-  ): Promise<string[]>;
+    options?: QueueJobSettings,
+  ): Promise<BulkAddResult>;
   work<T extends MessageQueueJobData>(
     queueName: MessageQueue,
-    handler: ({ data, id }: { data: T; id: string }) => Promise<void> | void,
+    handler: (job: MessageQueueJob<T>) => Promise<void> | void,
     options?: MessageQueueWorkerOptions,
   ): void;
   addCron<T extends MessageQueueJobData | undefined>({
@@ -51,9 +58,12 @@ export interface MessageQueueDriver {
     jobId?: string;
   }): Promise<void>;
   register?(queueName: MessageQueue): void;
+  closeWorkers?(): Promise<void>;
   getInFlightJobs?<T extends MessageQueueJobData>(
     queueName: MessageQueue,
   ): Promise<InFlightQueueJob<T>[]>;
+  reconcileJobMemory?(): Promise<JobMemoryReconciliation>;
+  removeJob?(queueName: MessageQueue, jobId: string): Promise<boolean>;
   getJobs?<T extends MessageQueueJobData>(
     queueName: MessageQueue,
     jobIds: string[],
@@ -63,6 +73,12 @@ export interface MessageQueueDriver {
 export type QueueJobToAdd<T extends MessageQueueJobData> = {
   data: T;
   jobId?: string;
+  groupKey?: string;
+} & QueueJobScope;
+
+export type BulkAddResult = {
+  jobs: { jobId: string; sizeBytes: number }[];
+  availableBytes: number | null;
 };
 
 export type QueueJobDetails<T extends MessageQueueJobData> = {
@@ -71,6 +87,7 @@ export type QueueJobDetails<T extends MessageQueueJobData> = {
   state: JobState;
   attemptsMade: number;
   failedReason?: string;
+  progress?: unknown;
   timestamp: number;
   processedOn?: number;
   finishedOn?: number;

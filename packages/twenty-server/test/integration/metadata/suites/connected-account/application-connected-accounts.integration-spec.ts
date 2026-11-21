@@ -4,8 +4,8 @@ import { cleanupApplicationAndAppRegistration } from 'test/integration/metadata/
 import { setupApplicationForSync } from 'test/integration/metadata/suites/application/utils/setup-application-for-sync.util';
 import { syncApplication } from 'test/integration/metadata/suites/application/utils/sync-application.util';
 import { findConnectionProvidersByApplication } from 'test/integration/metadata/suites/connection-provider/utils/find-connection-providers-by-application.util';
-import { makeMetadataAPIRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
-import { makeMetadataAPIRequestWithMemberRole } from 'test/integration/metadata/suites/utils/make-metadata-api-request-with-member-role.util';
+import { makeMetadataApiRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
+import { makeMetadataApiRequestWithMemberRole } from 'test/integration/metadata/suites/utils/make-metadata-api-request-with-member-role.util';
 import { ConnectedAccountProvider } from 'twenty-shared/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -35,25 +35,25 @@ describe('applicationConnectedAccounts resolver (e2e)', () => {
 
   const insertAppConnection = async ({
     id,
-    visibility,
+    scope,
     userWorkspaceId,
     archivedAt = null,
   }: {
     id: string;
-    visibility: 'user' | 'workspace';
+    scope: 'USER' | 'WORKSPACE';
     userWorkspaceId: string;
     archivedAt?: Date | null;
   }): Promise<void> => {
     await globalThis.testDataSource.query(
       `INSERT INTO core."connectedAccount"
-         (id, handle, provider, visibility, "workspaceId", "userWorkspaceId",
+         (id, handle, provider, scope, "workspaceId", "userWorkspaceId",
           "applicationId", "connectionProviderId", "archivedAt")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [
         id,
         'slack-bot@apple.dev',
         ConnectedAccountProvider.APP,
-        visibility,
+        scope,
         SEED_APPLE_WORKSPACE_ID,
         userWorkspaceId,
         applicationDbId,
@@ -105,22 +105,22 @@ describe('applicationConnectedAccounts resolver (e2e)', () => {
 
     await insertAppConnection({
       id: SHARED_BY_TIM_ID,
-      visibility: 'workspace',
+      scope: 'WORKSPACE',
       userWorkspaceId: USER_WORKSPACE_DATA_SEED_IDS.TIM,
     });
     await insertAppConnection({
       id: PRIVATE_OF_JANE_ID,
-      visibility: 'user',
+      scope: 'USER',
       userWorkspaceId: USER_WORKSPACE_DATA_SEED_IDS.JANE,
     });
     await insertAppConnection({
       id: PRIVATE_OF_TIM_ID,
-      visibility: 'user',
+      scope: 'USER',
       userWorkspaceId: USER_WORKSPACE_DATA_SEED_IDS.TIM,
     });
     await insertAppConnection({
       id: ARCHIVED_SHARED_BY_TIM_ID,
-      visibility: 'workspace',
+      scope: 'WORKSPACE',
       userWorkspaceId: USER_WORKSPACE_DATA_SEED_IDS.TIM,
       archivedAt: new Date(),
     });
@@ -139,7 +139,7 @@ describe('applicationConnectedAccounts resolver (e2e)', () => {
   }, 120000);
 
   it('returns workspace-shared connections and the caller own private ones', async () => {
-    const response = await makeMetadataAPIRequest({
+    const response = await makeMetadataApiRequest({
       query: APPLICATION_CONNECTED_ACCOUNTS_QUERY,
       variables: { applicationId: applicationDbId },
     });
@@ -159,8 +159,53 @@ describe('applicationConnectedAccounts resolver (e2e)', () => {
     );
   });
 
+  it('returns the scope alongside the deprecated lowercase visibility', async () => {
+    const response = await makeMetadataApiRequest({
+      query: gql`
+        query ApplicationConnectedAccountsScope($applicationId: UUID!) {
+          applicationConnectedAccounts(applicationId: $applicationId) {
+            id
+            scope
+            visibility
+          }
+        }
+      `,
+      variables: { applicationId: applicationDbId },
+    });
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.applicationConnectedAccounts).toEqual(
+      expect.arrayContaining([
+        { id: SHARED_BY_TIM_ID, scope: 'WORKSPACE', visibility: 'workspace' },
+        { id: PRIVATE_OF_JANE_ID, scope: 'USER', visibility: 'user' },
+      ]),
+    );
+  });
+
+  it('returns the scope alongside the deprecated lowercase visibility from myConnectedAccounts', async () => {
+    const response = await makeMetadataApiRequest({
+      query: gql`
+        query MyConnectedAccountsScope {
+          myConnectedAccounts {
+            id
+            scope
+            visibility
+          }
+        }
+      `,
+    });
+
+    expect(response.body.errors).toBeUndefined();
+    expect(response.body.data.myConnectedAccounts).toEqual(
+      expect.arrayContaining([
+        { id: SHARED_BY_TIM_ID, scope: 'WORKSPACE', visibility: 'workspace' },
+        { id: PRIVATE_OF_JANE_ID, scope: 'USER', visibility: 'user' },
+      ]),
+    );
+  });
+
   it('denies a member without the applications settings permission', async () => {
-    const response = await makeMetadataAPIRequestWithMemberRole({
+    const response = await makeMetadataApiRequestWithMemberRole({
       query: APPLICATION_CONNECTED_ACCOUNTS_QUERY,
       variables: { applicationId: applicationDbId },
     });
@@ -180,7 +225,7 @@ describe('applicationConnectedAccounts resolver (e2e)', () => {
   });
 
   it('returns nothing for an application without connections', async () => {
-    const response = await makeMetadataAPIRequest({
+    const response = await makeMetadataApiRequest({
       query: APPLICATION_CONNECTED_ACCOUNTS_QUERY,
       variables: { applicationId: uuidv4() },
     });

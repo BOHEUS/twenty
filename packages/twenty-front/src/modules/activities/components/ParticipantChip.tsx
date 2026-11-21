@@ -3,11 +3,11 @@ import React from 'react';
 
 import { getDisplayNameFromParticipant } from '@/activities/emails/utils/getDisplayNameFromParticipant';
 import { getEmailParticipantAvatarColorSeed } from '@/activities/emails/utils/getEmailParticipantAvatarColorSeed';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
 import { RecordChip } from '@/object-record/components/RecordChip';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 import { Avatar } from 'twenty-ui/primitives/data-display';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledAvatarContainer = styled.span`
   margin-right: ${themeCssVariables.spacing[1]};
@@ -63,7 +63,7 @@ export const ParticipantChip = ({
     <StyledContainer className={className}>
       {person ? (
         <RecordChip
-          objectNameSingular={CoreObjectNameSingular.Person}
+          objectNameSingular={StandardObjectNameSingular.Person}
           record={person}
           isBold={variant === 'bold'}
         />

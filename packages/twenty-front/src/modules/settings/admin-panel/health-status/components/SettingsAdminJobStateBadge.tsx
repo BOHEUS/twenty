@@ -1,7 +1,7 @@
 import { styled } from '@linaria/react';
 import { plural } from '@lingui/core/macro';
 import { Tag, type TagColor } from 'twenty-ui/primitives/data-display';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { JobState } from '~/generated-admin/graphql';
 
 type SettingsAdminJobStateBadgeProps = {
@@ -36,7 +36,7 @@ export const SettingsAdminJobStateBadge = ({
     <StyledContainer>
       <Tag color={color}>{state}</Tag>
       {showAttempts && (
-        <Tag color="red" weight="medium" preventShrink>
+        <Tag color="red" weight="medium" truncate={false}>
           {plural(attemptsMade, {
             one: `${attemptsMade} attempt`,
             other: `${attemptsMade} attempts`,

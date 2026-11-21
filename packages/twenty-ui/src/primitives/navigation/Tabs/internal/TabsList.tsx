@@ -3,13 +3,12 @@ import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
 
 import { mergeClassNames } from '@ui/utilities/internal/mergeClassNames';
 
-import styles from '../Tabs.module.scss';
+import styles from '../../internal/tab/Tab.module.scss';
 import { type TabsListProps } from '../types/TabsListProps';
 import { focusNextEnabledTab } from './focusNextEnabledTab';
 
 export const TabsList = ({
   className,
-  children,
   onKeyDown,
   loopFocus = true,
   ...props
@@ -37,9 +36,6 @@ export const TabsList = ({
       loopFocus={loopFocus}
       onKeyDown={handleKeyDown}
       className={mergeClassNames(styles.list, className)}
-    >
-      {children}
-      <TabsPrimitive.Indicator className={styles.indicator} />
-    </TabsPrimitive.List>
+    />
   );
 };

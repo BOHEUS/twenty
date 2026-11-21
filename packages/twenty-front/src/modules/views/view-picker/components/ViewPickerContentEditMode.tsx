@@ -2,7 +2,7 @@ import { Key } from 'ts-key-enum';
 
 import { IconPicker } from '@/ui/input/components/IconPicker';
 import { TextInput } from '@/ui/input/components/TextInput';
-import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
+import { LegacyDropdownContent } from '@/ui/layout/dropdown/components/LegacyDropdownContent';
 import { DropdownMenuHeader } from '@/ui/layout/dropdown/components/DropdownMenuHeader/DropdownMenuHeader';
 import { DropdownMenuHeaderLeftComponent } from '@/ui/layout/dropdown/components/DropdownMenuHeader/internal/DropdownMenuHeaderLeftComponent';
 import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
@@ -22,10 +22,11 @@ import { viewPickerInputNameComponentState } from '@/views/view-picker/states/vi
 import { viewPickerIsDirtyComponentState } from '@/views/view-picker/states/viewPickerIsDirtyComponentState';
 import { viewPickerIsPersistingComponentState } from '@/views/view-picker/states/viewPickerIsPersistingComponentState';
 import { viewPickerSelectedIconComponentState } from '@/views/view-picker/states/viewPickerSelectedIconComponentState';
-import { t } from '@lingui/core/macro';
 import { IconChevronLeft } from 'twenty-ui/icon';
+import { useLingui } from '@lingui/react/macro';
 
 export const ViewPickerContentEditMode = () => {
+  const { t } = useLingui();
   const dropdownId = useAvailableComponentInstanceIdOrThrow(
     DropdownComponentInstanceContext,
   );
@@ -71,7 +72,7 @@ export const ViewPickerContentEditMode = () => {
   };
 
   return (
-    <DropdownContent>
+    <LegacyDropdownContent>
       <DropdownMenuHeader
         StartComponent={
           <DropdownMenuHeaderLeftComponent
@@ -104,6 +105,6 @@ export const ViewPickerContentEditMode = () => {
           <ViewPickerEditButton />
         </ViewPickerSaveButtonContainer>
       </DropdownMenuItemsContainer>
-    </DropdownContent>
+    </LegacyDropdownContent>
   );
 };

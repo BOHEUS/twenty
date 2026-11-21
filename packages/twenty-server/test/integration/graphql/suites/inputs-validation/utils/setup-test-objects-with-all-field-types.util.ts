@@ -1,9 +1,10 @@
 import { getFieldMetadataCreationInputs } from 'test/integration/graphql/suites/inputs-validation/utils/get-field-metadata-creation-inputs.util';
 import { createManyOperationFactory } from 'test/integration/graphql/utils/create-many-operation-factory.util';
-import { makeGraphqlAPIRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
+import { makeGraphqlApiRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
 import { uploadFileWithDirectUpload } from 'test/integration/graphql/utils/upload-file-with-direct-upload.util';
 import { createOneObjectMetadata } from 'test/integration/metadata/suites/object-metadata/utils/create-one-object-metadata.util';
 import { getAppProviderByClassName } from 'test/integration/utils/get-app-provider-by-class-name.util';
+import { waitForDeferredWorkspaceOperationsOrThrow } from 'test/integration/utils/wait-for-deferred-workspace-operations-or-throw.util';
 import { FieldMetadataType, RelationType } from 'twenty-shared/types';
 import { v4 } from 'uuid';
 
@@ -82,6 +83,8 @@ export const setupTestObjectsWithAllFieldTypes = async (
     targetObjectMetadata2Id,
   );
 
+  await waitForDeferredWorkspaceOperationsOrThrow();
+
   const createdFlatFieldMetadatas =
     await getAppProviderByClassName<FieldMetadataService>(
       'FieldMetadataService',
@@ -94,7 +97,7 @@ export const setupTestObjectsWithAllFieldTypes = async (
     (flatFieldMetadata) => flatFieldMetadata.type === FieldMetadataType.FILES,
   )?.id;
 
-  await makeGraphqlAPIRequest(
+  await makeGraphqlApiRequest(
     createManyOperationFactory({
       objectMetadataSingularName: TEST_TARGET_OBJECT_METADATA_NAME_SINGULAR_1,
       objectMetadataPluralName: TEST_TARGET_OBJECT_METADATA_NAME_PLURAL_1,
@@ -128,7 +131,7 @@ export const setupTestObjectsWithAllFieldTypes = async (
     uploadedFileId = uploadedFile.id;
   }
 
-  await makeGraphqlAPIRequest(
+  await makeGraphqlApiRequest(
     createManyOperationFactory({
       objectMetadataSingularName: TEST_OBJECT_METADATA_NAME_SINGULAR,
       objectMetadataPluralName: TEST_OBJECT_METADATA_NAME_PLURAL,
@@ -144,12 +147,12 @@ export const setupTestObjectsWithAllFieldTypes = async (
           uuidField: TEST_UUID_FIELD_VALUE,
           textField: 'test',
           phonesField: {
-            primaryPhoneNumber: '01234567890',
+            primaryPhoneNumber: '0123456789',
             primaryPhoneCallingCode: '+33',
             primaryPhoneCountryCode: 'FR',
             additionalPhones: [
               {
-                number: '01234567890',
+                number: '0123456789',
                 callingCode: '+33',
                 countryCode: 'FR',
               },
@@ -214,7 +217,7 @@ export const setupTestObjectsWithAllFieldTypes = async (
     }),
   );
 
-  await makeGraphqlAPIRequest(
+  await makeGraphqlApiRequest(
     createManyOperationFactory({
       objectMetadataSingularName: TEST_TARGET_OBJECT_METADATA_NAME_SINGULAR_1,
       objectMetadataPluralName: TEST_TARGET_OBJECT_METADATA_NAME_PLURAL_1,

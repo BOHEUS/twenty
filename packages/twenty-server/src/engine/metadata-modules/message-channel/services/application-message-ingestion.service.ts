@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 
-import { MessageParticipantRole } from 'twenty-shared/types';
+import { FeatureFlagKey, MessageParticipantRole } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { In } from 'typeorm';
 
 import { CacheLockService } from 'src/engine/core-modules/cache-lock/cache-lock.service';
+import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
+import { APP_INGESTION_LOCK_OPTIONS } from 'src/engine/metadata-modules/message-channel/constants/app-ingestion-lock-options.constant';
 import { type MessageChannelEntity } from 'src/engine/metadata-modules/message-channel/entities/message-channel.entity';
 import { type AppMessageInput } from 'src/engine/metadata-modules/message-channel/dtos/ingest-app-messages.input';
 import { type IngestAppMessagesOutput } from 'src/engine/metadata-modules/message-channel/dtos/ingest-app-messages.output';
@@ -16,37 +18,22 @@ import { ApplicationMessageChannelsService } from 'src/engine/metadata-modules/m
 import { buildAppIngestionLockKey } from 'src/engine/metadata-modules/message-channel/utils/build-app-ingestion-lock-key.util';
 import { buildAppMessageHeaderMessageId } from 'src/engine/metadata-modules/message-channel/utils/build-app-message-header-message-id.util';
 import { resolveAppMessageDirection } from 'src/engine/metadata-modules/message-channel/utils/resolve-app-message-direction.util';
+import { withCanonicalParticipantHandlesOrThrow } from 'src/engine/metadata-modules/message-channel/utils/with-canonical-participant-handles-or-throw.util';
+import { MessageFolderEntity } from 'src/engine/metadata-modules/message-folder/entities/message-folder.entity';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
+import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
+import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
+import { type AttachmentWorkspaceEntity } from 'src/modules/attachment/standard-objects/attachment.workspace-entity';
+import { PersonHandleFieldService } from 'src/modules/match-participant/person-handle-field/person-handle-field.service';
+import { type PersonHandleField } from 'src/modules/match-participant/person-handle-field/types/person-handle-field.type';
 import { MessagingSaveMessagesAndEnqueueContactCreationService } from 'src/modules/messaging/message-import-manager/services/messaging-save-messages-and-enqueue-contact-creation.service';
-import { type MessageWithParticipants } from 'src/modules/messaging/message-import-manager/types/message';
-
-// A full batch is 100 messages in one transaction, so the hold has to outlast
-// that comfortably: a lease that expires mid-save would let the next delivery
-// in and reintroduce exactly the duplicate this prevents. Waiting up to the
-// same order of time is better than failing a webhook that would have
-// succeeded a second later.
-//
-// The wait deliberately outlasts the lease. `withLock` does not renew, so a
-// holder that dies leaves the key behind until Redis expires it; a window
-// shorter than the lease would make every waiter give up just before the
-// lock became free, turning one crash into a batch of avoidable failures.
-const INGESTION_LOCK_TTL_MS = 60_000;
-const INGESTION_LOCK_RETRY_INTERVAL_MS = 500;
-
-const INGESTION_LOCK_OPTIONS = {
-  ttl: INGESTION_LOCK_TTL_MS,
-  ms: INGESTION_LOCK_RETRY_INTERVAL_MS,
-  maxRetries:
-    Math.ceil(INGESTION_LOCK_TTL_MS / INGESTION_LOCK_RETRY_INTERVAL_MS) + 10,
-};
+import { type MessageWithParticipants } from 'src/modules/messaging/message-import-manager/types/message.type';
 
 type IngestArgs = {
   applicationId: string;
   workspaceId: string;
-  // Ingestion resolves the channel through the same gate the channel API
-  // uses, so a run triggered by one member cannot write into another
-  // member's private channel.
+  // same gate as the channel API so one member's run cannot write into another's private channel
   requestUserWorkspaceId: string | null;
   messageChannelId: string;
   messages: AppMessageInput[];
@@ -59,6 +46,10 @@ export class ApplicationMessageIngestionService {
     private readonly saveMessagesService: MessagingSaveMessagesAndEnqueueContactCreationService,
     private readonly workspaceOrmManager: WorkspaceOrmManager,
     private readonly cacheLockService: CacheLockService,
+    private readonly personHandleFieldService: PersonHandleFieldService,
+    @InjectWorkspaceScopedRepository(MessageFolderEntity)
+    private readonly messageFolderRepository: WorkspaceScopedRepository<MessageFolderEntity>,
+    private readonly featureFlagService: FeatureFlagService,
   ) {}
 
   async ingest({
@@ -87,34 +78,44 @@ export class ApplicationMessageIngestionService {
     this.assertExternalIdsAreUnique(messages);
     await this.assertReferencedIdentitiesExist({ messages, workspaceId });
 
+    const personHandleField = await this.findPersonHandleFieldOrThrow({
+      workspaceId,
+      participantHandleFieldUniversalIdentifier:
+        messageChannel.participantHandleFieldUniversalIdentifier,
+    });
+
     const messagesToSave = messages.map((message) =>
       this.toMessageWithParticipants({
-        message,
+        message: isDefined(personHandleField)
+          ? withCanonicalParticipantHandlesOrThrow({
+              message,
+              personHandleField,
+            })
+          : message,
         applicationId,
         messageChannel,
       }),
     );
 
-    // The save path decides what to insert by reading first and writing after,
-    // and no unique index backs headerMessageId — so two deliveries of the same
-    // provider message, arriving together, would both see nothing and both
-    // insert, handing the app two different Twenty ids for one message. A
-    // provider redelivers constantly, so this is the common case, not the edge.
-    // Serialising per channel is the narrowest scope that closes it: dedup
-    // never spans channels, and one channel's deliveries are naturally
-    // sequential, so contention is a redelivery racing its original.
+    // save reads before writing and headerMessageId has no unique index, so concurrent redeliveries would duplicate
+    // locked per channel, the narrowest scope since dedup never spans channels
     const savedMessages = await this.cacheLockService.withLock(
-      () =>
-        this.saveMessagesService.saveMessagesAndEnqueueContactCreation(
-          messagesToSave,
-          // The save path only reads folder and contact-creation settings off
-          // the channel, both inert here, plus its id.
+      async () =>
+        this.saveMessagesService.saveMessagesAndEnqueueContactCreation({
+          messagesToSave: await this.withMessageFolderIdsOrThrow({
+            workspaceId,
+            messageChannelId,
+            messages: messagesToSave,
+          }),
+          // the save path only reads inert settings and the id off the channel
           messageChannel,
           connectedAccount,
           workspaceId,
-        ),
+          folderLinkUpdate: 'add',
+          personHandleField: personHandleField ?? undefined,
+        }),
       buildAppIngestionLockKey({ workspaceId, messageChannelId }),
-      INGESTION_LOCK_OPTIONS,
+      APP_INGESTION_LOCK_OPTIONS,
     );
 
     if (!isDefined(savedMessages)) {
@@ -129,9 +130,12 @@ export class ApplicationMessageIngestionService {
       messageExternalIdToMessageThreadIdMap,
     } = savedMessages;
 
-    // Dropping a row here would report success while returning fewer messages
-    // than were sent, leaving the app with nothing to retry against — the
-    // silent version of the "did not persist" failure above.
+    const messageIdsWithAttachments = await this.findMessageIdsWithAttachments({
+      workspaceId,
+      messageIds: [...new Set(messageExternalIdsAndIdsMap.values())],
+    });
+
+    // never drop a row: the app would see success with nothing to retry
     return {
       messages: messagesToSave.map((message) => {
         const messageId = messageExternalIdsAndIdsMap.get(message.externalId);
@@ -150,9 +154,53 @@ export class ApplicationMessageIngestionService {
           externalId: message.externalId,
           messageId,
           messageThreadId,
+          hasAttachments: messageIdsWithAttachments.has(messageId),
         };
       }),
     };
+  }
+
+  private async findMessageIdsWithAttachments({
+    workspaceId,
+    messageIds,
+  }: {
+    workspaceId: string;
+    messageIds: string[];
+  }): Promise<Set<string>> {
+    if (messageIds.length === 0) {
+      return new Set();
+    }
+
+    const isMessageAttachmentEnabled =
+      await this.featureFlagService.isFeatureEnabled(
+        FeatureFlagKey.IS_MESSAGE_ATTACHMENT_ENABLED,
+        workspaceId,
+      );
+
+    if (!isMessageAttachmentEnabled) {
+      return new Set();
+    }
+
+    const attachments =
+      await this.workspaceOrmManager.executeInWorkspaceContext(
+        async () =>
+          this.workspaceOrmManager
+            .getRepositoryWithoutPermissionChecks<AttachmentWorkspaceEntity>(
+              'attachment',
+            )
+            .find({
+              where: { targetMessageId: In(messageIds) },
+              select: { targetMessageId: true },
+            }),
+        buildSystemAuthContext(workspaceId),
+        { lite: true },
+      );
+
+    return new Set(
+      attachments
+        .map(({ targetMessageId }) => targetMessageId)
+        .filter(isDefined),
+    );
   }
 
   private toMessageWithParticipants({
@@ -173,16 +221,16 @@ export class ApplicationMessageIngestionService {
       subject: message.subject ?? null,
       text: message.text,
       receivedAt: message.receivedAt,
-      // Apps ingest what the provider already delivered; there is no
-      // provider-side draft to mirror.
       isDraft: false,
       externalId: message.externalId,
       messageThreadExternalId: message.threadExternalId,
+      messageFolderExternalIds: [...new Set(message.folderExternalIds ?? [])],
       direction: resolveAppMessageDirection({
         participants: message.participants,
         channelHandle: messageChannel.handle,
       }),
       attachments: [],
+      attachmentFiles: message.attachments ?? [],
       participants: message.participants.map((participant) => ({
         role: participant.role,
         handle: participant.handle,
@@ -193,9 +241,90 @@ export class ApplicationMessageIngestionService {
     };
   }
 
-  // A participant pointing at a record that is not there, or belongs to
-  // another workspace, would insert a dangling link that quietly never
-  // renders. Checked up front so the app gets told, rather than at the FK.
+  private async withMessageFolderIdsOrThrow({
+    workspaceId,
+    messageChannelId,
+    messages,
+  }: {
+    workspaceId: string;
+    messageChannelId: string;
+    messages: MessageWithParticipants[];
+  }): Promise<MessageWithParticipants[]> {
+    const folderExternalIds = [
+      ...new Set(
+        messages.flatMap((message) => message.messageFolderExternalIds ?? []),
+      ),
+    ];
+
+    if (folderExternalIds.length === 0) {
+      return messages;
+    }
+
+    const messageFolders = await this.messageFolderRepository.find(
+      workspaceId,
+      {
+        where: { messageChannelId, externalId: In(folderExternalIds) },
+        select: { id: true, externalId: true },
+      },
+    );
+
+    const messageFolderIdByExternalId = new Map(
+      messageFolders.map((messageFolder) => [
+        messageFolder.externalId,
+        messageFolder.id,
+      ]),
+    );
+
+    const unknownFolderExternalIds = folderExternalIds.filter(
+      (folderExternalId) => !messageFolderIdByExternalId.has(folderExternalId),
+    );
+
+    if (unknownFolderExternalIds.length > 0) {
+      throw new MessageChannelException(
+        `Unknown folder externalId(s) on message channel ${messageChannelId}: ${unknownFolderExternalIds.join(', ')}. Declare them with syncAppMessageFolders first`,
+        MessageChannelExceptionCode.INVALID_MESSAGE_CHANNEL_INPUT,
+      );
+    }
+
+    return messages.map((message) => ({
+      ...message,
+      messageFolderIds: (message.messageFolderExternalIds ?? [])
+        .map((folderExternalId) =>
+          messageFolderIdByExternalId.get(folderExternalId),
+        )
+        .filter(isDefined),
+    }));
+  }
+
+  // raw handles would mix with the canonical ones already stored and stop matching the channel's own handle
+  private async findPersonHandleFieldOrThrow({
+    workspaceId,
+    participantHandleFieldUniversalIdentifier,
+  }: {
+    workspaceId: string;
+    participantHandleFieldUniversalIdentifier: string | null;
+  }): Promise<PersonHandleField | null> {
+    if (!isDefined(participantHandleFieldUniversalIdentifier)) {
+      return null;
+    }
+
+    const personHandleField =
+      await this.personHandleFieldService.findByUniversalIdentifier({
+        workspaceId,
+        fieldUniversalIdentifier: participantHandleFieldUniversalIdentifier,
+      });
+
+    if (!isDefined(personHandleField)) {
+      throw new MessageChannelException(
+        `The person field ${participantHandleFieldUniversalIdentifier} this channel matches participants on no longer exists or is inactive`,
+        MessageChannelExceptionCode.INVALID_MESSAGE_CHANNEL_INPUT,
+      );
+    }
+
+    return personHandleField;
+  }
+
+  // checked up front so the app gets an error rather than a dangling link that never renders
   private async assertReferencedIdentitiesExist({
     messages,
     workspaceId,
@@ -251,10 +380,10 @@ export class ApplicationMessageIngestionService {
       return;
     }
 
-    const repository = this.workspaceOrmManager.getRepository(
-      objectMetadataName,
-      { shouldBypassPermissionChecks: true },
-    );
+    const repository =
+      this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+        objectMetadataName,
+      );
 
     const found = await repository.find({
       where: { id: In([...ids]) },
@@ -271,9 +400,7 @@ export class ApplicationMessageIngestionService {
     }
   }
 
-  // Direction, the thread's sender column and the timeline preview all read
-  // the FROM participant, so a message without exactly one is rejected rather
-  // than silently rendering as an empty conversation.
+  // direction, thread sender and timeline preview all read the single FROM participant
   private assertEachMessageHasOneSender(messages: AppMessageInput[]): void {
     for (const message of messages) {
       const senderCount = message.participants.filter(
@@ -289,8 +416,7 @@ export class ApplicationMessageIngestionService {
     }
   }
 
-  // Two entries sharing an externalId would race each other inside the save
-  // transaction, which keys its accumulator on exactly that value.
+  // the save transaction keys its accumulator on externalId
   private assertExternalIdsAreUnique(messages: AppMessageInput[]): void {
     const externalIds = new Set<string>();
 

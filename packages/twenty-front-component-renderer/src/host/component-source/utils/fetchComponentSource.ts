@@ -1,4 +1,4 @@
-import { isDefined } from 'twenty-shared/utils';
+import { CustomError, isDefined } from 'twenty-shared/utils';
 
 import { computeComponentSourceChecksum } from '@/host/component-source/utils/computeComponentSourceChecksum';
 import { deleteComponentSourceFromCache } from '@/host/component-source/utils/deleteComponentSourceFromCache';
@@ -12,9 +12,11 @@ import { writeComponentSourceToCache } from '@/host/component-source/utils/write
 export const fetchComponentSource = async ({
   url,
   headers,
+  credentials,
 }: {
   url: string;
   headers?: Record<string, string>;
+  credentials?: RequestCredentials;
 }): Promise<string> => {
   const expectedChecksum = extractComponentChecksumFromUrl({ url });
 
@@ -40,15 +42,32 @@ export const fetchComponentSource = async ({
     }
   }
 
-  const source = await fetchComponentSourceFromNetwork({ url, headers });
+  const source = await fetchComponentSourceFromNetwork({
+    url,
+    headers,
+    credentials,
+  });
 
-  if (isDefined(cache) && isDefined(expectedChecksum)) {
-    const sourceChecksum = await computeComponentSourceChecksum({ source });
+  if (!isDefined(expectedChecksum)) {
+    return source;
+  }
 
-    if (sourceChecksum === expectedChecksum) {
-      writeComponentSourceToCache({ cache, url, source });
-      evictStaleComponentSourceCacheEntries({ cache, url });
-    }
+  const sourceChecksum = await computeComponentSourceChecksum({ source });
+
+  if (!isDefined(sourceChecksum)) {
+    return source;
+  }
+
+  if (sourceChecksum !== expectedChecksum) {
+    throw new CustomError(
+      `Front component source checksum mismatch for ${url}: expected ${expectedChecksum}, received ${sourceChecksum}`,
+      'FRONT_COMPONENT_SOURCE_CHECKSUM_MISMATCH',
+    );
+  }
+
+  if (isDefined(cache)) {
+    writeComponentSourceToCache({ cache, url, source });
+    evictStaleComponentSourceCacheEntries({ cache, url });
   }
 
   return source;

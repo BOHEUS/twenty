@@ -31,11 +31,20 @@ export class CreateAppMessageChannelInput {
   @MaxLength(255)
   displayName?: string;
 
-  // Deliberately required: a default here would decide, silently and for
-  // every app, whether one member's conversations are readable by the whole
-  // workspace. The app author knows which its provider's messages are.
+  // required: a default would silently decide for every app whether conversations are workspace-readable
   @Field(() => MessageChannelVisibility)
   @IsEnum(MessageChannelVisibility)
   @IsNotEmpty()
   visibility: MessageChannelVisibility;
+
+  // set once: handles are stored in this field's canonical form, which a later change would leave inconsistent
+  @Field(() => UUIDScalarType, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  participantHandleFieldUniversalIdentifier?: string;
+
+  @Field(() => UUIDScalarType, { nullable: true })
+  @IsOptional()
+  @IsUUID()
+  messagingProviderUniversalIdentifier?: string;
 }

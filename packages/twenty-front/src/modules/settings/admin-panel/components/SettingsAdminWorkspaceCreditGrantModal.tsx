@@ -6,38 +6,25 @@ import { GRANT_WORKSPACE_CREDITS } from '@/settings/admin-panel/graphql/mutation
 import { GET_WORKSPACE_BILLING_ADMIN_PANEL } from '@/settings/admin-panel/graphql/queries/getWorkspaceBillingAdminPanel';
 import { Select } from '@/ui/input/components/Select';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
-import { ModalStatefulWrapper } from '@/ui/layout/modal/components/ModalStatefulWrapper';
-import { useModal } from '@/ui/layout/modal/hooks/useModal';
+import { DialogInstance } from '@/ui/layout/dialog/components/DialogInstance';
+import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { useMutation } from '@apollo/client/react';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
+import { useToast } from 'twenty-ui/components/feedback';
 import { Button } from 'twenty-ui/primitives/input';
-import {
-  Section,
-  SectionAlignment,
-  SectionFontColor,
-} from 'twenty-ui/primitives/layout';
-import { H1Title, H1TitleFontColor } from 'twenty-ui/primitives/typography';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { Dialog } from 'twenty-ui/primitives/surfaces';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { v4 } from 'uuid';
 import { BillingCreditGrantType } from '~/generated-admin/graphql';
 
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
-import { useToast } from 'twenty-ui/primitives/feedback';
 
 type SettingsAdminWorkspaceCreditGrantModalProps = {
   modalInstanceId: string;
   workspaceId: string;
 };
-
-const StyledCenteredTitle = styled.div`
-  text-align: center;
-`;
-
-const StyledSectionContainer = styled.div`
-  margin-bottom: ${themeCssVariables.spacing[6]};
-`;
 
 const StyledFields = styled.div`
   display: flex;
@@ -45,14 +32,8 @@ const StyledFields = styled.div`
   gap: ${themeCssVariables.spacing[4]};
 `;
 
-const StyledModalActions = styled.div`
-  display: flex;
-  gap: ${themeCssVariables.spacing[2]};
-  margin-top: ${themeCssVariables.spacing[6]};
-
-  > div {
-    flex: 1;
-  }
+const StyledActionSlot = styled.div`
+  flex: 1;
 `;
 
 export const SettingsAdminWorkspaceCreditGrantModal = ({
@@ -60,7 +41,7 @@ export const SettingsAdminWorkspaceCreditGrantModal = ({
   workspaceId,
 }: SettingsAdminWorkspaceCreditGrantModalProps) => {
   const { t } = useLingui();
-  const { closeModal } = useModal();
+  const { closeDialog } = useDialog();
   const { enqueueToast } = useToast();
   const apolloAdminClient = useApolloAdminClient();
 
@@ -70,11 +51,7 @@ export const SettingsAdminWorkspaceCreditGrantModal = ({
   );
   const [reason, setReason] = useState('');
   const [expiresInDays, setExpiresInDays] = useState<number | null>(null);
-  // Identifies one intended grant, so a RetryLink retry or a resubmit after a
-  // lost response is answered with the grant the first attempt wrote rather
-  // than crediting the workspace twice. Keyed on the submitted values, since
-  // editing the amount and resubmitting is a different intent that must not be
-  // answered with the earlier grant.
+  // Idempotency key per submitted values: retries reuse it, an edited amount is a new grant.
   const [submittedGrant, setSubmittedGrant] = useState<{
     payload: string;
     clientOperationId: string;
@@ -91,15 +68,14 @@ export const SettingsAdminWorkspaceCreditGrantModal = ({
   const parsedAmount = Number(amount);
   const isAmountValid = Number.isFinite(parsedAmount) && parsedAmount > 0;
 
-  // The modal is mounted for the whole page, so without this the next admin to
-  // open it starts from the last grant's amount and reason.
+  // The modal stays mounted, so reset it for the next admin.
   const handleClose = () => {
     setAmount('');
     setType(BillingCreditGrantType.COMPENSATION);
     setReason('');
     setExpiresInDays(null);
     setSubmittedGrant(null);
-    closeModal(modalInstanceId);
+    closeDialog(modalInstanceId);
   };
 
   const handleSubmit = async () => {
@@ -135,7 +111,7 @@ export const SettingsAdminWorkspaceCreditGrantModal = ({
       });
 
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Granted ${parsedAmount} credits to this workspace.`,
       });
       handleClose();
@@ -145,99 +121,94 @@ export const SettingsAdminWorkspaceCreditGrantModal = ({
   };
 
   return (
-    <ModalStatefulWrapper
-      modalInstanceId={modalInstanceId}
+    <DialogInstance
+      dialogId={modalInstanceId}
+      dismissible
       onClose={handleClose}
-      isClosable
-      size="medium"
-      padding="large"
-      overlay="dark"
-      width="360px"
-      dataGloballyPreventClickOutside
       renderInDocumentBody
-      smallBorderRadius
-      autoHeight
     >
-      <StyledCenteredTitle>
-        <H1Title
-          title={t`Grant credits`}
-          fontColor={H1TitleFontColor.Primary}
-        />
-      </StyledCenteredTitle>
-      <StyledSectionContainer>
-        <Section
-          alignment={SectionAlignment.Center}
-          fontColor={SectionFontColor.Primary}
+      {({ onKeyDown }) => (
+        <Dialog.Popup
+          onKeyDown={onKeyDown}
+          size="compact"
+          data-globally-prevent-click-outside
         >
-          {t`Credits are added on top of the plan allowance and are spent only once it runs out. They carry over in full from one billing period to the next, and stay available until they are used up or, where an expiry is set, until the end of the billing period that expiry falls in.`}
-        </Section>
-      </StyledSectionContainer>
+          <Dialog.Header>
+            <Dialog.Title>{t`Grant credits`}</Dialog.Title>
+            <Dialog.Description>
+              {t`Credits are added on top of the plan allowance and are spent only once it runs out. They carry over in full from one billing period to the next, and stay available until they are used up or, where an expiry is set, until the end of the billing period that expiry falls in.`}
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Body>
+            <StyledFields>
+              <SettingsTextInput
+                instanceId={`${modalInstanceId}-amount`}
+                label={t`Amount`}
+                placeholder="200"
+                type="number"
+                min={0}
+                leftAdornment="$"
+                value={amount}
+                onChange={setAmount}
+                autoFocusOnMount
+                fullWidth
+              />
 
-      <StyledFields>
-        <SettingsTextInput
-          instanceId={`${modalInstanceId}-amount`}
-          label={t`Amount`}
-          placeholder="200"
-          type="number"
-          min={0}
-          leftAdornment="$"
-          value={amount}
-          onChange={setAmount}
-          autoFocusOnMount
-          fullWidth
-        />
+              <Select
+                dropdownId={`${modalInstanceId}-type`}
+                label={t`Type`}
+                value={type}
+                options={GRANTABLE_CREDIT_GRANT_TYPES.map((grantType) => ({
+                  value: grantType,
+                  label: t(CREDIT_GRANT_TYPE_LABELS[grantType]),
+                }))}
+                onChange={setType}
+                fullWidth
+              />
 
-        <Select
-          dropdownId={`${modalInstanceId}-type`}
-          label={t`Type`}
-          value={type}
-          options={GRANTABLE_CREDIT_GRANT_TYPES.map((grantType) => ({
-            value: grantType,
-            label: t(CREDIT_GRANT_TYPE_LABELS[grantType]),
-          }))}
-          onChange={setType}
-          isDropdownInModal
-          fullWidth
-        />
+              <Select
+                dropdownId={`${modalInstanceId}-expires-in-days`}
+                label={t`Expires`}
+                value={expiresInDays}
+                options={CREDIT_GRANT_EXPIRY_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: t(option.label),
+                }))}
+                onChange={setExpiresInDays}
+                fullWidth
+              />
 
-        <Select
-          dropdownId={`${modalInstanceId}-expires-in-days`}
-          label={t`Expires`}
-          value={expiresInDays}
-          options={CREDIT_GRANT_EXPIRY_OPTIONS.map((option) => ({
-            value: option.value,
-            label: t(option.label),
-          }))}
-          onChange={setExpiresInDays}
-          isDropdownInModal
-          fullWidth
-        />
-
-        <SettingsTextInput
-          instanceId={`${modalInstanceId}-reason`}
-          label={t`Reason`}
-          placeholder={t`Goodwill gesture after the March incident`}
-          value={reason}
-          onChange={setReason}
-          maxLength={500}
-          fullWidth
-        />
-      </StyledFields>
-
-      <StyledModalActions>
-        <Button
-          onClick={handleClose}
-          fullWidth
-          variant="outline"
-        >{t`Cancel`}</Button>
-        <Button
-          onClick={handleSubmit}
-          disabled={!isAmountValid || loading}
-          fullWidth
-          variant="solid"
-          color="accent"
-        >{t`Grant`}</Button>
-      </StyledModalActions>
-    </ModalStatefulWrapper>
+              <SettingsTextInput
+                instanceId={`${modalInstanceId}-reason`}
+                label={t`Reason`}
+                placeholder={t`Goodwill gesture after the March incident`}
+                value={reason}
+                onChange={setReason}
+                maxLength={500}
+                fullWidth
+              />
+            </StyledFields>
+          </Dialog.Body>
+          <Dialog.Footer>
+            <StyledActionSlot>
+              <Button
+                onClick={handleClose}
+                fullWidth
+                variant="outline"
+              >{t`Cancel`}</Button>
+            </StyledActionSlot>
+            <StyledActionSlot>
+              <Button
+                onClick={handleSubmit}
+                fullWidth
+                disabled={!isAmountValid || loading}
+                variant="solid"
+                color="accent"
+              >{t`Grant`}</Button>
+            </StyledActionSlot>
+          </Dialog.Footer>
+        </Dialog.Popup>
+      )}
+    </DialogInstance>
   );
 };

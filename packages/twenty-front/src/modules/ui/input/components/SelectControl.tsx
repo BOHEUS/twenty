@@ -1,13 +1,15 @@
-import { type SelectSizeVariant } from '@/ui/input/components/Select';
 import { type FormFieldInputVariant } from '@/ui/input/types/FormFieldInputVariant';
+import { type SelectSizeVariant } from '@/ui/input/types/SelectSizeVariant';
+import { getFormFieldBorderColor } from '@/ui/input/utils/getFormFieldBorderColor';
 import { styled } from '@linaria/react';
-import { type ReactNode, useContext } from 'react';
+import { type ReactNode } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { Tag, TintedIconTile } from 'twenty-ui/primitives/data-display';
+import { TintedIconTile } from 'twenty-ui/components/data-display';
 import { IconChevronDown } from 'twenty-ui/icon';
-import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/surfaces';
+import { Tag } from 'twenty-ui/primitives/data-display';
 import { type SelectOption } from 'twenty-ui/primitives/input';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 
 export type SelectControlTextAccent = 'default' | 'placeholder';
 
@@ -18,6 +20,7 @@ export const StyledControlContainer = styled.div<{
   selectSizeVariant?: SelectSizeVariant;
   textAccent: SelectControlTextAccent;
   hasRightElement?: boolean;
+  isFocused?: boolean;
   $variant?: FormFieldInputVariant;
 }>`
   align-items: center;
@@ -37,12 +40,18 @@ export const StyledControlContainer = styled.div<{
       : hasRightElement
         ? '0'
         : themeCssVariables.border.radius.md};
-  border-right: ${({ hasRightElement, $variant }) =>
+  border-color: ${({ isFocused, hasRightElement, $variant }) =>
+    getFormFieldBorderColor({ isFocused, hasRightElement, variant: $variant })};
+  border-right: ${({ isFocused, hasRightElement, $variant }) =>
     $variant === 'transparent'
       ? 'none'
       : hasRightElement
         ? 'none'
-        : `1px solid ${themeCssVariables.border.color.medium}`};
+        : `1px solid ${getFormFieldBorderColor({
+            isFocused,
+            hasRightElement,
+            variant: $variant,
+          })}`};
   border-top-left-radius: ${({ $variant }) =>
     $variant === 'transparent' ? '0' : themeCssVariables.border.radius.md};
   border-top-right-radius: ${({ hasRightElement, $variant }) =>
@@ -57,9 +66,13 @@ export const StyledControlContainer = styled.div<{
       ? themeCssVariables.font.color.tertiary
       : textAccent === 'default'
         ? themeCssVariables.font.color.primary
-        : themeCssVariables.font.color.tertiary};
+        : themeCssVariables.font.color.light};
   cursor: ${({ disabled }) => (disabled ? 'not-allowed' : 'pointer')};
   display: grid;
+  font-weight: ${({ textAccent }) =>
+    textAccent === 'placeholder'
+      ? themeCssVariables.font.weight.medium
+      : 'inherit'};
 
   gap: ${themeCssVariables.spacing[1]};
   grid-template-columns: ${({ hasIcon }) =>
@@ -94,13 +107,9 @@ const StyledIconChevronDownWrapper = styled.div<{
 `;
 
 const StyledTagContainer = styled.div`
+  display: flex;
   min-width: 0;
   overflow: hidden;
-`;
-
-const StyledTag = styled(Tag)`
-  box-sizing: border-box;
-  max-width: 100%;
 `;
 
 export type SelectControlProps = {
@@ -111,6 +120,7 @@ export type SelectControlProps = {
   selectSizeVariant?: SelectSizeVariant;
   textAccent?: SelectControlTextAccent;
   hasRightElement?: boolean;
+  isFocused?: boolean;
   variant?: FormFieldInputVariant;
 };
 
@@ -122,9 +132,10 @@ export const SelectControl = ({
   selectSizeVariant,
   textAccent = 'default',
   hasRightElement,
+  isFocused = false,
   variant = 'default',
 }: SelectControlProps) => {
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const hasLeadingContent =
     isDefined(LeftComponent) ||
     isDefined(selectedOption.Icon) ||
@@ -136,6 +147,7 @@ export const SelectControl = ({
       selectSizeVariant={selectSizeVariant}
       textAccent={textAccent}
       hasRightElement={hasRightElement}
+      isFocused={isFocused}
       $variant={variant}
       title={selectedOption.fullLabel}
     >
@@ -146,10 +158,13 @@ export const SelectControl = ({
           {isDefined(selectedOption?.Icon) ? (
             isDefined(selectedOption.iconThemeColor) ? (
               <TintedIconTile
-                Icon={selectedOption.Icon}
+                icon={
+                  <selectedOption.Icon
+                    size={theme.icon.size.md}
+                    stroke={theme.icon.stroke.sm}
+                  />
+                }
                 color={selectedOption.iconThemeColor}
-                size={theme.icon.size.md}
-                stroke={theme.icon.stroke.sm}
               />
             ) : (
               <selectedOption.Icon
@@ -166,9 +181,7 @@ export const SelectControl = ({
       ) : null}
       {renderAsTag && isDefined(selectedOption.color) ? (
         <StyledTagContainer>
-          <StyledTag color={selectedOption.color}>
-            {selectedOption.label}
-          </StyledTag>
+          <Tag color={selectedOption.color}>{selectedOption.label}</Tag>
         </StyledTagContainer>
       ) : (
         <OverflowingTextWithTooltip

@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { useLingui } from '@lingui/react/macro';
 import { Button } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledContainer = styled.div`
   display: flex;
@@ -40,7 +40,7 @@ export const SettingsApplicationRegistrationRedirectURIsInput = ({
         redirectUri: z
           .string()
           .trim()
-          .min(1, 'URI is required')
+          .min(1, t`URI is required`)
           .url(t`Please enter a valid URL`)
           .refine(
             (value) => !redirectUris.includes(value),

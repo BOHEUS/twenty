@@ -9,11 +9,13 @@ import { jotaiStore } from '@/ui/utilities/state/jotai/jotaiStore';
 import { renderHook, waitFor } from '@testing-library/react';
 import { Provider as JotaiProvider } from 'jotai';
 import { createElement, useEffect, type ReactNode } from 'react';
+import { DEFAULT_VIEW_GROUP_LOAD_LIMIT } from 'twenty-shared/constants';
 import { AppPath, SettingsPath } from 'twenty-shared/types';
-import { getSettingsPath } from 'twenty-shared/utils';
+import { getSettingsPath, isDefined } from 'twenty-shared/utils';
 import {
   type NavigationMenuItem,
   NavigationMenuItemType,
+  ViewKey,
   ViewType,
   ViewVisibility,
 } from '~/generated-metadata/graphql';
@@ -25,7 +27,8 @@ import { setTestViewsInMetadataStore } from '~/testing/utils/setTestViewsInMetad
 
 let mockIsMobile = false;
 
-jest.mock('@/ui/utilities/responsive/hooks/useIsMobile', () => ({
+jest.mock('twenty-ui/utilities', () => ({
+  ...jest.requireActual('twenty-ui/utilities'),
   useIsMobile: () => mockIsMobile,
 }));
 
@@ -35,7 +38,7 @@ const Wrapper = ({ children }: { children: ReactNode }) =>
 const buildObjectNavigationMenuItem = (
   objectNameSingular: string,
   position: number,
-  folderId?: string,
+  parentId?: string,
 ): NavigationMenuItem => ({
   __typename: 'NavigationMenuItem',
   id: `navigation-menu-item-${objectNameSingular}`,
@@ -43,7 +46,8 @@ const buildObjectNavigationMenuItem = (
   targetObjectMetadataId:
     getMockObjectMetadataItemOrThrow(objectNameSingular).id,
   position,
-  folderId,
+  parentId,
+  isActive: true,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
 });
@@ -57,6 +61,7 @@ const buildFolderNavigationMenuItem = (
   type: NavigationMenuItemType.FOLDER,
   name: 'Folder',
   position,
+  isActive: true,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
 });
@@ -70,6 +75,7 @@ const buildPageLayoutNavigationMenuItem = (
   type: NavigationMenuItemType.PAGE_LAYOUT,
   pageLayoutId,
   position,
+  isActive: true,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
 });
@@ -80,6 +86,7 @@ const buildLinkNavigationMenuItem = (position: number): NavigationMenuItem => ({
   type: NavigationMenuItemType.LINK,
   link: 'https://example.com',
   position,
+  isActive: true,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
 });
@@ -93,8 +100,37 @@ const buildViewNavigationMenuItem = (
   type: NavigationMenuItemType.VIEW,
   viewId,
   position,
+  isActive: true,
   createdAt: '2024-01-01T00:00:00.000Z',
   updatedAt: '2024-01-01T00:00:00.000Z',
+});
+
+const buildCompanyView = (
+  id: string,
+  key: ViewKey | null,
+  position: number,
+) => ({
+  id,
+  name: 'Company view',
+  objectMetadataId: getMockObjectMetadataItemOrThrow('company').id,
+  type: ViewType.TABLE,
+  key,
+  isCompact: false,
+  viewFields: [],
+  viewFieldGroups: [],
+  viewGroups: [],
+  viewSorts: [],
+  viewFilters: [],
+  viewFilterGroups: [],
+  kanbanAggregateOperation: AggregateOperations.COUNT,
+  icon: '',
+  kanbanAggregateOperationFieldMetadataId: '',
+  position,
+  visibility: ViewVisibility.WORKSPACE,
+  createdByUserWorkspaceId: null,
+  shouldHideEmptyGroups: false,
+  groupLoadLimit: DEFAULT_VIEW_GROUP_LOAD_LIMIT,
+  isActive: true,
 });
 
 const renderHooks = ({
@@ -104,6 +140,7 @@ const renderHooks = ({
   objectMetadataItems = getTestEnrichedObjectMetadataItemsMock(),
   navigationMenuItems = [],
   withNavigationMenuItemsLoaded = true,
+  views,
 }: {
   withCurrentUser: boolean;
   withExistingView: boolean;
@@ -111,6 +148,7 @@ const renderHooks = ({
   objectMetadataItems?: EnrichedObjectMetadataItem[];
   navigationMenuItems?: NavigationMenuItem[];
   withNavigationMenuItemsLoaded?: boolean;
+  views?: Parameters<typeof setTestViewsInMetadataStore>[1];
 }) => {
   if (withObjectMetadataLoaded) {
     setTestObjectMetadataItemsInMetadataStore(jotaiStore, objectMetadataItems);
@@ -136,7 +174,9 @@ const renderHooks = ({
       );
 
       useEffect(() => {
-        if (withExistingView) {
+        if (isDefined(views)) {
+          setTestViewsInMetadataStore(jotaiStore, views);
+        } else if (withExistingView) {
           setTestViewsInMetadataStore(jotaiStore, [
             {
               id: 'viewId',
@@ -158,6 +198,7 @@ const renderHooks = ({
               visibility: ViewVisibility.WORKSPACE,
               createdByUserWorkspaceId: null,
               shouldHideEmptyGroups: false,
+              groupLoadLimit: DEFAULT_VIEW_GROUP_LOAD_LIMIT,
               isActive: true,
             },
           ]);
@@ -286,6 +327,24 @@ describe('useDefaultHomePagePath', () => {
       expect(result.current.defaultHomePagePath).toEqual('/objects/companies');
     });
   });
+  it('should target the initial view rather than the index view when the menu has no object item', async () => {
+    const { result } = renderHooks({
+      withCurrentUser: true,
+      withExistingView: false,
+      navigationMenuItems: [],
+      views: [
+        buildCompanyView('index-view-id', ViewKey.INDEX, 0),
+        buildCompanyView('initial-view-id', null, 1),
+      ],
+    });
+
+    await waitFor(() => {
+      expect(result.current.defaultHomePagePath).toEqual(
+        '/objects/companies?viewId=initial-view-id',
+      );
+    });
+  });
+
   it('should redirect to profile settings when there is no readable object', async () => {
     const { result } = renderHooks({
       withCurrentUser: true,
@@ -300,9 +359,7 @@ describe('useDefaultHomePagePath', () => {
       );
     });
   });
-  // Regression: during the post-login transition window object metadata may
-  // not yet be loaded. We must not redirect the user to /settings/profile
-  // (the genuine empty-fallback) until metadata has actually loaded.
+  // Metadata may not be loaded yet right after login; don't fall back to /settings/profile.
   it('should defer to AppPath.Index when currentUser is defined but object metadata is not loaded yet', async () => {
     const { result } = renderHooks({
       withCurrentUser: true,

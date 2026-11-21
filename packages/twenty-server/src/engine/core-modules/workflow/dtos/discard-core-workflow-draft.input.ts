@@ -8,5 +8,5 @@ import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/
 export class DiscardCoreWorkflowDraftInput {
   @Field(() => UUIDScalarType)
   @IsUUID()
-  workspaceWorkflowVersionId: string;
+  coreWorkflowVersionId: string;
 }

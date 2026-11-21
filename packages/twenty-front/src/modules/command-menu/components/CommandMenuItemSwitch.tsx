@@ -1,26 +1,69 @@
 import { isSelectedItemIdComponentFamilyState } from '@/ui/layout/selectable-list/states/isSelectedItemIdComponentFamilyState';
 import { useAtomComponentFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentFamilyStateValue';
-import {
-  MenuItemSwitch,
-  type MenuItemSwitchProps,
-} from 'twenty-ui/primitives/navigation';
+import { styled } from '@linaria/react';
+import { isDefined } from 'twenty-shared/utils';
+import { SettingsRow } from 'twenty-ui/components/settings';
+import { type IconComponent } from 'twenty-ui/icon';
+import { type SwitchProps } from 'twenty-ui/primitives/input';
+import { themeCssVariables } from 'twenty-ui/theme';
 
-export type CommandMenuItemSwitchProps = MenuItemSwitchProps & {
+type CommandMenuItemSwitchProps = {
   id: string;
+  LeftIcon?: IconComponent;
+  text: string;
+  description?: string;
+  checked: boolean;
+  onCheckedChange?: SwitchProps['onCheckedChange'];
+  size?: SwitchProps['size'];
+  disabled?: boolean;
 };
 
-export const CommandMenuItemSwitch = (props: CommandMenuItemSwitchProps) => {
+const StyledIconContainer = styled.span`
+  align-items: center;
+  background: ${themeCssVariables.background.transparent.light};
+  border-radius: ${themeCssVariables.border.radius.sm};
+  display: flex;
+  padding: ${themeCssVariables.spacing[1]};
+
+  svg {
+    height: calc(${themeCssVariables.icon.size.md} * 1px);
+    stroke-width: ${themeCssVariables.icon.stroke.sm};
+    width: calc(${themeCssVariables.icon.size.md} * 1px);
+  }
+`;
+
+export const CommandMenuItemSwitch = ({
+  id,
+  LeftIcon,
+  text,
+  description,
+  checked,
+  onCheckedChange,
+  size = 'md',
+  disabled = false,
+}: CommandMenuItemSwitchProps) => {
   const isSelectedItemId = useAtomComponentFamilyStateValue(
     isSelectedItemIdComponentFamilyState,
-    props.id,
+    id,
   );
 
   return (
-    <MenuItemSwitch
-      // oxlint-disable-next-line react/jsx-props-no-spreading
-      {...props}
+    <SettingsRow
       focused={isSelectedItemId}
-      withIconContainer
-    />
+      startElement={
+        isDefined(LeftIcon) && (
+          <StyledIconContainer>
+            <LeftIcon />
+          </StyledIconContainer>
+        )
+      }
+      description={description}
+      disabled={disabled}
+      checked={checked}
+      onCheckedChange={onCheckedChange}
+      size={size}
+    >
+      {text}
+    </SettingsRow>
   );
 };

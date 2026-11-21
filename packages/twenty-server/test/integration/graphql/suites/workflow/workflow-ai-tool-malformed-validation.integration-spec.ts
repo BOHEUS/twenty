@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
 import request from 'supertest';
-import { deleteRecordsByIds } from 'test/integration/utils/delete-records-by-ids';
 
 const baseUrl = `http://localhost:${APP_PORT}`;
 
@@ -53,11 +52,12 @@ const buildCreateRecordStep = (objectRecord: Record<string, unknown>) => ({
 
 const createCompleteWorkflow = (
   step: ReturnType<typeof buildCreateRecordStep>,
+  name = `AI malformed test ${randomUUID().slice(0, 8)}`,
 ) =>
   callMcpTool('execute_tool', {
     toolName: 'create_complete_workflow',
     arguments: {
-      name: `AI malformed test ${randomUUID().slice(0, 8)}`,
+      name,
       trigger: {
         name: 'Manual Trigger',
         type: 'MANUAL',
@@ -73,24 +73,30 @@ const createCompleteWorkflow = (
 type ToolPayload = {
   success: boolean;
   error?: string;
-  result?: { workflowId?: string };
+  result?: { coreWorkflowId?: string };
 };
 
 const parsePayload = (result: McpToolCallResult): ToolPayload =>
   JSON.parse(result.content?.[0]?.text ?? '{}') as ToolPayload;
 
 describe('Workflow AI tool validation (e2e)', () => {
-  const createdWorkflowIds: string[] = [];
+  const createdCoreWorkflowIds: string[] = [];
 
   afterAll(async () => {
-    if (createdWorkflowIds.length > 0) {
-      await deleteRecordsByIds('workflow', createdWorkflowIds);
+    for (const coreWorkflowId of createdCoreWorkflowIds) {
+      await callMcpTool('execute_tool', {
+        toolName: 'delete_workflow',
+        arguments: { coreWorkflowId },
+      });
     }
   });
 
   it('reports a failure (does not crash) when create_complete_workflow carries a bare-string rich text', async () => {
+    const name = `AI malformed test ${randomUUID().slice(0, 8)}`;
+
     const result = await createCompleteWorkflow(
       buildCreateRecordStep({ bodyV2: 'a plain string' }),
+      name,
     );
 
     expect(result.isError).toBe(true);
@@ -99,6 +105,48 @@ describe('Workflow AI tool validation (e2e)', () => {
 
     expect(payload.success).toBe(false);
     expect(payload.error).toMatch(/rich text/i);
+
+    const leftoverCoreWorkflows = await global.testDataSource.query(
+      `SELECT id FROM core."workflow" WHERE name = $1`,
+      [name],
+    );
+
+    expect(leftoverCoreWorkflows).toEqual([]);
+  });
+
+  it('creates nothing when an edge points to an unknown step', async () => {
+    const name = `AI dangling edge test ${randomUUID().slice(0, 8)}`;
+    const step = buildCreateRecordStep({});
+
+    const result = await callMcpTool('execute_tool', {
+      toolName: 'create_complete_workflow',
+      arguments: {
+        name,
+        trigger: {
+          name: 'Manual Trigger',
+          type: 'MANUAL',
+          settings: { outputSchema: {} },
+          nextStepIds: [],
+        },
+        steps: [step],
+        edges: [
+          { source: 'trigger', target: step.id },
+          { source: step.id, target: randomUUID() },
+        ],
+      },
+    });
+
+    const payload = parsePayload(result);
+
+    expect(payload.success).toBe(false);
+    expect(payload.error).toMatch(/not found/i);
+
+    const leftoverCoreWorkflows = await global.testDataSource.query(
+      `SELECT id FROM core."workflow" WHERE name = $1`,
+      [name],
+    );
+
+    expect(leftoverCoreWorkflows).toEqual([]);
   });
 
   it('creates the workflow when the rich text is a valid object', async () => {
@@ -109,10 +157,10 @@ describe('Workflow AI tool validation (e2e)', () => {
     const payload = parsePayload(result);
 
     expect(payload.success).toBe(true);
-    expect(payload.result?.workflowId).toBeDefined();
+    expect(payload.result?.coreWorkflowId).toBeDefined();
 
-    if (payload.result?.workflowId) {
-      createdWorkflowIds.push(payload.result.workflowId);
+    if (payload.result?.coreWorkflowId) {
+      createdCoreWorkflowIds.push(payload.result.coreWorkflowId);
     }
   });
 
@@ -122,10 +170,10 @@ describe('Workflow AI tool validation (e2e)', () => {
     const payload = parsePayload(result);
 
     expect(payload.success).toBe(true);
-    expect(payload.result?.workflowId).toBeDefined();
+    expect(payload.result?.coreWorkflowId).toBeDefined();
 
-    if (payload.result?.workflowId) {
-      createdWorkflowIds.push(payload.result.workflowId);
+    if (payload.result?.coreWorkflowId) {
+      createdCoreWorkflowIds.push(payload.result.coreWorkflowId);
     }
   });
 });

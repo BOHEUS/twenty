@@ -8,6 +8,7 @@ import {
   type ViewManifest,
   type ViewSortManifest,
 } from 'twenty-shared/application';
+import { DEFAULT_VIEW_GROUP_LOAD_LIMIT } from 'twenty-shared/constants';
 import {
   AggregateOperations,
   FieldMetadataType,
@@ -196,6 +197,7 @@ const buildFlatView = ({
   viewFilterIds: [],
   viewGroupIds: [],
   viewFilterGroupIds: [],
+  navigationMenuItemIds: [],
   viewSortIds: [],
   ...flatViewProperties,
 });
@@ -220,6 +222,7 @@ const buildFlatViewField = ({
   fieldMetadataId: `${viewFieldManifest.fieldMetadataUniversalIdentifier}-id`,
   viewId: `${viewUniversalIdentifier}-id`,
   viewFieldGroupId: null,
+  relationTargetFieldMetadataId: null,
   overrides: null,
   ...flatViewFieldProperties,
 });
@@ -328,6 +331,7 @@ const buildFlatViewSort = ({
   workspaceId: WORKSPACE_ID,
   applicationId: APP_ID,
   fieldMetadataId: `${viewSortManifest.fieldMetadataUniversalIdentifier}-id`,
+  relationTargetFieldMetadataId: null,
   viewId: `${viewUniversalIdentifier}-id`,
 });
 
@@ -342,6 +346,8 @@ const ALL_PETS_VIEW_MANIFEST: ViewManifest = {
   visibility: ViewVisibility.WORKSPACE,
   openRecordIn: ViewOpenRecordIn.SIDE_PANEL,
   shouldHideEmptyGroups: false,
+  shouldDisplayGroupsAsTabs: false,
+  groupLoadLimit: DEFAULT_VIEW_GROUP_LOAD_LIMIT,
 };
 
 const ZOO_PETS_VIEW_MANIFEST: ViewManifest = {
@@ -355,6 +361,8 @@ const ZOO_PETS_VIEW_MANIFEST: ViewManifest = {
   visibility: ViewVisibility.WORKSPACE,
   openRecordIn: ViewOpenRecordIn.RECORD_PAGE,
   shouldHideEmptyGroups: true,
+  shouldDisplayGroupsAsTabs: false,
+  groupLoadLimit: DEFAULT_VIEW_GROUP_LOAD_LIMIT,
   mainGroupByFieldMetadataUniversalIdentifier: SPECIES_FIELD_UID,
 };
 

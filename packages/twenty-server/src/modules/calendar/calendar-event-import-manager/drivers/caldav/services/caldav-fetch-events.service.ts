@@ -12,7 +12,7 @@ import {
 import { isDefined } from 'twenty-shared/utils';
 
 import { CALDAV_UNVERSIONED_RESOURCE } from 'src/modules/calendar/calendar-event-import-manager/drivers/caldav/constants/caldav-unversioned-resource.constant';
-import { type CalDavSyncCursor } from 'src/modules/calendar/calendar-event-import-manager/drivers/caldav/types/caldav-sync-cursor';
+import { type CalDavSyncCursor } from 'src/modules/calendar/calendar-event-import-manager/drivers/caldav/types/caldav-sync-cursor.type';
 import { extractICalData } from 'src/modules/calendar/calendar-event-import-manager/drivers/caldav/utils/extract-ical-data.util';
 import { isCalDavCollectionHref } from 'src/modules/calendar/calendar-event-import-manager/drivers/caldav/utils/is-caldav-collection-href.util';
 import { isEventCalendar } from 'src/modules/calendar/calendar-event-import-manager/drivers/caldav/utils/is-event-calendar.util';
@@ -24,7 +24,7 @@ import { mapCalDavStatusToExceptionCode } from 'src/modules/calendar/calendar-ev
 import { parseICalEvents } from 'src/modules/calendar/calendar-event-import-manager/drivers/caldav/utils/parse-ical-event.util';
 import { resolveCalDavResourceVersion } from 'src/modules/calendar/calendar-event-import-manager/drivers/caldav/utils/resolve-caldav-resource-version.util';
 import { CalendarEventImportDriverException } from 'src/modules/calendar/calendar-event-import-manager/drivers/exceptions/calendar-event-import-driver.exception';
-import { type FetchedCalendarEvent } from 'src/modules/calendar/common/types/fetched-calendar-event';
+import { type FetchedCalendarEvent } from 'src/modules/calendar/common/types/fetched-calendar-event.type';
 
 type CalendarSyncResult = {
   calendarUrl: string;
@@ -75,7 +75,9 @@ export class CalDavFetchEventsService {
     client: DAVClient,
     eventHrefs: string[],
   ): Promise<FetchedCalendarEvent[]> {
-    if (eventHrefs.length === 0) return [];
+    if (eventHrefs.length === 0) {
+      return [];
+    }
 
     const startDate = new Date(
       Date.now() -
@@ -110,7 +112,9 @@ export class CalDavFetchEventsService {
     return calendarObjects.flatMap((calendarObject) => {
       const iCalData = extractICalData(calendarObject.props?.calendarData);
 
-      if (!isNonEmptyString(calendarObject.href) || !iCalData) return [];
+      if (!isNonEmptyString(calendarObject.href) || !iCalData) {
+        return [];
+      }
 
       return parseICalEvents(iCalData, calendarObject.href).filter((event) =>
         isEventInTimeRange(event, startDate, endDate),
@@ -342,10 +346,15 @@ export class CalDavFetchEventsService {
     const etags: Record<string, Record<string, string>> = {};
 
     for (const result of results) {
-      if (result.newSyncToken)
+      if (result.newSyncToken) {
         syncTokens[result.calendarUrl] = result.newSyncToken;
-      if (result.newCtag) ctags[result.calendarUrl] = result.newCtag;
-      if (result.newEtags) etags[result.calendarUrl] = result.newEtags;
+      }
+      if (result.newCtag) {
+        ctags[result.calendarUrl] = result.newCtag;
+      }
+      if (result.newEtags) {
+        etags[result.calendarUrl] = result.newEtags;
+      }
     }
 
     return {

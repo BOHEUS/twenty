@@ -8,7 +8,7 @@ import { In, Like } from 'typeorm';
 
 import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
 import { FileUrlService } from 'src/engine/core-modules/file/file-url/file-url.service';
-import { FILE_STATUS } from 'src/engine/core-modules/file/types/file-status.types';
+import { FILE_STATUS } from 'src/engine/core-modules/file/types/file-status.type';
 import { type ResolvedRunAgentAttachment } from 'src/engine/metadata-modules/ai/ai-agent-execution/types/resolved-run-agent-attachment.type';
 import { buildRunAgentModelMessageOrThrow } from 'src/engine/metadata-modules/ai/ai-agent-execution/utils/build-run-agent-model-message.util';
 import { extractRunAgentAttachmentFileIdsOrThrow } from 'src/engine/metadata-modules/ai/ai-agent-execution/utils/extract-run-agent-attachment-file-ids.util';
@@ -26,9 +26,11 @@ export class RunAgentAttachmentService {
   async buildModelMessagesOrThrow({
     messages,
     workspaceId,
+    modalities,
   }: {
     messages: RunAgentMessage[];
     workspaceId: string;
+    modalities: string[] | undefined;
   }): Promise<ModelMessage[]> {
     const fileIds = extractRunAgentAttachmentFileIdsOrThrow(messages);
 
@@ -37,7 +39,11 @@ export class RunAgentAttachmentService {
       : new Map<string, ResolvedRunAgentAttachment>();
 
     return messages.map((message) =>
-      buildRunAgentModelMessageOrThrow({ message, attachmentsByFileId }),
+      buildRunAgentModelMessageOrThrow({
+        message,
+        attachmentsByFileId,
+        modalities,
+      }),
     );
   }
 
@@ -57,19 +63,17 @@ export class RunAgentAttachmentService {
     });
 
     const resolvedEntries = await Promise.all(
-      files.map(
-        async (file): Promise<[string, ResolvedRunAgentAttachment]> => [
-          file.id,
-          {
-            mediaType: file.mimeType,
-            url: await this.fileUrlService.signFileByIdUrl({
-              fileId: file.id,
-              workspaceId,
-              fileFolder: FileFolder.AgentChat,
-            }),
-          },
-        ],
-      ),
+      files.map(async (file): Promise<[string, ResolvedRunAgentAttachment]> => [
+        file.id,
+        {
+          mediaType: file.mimeType,
+          url: await this.fileUrlService.signFileByIdUrl({
+            fileId: file.id,
+            workspaceId,
+            fileFolder: FileFolder.AgentChat,
+          }),
+        },
+      ]),
     );
 
     return new Map(resolvedEntries);

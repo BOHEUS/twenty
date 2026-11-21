@@ -3,6 +3,8 @@ import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/use
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
 import { viewsFromObjectMetadataItemFamilySelector } from '@/views/states/selectors/viewsFromObjectMetadataItemFamilySelector';
 import { ViewType } from '@/views/types/ViewType';
+import { useGetCurrentViewOnly } from '@/views/hooks/useGetCurrentViewOnly';
+import { computeViewPickerVisibleViews } from '@/views/view-picker/utils/computeViewPickerVisibleViews';
 import { useCreateViewFromCurrentState } from '@/views/view-picker/hooks/useCreateViewFromCurrentState';
 import { useDestroyViewFromCurrentState } from '@/views/view-picker/hooks/useDestroyViewFromCurrentState';
 import { useGetAvailableFieldsToGroupRecordsBy } from '@/views/view-picker/hooks/useGetAvailableFieldsToGroupRecordsBy';
@@ -10,10 +12,11 @@ import { useViewPickerMode } from '@/views/view-picker/hooks/useViewPickerMode';
 import { viewPickerIsPersistingComponentState } from '@/views/view-picker/states/viewPickerIsPersistingComponentState';
 import { viewPickerMainGroupByFieldMetadataIdComponentState } from '@/views/view-picker/states/viewPickerMainGroupByFieldMetadataIdComponentState';
 import { viewPickerTypeComponentState } from '@/views/view-picker/states/viewPickerTypeComponentState';
-import { t } from '@lingui/core/macro';
 import { Button } from 'twenty-ui/primitives/input';
+import { useLingui } from '@lingui/react/macro';
 
 export const ViewPickerEditButton = () => {
+  const { t } = useLingui();
   const { availableFieldsForGrouping, navigateToSelectSettings } =
     useGetAvailableFieldsToGroupRecordsBy();
 
@@ -24,7 +27,14 @@ export const ViewPickerEditButton = () => {
     { objectMetadataItemId: objectMetadataItem.id },
   );
 
-  const isLastView = viewsOnCurrentObject.length <= 1;
+  const { currentView } = useGetCurrentViewOnly();
+
+  const visibleViews = computeViewPickerVisibleViews({
+    views: viewsOnCurrentObject,
+    currentViewId: currentView?.id,
+  });
+
+  const isLastView = visibleViews.length <= 1;
 
   const { viewPickerMode } = useViewPickerMode();
   const viewPickerType = useAtomComponentStateValue(

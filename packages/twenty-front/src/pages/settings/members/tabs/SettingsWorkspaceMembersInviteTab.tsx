@@ -7,6 +7,7 @@ import { Table } from '@/ui/layout/table/components/Table';
 import { TableCell } from '@/ui/layout/table/components/TableCell';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
 import { TableRow } from '@/ui/layout/table/components/TableRow';
+import { TooltipDelay } from '@/ui/layout/tooltip/constants/TooltipDelay';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useDeleteWorkspaceInvitation } from '@/workspace-invitation/hooks/useDeleteWorkspaceInvitation';
 import { useResendWorkspaceInvitation } from '@/workspace-invitation/hooks/useResendWorkspaceInvitation';
@@ -17,19 +18,17 @@ import { styled } from '@linaria/react';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { isNonEmptyArray } from '@sniptt/guards';
 import { formatDistanceToNow } from 'date-fns';
-import { useContext, useMemo } from 'react';
+import { useMemo } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
+import { IconButton } from 'twenty-ui/components/input';
+import { Section } from 'twenty-ui/components/layout';
 import { IconMail, IconReload, IconTrash } from 'twenty-ui/icon';
 import { Status } from 'twenty-ui/primitives/data-display';
-import { IconButton } from 'twenty-ui/components';
-import { Section } from 'twenty-ui/primitives/layout';
-import { AppTooltip, TooltipDelay } from 'twenty-ui/primitives/surfaces';
-import { H2Title } from 'twenty-ui/primitives/typography';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { Tooltip } from 'twenty-ui/primitives/surfaces';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import { GetWorkspaceInvitationsDocument } from '~/generated-metadata/graphql';
-import { dateLocaleState } from '~/localization/states/dateLocaleState';
-
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { dateLocaleState } from '@/localization/states/dateLocaleState';
 
 const StyledButtonContainer = styled.div`
   align-items: center;
@@ -68,7 +67,7 @@ const StyledTableRows = styled.div`
 `;
 
 export const SettingsWorkspaceMembersInviteTab = () => {
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const { t } = useLingui();
   const { enqueueToast } = useToast();
   const roles = useSettingsAllRoles();
@@ -94,7 +93,7 @@ export const SettingsWorkspaceMembersInviteTab = () => {
     const result = await deleteWorkspaceInvitation({ appTokenId });
     if (isDefined(result.error)) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Error deleting invitation`,
         duration: 2000,
       });
@@ -105,7 +104,7 @@ export const SettingsWorkspaceMembersInviteTab = () => {
     const result = await resendInvitation({ appTokenId });
     if (isDefined(result.error)) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Error resending invitation`,
         duration: 2000,
       });
@@ -114,7 +113,9 @@ export const SettingsWorkspaceMembersInviteTab = () => {
 
   const getExpiresAtText = (expiresAt: string) => {
     const expirationDate = new Date(expiresAt);
-    if (expirationDate.getTime() <= Date.now()) return t`Expired`;
+    if (expirationDate.getTime() <= Date.now()) {
+      return t`Expired`;
+    }
     return formatDistanceToNow(expirationDate, { locale: localeCatalog });
   };
 
@@ -125,18 +126,18 @@ export const SettingsWorkspaceMembersInviteTab = () => {
       <SettingsRolesQueryEffect />
       {currentWorkspace?.inviteHash &&
         currentWorkspace?.isPublicInviteLinkEnabled && (
-          <Section>
-            <H2Title
+          <Section.Root>
+            <Section.Header
               title={t`Invite by link`}
               description={t`Share this link to invite users to join your workspace`}
             />
             <WorkspaceInviteLink
               inviteLink={`${window.location.origin}/invite/${currentWorkspace?.inviteHash}`}
             />
-          </Section>
+          </Section.Root>
         )}
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title={t`Invite by email`}
           description={t`Send an invite email to your team`}
         />
@@ -179,19 +180,18 @@ export const SettingsWorkspaceMembersInviteTab = () => {
                           stroke={theme.icon.stroke.sm}
                         />
                       </StyledIconWrapper>
-                      <StyledTextContainerWithEllipsis
-                        id={`invitation-email-${workspaceInvitation.id}`}
-                      >
-                        {workspaceInvitation.email}
-                      </StyledTextContainerWithEllipsis>
-                      <AppTooltip
-                        anchorSelect={`#invitation-email-${workspaceInvitation.id}`}
-                        title={workspaceInvitation.email}
-                        noArrow
-                        place="top"
-                        positionStrategy="fixed"
+                      <Tooltip
+                        content={workspaceInvitation.email}
+                        side="top"
+                        positionMethod="fixed"
                         delay={TooltipDelay.shortDelay}
-                      />
+                      >
+                        <StyledTextContainerWithEllipsis
+                          id={`invitation-email-${workspaceInvitation.id}`}
+                        >
+                          {workspaceInvitation.email}
+                        </StyledTextContainerWithEllipsis>
+                      </Tooltip>
                     </TableCell>
                     <TableCell minWidth="0" overflow="hidden">
                       <StyledTextContainerWithEllipsis>
@@ -238,14 +238,14 @@ export const SettingsWorkspaceMembersInviteTab = () => {
             </Table>
           </StyledTableContainer>
         )}
-      </Section>
-      <Section>
-        <H2Title
+      </Section.Root>
+      <Section.Root>
+        <Section.Header
           title={t`Approved Domains`}
           description={t`Anyone with an email address at these domains is allowed to sign up for this workspace.`}
         />
         <SettingsApprovedAccessDomainsListCard />
-      </Section>
+      </Section.Root>
     </>
   );
 };

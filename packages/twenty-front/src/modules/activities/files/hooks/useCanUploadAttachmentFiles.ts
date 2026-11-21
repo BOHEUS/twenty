@@ -1,3 +1,5 @@
+import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
+import { isObjectMetadataReadOnly } from '@/object-record/read-only/utils/isObjectMetadataReadOnly';
 import { type ActivityTargetableObject } from '@/activities/types/ActivityTargetableEntity';
 import { useCanUpdateObjectRecords } from '@/object-record/hooks/useCanUpdateObjectRecords';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
@@ -6,7 +8,10 @@ import { PermissionFlagType } from '~/generated-metadata/graphql';
 export const useCanUploadAttachmentFiles = (
   targetableObject: ActivityTargetableObject,
 ) => {
-  const { canUpdateObjectRecords } = useCanUpdateObjectRecords(
+  const { objectMetadataItem } = useObjectMetadataItem({
+    objectNameSingular: targetableObject.targetObjectNameSingular,
+  });
+  const { canUpdateSomeRecords } = useCanUpdateObjectRecords(
     targetableObject.targetObjectNameSingular,
   );
 
@@ -15,6 +20,9 @@ export const useCanUploadAttachmentFiles = (
   );
 
   return {
-    canUploadFiles: canUpdateObjectRecords && hasUploadPermission,
+    canUploadFiles:
+      canUpdateSomeRecords &&
+      hasUploadPermission &&
+      !isObjectMetadataReadOnly({ objectMetadataItem }),
   };
 };

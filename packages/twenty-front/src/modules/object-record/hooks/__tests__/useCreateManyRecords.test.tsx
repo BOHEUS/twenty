@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { v4 } from 'uuid';
 
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
 import { triggerCreateRecordsOptimisticEffect } from '@/apollo/optimistic-effect/utils/triggerCreateRecordsOptimisticEffect';
 import {
   query,
@@ -27,8 +27,7 @@ jest.mocked(useRefetchAggregateQueries).mockReturnValue({
 });
 
 jest
-  // uuid v11+ types add a Uint8Array overload to v4; pin to the string
-  // signature so the mocked return values type-check.
+  // uuid v11+ adds a Uint8Array overload to v4; pin the string signature for the mocks.
   .mocked(v4 as () => string)
   .mockReturnValueOnce(variables.data[0].id)
   .mockReturnValueOnce(variables.data[1].id);
@@ -75,7 +74,7 @@ describe('useCreateManyRecords', () => {
     const { result } = renderHook(
       () =>
         useCreateManyRecords({
-          objectNameSingular: CoreObjectNameSingular.Person,
+          objectNameSingular: StandardObjectNameSingular.Person,
         }),
       {
         wrapper: Wrapper,
@@ -97,7 +96,7 @@ describe('useCreateManyRecords', () => {
     const { result } = renderHook(
       () =>
         useCreateManyRecords({
-          objectNameSingular: CoreObjectNameSingular.Person,
+          objectNameSingular: StandardObjectNameSingular.Person,
         }),
       {
         wrapper: Wrapper,
@@ -112,7 +111,6 @@ describe('useCreateManyRecords', () => {
       expect(res).toEqual(response);
     });
 
-    // Verify that the mutation was called with data without IDs
     expect(mocks[1].request.variables.data).toEqual(input);
     mocks[1].request.variables.data.forEach((record: any) => {
       expect(record).not.toHaveProperty('id');

@@ -28,9 +28,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "63d7dfdd-ccca-410b-9686-f2ad8428496a",
@@ -704,9 +704,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "126456b1-0206-479b-a362-7cf99b727614",
@@ -1091,7 +1091,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -1112,7 +1113,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -1138,9 +1140,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "447dbffe-f0f5-47c3-8d2c-ac448a452a1e",
@@ -1550,7 +1552,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -1576,9 +1579,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "ba2f93fe-248e-47f7-83b4-00189ca53e24",
@@ -2347,7 +2350,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -2368,7 +2372,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -2389,7 +2394,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -2410,7 +2416,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -2436,9 +2443,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "453d499a-47bf-4ea0-be5e-9c2acbf7a464",
@@ -2826,9 +2833,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "d09704f0-057d-48ed-8278-3d673d5eb467",
@@ -3475,58 +3482,6 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
                   },
                   "targetObjectMetadata": {
                     "__typename": "Object",
-                    "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                    "nameSingular": "workflow",
-                    "namePlural": "workflows"
-                  },
-                  "sourceFieldMetadata": {
-                    "__typename": "Field",
-                    "id": "d88ca30e-2d50-4a21-9146-775ac32adbe2",
-                    "name": "target"
-                  },
-                  "targetFieldMetadata": {
-                    "__typename": "Field",
-                    "id": "5bfdccb5-ae15-428e-9cb8-acc2569220dc",
-                    "name": "timelineActivities"
-                  }
-                },
-                {
-                  "__typename": "Relation",
-                  "type": "MANY_TO_ONE",
-                  "sourceObjectMetadata": {
-                    "__typename": "Object",
-                    "id": "bcdaa361-9ee6-4c8e-81c2-711fd330e5b2",
-                    "nameSingular": "timelineActivity",
-                    "namePlural": "timelineActivities"
-                  },
-                  "targetObjectMetadata": {
-                    "__typename": "Object",
-                    "id": "2f5f0567-c6f1-48f7-bd11-19f316d4395a",
-                    "nameSingular": "workflowVersion",
-                    "namePlural": "workflowVersions"
-                  },
-                  "sourceFieldMetadata": {
-                    "__typename": "Field",
-                    "id": "b01af7d6-a3b3-45a3-a7cc-d4c491586227",
-                    "name": "target"
-                  },
-                  "targetFieldMetadata": {
-                    "__typename": "Field",
-                    "id": "1a1ee54b-8af0-46f1-b02e-836dc676cd53",
-                    "name": "timelineActivities"
-                  }
-                },
-                {
-                  "__typename": "Relation",
-                  "type": "MANY_TO_ONE",
-                  "sourceObjectMetadata": {
-                    "__typename": "Object",
-                    "id": "bcdaa361-9ee6-4c8e-81c2-711fd330e5b2",
-                    "nameSingular": "timelineActivity",
-                    "namePlural": "timelineActivities"
-                  },
-                  "targetObjectMetadata": {
-                    "__typename": "Object",
                     "id": "61d7672d-5c4f-42e1-812e-99eb0a2565de",
                     "nameSingular": "workflowRun",
                     "namePlural": "workflowRuns"
@@ -3686,7 +3641,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -3707,7 +3663,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -3728,7 +3685,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -3749,7 +3707,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -3770,7 +3729,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -3791,7 +3751,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -3812,7 +3773,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -3833,7 +3795,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -3854,7 +3817,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -3875,657 +3839,13 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
                   "id": "781fdb5b-05c6-45f2-98e1-873d29f0dc5b",
                   "fieldMetadataId": "a1cc36c1-9dfb-4e35-b843-84b86a511602",
-                  "createdAt": "2026-04-10T08:55:56.624Z",
-                  "updatedAt": "2026-04-10T08:55:56.624Z",
-                  "order": 0
-                }
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "__typename": "ObjectEdge",
-        "node": {
-          "__typename": "Object",
-          "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-          "universalIdentifier": "20202020-62be-406c-b9ca-8caa50d51392",
-          "nameSingular": "workflow",
-          "namePlural": "workflows",
-          "isRemote": false,
-          "isActive": true,
-          "isSystem": false,
-          "isUIEditable": true,
-          "isUICreatable": true,
-          "writability": "OPEN",
-          "createdAt": "2026-04-10T08:55:56.200Z",
-          "updatedAt": "2026-04-10T08:55:56.200Z",
-          "labelIdentifierFieldMetadataId": "83ab1b71-c43f-4e6e-bc58-5bdaa93d6525",
-          "imageIdentifierFieldMetadataId": null,
-          "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-          "shortcut": "W",
-          "isLabelSyncedWithName": false,
-          "isSearchable": true,
-          "duplicateCriteria": null,
-          "labelSingular": "Workflow",
-          "labelPlural": "Workflows",
-          "description": "A workflow",
-          "icon": "IconSettingsAutomation",
-          "fieldsList": [
-            {
-              "__typename": "Field",
-              "id": "d1352cb4-a0a0-4673-a3dc-9f5583de46dd",
-              "universalIdentifier": "20202020-f02a-4181-8a81-efabcdefabcd",
-              "type": "UUID",
-              "name": "id",
-              "label": "Id",
-              "description": "Id",
-              "icon": "Icon123",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "uuid",
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "5b5533e7-d32d-4b31-b2ec-16474c6ccf34",
-              "universalIdentifier": "20202020-f02b-4182-9b82-fabcdefabcde",
-              "type": "DATE_TIME",
-              "name": "createdAt",
-              "label": "Creation date",
-              "description": "Creation date",
-              "icon": "IconCalendar",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "now",
-              "options": null,
-              "settings": {
-                "displayFormat": "RELATIVE"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "20b7c1ac-b5a6-429c-ab26-f03ab5ff7f9c",
-              "universalIdentifier": "20202020-f02c-4183-8c83-abcdefabcdef",
-              "type": "DATE_TIME",
-              "name": "updatedAt",
-              "label": "Last update",
-              "description": "Last time the record was changed",
-              "icon": "IconCalendarClock",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "now",
-              "options": null,
-              "settings": {
-                "displayFormat": "RELATIVE"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "0648abd1-4a38-4ef5-8d73-5dd63f5d34f7",
-              "universalIdentifier": "20202020-f02d-4184-9d84-bcdefabcdefa",
-              "type": "DATE_TIME",
-              "name": "deletedAt",
-              "label": "Deleted at",
-              "description": "Date when the record was deleted",
-              "icon": "IconCalendarMinus",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "displayFormat": "RELATIVE"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "83ab1b71-c43f-4e6e-bc58-5bdaa93d6525",
-              "universalIdentifier": "20202020-b3d3-478f-acc0-5d901e725b20",
-              "type": "TEXT",
-              "name": "name",
-              "label": "Name",
-              "description": "The workflow name",
-              "icon": "IconSettingsAutomation",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": true,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": true,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "2392c4ec-df1f-4d47-9735-bec3d82cf834",
-              "universalIdentifier": "20202020-326a-4fba-8639-3456c0a169e8",
-              "type": "TEXT",
-              "name": "lastPublishedVersionId",
-              "label": "Last published Version Id",
-              "description": "The workflow last published version id",
-              "icon": "IconVersions",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "79041349-60ca-4734-b67f-90c0399ebd95",
-              "universalIdentifier": "20202020-357c-4432-8c50-8c31b4a552d9",
-              "type": "MULTI_SELECT",
-              "name": "statuses",
-              "label": "Statuses",
-              "description": "The current statuses of the workflow versions",
-              "icon": "IconStatusChange",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": [
-                {
-                  "id": "20202020-e9d8-41df-8262-31bb04948366",
-                  "color": "yellow",
-                  "label": "Draft",
-                  "value": "DRAFT",
-                  "position": 0
-                },
-                {
-                  "id": "20202020-e47e-4d57-913a-7b29e1f140ef",
-                  "color": "green",
-                  "label": "Active",
-                  "value": "ACTIVE",
-                  "position": 1
-                },
-                {
-                  "id": "20202020-bdfa-4d35-bf5c-e410cccfc765",
-                  "color": "gray",
-                  "label": "Deactivated",
-                  "value": "DEACTIVATED",
-                  "position": 2
-                }
-              ],
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "1ed983b2-0797-47cd-82e3-672cc07828f4",
-              "universalIdentifier": "20202020-39b0-4d8c-8c5f-33c2326deb5f",
-              "type": "POSITION",
-              "name": "position",
-              "label": "Position",
-              "description": "Workflow record position",
-              "icon": "IconHierarchy2",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": true,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": 0,
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "c2cf98eb-91d3-4ec7-abbf-879c478043de",
-              "universalIdentifier": "20202020-6007-401a-8aa5-e6f48581a6f3",
-              "type": "ACTOR",
-              "name": "createdBy",
-              "label": "Created by",
-              "description": "The creator of the record",
-              "icon": "IconCreativeCommonsSa",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": {
-                "name": "'System'",
-                "source": "'MANUAL'",
-                "workspaceMemberId": null
-              },
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "24360efa-48ec-4b31-9fef-b21956170eba",
-              "universalIdentifier": "3559831e-caf2-4eb5-9db1-b47bf968c774",
-              "type": "ACTOR",
-              "name": "updatedBy",
-              "label": "Updated by",
-              "description": "The workspace member who last updated the record",
-              "icon": "IconUserCircle",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": {
-                "name": "'System'",
-                "source": "'MANUAL'",
-                "workspaceMemberId": null
-              },
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "0e96c7b4-d8fa-4929-a00e-b1f93779dad5",
-              "universalIdentifier": "20202020-535d-4ffa-b7f3-4fa0d5da1b7a",
-              "type": "TS_VECTOR",
-              "name": "searchVector",
-              "label": "Search vector",
-              "description": "Field used for full-text search",
-              "icon": "IconUser",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": true,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "asExpression": "to_tsvector('simple', COALESCE(public.unaccent_immutable(\"name\"), ''))",
-                "generatedType": "STORED"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "077d02f7-6730-40dd-a9bb-5960a68fe033",
-              "universalIdentifier": "78d27c16-be35-54d2-988a-451dc24f77ff",
-              "type": "RELATION",
-              "name": "attachments",
-              "label": "Attachments",
-              "description": "Attachments linked to the workflow",
-              "icon": "IconFileUpload",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": true,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "relationType": "ONE_TO_MANY"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "ONE_TO_MANY",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                  "nameSingular": "workflow",
-                  "namePlural": "workflows"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "713c3680-8982-49e3-b7dc-8d6002ac13aa",
-                  "nameSingular": "attachment",
-                  "namePlural": "attachments"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "077d02f7-6730-40dd-a9bb-5960a68fe033",
-                  "name": "attachments"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "107f1410-5f59-489b-92b7-25ab6d3c7e48",
-                  "name": "target"
-                }
-              },
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "5bfdccb5-ae15-428e-9cb8-acc2569220dc",
-              "universalIdentifier": "0ca041cd-598d-5c6b-881c-fe89ee97a0bc",
-              "type": "RELATION",
-              "name": "timelineActivities",
-              "label": "Timeline Activities",
-              "description": "Timeline activities linked to the workflow",
-              "icon": "IconTimelineEvent",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": true,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "relationType": "ONE_TO_MANY"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "ONE_TO_MANY",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                  "nameSingular": "workflow",
-                  "namePlural": "workflows"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "bcdaa361-9ee6-4c8e-81c2-711fd330e5b2",
-                  "nameSingular": "timelineActivity",
-                  "namePlural": "timelineActivities"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "5bfdccb5-ae15-428e-9cb8-acc2569220dc",
-                  "name": "timelineActivities"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "0419db16-5fd4-4306-bd1d-ea0b1dde5349",
-                  "name": "target"
-                }
-              },
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "76c53f11-472b-48c6-bb3e-61d052035d09",
-              "universalIdentifier": "20202020-9432-416e-8f3c-27ee3153d099",
-              "type": "RELATION",
-              "name": "versions",
-              "label": "Versions",
-              "description": "Workflow versions linked to the workflow.",
-              "icon": "IconVersions",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "relationType": "ONE_TO_MANY"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "ONE_TO_MANY",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                  "nameSingular": "workflow",
-                  "namePlural": "workflows"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "2f5f0567-c6f1-48f7-bd11-19f316d4395a",
-                  "nameSingular": "workflowVersion",
-                  "namePlural": "workflowVersions"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "76c53f11-472b-48c6-bb3e-61d052035d09",
-                  "name": "versions"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "0ffcd8dd-44bb-44d6-bcdb-9f9b50a70c13",
-                  "name": "workflow"
-                }
-              },
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "39a29e02-a472-4c7e-b70c-68fded3c6aa7",
-              "universalIdentifier": "20202020-759b-4340-b58b-e73595c4df4f",
-              "type": "RELATION",
-              "name": "runs",
-              "label": "Runs",
-              "description": "Workflow runs linked to the workflow.",
-              "icon": "IconRun",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "relationType": "ONE_TO_MANY"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "ONE_TO_MANY",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                  "nameSingular": "workflow",
-                  "namePlural": "workflows"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "61d7672d-5c4f-42e1-812e-99eb0a2565de",
-                  "nameSingular": "workflowRun",
-                  "namePlural": "workflowRuns"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "39a29e02-a472-4c7e-b70c-68fded3c6aa7",
-                  "name": "runs"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "d211e714-0333-4459-909a-d7af75740429",
-                  "name": "workflow"
-                }
-              },
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "8a08086a-e4fd-4f11-a5fc-51afa26cd6fb",
-              "universalIdentifier": "20202020-3319-4234-a34c-117ecad2b8a9",
-              "type": "RELATION",
-              "name": "automatedTriggers",
-              "label": "Automated Triggers",
-              "description": "Workflow automated triggers linked to the workflow.",
-              "icon": "IconSettingsAutomation",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "relationType": "ONE_TO_MANY"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "ONE_TO_MANY",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                  "nameSingular": "workflow",
-                  "namePlural": "workflows"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "6e8eca5e-742b-4d5c-abe5-41bf2ee81922",
-                  "nameSingular": "workflowAutomatedTrigger",
-                  "namePlural": "workflowAutomatedTriggers"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "8a08086a-e4fd-4f11-a5fc-51afa26cd6fb",
-                  "name": "automatedTriggers"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "a4307a58-9294-4926-80c0-2ed6c3641a45",
-                  "name": "workflow"
-                }
-              },
-              "morphRelations": null
-            }
-          ],
-          "searchFieldMetadataList": [],
-          "indexMetadataList": [
-            {
-              "__typename": "Index",
-              "id": "4100d7e2-fb2e-4340-aa7b-15452ad2485c",
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "name": "IDX_d09fc4b1711543f42c127270f1e",
-              "indexWhereClause": null,
-              "indexType": "GIN",
-              "isUnique": false,
-              "isCustom": false,
-              "indexFieldMetadataList": [
-                {
-                  "__typename": "IndexField",
-                  "id": "b1833207-4a49-49e5-9da5-d8bc21a97603",
-                  "fieldMetadataId": "0e96c7b4-d8fa-4929-a00e-b1f93779dad5",
                   "createdAt": "2026-04-10T08:55:56.624Z",
                   "updatedAt": "2026-04-10T08:55:56.624Z",
                   "order": 0
@@ -4546,9 +3866,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:58.471Z",
           "updatedAt": "2026-04-10T08:55:58.471Z",
           "labelIdentifierFieldMetadataId": "a2b70b10-ab44-428e-b1f7-631d78536469",
@@ -5340,7 +4660,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -5361,7 +4682,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": true,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -5387,9 +4709,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "5a75ae6c-c4f8-4bd6-9676-259f1bbed07c",
@@ -5935,7 +5257,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -5956,7 +5279,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -5977,7 +5301,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -5998,7 +5323,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -6024,9 +5350,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "ef9a5003-2e21-459e-804a-5b27afa9cb6a",
@@ -6550,7 +5876,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -6571,7 +5898,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -6592,7 +5920,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -6618,9 +5947,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "b127a5d9-2bd4-480f-bb9a-6eca0dbf250e",
@@ -7245,32 +6574,6 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
                   },
                   "targetObjectMetadata": {
                     "__typename": "Object",
-                    "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                    "nameSingular": "workflow",
-                    "namePlural": "workflows"
-                  },
-                  "sourceFieldMetadata": {
-                    "__typename": "Field",
-                    "id": "3c73fafe-86c3-4c92-88dd-2a6cd954a597",
-                    "name": "target"
-                  },
-                  "targetFieldMetadata": {
-                    "__typename": "Field",
-                    "id": "077d02f7-6730-40dd-a9bb-5960a68fe033",
-                    "name": "attachments"
-                  }
-                },
-                {
-                  "__typename": "Relation",
-                  "type": "MANY_TO_ONE",
-                  "sourceObjectMetadata": {
-                    "__typename": "Object",
-                    "id": "713c3680-8982-49e3-b7dc-8d6002ac13aa",
-                    "nameSingular": "attachment",
-                    "namePlural": "attachments"
-                  },
-                  "targetObjectMetadata": {
-                    "__typename": "Object",
                     "id": "6934bd29-d89d-479e-8b32-f4f3a9af19b6",
                     "nameSingular": "rocket",
                     "namePlural": "rockets"
@@ -7378,7 +6681,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -7399,7 +6703,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -7420,7 +6725,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -7441,7 +6747,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -7462,7 +6769,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -7483,7 +6791,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -7504,7 +6813,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -7523,408 +6833,6 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
         "__typename": "ObjectEdge",
         "node": {
           "__typename": "Object",
-          "id": "6e8eca5e-742b-4d5c-abe5-41bf2ee81922",
-          "universalIdentifier": "20202020-3319-4234-a34c-7f3b9d2e4d1f",
-          "nameSingular": "workflowAutomatedTrigger",
-          "namePlural": "workflowAutomatedTriggers",
-          "isRemote": false,
-          "isActive": true,
-          "isSystem": true,
-          "isUIEditable": true,
-          "isUICreatable": true,
-          "writability": "OPEN",
-          "createdAt": "2026-04-10T08:55:56.200Z",
-          "updatedAt": "2026-04-10T08:55:56.200Z",
-          "labelIdentifierFieldMetadataId": "c4a2e871-0f4e-445e-a43b-b2399e046b54",
-          "imageIdentifierFieldMetadataId": null,
-          "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-          "shortcut": null,
-          "isLabelSyncedWithName": false,
-          "isSearchable": false,
-          "duplicateCriteria": null,
-          "labelSingular": "Workflow Automated Trigger",
-          "labelPlural": "Workflow Automated Triggers",
-          "description": "A workflow automated trigger",
-          "icon": "IconSettingsAutomation",
-          "fieldsList": [
-            {
-              "__typename": "Field",
-              "id": "c4a2e871-0f4e-445e-a43b-b2399e046b54",
-              "universalIdentifier": "20202020-f01a-4171-8a71-abcdefabcdef",
-              "type": "UUID",
-              "name": "id",
-              "label": "Id",
-              "description": "Id",
-              "icon": "Icon123",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": true,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "uuid",
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "a0a9b1cc-26b2-471d-9e70-78a16d482950",
-              "universalIdentifier": "20202020-f01b-4172-9b72-bcdefabcdefa",
-              "type": "DATE_TIME",
-              "name": "createdAt",
-              "label": "Creation date",
-              "description": "Creation date",
-              "icon": "IconCalendar",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "now",
-              "options": null,
-              "settings": {
-                "displayFormat": "RELATIVE"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "8ab6388a-eee9-46fc-bec4-92d47c98ded6",
-              "universalIdentifier": "20202020-f01c-4173-8c73-cdefabcdefab",
-              "type": "DATE_TIME",
-              "name": "updatedAt",
-              "label": "Last update",
-              "description": "Last time the record was changed",
-              "icon": "IconCalendarClock",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "now",
-              "options": null,
-              "settings": {
-                "displayFormat": "RELATIVE"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "00c38e6f-73bc-47e6-a8b3-a0035b65b4c7",
-              "universalIdentifier": "20202020-f01d-4174-9d74-defabcdefabc",
-              "type": "DATE_TIME",
-              "name": "deletedAt",
-              "label": "Deleted at",
-              "description": "Date when the record was deleted",
-              "icon": "IconCalendarMinus",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "displayFormat": "RELATIVE"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "17adfceb-538f-47d6-863c-a7a014621021",
-              "universalIdentifier": "5cea2f46-3779-4782-9fce-3062652e2dfd",
-              "type": "ACTOR",
-              "name": "createdBy",
-              "label": "Created by",
-              "description": "The creator of the record",
-              "icon": "IconCreativeCommonsSa",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": {
-                "name": "'System'",
-                "source": "'MANUAL'",
-                "workspaceMemberId": null
-              },
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "a8ca4fc4-6e09-4367-bcf1-91b42509aed9",
-              "universalIdentifier": "017d3587-98bd-43ad-b5a6-cb8125105641",
-              "type": "ACTOR",
-              "name": "updatedBy",
-              "label": "Updated by",
-              "description": "The workspace member who last updated the record",
-              "icon": "IconUserCircle",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": {
-                "name": "'System'",
-                "source": "'MANUAL'",
-                "workspaceMemberId": null
-              },
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "d0ce38ff-b052-48cd-9189-620808fb92f1",
-              "universalIdentifier": "f4c5eb0a-8a86-49a2-a775-941eaad98fc9",
-              "type": "POSITION",
-              "name": "position",
-              "label": "Position",
-              "description": "WorkflowAutomatedTrigger record position",
-              "icon": "IconHierarchy2",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": true,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": 0,
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "9271ec75-d6c0-4062-8a67-7eacd0cd7932",
-              "universalIdentifier": "dae934ca-bfca-4101-8211-8eae6e2b5513",
-              "type": "TS_VECTOR",
-              "name": "searchVector",
-              "label": "Search vector",
-              "description": "Field used for full-text search",
-              "icon": "IconUser",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": true,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "asExpression": "to_tsvector('simple', COALESCE(\"id\"::text, ''))",
-                "generatedType": "STORED"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "d0413599-2513-4598-9a41-615c4dde6329",
-              "universalIdentifier": "20202020-3319-4234-a34c-3f92c1ab56e7",
-              "type": "SELECT",
-              "name": "type",
-              "label": "Automated Trigger Type",
-              "description": "The workflow automated trigger type",
-              "icon": "IconSettingsAutomation",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "'DATABASE_EVENT'",
-              "options": [
-                {
-                  "id": "20202020-ccd5-4f45-9292-f6b2fe81b22c",
-                  "color": "green",
-                  "label": "Database Event",
-                  "value": "DATABASE_EVENT",
-                  "position": 0
-                },
-                {
-                  "id": "20202020-07b8-4e8f-b218-997ac813c209",
-                  "color": "blue",
-                  "label": "Cron",
-                  "value": "CRON",
-                  "position": 1
-                }
-              ],
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "99ac680e-bab0-42fc-9368-299197622fd8",
-              "universalIdentifier": "20202020-3319-4234-a34c-bac8f903de12",
-              "type": "RAW_JSON",
-              "name": "settings",
-              "label": "Settings",
-              "description": "The workflow automated trigger settings",
-              "icon": "IconSettings",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "a4307a58-9294-4926-80c0-2ed6c3641a45",
-              "universalIdentifier": "20202020-3319-4234-a34c-8e1a4d2f7c03",
-              "type": "RELATION",
-              "name": "workflow",
-              "label": "Workflow",
-              "description": "WorkflowAutomatedTrigger workflow",
-              "icon": "IconSettingsAutomation",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "onDelete": "CASCADE",
-                "relationType": "MANY_TO_ONE",
-                "joinColumnName": "workflowId"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "MANY_TO_ONE",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "6e8eca5e-742b-4d5c-abe5-41bf2ee81922",
-                  "nameSingular": "workflowAutomatedTrigger",
-                  "namePlural": "workflowAutomatedTriggers"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                  "nameSingular": "workflow",
-                  "namePlural": "workflows"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "a4307a58-9294-4926-80c0-2ed6c3641a45",
-                  "name": "workflow"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "8a08086a-e4fd-4f11-a5fc-51afa26cd6fb",
-                  "name": "automatedTriggers"
-                }
-              },
-              "morphRelations": null
-            }
-          ],
-          "searchFieldMetadataList": [],
-          "indexMetadataList": [
-            {
-              "__typename": "Index",
-              "id": "78da6f89-5f40-4cb7-8c8f-e5b2d3cf215d",
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "name": "IDX_397bfb7946782933c476b98d925",
-              "indexWhereClause": null,
-              "indexType": "BTREE",
-              "isUnique": false,
-              "isCustom": false,
-              "indexFieldMetadataList": [
-                {
-                  "__typename": "IndexField",
-                  "id": "bbc054ef-51d1-47a7-8f2e-2245d9b25170",
-                  "fieldMetadataId": "a4307a58-9294-4926-80c0-2ed6c3641a45",
-                  "createdAt": "2026-04-10T08:55:56.625Z",
-                  "updatedAt": "2026-04-10T08:55:56.625Z",
-                  "order": 0
-                }
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "__typename": "ObjectEdge",
-        "node": {
-          "__typename": "Object",
           "id": "6cafc7d5-9a81-4f0e-8cdc-a28cb4987bac",
           "universalIdentifier": "20202020-a1c3-47a6-9732-27e5b1e8436d",
           "nameSingular": "calendarEventParticipant",
@@ -7932,9 +6840,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "e0a6eefc-a74b-40fa-9ca6-eac3c67455a3",
@@ -8484,7 +7392,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -8505,7 +7414,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -8526,7 +7436,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -8552,9 +7463,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "4a3b7558-0562-405a-802f-f148cbc7d745",
@@ -9088,7 +7999,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -9109,7 +8021,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -9130,7 +8043,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": "\"deletedAt\" IS NULL",
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -9164,9 +8078,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:57.800Z",
           "updatedAt": "2026-04-10T08:55:57.800Z",
           "labelIdentifierFieldMetadataId": "f0ffa796-6575-4ec0-a56e-ed35144704a4",
@@ -9756,7 +8670,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -9777,7 +8692,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": true,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -9803,9 +8719,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": false,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "5ae70c32-669a-4346-b8d0-660e858e26df",
@@ -10051,15 +8967,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "isSearchable": false,
               "createdAt": "2026-04-10T08:55:56.200Z",
               "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "'NOT_STARTED'",
+              "defaultValue": "'ENQUEUED'",
               "options": [
-                {
-                  "id": "20202020-2ec6-40d8-b9e1-1b1e567bcca9",
-                  "color": "gray",
-                  "label": "Not started",
-                  "value": "NOT_STARTED",
-                  "position": 0
-                },
                 {
                   "id": "20202020-3166-46be-995a-67cb1f4c41d5",
                   "color": "yellow",
@@ -10303,162 +9212,10 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
                 }
               },
               "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "d211e714-0333-4459-909a-d7af75740429",
-              "universalIdentifier": "20202020-8c57-4e7f-84f5-f373f68e1b82",
-              "type": "RELATION",
-              "name": "workflow",
-              "label": "Workflow",
-              "description": "Workflow linked to the run.",
-              "icon": "IconSettingsAutomation",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "onDelete": "CASCADE",
-                "relationType": "MANY_TO_ONE",
-                "joinColumnName": "workflowId"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "MANY_TO_ONE",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "61d7672d-5c4f-42e1-812e-99eb0a2565de",
-                  "nameSingular": "workflowRun",
-                  "namePlural": "workflowRuns"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                  "nameSingular": "workflow",
-                  "namePlural": "workflows"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "d211e714-0333-4459-909a-d7af75740429",
-                  "name": "workflow"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "39a29e02-a472-4c7e-b70c-68fded3c6aa7",
-                  "name": "runs"
-                }
-              },
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "d91e1088-0bcb-4640-9a52-154dad7dd15c",
-              "universalIdentifier": "20202020-2f52-4ba8-8dc4-d0d6adb9578d",
-              "type": "RELATION",
-              "name": "workflowVersion",
-              "label": "Workflow version",
-              "description": "Workflow version linked to the run.",
-              "icon": "IconVersions",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "onDelete": "SET_NULL",
-                "relationType": "MANY_TO_ONE",
-                "joinColumnName": "workflowVersionId"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "MANY_TO_ONE",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "61d7672d-5c4f-42e1-812e-99eb0a2565de",
-                  "nameSingular": "workflowRun",
-                  "namePlural": "workflowRuns"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "2f5f0567-c6f1-48f7-bd11-19f316d4395a",
-                  "nameSingular": "workflowVersion",
-                  "namePlural": "workflowVersions"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "d91e1088-0bcb-4640-9a52-154dad7dd15c",
-                  "name": "workflowVersion"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "89b6fc02-8fc4-4095-8083-228aaf435ba5",
-                  "name": "runs"
-                }
-              },
-              "morphRelations": null
             }
           ],
           "searchFieldMetadataList": [],
           "indexMetadataList": [
-            {
-              "__typename": "Index",
-              "id": "d3b1f0ca-009a-4340-9e39-55d1b64f0705",
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "name": "IDX_9fdeb410f15f569f2843698c5b3",
-              "indexWhereClause": null,
-              "indexType": "BTREE",
-              "isUnique": false,
-              "isCustom": false,
-              "indexFieldMetadataList": [
-                {
-                  "__typename": "IndexField",
-                  "id": "58e443fa-defd-4d5e-8713-0fd2f8701b92",
-                  "fieldMetadataId": "d91e1088-0bcb-4640-9a52-154dad7dd15c",
-                  "createdAt": "2026-04-10T08:55:56.626Z",
-                  "updatedAt": "2026-04-10T08:55:56.626Z",
-                  "order": 0
-                }
-              ]
-            },
-            {
-              "__typename": "Index",
-              "id": "9fc21b6a-3d4c-4f1a-bf62-901957407f97",
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "name": "IDX_eced9eb2a6cc8f9a5b49fe4b04e",
-              "indexWhereClause": null,
-              "indexType": "BTREE",
-              "isUnique": false,
-              "isCustom": false,
-              "indexFieldMetadataList": [
-                {
-                  "__typename": "IndexField",
-                  "id": "5ee82d2f-47ee-4e5c-a4c5-d49cf77550fd",
-                  "fieldMetadataId": "d211e714-0333-4459-909a-d7af75740429",
-                  "createdAt": "2026-04-10T08:55:56.626Z",
-                  "updatedAt": "2026-04-10T08:55:56.626Z",
-                  "order": 0
-                }
-              ]
-            },
             {
               "__typename": "Index",
               "id": "a20bd7f9-4c52-4810-b494-9072c4a87cda",
@@ -10468,7 +9225,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -10494,9 +9252,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": false,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "d8ff93be-5b55-4e4b-af50-20eb2f38320c",
@@ -11494,7 +10252,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": true,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -11515,7 +10274,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -11541,9 +10301,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:58.075Z",
           "updatedAt": "2026-04-10T08:55:58.075Z",
           "labelIdentifierFieldMetadataId": "6182038f-196f-4f37-95c8-d4aee7118b7a",
@@ -12776,7 +11536,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -12797,7 +11558,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": true,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -12818,7 +11580,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": true,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -12844,9 +11607,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:59.195Z",
           "updatedAt": "2026-04-10T08:55:59.195Z",
           "labelIdentifierFieldMetadataId": "455256a6-d7ec-4bac-bf0c-d296b74a59d5",
@@ -13440,7 +12203,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -13461,7 +12225,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": true,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -13482,7 +12247,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": true,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -13503,7 +12269,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": true,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -13529,9 +12296,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "55124b9b-08ba-48a3-b34b-76d8f616d805",
@@ -13864,7 +12631,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -13885,7 +12653,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -13906,7 +12675,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": "\"deletedAt\" IS NULL",
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -13940,9 +12710,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "eee1262f-7a1a-45d0-b957-9ed79862383c",
@@ -14535,7 +13305,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -14556,7 +13327,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -14575,601 +13347,6 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
         "__typename": "ObjectEdge",
         "node": {
           "__typename": "Object",
-          "id": "2f5f0567-c6f1-48f7-bd11-19f316d4395a",
-          "universalIdentifier": "20202020-d65d-4ab9-9344-d77bfb376a3d",
-          "nameSingular": "workflowVersion",
-          "namePlural": "workflowVersions",
-          "isRemote": false,
-          "isActive": true,
-          "isSystem": true,
-          "isUIEditable": true,
-          "isUICreatable": false,
-          "writability": "OPEN",
-          "createdAt": "2026-04-10T08:55:56.200Z",
-          "updatedAt": "2026-04-10T08:55:56.200Z",
-          "labelIdentifierFieldMetadataId": "9b0a0e4e-e140-4cf8-9217-6a4667365c0e",
-          "imageIdentifierFieldMetadataId": null,
-          "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-          "shortcut": null,
-          "isLabelSyncedWithName": false,
-          "isSearchable": false,
-          "duplicateCriteria": null,
-          "labelSingular": "Workflow Version",
-          "labelPlural": "Workflow Versions",
-          "description": "A workflow version",
-          "icon": "IconVersions",
-          "fieldsList": [
-            {
-              "__typename": "Field",
-              "id": "7b8b7264-f3bd-452c-a124-36cfd445e2ae",
-              "universalIdentifier": "20202020-f04a-41a1-8aa1-abcdefabcdef",
-              "type": "UUID",
-              "name": "id",
-              "label": "Id",
-              "description": "Id",
-              "icon": "Icon123",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "uuid",
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "3abd7a9c-89e4-4fc7-9be7-efc6eb9dcade",
-              "universalIdentifier": "20202020-f04b-41a2-9ba2-bcdefabcdefa",
-              "type": "DATE_TIME",
-              "name": "createdAt",
-              "label": "Creation date",
-              "description": "Creation date",
-              "icon": "IconCalendar",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "now",
-              "options": null,
-              "settings": {
-                "displayFormat": "RELATIVE"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "d383580f-aa5e-46ee-b26d-3b9bba78eada",
-              "universalIdentifier": "20202020-f04c-41a3-8ca3-cdefabcdefab",
-              "type": "DATE_TIME",
-              "name": "updatedAt",
-              "label": "Last update",
-              "description": "Last time the record was changed",
-              "icon": "IconCalendarClock",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "now",
-              "options": null,
-              "settings": {
-                "displayFormat": "RELATIVE"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "0642d109-cc6e-455d-beea-d98e3a50cad3",
-              "universalIdentifier": "20202020-f04d-41a4-9da4-defabcdefabc",
-              "type": "DATE_TIME",
-              "name": "deletedAt",
-              "label": "Deleted at",
-              "description": "Date when the record was deleted",
-              "icon": "IconCalendarMinus",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "displayFormat": "RELATIVE"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "61ec3211-98b1-4358-afe0-895fc213e094",
-              "universalIdentifier": "34f592a7-5c13-4c8b-8473-7bef00848b4e",
-              "type": "ACTOR",
-              "name": "createdBy",
-              "label": "Created by",
-              "description": "The creator of the record",
-              "icon": "IconCreativeCommonsSa",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": {
-                "name": "'System'",
-                "source": "'MANUAL'",
-                "workspaceMemberId": null
-              },
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "077ac63d-ff2f-4147-89bd-de0cda7d24d0",
-              "universalIdentifier": "4f8777e6-c5eb-40c6-bb4c-ed9dcf0d81e9",
-              "type": "ACTOR",
-              "name": "updatedBy",
-              "label": "Updated by",
-              "description": "The workspace member who last updated the record",
-              "icon": "IconUserCircle",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": {
-                "name": "'System'",
-                "source": "'MANUAL'",
-                "workspaceMemberId": null
-              },
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "9b0a0e4e-e140-4cf8-9217-6a4667365c0e",
-              "universalIdentifier": "20202020-a12f-4cca-9937-a2e40cc65509",
-              "type": "TEXT",
-              "name": "name",
-              "label": "Name",
-              "description": "The workflow version name",
-              "icon": "IconSettingsAutomation",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": true,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "bb4deb5f-5e6c-4ffb-a622-3fb6c20cf0dd",
-              "universalIdentifier": "20202020-4eae-43e7-86e0-212b41a30b48",
-              "type": "RAW_JSON",
-              "name": "trigger",
-              "label": "Version trigger",
-              "description": "Json object to provide trigger",
-              "icon": "IconSettingsAutomation",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "327839c9-d0d8-4290-9d73-5459e841b330",
-              "universalIdentifier": "20202020-5988-4a64-b94a-1f9b7b989039",
-              "type": "RAW_JSON",
-              "name": "steps",
-              "label": "Version steps",
-              "description": "Json object to provide steps",
-              "icon": "IconSettingsAutomation",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "f92dc9f5-60a4-41c4-9ac5-24074e45d827",
-              "universalIdentifier": "20202020-5a34-440e-8a25-39d8c3d1d4cf",
-              "type": "SELECT",
-              "name": "status",
-              "label": "Version status",
-              "description": "The workflow version status",
-              "icon": "IconStatusChange",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": "'DRAFT'",
-              "options": [
-                {
-                  "id": "20202020-e3fe-4308-bb57-931bb8098aa0",
-                  "color": "yellow",
-                  "label": "Draft",
-                  "value": "DRAFT",
-                  "position": 0
-                },
-                {
-                  "id": "20202020-e9da-428f-8499-bce1b020660b",
-                  "color": "green",
-                  "label": "Active",
-                  "value": "ACTIVE",
-                  "position": 1
-                },
-                {
-                  "id": "20202020-e48d-4159-980d-2cc1235fc918",
-                  "color": "orange",
-                  "label": "Deactivated",
-                  "value": "DEACTIVATED",
-                  "position": 2
-                },
-                {
-                  "id": "20202020-5e5e-48fe-bcd6-7688ec280b30",
-                  "color": "gray",
-                  "label": "Archived",
-                  "value": "ARCHIVED",
-                  "position": 3
-                }
-              ],
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "3f153430-3df5-4a2b-ac8b-625696ee8ec6",
-              "universalIdentifier": "20202020-791d-4950-ab28-0e704767ae1c",
-              "type": "POSITION",
-              "name": "position",
-              "label": "Position",
-              "description": "Workflow version position",
-              "icon": "IconHierarchy2",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": 0,
-              "options": null,
-              "settings": null,
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "57aef547-5017-4550-bed0-b73c917887eb",
-              "universalIdentifier": "20202020-3f17-44ef-b8c1-b282ae8469b2",
-              "type": "TS_VECTOR",
-              "name": "searchVector",
-              "label": "Search vector",
-              "description": "Field used for full-text search",
-              "icon": "IconUser",
-              "isActive": true,
-              "isSystem": true,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "asExpression": "to_tsvector('simple', COALESCE(public.unaccent_immutable(\"name\"), ''))",
-                "generatedType": "STORED"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": null,
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "1a1ee54b-8af0-46f1-b02e-836dc676cd53",
-              "universalIdentifier": "4be90325-f6ca-5931-a977-1194bb4b3d5c",
-              "type": "RELATION",
-              "name": "timelineActivities",
-              "label": "Timeline Activities",
-              "description": "Timeline activities linked to the version",
-              "icon": "IconTimelineEvent",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": false,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "relationType": "ONE_TO_MANY"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "ONE_TO_MANY",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "2f5f0567-c6f1-48f7-bd11-19f316d4395a",
-                  "nameSingular": "workflowVersion",
-                  "namePlural": "workflowVersions"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "bcdaa361-9ee6-4c8e-81c2-711fd330e5b2",
-                  "nameSingular": "timelineActivity",
-                  "namePlural": "timelineActivities"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "1a1ee54b-8af0-46f1-b02e-836dc676cd53",
-                  "name": "timelineActivities"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "0419db16-5fd4-4306-bd1d-ea0b1dde5349",
-                  "name": "target"
-                }
-              },
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "0ffcd8dd-44bb-44d6-bcdb-9f9b50a70c13",
-              "universalIdentifier": "20202020-afa3-46c3-91b0-0631ca6aa1c8",
-              "type": "RELATION",
-              "name": "workflow",
-              "label": "Workflow",
-              "description": "WorkflowVersion workflow",
-              "icon": "IconSettingsAutomation",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "onDelete": "CASCADE",
-                "relationType": "MANY_TO_ONE",
-                "joinColumnName": "workflowId"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "MANY_TO_ONE",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "2f5f0567-c6f1-48f7-bd11-19f316d4395a",
-                  "nameSingular": "workflowVersion",
-                  "namePlural": "workflowVersions"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "a3c473c4-6f08-4fa1-8ece-e429bb3cfce9",
-                  "nameSingular": "workflow",
-                  "namePlural": "workflows"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "0ffcd8dd-44bb-44d6-bcdb-9f9b50a70c13",
-                  "name": "workflow"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "76c53f11-472b-48c6-bb3e-61d052035d09",
-                  "name": "versions"
-                }
-              },
-              "morphRelations": null
-            },
-            {
-              "__typename": "Field",
-              "id": "89b6fc02-8fc4-4095-8083-228aaf435ba5",
-              "universalIdentifier": "20202020-1d08-46df-901a-85045f18099a",
-              "type": "RELATION",
-              "name": "runs",
-              "label": "Runs",
-              "description": "Workflow runs linked to the version.",
-              "icon": "IconRun",
-              "isActive": true,
-              "isSystem": false,
-              "isUIEditable": false,
-              "isNullable": true,
-              "isUnique": false,
-              "isSearchable": false,
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "defaultValue": null,
-              "options": null,
-              "settings": {
-                "relationType": "ONE_TO_MANY"
-              },
-              "isLabelSyncedWithName": false,
-              "morphId": null,
-              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
-              "relation": {
-                "__typename": "Relation",
-                "type": "ONE_TO_MANY",
-                "sourceObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "2f5f0567-c6f1-48f7-bd11-19f316d4395a",
-                  "nameSingular": "workflowVersion",
-                  "namePlural": "workflowVersions"
-                },
-                "targetObjectMetadata": {
-                  "__typename": "Object",
-                  "id": "61d7672d-5c4f-42e1-812e-99eb0a2565de",
-                  "nameSingular": "workflowRun",
-                  "namePlural": "workflowRuns"
-                },
-                "sourceFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "89b6fc02-8fc4-4095-8083-228aaf435ba5",
-                  "name": "runs"
-                },
-                "targetFieldMetadata": {
-                  "__typename": "Field",
-                  "id": "d91e1088-0bcb-4640-9a52-154dad7dd15c",
-                  "name": "workflowVersion"
-                }
-              },
-              "morphRelations": null
-            }
-          ],
-          "searchFieldMetadataList": [],
-          "indexMetadataList": [
-            {
-              "__typename": "Index",
-              "id": "4aa89be1-4a89-4e55-942e-c253a03f15fe",
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "name": "IDX_6dbfc4d091e55b676e5f698c2c2",
-              "indexWhereClause": null,
-              "indexType": "BTREE",
-              "isUnique": false,
-              "isCustom": false,
-              "indexFieldMetadataList": [
-                {
-                  "__typename": "IndexField",
-                  "id": "7a2aebdf-fd13-4d4b-8825-594102423cc8",
-                  "fieldMetadataId": "0ffcd8dd-44bb-44d6-bcdb-9f9b50a70c13",
-                  "createdAt": "2026-04-10T08:55:56.627Z",
-                  "updatedAt": "2026-04-10T08:55:56.627Z",
-                  "order": 0
-                }
-              ]
-            },
-            {
-              "__typename": "Index",
-              "id": "20e8a23d-11d8-45d4-878f-f5fec81218d8",
-              "createdAt": "2026-04-10T08:55:56.200Z",
-              "updatedAt": "2026-04-10T08:55:56.200Z",
-              "name": "IDX_51329bbcdab6618a75361670c26",
-              "indexWhereClause": null,
-              "indexType": "GIN",
-              "isUnique": false,
-              "isCustom": false,
-              "indexFieldMetadataList": [
-                {
-                  "__typename": "IndexField",
-                  "id": "ef2b071b-9091-4179-a618-2508d170627f",
-                  "fieldMetadataId": "57aef547-5017-4550-bed0-b73c917887eb",
-                  "createdAt": "2026-04-10T08:55:56.628Z",
-                  "updatedAt": "2026-04-10T08:55:56.628Z",
-                  "order": 0
-                }
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "__typename": "ObjectEdge",
-        "node": {
-          "__typename": "Object",
           "id": "2e0d7477-8143-4d8f-bc36-2b4f92cbd101",
           "universalIdentifier": "20202020-e674-48e5-a542-72570eee7213",
           "nameSingular": "person",
@@ -15177,9 +13354,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "1b86fb74-25cf-4228-af97-b6a479643407",
@@ -16378,7 +14555,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -16399,7 +14577,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": true,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -16420,7 +14599,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -16446,9 +14626,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "3c551b83-e8c0-4fd0-b43e-a51f0d3a408c",
@@ -16994,7 +15174,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -17015,7 +15196,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -17036,7 +15218,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -17057,7 +15240,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -17083,9 +15267,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "50c85704-9c8e-4e30-8a86-dc6adb756999",
@@ -18161,7 +16345,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -18182,7 +16367,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": true,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -18203,7 +16389,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -18229,9 +16416,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "a5f99b30-3b36-4fbb-935c-bcdf28183247",
@@ -18695,7 +16882,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -18721,9 +16909,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": false,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "d87675ee-1d19-4658-8037-daec3e00b718",
@@ -19240,7 +17428,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -19266,9 +17455,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": true,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:56.200Z",
           "updatedAt": "2026-04-10T08:55:56.200Z",
           "labelIdentifierFieldMetadataId": "dfea27f1-41e8-431e-a78b-5f4960df5600",
@@ -19601,7 +17790,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "dd6a5463-023d-4a10-855f-a4abaf32c1ec",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -19627,9 +17817,9 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
           "isRemote": false,
           "isActive": true,
           "isSystem": false,
+          "isAuditLogged": true,
           "isUIEditable": true,
           "isUICreatable": true,
-          "writability": "OPEN",
           "createdAt": "2026-04-10T08:55:58.898Z",
           "updatedAt": "2026-04-10T08:55:58.898Z",
           "labelIdentifierFieldMetadataId": "d635bcd1-14b8-4224-9617-ca7049448c02",
@@ -20195,7 +18385,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "GIN",
               "isUnique": false,
-              "isCustom": false,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -20216,7 +18407,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": true,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
@@ -20237,7 +18429,8 @@ export const mockedStandardObjectMetadataQueryResult: ObjectMetadataItemsQuery =
               "indexWhereClause": null,
               "indexType": "BTREE",
               "isUnique": false,
-              "isCustom": true,
+              "applicationId": "029204a9-b419-41d8-a483-57690c3d1a18",
+              "isSystemSideEffect": true,
               "indexFieldMetadataList": [
                 {
                   "__typename": "IndexField",
