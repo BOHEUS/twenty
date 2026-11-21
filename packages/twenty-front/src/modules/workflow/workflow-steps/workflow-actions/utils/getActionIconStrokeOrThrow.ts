@@ -7,6 +7,7 @@ export const getActionIconStrokeOrThrow = (
   switch (actionType) {
     case 'CODE':
     case 'LOGIC_FUNCTION':
+    case 'MCP_TOOL':
     case 'HTTP_REQUEST':
     case 'SEND_EMAIL':
     case 'DRAFT_EMAIL':
@@ -20,10 +21,12 @@ export const getActionIconStrokeOrThrow = (
     case 'IF_ELSE':
       return 'sm';
     case 'FORM':
+    case 'SEND_CHAT_MESSAGE':
     case 'ITERATOR':
     case 'EMPTY':
     case 'FILTER':
     case 'DELAY':
+    case 'WAIT_FOR_EVENT':
     case 'AI_AGENT':
     case 'CLASSIFY':
       return undefined;

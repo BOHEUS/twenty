@@ -5,10 +5,10 @@ import { isNonEmptyString } from '@sniptt/guards';
 import { type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { SettingsPath } from 'twenty-shared/types';
-import { getSettingsPath } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { getSettingsPath, isDefined } from 'twenty-shared/utils';
+import { Section } from 'twenty-ui/components/layout';
 import { Status, Tag } from 'twenty-ui/primitives/data-display';
-import { IconRefresh, IconTrash, IconUsers } from 'twenty-ui/icon';
+import { IconRefresh, IconTrash } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 
@@ -29,12 +29,14 @@ import {
   FindOneApplicationDocument,
 } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import { SettingsApplicationConnectionMessageFolders } from '~/pages/settings/applications/components/SettingsApplicationConnectionMessageFolders';
 import { useFindApplicationConnectionProviders } from '~/pages/settings/applications/hooks/useFindApplicationConnectionProviders';
 import {
   type ApplicationConnectedAccount,
   useApplicationConnectedAccounts,
 } from '~/pages/settings/applications/hooks/useApplicationConnectedAccounts';
-import { useTriggerAppOAuth } from '~/pages/settings/applications/hooks/useTriggerAppOAuth';
+import { SettingsSyncFailedStatus } from '@/settings/applications/components/SettingsSyncFailedStatus';
+import { useStartAppConnection } from '@/settings/applications/hooks/useStartAppConnection';
 import { type FrontendApplicationConnectionProvider } from '~/pages/settings/applications/types/FrontendApplicationConnectionProvider';
 
 const DETAIL_GRID_TEMPLATE = '220px 1fr';
@@ -84,7 +86,7 @@ export const SettingsApplicationConnectionDetail = () => {
 
   const navigate = useNavigateSettings();
   const { openDialog } = useDialog();
-  const { triggerAppOAuth } = useTriggerAppOAuth();
+  const { startAppConnection } = useStartAppConnection();
   const { connectionProviders, loading: providersLoading } =
     useFindApplicationConnectionProviders(applicationId);
   const { accounts: connectedAccounts, loading: accountsLoading } =
@@ -113,13 +115,14 @@ export const SettingsApplicationConnectionDetail = () => {
 
   const application = data?.findOneApplication;
   const providerIds = new Set(
-    connectionProviders.map((provider) => provider.id),
+    connectionProviders
+      .filter((provider) => provider.scope === 'WORKSPACE')
+      .map((provider) => provider.id),
   );
   const connection = connectedAccounts.find(
     (account) =>
       account.id === connectedAccountId &&
-      account.connectionProviderId !== null &&
-      account.connectionProviderId !== undefined &&
+      isDefined(account.connectionProviderId) &&
       providerIds.has(account.connectionProviderId),
   );
   const provider = connectionProviders.find(
@@ -134,8 +137,7 @@ export const SettingsApplicationConnectionDetail = () => {
     connection.name.trim() !== ''
       ? connection.name
       : (connection?.handle ?? t`Connection`);
-  const deleteModalId = `delete-application-connection-modal-${connectedAccountId}`;
-  const shareWithWorkspaceModalId = `share-application-connection-with-workspace-modal-${connectedAccountId}`;
+  const removeDialogId = `remove-application-connection-modal-${connectedAccountId}`;
   const applicationSettingsPath = getSettingsPath(
     SettingsPath.ApplicationDetail,
     { applicationId },
@@ -152,30 +154,16 @@ export const SettingsApplicationConnectionDetail = () => {
       return;
     }
 
-    triggerAppOAuth({
+    startAppConnection({
       applicationId,
-      providerName: provider.name,
-      visibility: connection.visibility === 'workspace' ? 'workspace' : 'user',
+      connectionProviderName: provider.name,
+      connectionProviderType: provider.type,
       reconnectingConnectedAccountId: connection.id,
       redirectLocation: detailPath,
     });
   };
 
-  const handleShareWithWorkspace = () => {
-    if (connection === undefined || provider === undefined) {
-      return;
-    }
-
-    triggerAppOAuth({
-      applicationId,
-      providerName: provider.name,
-      visibility: 'workspace',
-      reconnectingConnectedAccountId: connection.id,
-      redirectLocation: detailPath,
-    });
-  };
-
-  const handleDelete = async () => {
+  const handleRemove = async () => {
     if (connection === undefined) {
       return;
     }
@@ -199,7 +187,12 @@ export const SettingsApplicationConnectionDetail = () => {
   }: {
     connection: ApplicationConnectedAccount;
     provider: FrontendApplicationConnectionProvider;
-  }): { key: string; label: string; value: ReactNode }[] => {
+  }): {
+    key: string;
+    label: string;
+    value: ReactNode;
+    isMultiline?: boolean;
+  }[] => {
     const scopes = connection.scopes ?? [];
 
     return [
@@ -214,30 +207,18 @@ export const SettingsApplicationConnectionDetail = () => {
         value: <StyledMonoText>{connection.handle}</StyledMonoText>,
       },
       {
-        key: 'visibility',
-        label: t`Visibility`,
-        value: (
-          <Status
-            color={connection.visibility === 'workspace' ? 'blue' : 'gray'}
-          >
-            {connection.visibility === 'workspace'
-              ? t`Workspace shared`
-              : t`Just for me`}
-          </Status>
-        ),
-      },
-      {
         key: 'status',
         label: t`Status`,
         value: connection.authFailedAt ? (
-          <Status color="red">{t`Reconnect needed`}</Status>
+          <SettingsSyncFailedStatus />
         ) : (
-          <Status color="green">{t`Connected`}</Status>
+          <Status color="green" weight="medium">{t`Connected`}</Status>
         ),
       },
       {
         key: 'scopes',
         label: t`Granted OAuth scopes`,
+        isMultiline: true,
         value:
           scopes.length > 0 ? (
             <StyledScopeList>
@@ -336,19 +317,12 @@ export const SettingsApplicationConnectionDetail = () => {
                     color="accent"
                   >{t`Reconnect`}</Button>
                 )}
-                {connection.visibility !== 'workspace' && (
-                  <Button
-                    startIcon={<IconUsers />}
-                    onClick={() => openDialog(shareWithWorkspaceModalId)}
-                    variant="outline"
-                  >{t`Share with workspace`}</Button>
-                )}
                 <Button
                   startIcon={<IconTrash />}
-                  onClick={() => openDialog(deleteModalId)}
+                  onClick={() => openDialog(removeDialogId)}
                   variant="outline"
                   color="danger"
-                >{t`Disconnect`}</Button>
+                >{t`Remove`}</Button>
               </StyledActions>
             </Section.Root>
             <Section.Root>
@@ -370,7 +344,16 @@ export const SettingsApplicationConnectionDetail = () => {
                       <TableCell color={themeCssVariables.font.color.secondary}>
                         {row.label}
                       </TableCell>
-                      <TableCell minWidth="0" overflow="hidden">
+                      <TableCell
+                        minWidth="0"
+                        overflow="hidden"
+                        height={row.isMultiline ? 'auto' : undefined}
+                        padding={
+                          row.isMultiline
+                            ? `${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[2]}`
+                            : undefined
+                        }
+                      >
                         {row.value}
                       </TableCell>
                     </TableRow>
@@ -378,30 +361,21 @@ export const SettingsApplicationConnectionDetail = () => {
                 </TableSection>
               </Table>
             </Section.Root>
-            <ConfirmationDialog
-              dialogId={deleteModalId}
-              title={t`Disconnect connection?`}
-              subtitle={
-                <Trans>
-                  This will disconnect {connectionLabel} from this application.
-                </Trans>
-              }
-              onConfirmClick={handleDelete}
-              confirmButtonText={t`Disconnect`}
-              loading={isDeleting}
+            <SettingsApplicationConnectionMessageFolders
+              connectedAccountId={connection.id}
             />
             <ConfirmationDialog
-              dialogId={shareWithWorkspaceModalId}
-              title={t`Share with workspace?`}
+              dialogId={removeDialogId}
+              title={t`Remove connection?`}
               subtitle={
                 <Trans>
-                  Sharing this connection with the workspace requires
-                  reconnecting it. You will be redirected to authorize it again.
+                  This permanently removes {connectionLabel}. The app loses
+                  access to it.
                 </Trans>
               }
-              onConfirmClick={handleShareWithWorkspace}
-              confirmButtonText={t`Reconnect and share`}
-              confirmButtonColor="accent"
+              onConfirmClick={handleRemove}
+              confirmButtonText={t`Remove`}
+              loading={isDeleting}
             />
           </>
         )}

@@ -1,222 +1,306 @@
+import { FeatureFlagKey } from 'twenty-shared/types';
+import { v4 } from 'uuid';
+
+import { createEmptyAllFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-all-flat-entity-maps.constant';
+import { createEmptyFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-flat-entity-maps.constant';
 import { SettingsMenuItemExceptionCode } from 'src/engine/metadata-modules/settings-menu-item/settings-menu-item.exception';
+import { type WorkspaceMigrationBuilderAdditionalCacheDataMaps } from 'src/engine/workspace-manager/workspace-migration/types/workspace-migration-builder-additional-cache-data-maps.type';
+import { type MetadataUniversalFlatEntityMaps } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/metadata-universal-flat-entity-maps.type';
+import { type UniversalFlatSettingsMenuItem } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-settings-menu-item.type';
+import { addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/utils/add-universal-flat-entity-to-universal-flat-entity-maps-through-mutation-or-throw.util';
+import { type FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-update-validation-args.type';
 import { FlatSettingsMenuItemValidatorService } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/validators/services/flat-settings-menu-item-validator.service';
 
-type CreationArgs = Parameters<
-  FlatSettingsMenuItemValidatorService['validateFlatSettingsMenuItemCreation']
->[0];
+const WORKSPACE_CUSTOM_APPLICATION_UNIVERSAL_IDENTIFIER =
+  '7f1c2b9e-6a1d-4c55-9a2e-1a6f0d6c2b11';
 
-const APPLICATION_UNIVERSAL_IDENTIFIER = '11111111-1111-4111-8111-111111111111';
-const FRONT_COMPONENT_UNIVERSAL_IDENTIFIER =
-  '22222222-2222-4222-8222-222222222222';
+const WORKSPACE_ID = v4();
+const APPLICATION_UNIVERSAL_IDENTIFIER = v4();
+const OTHER_APPLICATION_UNIVERSAL_IDENTIFIER = v4();
+const now = new Date().toISOString();
 
-const buildSettingsMenuItem = ({
-  universalIdentifier,
-  position,
-  scope = 'WORKSPACE',
-}: {
-  universalIdentifier: string;
-  position: number;
-  scope?: string;
-}) => ({
-  universalIdentifier,
+const SLUG_ERROR_CODES: string[] = [
+  SettingsMenuItemExceptionCode.INVALID_SETTINGS_MENU_ITEM_SLUG,
+  SettingsMenuItemExceptionCode.SETTINGS_MENU_ITEM_SLUG_ALREADY_TAKEN,
+];
+
+let nextPosition = 0;
+
+const buildSettingsMenuItem = (
+  overrides: Partial<UniversalFlatSettingsMenuItem> = {},
+): UniversalFlatSettingsMenuItem => ({
+  universalIdentifier: v4(),
   applicationUniversalIdentifier: APPLICATION_UNIVERSAL_IDENTIFIER,
-  frontComponentUniversalIdentifier: FRONT_COMPONENT_UNIVERSAL_IDENTIFIER,
-  title: `Item ${universalIdentifier}`,
-  icon: 'IconRefresh',
-  position,
-  scope,
+  frontComponentUniversalIdentifier: v4(),
+  title: 'Sync',
+  icon: null,
+  position: nextPosition++,
+  scope: 'WORKSPACE',
+  slug: null,
+  createdAt: now,
+  updatedAt: now,
+  ...overrides,
 });
 
-const buildMaps = (items: ReturnType<typeof buildSettingsMenuItem>[]) => ({
-  byUniversalIdentifier: Object.fromEntries(
-    items.map((item) => [item.universalIdentifier, item]),
-  ),
-});
+const buildSettingsMenuItemMaps = (
+  settingsMenuItems: UniversalFlatSettingsMenuItem[],
+): MetadataUniversalFlatEntityMaps<'settingsMenuItem'> => {
+  const settingsMenuItemMaps = createEmptyFlatEntityMaps();
 
-const buildArgs = ({
-  itemToCreate,
-  optimisticItems,
-  finalItems,
-  remainingItems = [],
-}: {
-  itemToCreate: ReturnType<typeof buildSettingsMenuItem>;
-  optimisticItems: ReturnType<typeof buildSettingsMenuItem>[];
-  finalItems: ReturnType<typeof buildSettingsMenuItem>[];
-  remainingItems?: ReturnType<typeof buildSettingsMenuItem>[];
-}) =>
-  ({
-    flatEntityToValidate: itemToCreate,
-    remainingFlatEntityMapsToValidate: buildMaps(remainingItems),
-    optimisticFlatEntityMapsAndRelatedFlatEntityMaps: {
-      flatSettingsMenuItemMaps: buildMaps(optimisticItems),
-      flatFrontComponentMaps: {
-        byUniversalIdentifier: {
-          [FRONT_COMPONENT_UNIVERSAL_IDENTIFIER]: {
-            universalIdentifier: FRONT_COMPONENT_UNIVERSAL_IDENTIFIER,
-            applicationUniversalIdentifier: APPLICATION_UNIVERSAL_IDENTIFIER,
-          },
-        },
-      },
+  for (const settingsMenuItem of settingsMenuItems) {
+    addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
+      universalFlatEntity: settingsMenuItem,
+      universalFlatEntityMapsToMutate: settingsMenuItemMaps,
+    });
+  }
+
+  return settingsMenuItemMaps;
+};
+
+const buildFeatureFlagsMap =
+  (): WorkspaceMigrationBuilderAdditionalCacheDataMaps['featureFlagsMap'] =>
+    Object.values(FeatureFlagKey).reduce(
+      (featureFlagsMap, key) => ({ ...featureFlagsMap, [key]: false }),
+      {} as WorkspaceMigrationBuilderAdditionalCacheDataMaps['featureFlagsMap'],
+    );
+
+const buildCommonValidationArgs = (
+  existingSettingsMenuItems: UniversalFlatSettingsMenuItem[],
+) => {
+  const optimisticFlatEntityMapsAndRelatedFlatEntityMaps =
+    createEmptyAllFlatEntityMaps();
+
+  for (const settingsMenuItem of existingSettingsMenuItems) {
+    addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
+      universalFlatEntity: settingsMenuItem,
+      universalFlatEntityMapsToMutate:
+        optimisticFlatEntityMapsAndRelatedFlatEntityMaps.flatSettingsMenuItemMaps,
+    });
+  }
+
+  return {
+    additionalCacheDataMaps: {
+      featureFlagsMap: buildFeatureFlagsMap(),
+      billingEntitlements: {},
     },
-    finalFlatEntityMaps: buildMaps(finalItems),
-  }) as unknown as CreationArgs;
+    optimisticFlatEntityMapsAndRelatedFlatEntityMaps,
+    workspaceId: WORKSPACE_ID,
+    buildOptions: {
+      isSystemBuild: false,
+      applicationUniversalIdentifier: APPLICATION_UNIVERSAL_IDENTIFIER,
+      workspaceCustomApplicationUniversalIdentifier:
+        WORKSPACE_CUSTOM_APPLICATION_UNIVERSAL_IDENTIFIER,
+      flatApplicationMaps: { byId: {}, idByUniversalIdentifier: {} },
+    },
+  };
+};
 
-describe('settings menu item position collision on creation', () => {
-  const service = new FlatSettingsMenuItemValidatorService();
+const slugErrorCodes = (result: { errors: { code: string }[] }) =>
+  result.errors
+    .map(({ code }) => code)
+    .filter((code) => SLUG_ERROR_CODES.includes(code));
 
-  // The positions to compare against are the ones the migration ends on, not the
-  // ones it started from: an item moved out of the way in the same sync has already
-  // freed its position by the time the migration runs.
-  it('should accept a position freed by another item moved in the same migration', () => {
-    const itemBeforeMove = buildSettingsMenuItem({
-      universalIdentifier: 'item-moved',
-      position: 1,
-    });
-    const itemAfterMove = buildSettingsMenuItem({
-      universalIdentifier: 'item-moved',
-      position: 2,
-    });
-    const itemToCreate = buildSettingsMenuItem({
-      universalIdentifier: 'item-new',
-      position: 1,
+describe('FlatSettingsMenuItemValidatorService slug validation', () => {
+  const validator = new FlatSettingsMenuItemValidatorService();
+
+  describe('creation', () => {
+    const validate = ({
+      settingsMenuItem,
+      otherSettingsMenuItems = [],
+      queuedCreations = [],
+    }: {
+      settingsMenuItem: UniversalFlatSettingsMenuItem;
+      otherSettingsMenuItems?: UniversalFlatSettingsMenuItem[];
+      queuedCreations?: UniversalFlatSettingsMenuItem[];
+    }) =>
+      validator.validateFlatSettingsMenuItemCreation({
+        ...buildCommonValidationArgs(otherSettingsMenuItems),
+        flatEntityToValidate: settingsMenuItem,
+        finalFlatEntityMaps: buildSettingsMenuItemMaps([
+          settingsMenuItem,
+          ...otherSettingsMenuItems,
+          ...queuedCreations,
+        ]),
+        remainingFlatEntityMapsToValidate:
+          buildSettingsMenuItemMaps(queuedCreations),
+      });
+
+    it('accepts an item without a slug', () => {
+      expect(
+        slugErrorCodes(validate({ settingsMenuItem: buildSettingsMenuItem() })),
+      ).toEqual([]);
     });
 
-    const { errors } = service.validateFlatSettingsMenuItemCreation(
-      buildArgs({
-        itemToCreate,
-        optimisticItems: [itemBeforeMove],
-        finalItems: [itemAfterMove, itemToCreate],
-      }),
+    it('accepts a kebab-case slug', () => {
+      expect(
+        slugErrorCodes(
+          validate({
+            settingsMenuItem: buildSettingsMenuItem({ slug: 'sync-settings' }),
+          }),
+        ),
+      ).toEqual([]);
+    });
+
+    it.each(['Sync', 'sync_settings', 'sync--settings', 'a'.repeat(65)])(
+      'rejects the malformed slug "%s"',
+      (slug) => {
+        expect(
+          slugErrorCodes(
+            validate({ settingsMenuItem: buildSettingsMenuItem({ slug }) }),
+          ),
+        ).toEqual([
+          SettingsMenuItemExceptionCode.INVALID_SETTINGS_MENU_ITEM_SLUG,
+        ]);
+      },
     );
 
-    expect(errors).toEqual([]);
+    it.each(['general', 'variables', '7d48ab00-8e9c-408b-b7ea-8e752c59ee7a'])(
+      'rejects the reserved slug "%s"',
+      (slug) => {
+        expect(
+          slugErrorCodes(
+            validate({ settingsMenuItem: buildSettingsMenuItem({ slug }) }),
+          ),
+        ).toEqual([
+          SettingsMenuItemExceptionCode.INVALID_SETTINGS_MENU_ITEM_SLUG,
+        ]);
+      },
+    );
+
+    it('rejects a slug already used by an item of the same application in another scope', () => {
+      expect(
+        slugErrorCodes(
+          validate({
+            settingsMenuItem: buildSettingsMenuItem({ slug: 'sync' }),
+            otherSettingsMenuItems: [
+              buildSettingsMenuItem({ slug: 'sync', scope: 'USER' }),
+            ],
+          }),
+        ),
+      ).toEqual([
+        SettingsMenuItemExceptionCode.SETTINGS_MENU_ITEM_SLUG_ALREADY_TAKEN,
+      ]);
+    });
+
+    it('accepts a slug used by another application', () => {
+      expect(
+        slugErrorCodes(
+          validate({
+            settingsMenuItem: buildSettingsMenuItem({ slug: 'sync' }),
+            otherSettingsMenuItems: [
+              buildSettingsMenuItem({
+                slug: 'sync',
+                applicationUniversalIdentifier:
+                  OTHER_APPLICATION_UNIVERSAL_IDENTIFIER,
+              }),
+            ],
+          }),
+        ),
+      ).toEqual([]);
+    });
+
+    it('reports a slug shared by two new items only once, on the later one', () => {
+      const firstSettingsMenuItem = buildSettingsMenuItem({ slug: 'sync' });
+      const secondSettingsMenuItem = buildSettingsMenuItem({ slug: 'sync' });
+
+      expect(
+        slugErrorCodes(
+          validate({
+            settingsMenuItem: firstSettingsMenuItem,
+            queuedCreations: [secondSettingsMenuItem],
+          }),
+        ),
+      ).toEqual([]);
+      expect(
+        slugErrorCodes(
+          validate({
+            settingsMenuItem: secondSettingsMenuItem,
+            otherSettingsMenuItems: [firstSettingsMenuItem],
+          }),
+        ),
+      ).toEqual([
+        SettingsMenuItemExceptionCode.SETTINGS_MENU_ITEM_SLUG_ALREADY_TAKEN,
+      ]);
+    });
   });
 
-  it('should reject a position another item still holds in the final state', () => {
-    const stayingItem = buildSettingsMenuItem({
-      universalIdentifier: 'item-staying',
-      position: 1,
-    });
-    const itemToCreate = buildSettingsMenuItem({
-      universalIdentifier: 'item-new',
-      position: 1,
-    });
+  describe('update', () => {
+    const validate = ({
+      settingsMenuItem,
+      flatEntityUpdate,
+      otherSettingsMenuItems = [],
+    }: {
+      settingsMenuItem: UniversalFlatSettingsMenuItem;
+      flatEntityUpdate: FlatEntityUpdateValidationArgs<'settingsMenuItem'>['flatEntityUpdate'];
+      otherSettingsMenuItems?: UniversalFlatSettingsMenuItem[];
+    }) =>
+      validator.validateFlatSettingsMenuItemUpdate({
+        ...buildCommonValidationArgs([
+          settingsMenuItem,
+          ...otherSettingsMenuItems,
+        ]),
+        finalFlatEntityMaps: buildSettingsMenuItemMaps([
+          { ...settingsMenuItem, ...flatEntityUpdate },
+          ...otherSettingsMenuItems,
+        ]),
+        flatEntityUpdate,
+        universalIdentifier: settingsMenuItem.universalIdentifier,
+      });
 
-    const { errors } = service.validateFlatSettingsMenuItemCreation(
-      buildArgs({
-        itemToCreate,
-        optimisticItems: [stayingItem],
-        finalItems: [stayingItem, itemToCreate],
-      }),
-    );
-
-    expect(errors).toHaveLength(1);
-    expect(errors[0].code).toBe(
-      SettingsMenuItemExceptionCode.SETTINGS_MENU_ITEM_POSITION_ALREADY_TAKEN,
-    );
-  });
-
-  // Both items are in the final state from the start, so comparing against it
-  // naively reports the clash twice; the sync must surface it once.
-  it('should report a position shared by two new items once, on the later one', () => {
-    const firstItem = buildSettingsMenuItem({
-      universalIdentifier: 'item-first',
-      position: 1,
-    });
-    const secondItem = buildSettingsMenuItem({
-      universalIdentifier: 'item-second',
-      position: 1,
-    });
-    const finalItems = [firstItem, secondItem];
-
-    const firstResult = service.validateFlatSettingsMenuItemCreation(
-      buildArgs({
-        itemToCreate: firstItem,
-        optimisticItems: [],
-        finalItems,
-        remainingItems: [secondItem],
-      }),
-    );
-    const secondResult = service.validateFlatSettingsMenuItemCreation(
-      buildArgs({
-        itemToCreate: secondItem,
-        optimisticItems: [firstItem],
-        finalItems,
-        remainingItems: [],
-      }),
-    );
-
-    expect(firstResult.errors).toEqual([]);
-    expect(secondResult.errors).toHaveLength(1);
-    expect(secondResult.errors[0].code).toBe(
-      SettingsMenuItemExceptionCode.SETTINGS_MENU_ITEM_POSITION_ALREADY_TAKEN,
-    );
-  });
-});
-
-describe('settings menu item input validation on creation', () => {
-  const service = new FlatSettingsMenuItemValidatorService();
-
-  it('should accept an item whose scope and position are both usable', () => {
-    const itemToCreate = buildSettingsMenuItem({
-      universalIdentifier: 'item-new',
-      position: 1,
+    it('rejects a reserved slug', () => {
+      expect(
+        slugErrorCodes(
+          validate({
+            settingsMenuItem: buildSettingsMenuItem(),
+            flatEntityUpdate: { slug: 'general' },
+          }),
+        ),
+      ).toEqual([
+        SettingsMenuItemExceptionCode.INVALID_SETTINGS_MENU_ITEM_SLUG,
+      ]);
     });
 
-    const { errors } = service.validateFlatSettingsMenuItemCreation(
-      buildArgs({
-        itemToCreate,
-        optimisticItems: [],
-        finalItems: [itemToCreate],
-      }),
-    );
-
-    expect(errors).toEqual([]);
-  });
-
-  it('should reject a scope the database enum does not accept', () => {
-    const itemToCreate = buildSettingsMenuItem({
-      universalIdentifier: 'item-new',
-      position: 1,
-      scope: 'GLOBAL',
+    it('rejects a slug another item of the application ends up with', () => {
+      expect(
+        slugErrorCodes(
+          validate({
+            settingsMenuItem: buildSettingsMenuItem(),
+            flatEntityUpdate: { slug: 'sync' },
+            otherSettingsMenuItems: [buildSettingsMenuItem({ slug: 'sync' })],
+          }),
+        ),
+      ).toEqual([
+        SettingsMenuItemExceptionCode.SETTINGS_MENU_ITEM_SLUG_ALREADY_TAKEN,
+      ]);
     });
 
-    const { errors } = service.validateFlatSettingsMenuItemCreation(
-      buildArgs({
-        itemToCreate,
-        optimisticItems: [],
-        finalItems: [itemToCreate],
-      }),
-    );
+    it('accepts taking a slug another item releases in the same migration', () => {
+      const releasingSettingsMenuItem = buildSettingsMenuItem({
+        slug: 'sync',
+      });
 
-    expect(errors).toHaveLength(1);
-    expect(errors[0].code).toBe(
-      SettingsMenuItemExceptionCode.INVALID_SETTINGS_MENU_ITEM_INPUT,
-    );
-    expect(errors[0].message).toContain('scope');
-  });
+      expect(
+        slugErrorCodes(
+          validate({
+            settingsMenuItem: buildSettingsMenuItem(),
+            flatEntityUpdate: { slug: 'sync' },
+            otherSettingsMenuItems: [
+              { ...releasingSettingsMenuItem, slug: 'legacy-sync' },
+            ],
+          }),
+        ),
+      ).toEqual([]);
+    });
 
-  it('should reject a position that is not a number', () => {
-    const itemToCreate = {
-      ...buildSettingsMenuItem({
-        universalIdentifier: 'item-new',
-        position: 1,
-      }),
-      position: '1' as unknown as number,
-    };
-
-    const { errors } = service.validateFlatSettingsMenuItemCreation(
-      buildArgs({
-        itemToCreate,
-        optimisticItems: [],
-        finalItems: [itemToCreate],
-      }),
-    );
-
-    expect(errors).toHaveLength(1);
-    expect(errors[0].code).toBe(
-      SettingsMenuItemExceptionCode.INVALID_SETTINGS_MENU_ITEM_INPUT,
-    );
-    expect(errors[0].message).toContain('position must be a number');
+    it('accepts clearing the slug', () => {
+      expect(
+        slugErrorCodes(
+          validate({
+            settingsMenuItem: buildSettingsMenuItem({ slug: 'sync' }),
+            flatEntityUpdate: { slug: null },
+          }),
+        ),
+      ).toEqual([]);
+    });
   });
 });

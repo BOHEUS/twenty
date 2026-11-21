@@ -2,6 +2,7 @@ import { buildAdminUsageLimitRows } from '@/settings/admin-panel/utils/buildAdmi
 import {
   UsageOperationType,
   UsageResourceType,
+  UsageUnit,
   type WorkspaceUsageLimitsQuery,
 } from '~/generated-admin/graphql';
 
@@ -17,7 +18,7 @@ const buildDefault = (
   limitKind: 'stock',
   periodCount: 1,
   periodUnit: 'lifetime',
-  meter: 'bytes',
+  unit: UsageUnit.BYTE,
   limitValue: 100,
   isOverridable: true,
   overriddenByUsageLimitId: null,
@@ -33,6 +34,7 @@ const buildLimit = (
   periodUnit: 'lifetime',
   limitValue: 50,
   burstValue: null,
+  endsAt: null,
   ...overrides,
 });
 
@@ -74,6 +76,17 @@ describe('buildAdminUsageLimitRows', () => {
     expect(row.defaultValue).toBe(100);
   });
 
+  it('carries the end date of the override', () => {
+    const [row] = buildAdminUsageLimitRows(
+      buildWorkspaceUsageLimits({
+        defaults: [buildDefault({ overriddenByUsageLimitId: 'limit-1' })],
+        limits: [buildLimit({ endsAt: '2026-12-31T00:00:00.000Z' })],
+      }),
+    );
+
+    expect(row.endsAt).toBe('2026-12-31T00:00:00.000Z');
+  });
+
   it('shows the instance value on a default nothing replaced', () => {
     const [row] = buildAdminUsageLimitRows(
       buildWorkspaceUsageLimits({ defaults: [buildDefault()] }),
@@ -82,6 +95,17 @@ describe('buildAdminUsageLimitRows', () => {
     expect(row.isOverridden).toBe(false);
     expect(row.usageLimitId).toBeNull();
     expect(row.limitValue).toBe(100);
+  });
+
+  it('keeps a default without a value empty instead of showing 0', () => {
+    const [row] = buildAdminUsageLimitRows(
+      buildWorkspaceUsageLimits({
+        defaults: [buildDefault({ limitValue: null })],
+      }),
+    );
+
+    expect(row.defaultValue).toBeNull();
+    expect(row.limitValue).toBeNull();
   });
 
   it('leaves a default writable when the server named no row for it', () => {
@@ -103,7 +127,7 @@ describe('buildAdminUsageLimitRows', () => {
         defaults: [
           buildDefault({
             limitKind: 'speed',
-            meter: 'quantity',
+            unit: UsageUnit.REQUEST,
             periodUnit: 'second',
             periodCount: 30,
             overriddenByUsageLimitId: 'limit-1',
@@ -136,7 +160,7 @@ describe('buildAdminUsageLimitRows', () => {
             operationType: UsageOperationType.API_REQUEST,
             spenderType: 'apiKey',
             limitKind: 'speed',
-            meter: 'quantity',
+            unit: UsageUnit.REQUEST,
             periodUnit: 'second',
             periodCount: 60,
             overriddenByUsageLimitId: 'limit-1',
@@ -157,7 +181,7 @@ describe('buildAdminUsageLimitRows', () => {
             resourceType: UsageResourceType.WEBHOOK,
             operationType: UsageOperationType.WEBHOOK_CALL,
             limitKind: 'speed',
-            meter: 'quantity',
+            unit: UsageUnit.REQUEST,
           }),
           buildDefault(),
         ],

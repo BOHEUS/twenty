@@ -1,12 +1,13 @@
-import { DEFAULT_ADVANCED_FILTER_DROPDOWN_OFFSET } from '@/object-record/advanced-filter/constants/DefaultAdvancedFilterDropdownOffset';
+import { DEFAULT_ADVANCED_FILTER_DROPDOWN_SIDE_OFFSET } from '@/object-record/advanced-filter/constants/DefaultAdvancedFilterDropdownSideOffset';
 import { useRemoveStepFilterGroup } from '@/workflow/workflow-steps/filters/hooks/useRemoveStepFilterGroup';
 import { WorkflowStepFilterContext } from '@/workflow/workflow-steps/filters/states/context/WorkflowStepFilterContext';
 import { useContext } from 'react';
-import { t } from '@lingui/core/macro';
 import { IconDotsVertical, IconTrash } from 'twenty-ui/icon';
 import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
-import { Dropdown, IconButton } from 'twenty-ui/components';
+import { IconButton } from 'twenty-ui/components/input';
+import { Dropdown } from 'twenty-ui/components/navigation';
+import { useLingui } from '@lingui/react/macro';
 
 type WorkflowStepFilterGroupOptionsDropdownProps = {
   stepFilterGroupId: string;
@@ -15,6 +16,7 @@ type WorkflowStepFilterGroupOptionsDropdownProps = {
 export const WorkflowStepFilterGroupOptionsDropdown = ({
   stepFilterGroupId,
 }: WorkflowStepFilterGroupOptionsDropdownProps) => {
+  const { t } = useLingui();
   const { readonly } = useContext(WorkflowStepFilterContext);
 
   const { removeStepFilterGroup } = useRemoveStepFilterGroup();
@@ -38,7 +40,7 @@ export const WorkflowStepFilterGroupOptionsDropdown = ({
       />
       <DropdownContent
         align="end"
-        sideOffset={DEFAULT_ADVANCED_FILTER_DROPDOWN_OFFSET.y}
+        sideOffset={DEFAULT_ADVANCED_FILTER_DROPDOWN_SIDE_OFFSET}
       >
         <Dropdown.Section>
           <Dropdown.ActionItem

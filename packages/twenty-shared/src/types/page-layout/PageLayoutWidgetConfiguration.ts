@@ -102,8 +102,7 @@ export type FieldConfiguration = {
   fieldMetadataId: string;
   fieldDisplayMode: 'CARD' | 'EDITOR' | 'FIELD' | 'VIEW' | 'TABLE';
   viewId?: string;
-  // One-to-many relation field on the relation target object, to list records
-  // two relation hops away (e.g. Company -> People -> Owned opportunities)
+  // One-to-many relation field on the target object, for records two hops away (e.g. Company -> People -> Owned opportunities).
   nestedRelationFieldMetadataId?: string | null;
   isUIEditable?: boolean;
 };
@@ -127,8 +126,9 @@ export type FieldRichTextConfiguration = {
 export type StandaloneRichTextConfiguration = {
   configurationType: 'STANDALONE_RICH_TEXT';
   body: {
+    tiptap?: string | null;
+    markdown?: string | null;
     blocknote?: string | null;
-    markdown: string | null;
   };
 };
 

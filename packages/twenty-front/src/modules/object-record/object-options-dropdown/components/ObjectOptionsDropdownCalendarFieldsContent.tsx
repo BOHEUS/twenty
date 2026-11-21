@@ -1,4 +1,4 @@
-import { ListItem } from 'twenty-ui/primitives/navigation';
+import { ListItemButton } from 'twenty-ui/components/navigation';
 import { SelectOptionIcon } from '@/ui/input/components/SelectOptionIcon';
 import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
 import { useObjectOptionsDropdown } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsDropdown';
@@ -14,7 +14,8 @@ import { useUpdateCurrentView } from '@/views/hooks/useUpdateCurrentView';
 import { useGetAvailableFieldsForCalendar } from '@/views/view-picker/hooks/useGetAvailableFieldsForCalendar';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
-import { IconChevronLeft, IconSettings, useIcons } from 'twenty-ui/icon';
+import { IconChevronLeft, IconSettings } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 
 export const ObjectOptionsDropdownCalendarFieldsContent = () => {
   const { t } = useLingui();
@@ -81,7 +82,7 @@ export const ObjectOptionsDropdownCalendarFieldsContent = () => {
       <DropdownMenuSeparator />
       <DropdownMenuItemsContainer>
         {filteredCalendarFields.map((fieldMetadataItem) => (
-          <ListItem
+          <ListItemButton
             key={fieldMetadataItem.id}
             onClick={() => handleCalendarFieldChange(fieldMetadataItem)}
             role="option"
@@ -93,18 +94,18 @@ export const ObjectOptionsDropdownCalendarFieldsContent = () => {
             }
           >
             {fieldMetadataItem.label}
-          </ListItem>
+          </ListItemButton>
         ))}
       </DropdownMenuItemsContainer>
       <DropdownMenuSeparator />
       <DropdownMenuItemsContainer scrollable={false}>
-        <ListItem
+        <ListItemButton
           startIcon={<IconSettings />}
           onClick={() => {
             navigateToDateFieldSettings();
             closeDropdown();
           }}
-        >{t`Create date field`}</ListItem>
+        >{t`Create date field`}</ListItemButton>
       </DropdownMenuItemsContainer>
     </LegacyDropdownContent>
   );

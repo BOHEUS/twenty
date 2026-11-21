@@ -30,6 +30,7 @@ export type ClientConfig = {
   captcha: Captcha;
   defaultSubdomain?: string;
   frontDomain: string;
+  serverUrl: string;
   publicFunctionDomain?: string | null;
   isAttachmentPreviewEnabled: boolean;
   isConfigVariablesInDbEnabled: boolean;
@@ -54,4 +55,5 @@ export type ClientConfig = {
   allowRequestsToTwentyIcons: boolean;
   maintenance?: ClientConfigMaintenanceMode;
   enterpriseInstanceType?: EnterpriseInstanceType;
+  webPushVapidPublicKey?: string | null;
 };

@@ -1,21 +1,27 @@
 import { useState } from 'react';
 import { t } from 'twenty-sdk/front-component';
 import { isDefined } from 'twenty-sdk/utils';
-import { Info } from 'twenty-ui/feedback';
-import { Section } from 'twenty-ui/layout';
-import { H2Title } from 'twenty-ui/typography';
+import { InlineBanner } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 
 import { GranolaFolderPicker } from 'src/front-components/components/GranolaFolderPicker';
 import { GranolaFolderPolicyRadioCard } from 'src/front-components/components/GranolaFolderPolicyRadioCard';
 import { OnMountEffect } from 'src/front-components/components/OnMountEffect';
 import { StyledSettingsSectionStack } from 'src/front-components/components/StyledSettingsSectionStack';
+import { type GranolaFoldersResult } from 'src/front-components/types/granola-folders-result.type';
 import { type GranolaStoredFolderSelection } from 'src/front-components/types/granola-stored-folder-selection.type';
 import { fetchGranolaFolderSelectionOrThrow } from 'src/front-components/utils/fetch-granola-folder-selection-or-throw.util';
+import { fetchGranolaFoldersOrThrow } from 'src/front-components/utils/fetch-granola-folders-or-throw.util';
+import { getGranolaWorkspaceFolderPolicyOptions } from 'src/front-components/utils/get-granola-workspace-folder-policy-options.util';
 
 type GranolaStoredSelectionState =
   | { step: 'LOADING' }
   | { step: 'FAILED' }
-  | { step: 'LOADED'; storedSelection: GranolaStoredFolderSelection };
+  | {
+      step: 'LOADED';
+      storedSelection: GranolaStoredFolderSelection;
+      folderListRequest: Promise<GranolaFoldersResult | undefined>;
+    };
 
 export const GranolaFolderSection = () => {
   const [storedSelectionState, setStoredSelectionState] =
@@ -24,21 +30,24 @@ export const GranolaFolderSection = () => {
   const loadStoredSelection = async () => {
     setStoredSelectionState({ step: 'LOADING' });
 
+    const folderListRequest = fetchGranolaFoldersOrThrow().catch(
+      () => undefined,
+    );
     const storedSelection = await fetchGranolaFolderSelectionOrThrow().catch(
       () => undefined,
     );
 
     setStoredSelectionState(
       isDefined(storedSelection)
-        ? { step: 'LOADED', storedSelection }
+        ? { step: 'LOADED', storedSelection, folderListRequest }
         : { step: 'FAILED' },
     );
   };
 
   return (
-    <Section>
+    <Section.Root>
       <OnMountEffect onMount={loadStoredSelection} />
-      <H2Title
+      <Section.Header
         title={t('Folders')}
         description={t(
           'Choose which Granola folders feed live sync and history imports.',
@@ -46,20 +55,31 @@ export const GranolaFolderSection = () => {
       />
       <StyledSettingsSectionStack>
         {storedSelectionState.step === 'LOADING' && (
-          <GranolaFolderPolicyRadioCard policy={undefined} />
-        )}
-        {storedSelectionState.step === 'LOADED' && (
-          <GranolaFolderPicker {...storedSelectionState.storedSelection} />
-        )}
-        {storedSelectionState.step === 'FAILED' && (
-          <Info
-            accent="danger"
-            text={t('Could not load your Granola folders.')}
-            buttonTitle={t('Retry')}
-            onClick={loadStoredSelection}
+          <GranolaFolderPolicyRadioCard
+            options={getGranolaWorkspaceFolderPolicyOptions()}
+            policy={undefined}
           />
         )}
+        {storedSelectionState.step === 'LOADED' && (
+          <GranolaFolderPicker
+            {...storedSelectionState.storedSelection}
+            folderListRequest={storedSelectionState.folderListRequest}
+          />
+        )}
+        {storedSelectionState.step === 'FAILED' && (
+          <InlineBanner
+            layout="compact"
+            status="error"
+            action={
+              <InlineBanner.Action onClick={loadStoredSelection}>
+                {t('Retry')}
+              </InlineBanner.Action>
+            }
+          >
+            {t('Could not load your Granola folders.')}
+          </InlineBanner>
+        )}
       </StyledSettingsSectionStack>
-    </Section>
+    </Section.Root>
   );
 };

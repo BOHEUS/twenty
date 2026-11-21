@@ -39,8 +39,7 @@ export class ResendDriver implements EmailingDomainDriverInterface {
     private readonly unsubscribeContentService: UnsubscribeContentService,
   ) {}
 
-  // Resend has no per-workspace resources: domains are account-level and
-  // workspace attribution travels on each send as a tag.
+  // Resend domains are account-level; workspace attribution travels on each send as a tag.
   async provisionWorkspace(workspaceId: string): Promise<void> {
     this.logger.log(
       `No Resend resources to provision for workspace ${workspaceId}`,
@@ -55,6 +54,12 @@ export class ResendDriver implements EmailingDomainDriverInterface {
 
   async registerDomain(_input: EmailingDomainResourceInput): Promise<void> {
     // the return-path subdomain is configured by Resend at domain creation
+  }
+
+  async retryVerification(input: EmailingDomainResourceInput): Promise<void> {
+    this.logger.log(
+      `Resend re-verifies ${input.domain} on every verifyDomain call, nothing to retry`,
+    );
   }
 
   async verifyDomain(
@@ -101,21 +106,9 @@ export class ResendDriver implements EmailingDomainDriverInterface {
   }
 
   async cleanupDomain(input: EmailingDomainResourceInput): Promise<void> {
-    const domain = await this.findDomainByName(input.domain);
-
-    if (!isDefined(domain)) {
-      return;
-    }
-
-    await this.resendApiClientService.deleteDomain(domain.id).catch((error) => {
-      if (
-        error instanceof EmailingDomainDriverException &&
-        error.code === EmailingDomainDriverExceptionCode.NOT_FOUND
-      ) {
-        return;
-      }
-      throw error;
-    });
+    this.logger.log(
+      `Keeping Resend domain ${input.domain}: Resend domains are account-level and may be used by other applications`,
+    );
   }
 
   async sendEmail(

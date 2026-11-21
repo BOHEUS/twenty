@@ -2,13 +2,9 @@ import { Injectable } from '@nestjs/common';
 
 import { msg } from '@lingui/core/macro';
 
-import {
-  QUERY_MAX_RECORDS,
-  QUERY_MAX_RECORDS_FROM_RELATION,
-} from 'twenty-shared/constants';
-import { ObjectRecord, OrderByDirection } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
-import { FindOptionsRelations, ObjectLiteral } from 'typeorm';
+import { QUERY_MAX_RECORDS_FROM_RELATION } from 'twenty-shared/constants';
+import { ObjectRecord } from 'twenty-shared/types';
+import { isDefined, isEmptyObject } from 'twenty-shared/utils';
 
 import {
   ObjectRecordFilter,
@@ -16,14 +12,19 @@ import {
 } from 'src/engine/api/graphql/workspace-query-builder/interfaces/object-record.interface';
 
 import { CommonBaseQueryRunnerService } from 'src/engine/api/common/common-query-runners/common-base-query-runner.service';
+import { DEFAULT_ID_ORDER_BY_TIEBREAKER } from 'src/engine/api/common/constants/default-id-order-by-tiebreaker.constant';
 import {
   CommonQueryRunnerException,
   CommonQueryRunnerExceptionCode,
 } from 'src/engine/api/common/common-query-runners/errors/common-query-runner.exception';
-import { STANDARD_ERROR_MESSAGE } from 'src/engine/api/common/common-query-runners/errors/standard-error-message.constant';
+import { STANDARD_ERROR_MESSAGE } from 'src/engine/constants/standard-error-message.constant';
+import { computeMaxFieldCountPerRecord } from 'src/engine/api/common/common-query-runners/utils/compute-max-field-count-per-record.util';
+import { getFindManyPageSize } from 'src/engine/api/common/common-query-runners/utils/get-find-many-page-size.util';
 import { CommonBaseQueryRunnerContext } from 'src/engine/api/common/types/common-base-query-runner-context.type';
+import { type CommonQueryRunResult } from 'src/engine/api/common/types/common-query-result.type';
 import { CommonExtendedQueryRunnerContext } from 'src/engine/api/common/types/common-extended-query-runner-context.type';
 import { CommonFindManyOutput } from 'src/engine/api/common/types/common-find-many-output.type';
+import { type CommonAggregatedValues } from 'src/engine/api/common/types/common-aggregated-values.type';
 import {
   CommonExtendedInput,
   CommonInput,
@@ -34,21 +35,18 @@ import { CommonSelectedFieldsResult } from 'src/engine/api/common/types/common-s
 import { buildCursorPage } from 'src/engine/api/utils/build-cursor-page.util';
 import { getNonToOneJoinAliases } from 'src/engine/api/common/utils/get-non-to-one-join-aliases.util';
 import { getPageInfo } from 'src/engine/api/common/utils/get-page-info.util';
-import { ProcessAggregateHelper } from 'src/engine/api/graphql/graphql-query-runner/helpers/process-aggregate.helper';
+import { ProcessAggregateHelper } from 'src/engine/api/common/utils/process-aggregate.helper';
 import { type WorkspaceSelectQueryBuilder } from 'src/engine/twenty-orm/query-builder/workspace-select-query-builder';
-import { buildColumnsToSelect } from 'src/engine/api/graphql/graphql-query-runner/utils/build-columns-to-select';
-import { buildOrderByColumnsToSelect } from 'src/engine/api/graphql/graphql-query-runner/utils/build-order-by-columns-to-select';
-import { getCursor } from 'src/engine/api/graphql/graphql-query-runner/utils/cursors.util';
+import { buildColumnsToSelect } from 'src/engine/api/common/utils/build-columns-to-select';
+import { buildOrderByColumnsToSelect } from 'src/engine/api/common/utils/build-order-by-columns-to-select';
+import { getCursor } from 'src/engine/api/common/utils/cursors.util';
 import { buildOrderByValuesByRecordId } from 'src/engine/api/utils/build-order-by-values-by-record-id.util';
-import { computeCursorArgFilter } from 'src/engine/api/utils/compute-cursor-arg-filter.utils';
+import { computeCursorArgFilter } from 'src/engine/api/utils/compute-cursor-arg-filter.util';
 import {
   buildOrderByFromLeaves,
   resolveOrderByLeaves,
 } from 'src/engine/api/utils/resolve-order-by-leaves.utils';
-import { WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
-import { FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
-import { type OrmFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/orm-flat-field-metadata.type';
-import { FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
+import { type CommonQueryResultProcessingArgs } from 'src/engine/api/common/types/common-query-result-processing-args.type';
 
 @Injectable()
 export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerService<
@@ -61,10 +59,8 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
   async run(
     args: CommonExtendedInput<FindManyQueryArgs>,
     queryRunnerContext: CommonExtendedQueryRunnerContext,
-  ): Promise<CommonFindManyOutput> {
+  ): Promise<CommonQueryRunResult<CommonFindManyOutput>> {
     const {
-      authContext,
-      rolePermissionConfig,
       flatObjectMetadata,
       flatObjectMetadataMaps,
       flatFieldMetadataMaps,
@@ -78,26 +74,24 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
 
     const aggregateQueryBuilder = queryBuilder.clone();
 
-    let appliedFilters = args.filter ?? ({} as ObjectRecordFilter);
+    const appliedFilters: Partial<ObjectRecordFilter> = args.filter ?? {};
 
-    commonQueryParser.applyFilterToBuilder(
-      aggregateQueryBuilder,
-      flatObjectMetadata.nameSingular,
-      appliedFilters,
-    );
+    commonQueryParser.applyFilterToBuilder({
+      queryBuilder: aggregateQueryBuilder,
+      objectNameSingular: flatObjectMetadata.nameSingular,
+      recordFilter: appliedFilters,
+    });
 
-    commonQueryParser.applyDeletedAtToBuilder(
-      aggregateQueryBuilder,
-      appliedFilters,
-    );
+    commonQueryParser.applyDeletedAtToBuilder({
+      queryBuilder: aggregateQueryBuilder,
+      recordFilter: appliedFilters,
+    });
 
-    // Normalizing to deduplicated leaves makes the appended id tie-breaker
-    // yield to a caller-provided id ordering, and guarantees the SQL scan
-    // order and the keyset conditions derive from the same list
+    // Deduplicated leaves let a caller id ordering override the tie-breaker and keep scan order and keyset conditions in sync
     const orderByLeaves = resolveOrderByLeaves({
       orderBy: [
         ...(args.orderBy ?? []),
-        { id: OrderByDirection.AscNullsFirst },
+        DEFAULT_ID_ORDER_BY_TIEBREAKER,
       ] as ObjectRecordOrderBy,
       flatObjectMetadata,
       flatObjectMetadataMaps,
@@ -107,6 +101,12 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
     const orderByWithIdCondition = buildOrderByFromLeaves(orderByLeaves);
 
     const isForwardPagination = !isDefined(args.before);
+
+    commonQueryParser.applyFilterToBuilder({
+      queryBuilder,
+      objectNameSingular: flatObjectMetadata.nameSingular,
+      recordFilter: appliedFilters,
+    });
 
     const cursor = getCursor(args);
 
@@ -121,47 +121,42 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
       });
 
       if (cursorArgFilter.length > 0) {
-        appliedFilters = (args.filter && Object.keys(args.filter).length > 0
-          ? {
-              and: [args.filter, { or: cursorArgFilter }],
-            }
-          : { or: cursorArgFilter }) as unknown as ObjectRecordFilter;
+        commonQueryParser.applyCursorFilterToBuilder({
+          queryBuilder,
+          objectNameSingular: flatObjectMetadata.nameSingular,
+          cursorFilter: { or: cursorArgFilter },
+        });
       }
     }
 
-    commonQueryParser.applyFilterToBuilder(
+    const parsedOrderBy = commonQueryParser.applyOrderToBuilder({
       queryBuilder,
-      flatObjectMetadata.nameSingular,
-      appliedFilters,
-    );
-
-    const parsedOrderBy = commonQueryParser.applyOrderToBuilder(
-      queryBuilder,
-      orderByWithIdCondition,
-      flatObjectMetadata.nameSingular,
+      orderBy: orderByWithIdCondition,
+      objectNameSingular: flatObjectMetadata.nameSingular,
       isForwardPagination,
-    );
+    });
 
-    commonQueryParser.applyDeletedAtToBuilder(queryBuilder, appliedFilters);
+    commonQueryParser.applyDeletedAtToBuilder({
+      queryBuilder,
+      recordFilter: appliedFilters,
+    });
 
     ProcessAggregateHelper.addSelectedAggregatedFieldsQueriesToQueryBuilder({
-      selectedAggregatedFields: args.selectedFieldsResult.aggregate,
+      selectedAggregatedFields: args.selectedFieldsResult.aggregates,
       queryBuilder: aggregateQueryBuilder,
       objectMetadataNameSingular: flatObjectMetadata.nameSingular,
     });
 
-    const limit = args.first ?? args.last ?? QUERY_MAX_RECORDS;
+    const limit = getFindManyPageSize(args);
 
     const columnsToSelect = {
       ...buildColumnsToSelect({
-        select: args.selectedFieldsResult.select,
-        relations: args.selectedFieldsResult.relations,
+        selection: args.selectedFieldsResult,
         flatObjectMetadata,
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
       }),
-      // Order columns must be hydrated onto the records even when not requested:
-      // cursor encoding reads the sort values from them (issue #24333)
+      // Selected even when unrequested: cursor encoding reads the sort values off the records (issue #24333)
       ...buildOrderByColumnsToSelect({
         orderBy: args.orderBy,
         flatObjectMetadata,
@@ -171,9 +166,7 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
 
     queryBuilder.setFindOptions({ select: columnsToSelect });
 
-    // A join that can duplicate root rows makes a row-level LIMIT return fewer records than
-    // asked, so it is rejected rather than paginated with take/skip, which drops the LIMIT
-    // from the scan.
+    // A row-duplicating join makes LIMIT return too few records, and take/skip would drop LIMIT from the scan
     const nonToOneJoinAliases = getNonToOneJoinAliases(queryBuilder);
 
     if (nonToOneJoinAliases.length > 0) {
@@ -191,18 +184,15 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
     }
     queryBuilder.limit(limit + 1);
 
-    // Add order columns AFTER setFindOptions (setFindOptions clears addSelect)
-    // Pass columnsToSelect so we only add columns that aren't already selected
-    commonQueryParser.addRelationOrderColumnsToBuilder(
+    // setFindOptions clears addSelect, so this must come after it
+    commonQueryParser.addRelationOrderColumnsToBuilder({
       queryBuilder,
       parsedOrderBy,
-      flatObjectMetadata.nameSingular,
+      objectNameSingular: flatObjectMetadata.nameSingular,
       columnsToSelect,
-    );
+    });
 
-    // Raw rows travel along the entities: the ordered join columns already
-    // selected for the relation ordering are read out of them, so cursors get
-    // their relation values whatever the client selected (or the REST depth)
+    // Raw rows carry the ordered join columns, so cursors get relation values whatever the client selected
     const { entities: fetchedObjectRecords, raw: fetchedRawRows } =
       (await queryBuilder.getRawAndEntities()) as {
         entities: ObjectRecord[];
@@ -218,8 +208,7 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
       fetchedItems: fetchedObjectRecords,
       limit,
       direction: isForwardPagination ? 'forward' : 'backward',
-      // getCursor applies cursors on truthiness, so an empty-string cursor
-      // must not advertise navigation from a cursor.
+      // getCursor applies cursors on truthiness, so an empty-string cursor must not advertise navigation
       hasAfterCursor: Boolean(args.after),
       hasBeforeCursor: Boolean(args.before),
     });
@@ -232,40 +221,26 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
       flatFieldMetadataMaps,
       orderByValuesByRecordId,
     });
-    const hasAggregatedFields =
-      Object.keys(args.selectedFieldsResult.aggregate ?? {}).length > 0;
+    const aggregatedValues = isEmptyObject(args.selectedFieldsResult.aggregates)
+      ? undefined
+      : await aggregateQueryBuilder.getRawOne<CommonAggregatedValues>();
 
-    const parentObjectRecordsAggregatedValues = hasAggregatedFields
-      ? await aggregateQueryBuilder.getRawOne<Record<string, number>>()
-      : undefined;
-
-    if (isDefined(args.selectedFieldsResult.relations)) {
-      await this.processNestedRelationsHelper.processNestedRelations({
-        flatObjectMetadataMaps,
-        flatFieldMetadataMaps,
-        parentObjectMetadataItem: flatObjectMetadata,
-        parentObjectRecords: objectRecords,
-        parentObjectRecordsAggregatedValues,
-        relations: args.selectedFieldsResult.relations as Record<
-          string,
-          FindOptionsRelations<ObjectLiteral>
-        >,
-        aggregate: args.selectedFieldsResult.aggregate,
-        limit: QUERY_MAX_RECORDS_FROM_RELATION,
-        authContext,
-        rolePermissionConfig,
-        selectedFields: args.selectedFieldsResult.select,
-        ...this.getNestedRelationsReadPathOptions(),
-      });
-    }
+    const relationAggregatedValues = await this.processNestedRelations({
+      records: objectRecords,
+      selection: args.selectedFieldsResult,
+      queryRunnerContext,
+    });
 
     return {
-      records: objectRecords,
-      aggregatedValues: parentObjectRecordsAggregatedValues,
-      totalCount: parentObjectRecordsAggregatedValues?.totalCount,
-      pageInfo,
-      orderByValuesByRecordId,
-      selectedFieldsResult: args.selectedFieldsResult,
+      result: {
+        records: objectRecords,
+        aggregatedValues,
+        totalCount: aggregatedValues?.totalCount,
+        pageInfo,
+        orderByValuesByRecordId,
+        selectedFieldsResult: args.selectedFieldsResult,
+      },
+      relationAggregatedValues,
     };
   }
 
@@ -293,21 +268,27 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
     };
   }
 
-  async processQueryResult(
-    queryResult: CommonFindManyOutput,
-    flatObjectMetadata: FlatObjectMetadata,
-    flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>,
-    flatFieldMetadataMaps: FlatEntityMaps<OrmFlatFieldMetadata>,
-    authContext: WorkspaceAuthContext,
-  ): Promise<CommonFindManyOutput> {
+  protected getResultRecords(results: CommonFindManyOutput): ObjectRecord[] {
+    return results.records;
+  }
+
+  async processQueryResult({
+    queryResult,
+    flatObjectMetadata,
+    flatObjectMetadataMaps,
+    flatFieldMetadataMaps,
+    workspaceId,
+    selection,
+  }: CommonQueryResultProcessingArgs<CommonFindManyOutput>): Promise<CommonFindManyOutput> {
     const processedRecords =
-      await this.commonResultGettersService.processRecordArray(
-        queryResult.records,
+      await this.commonResultGettersService.processRecordArray({
+        records: queryResult.records,
         flatObjectMetadata,
         flatObjectMetadataMaps,
         flatFieldMetadataMaps,
-        authContext.workspace.id,
-      );
+        workspaceId,
+        selection,
+      });
 
     return {
       ...queryResult,
@@ -383,5 +364,28 @@ export class CommonFindManyQueryRunnerService extends CommonBaseQueryRunnerServi
     }).filter((leaf) => leaf.kind === 'relation').length;
 
     return baseComplexity + orderByRelationCount;
+  }
+
+  protected override computeQueryComplexityV2(
+    selectedFieldsResult: CommonSelectedFieldsResult,
+    args: CommonExtendedInput<FindManyQueryArgs>,
+    queryRunnerContext: CommonBaseQueryRunnerContext,
+  ): number {
+    const {
+      flatObjectMetadata,
+      flatObjectMetadataMaps,
+      flatFieldMetadataMaps,
+    } = queryRunnerContext;
+
+    return (
+      getFindManyPageSize(args) *
+      computeMaxFieldCountPerRecord({
+        selection: selectedFieldsResult,
+        flatObjectMetadata,
+        flatObjectMetadataMaps,
+        flatFieldMetadataMaps,
+        recordLimitPerOneToManyRelation: QUERY_MAX_RECORDS_FROM_RELATION,
+      })
+    );
   }
 }

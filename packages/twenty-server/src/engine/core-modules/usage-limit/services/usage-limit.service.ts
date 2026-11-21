@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
-
+import { InjectDataSource } from '@nestjs/typeorm';
 import { isNonEmptyString } from '@sniptt/guards';
+import isEqual from 'lodash.isequal';
 import { isDefined } from 'twenty-shared/utils';
+import { DataSource, type EntityManager, In } from 'typeorm';
 
 import { ApiKeyEntity } from 'src/engine/core-modules/api-key/api-key.entity';
 import { ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
@@ -34,6 +36,11 @@ import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 
+type WriteAlongside = (args: {
+  entityManager: EntityManager;
+  usageLimit: UsageLimitEntity;
+}) => Promise<void>;
+
 @Injectable()
 export class UsageLimitService {
   constructor(
@@ -54,20 +61,36 @@ export class UsageLimitService {
     private readonly usageLimitStockService: UsageLimitStockService,
     private readonly usageLimitEntitlementService: UsageLimitEntitlementService,
     private readonly usagePeriodService: UsagePeriodService,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(workspaceId: string): Promise<UsageLimitEntity[]> {
     return this.usageLimitRepository.find(workspaceId);
   }
 
+  async findByIds({
+    workspaceId,
+    usageLimitIds,
+  }: {
+    workspaceId: string;
+    usageLimitIds: string[];
+  }): Promise<UsageLimitEntity[]> {
+    return this.usageLimitRepository.find(workspaceId, {
+      where: { id: In(usageLimitIds) },
+    });
+  }
+
   async create({
     workspaceId,
     input,
     isOperator,
+    writeAlongside,
   }: {
     workspaceId: string;
     input: CreateUsageLimitInput;
     isOperator: boolean;
+    writeAlongside?: WriteAlongside;
   }): Promise<UsageLimitEntity> {
     await this.validateInput({ workspaceId, input, isOperator });
 
@@ -77,22 +100,34 @@ export class UsageLimitService {
 
     await this.assertScopeIsFree({ workspaceId, scope });
 
-    await this.usageLimitRepository.insert(workspaceId, {
-      workspaceId,
-      ...scope,
-      limitValue: input.limitValue,
-      burstValue: input.burstValue ?? null,
-      isInstanceOverride: isOperator,
-    });
+    const usageLimit = await this.dataSource.transaction(
+      async (entityManager) => {
+        const repository = this.usageLimitRepository.withManager(entityManager);
+
+        await repository.insert(workspaceId, {
+          workspaceId,
+          ...scope,
+          limitValue: input.limitValue,
+          burstValue: input.burstValue ?? null,
+          isInstanceOverride: isOperator,
+        });
+
+        const insertedUsageLimit = await repository.findOneOrFail(workspaceId, {
+          where: scope,
+        });
+
+        await writeAlongside?.({
+          entityManager,
+          usageLimit: insertedUsageLimit,
+        });
+
+        return insertedUsageLimit;
+      },
+    );
 
     await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
       'usageLimits',
     ]);
-
-    const usageLimit = await this.usageLimitRepository.findOneOrFail(
-      workspaceId,
-      { where: scope },
-    );
 
     await this.dropCounter(usageLimit);
 
@@ -171,9 +206,13 @@ export class UsageLimitService {
       { where: { id: usageLimit.id } },
     );
 
-    // counters are keyed by scope and value, so an edit leaves two of them behind
-    await this.dropCounter(usageLimit);
-    await this.dropCounter(updatedUsageLimit);
+    if (
+      usageLimit.isInstanceOverride !== isOperator ||
+      !isEqual(authorizedScope, scope)
+    ) {
+      await this.dropCounter(usageLimit);
+      await this.dropCounter(updatedUsageLimit);
+    }
 
     return updatedUsageLimit;
   }
@@ -251,10 +290,12 @@ export class UsageLimitService {
     workspaceId,
     usageLimitId,
     isOperator,
+    writeAlongside,
   }: {
     workspaceId: string;
     usageLimitId: string;
     isOperator: boolean;
+    writeAlongside?: WriteAlongside;
   }): Promise<boolean> {
     const usageLimit = await this.usageLimitRepository.findOne(workspaceId, {
       where: { id: usageLimitId },
@@ -271,18 +312,20 @@ export class UsageLimitService {
       isOperator,
     });
 
-    const { affected } = await this.usageLimitRepository.delete(workspaceId, {
-      id: usageLimitId,
-      ...buildUsageLimitScope(usageLimit),
-      isInstanceOverride: usageLimit.isInstanceOverride,
-    });
+    await this.dataSource.transaction(async (entityManager) => {
+      const { affected } = await this.usageLimitRepository
+        .withManager(entityManager)
+        .delete(workspaceId, { id: usageLimitId });
 
-    if (!isDefined(affected) || affected === 0) {
-      throw new UsageLimitException(
-        `Usage limit ${usageLimitId} changed while this request was being authorized`,
-        UsageLimitExceptionCode.LIMIT_CONFLICT,
-      );
-    }
+      if (!isDefined(affected) || affected === 0) {
+        throw new UsageLimitException(
+          `Usage limit ${usageLimitId} changed while this request was being authorized`,
+          UsageLimitExceptionCode.LIMIT_CONFLICT,
+        );
+      }
+
+      await writeAlongside?.({ entityManager, usageLimit });
+    });
 
     await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
       'usageLimits',
@@ -293,20 +336,39 @@ export class UsageLimitService {
     return true;
   }
 
+  async deleteLimits({
+    workspaceId,
+    usageLimitIds,
+  }: {
+    workspaceId: string;
+    usageLimitIds: string[];
+  }): Promise<void> {
+    const deletedUsageLimits = await this.usageLimitRepository.deleteAndReturn(
+      workspaceId,
+      { id: In(usageLimitIds) },
+    );
+
+    await this.workspaceCacheService.invalidateAndRecompute(workspaceId, [
+      'usageLimits',
+    ]);
+
+    await Promise.all(
+      deletedUsageLimits.map((usageLimit) => this.dropCounter(usageLimit)),
+    );
+  }
+
   private async dropCounter(usageLimit: UsageLimitEntity): Promise<void> {
     if (isStockLimit(usageLimit)) {
-      return this.usageLimitStockService.dropStockCounters({
+      return this.usageLimitStockService.dropLimitCounter({
         workspaceId: usageLimit.workspaceId,
-        resourceType: usageLimit.resourceType,
-        operationType: usageLimit.operationType,
-        spenderType: usageLimit.spenderType,
-        spenderId: usageLimit.spenderId,
-        meter: usageLimit.meter,
-        limitValue: usageLimit.limitValue,
+        usageLimit,
       });
     }
 
-    return this.usageLimitQuotaService.dropLimitCounter(usageLimit);
+    return this.usageLimitQuotaService.dropLimitCounter({
+      workspaceId: usageLimit.workspaceId,
+      usageLimit,
+    });
   }
 
   private async validateSpenderBelongsToWorkspace({

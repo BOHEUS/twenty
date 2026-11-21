@@ -4,9 +4,10 @@ import { useDuplicateMessageList } from '@/command-menu-item/engine-command/reco
 import { plural } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
-import { AppPath, CoreObjectNameSingular } from 'twenty-shared/types';
+import { AppPath, StandardObjectNameSingular } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { useToast } from 'twenty-ui/components/feedback';
 import { useNavigateApp } from '~/hooks/useNavigateApp';
 
 export const DuplicateMessageListSingleRecordCommand = () => {
@@ -19,7 +20,7 @@ export const DuplicateMessageListSingleRecordCommand = () => {
   const { t } = useLingui();
 
   if (!isDefined(recordId)) {
-    throw new Error('Record ID is required to duplicate list');
+    throw new Error(doNotTranslate('Record ID is required to duplicate list'));
   }
 
   const handleExecute = async () => {
@@ -29,7 +30,7 @@ export const DuplicateMessageListSingleRecordCommand = () => {
       const memberCount = result.memberCount;
 
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`List duplicated with ${plural(memberCount, {
           one: '# member',
           other: '# members',
@@ -37,7 +38,7 @@ export const DuplicateMessageListSingleRecordCommand = () => {
       });
 
       navigate(AppPath.RecordShowPage, {
-        objectNameSingular: CoreObjectNameSingular.MessageList,
+        objectNameSingular: StandardObjectNameSingular.MessageList,
         objectRecordId: result.id,
       });
     }

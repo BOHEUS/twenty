@@ -17,6 +17,7 @@ type GetOnboardingCreditsProgressArgs = {
   onboardingStatus: OnboardingStatus | null | undefined;
   isWorkspaceCreator: boolean;
   isPlanRequired: boolean;
+  isTrialAvailable: boolean;
   profileName: FullNameMetadata | null | undefined;
   inviteTeamValidEmailsCount: number;
   upgradeTrialLostCredits?: number;
@@ -28,6 +29,7 @@ export const getOnboardingCreditsProgress = ({
   onboardingStatus,
   isWorkspaceCreator,
   isPlanRequired,
+  isTrialAvailable,
   profileName,
   inviteTeamValidEmailsCount,
   upgradeTrialLostCredits = 0,
@@ -36,16 +38,16 @@ export const getOnboardingCreditsProgress = ({
     importContacts: isWorkspaceCreator
       ? onboardingConfig.importContactsCreditsReward
       : 0,
-    installApps: isWorkspaceCreator
-      ? onboardingConfig.installAppsCreditsReward
-      : 0,
     createProfile: isWorkspaceCreator
       ? onboardingConfig.createProfileCreditsReward
       : 0,
     inviteTeam:
       onboardingConfig.inviteTeamCreditsRewardPerUser *
       onboardingConfig.inviteTeamMaxInvites,
-    upgradeTrial: isPlanRequired ? onboardingConfig.upgradeCreditsReward : 0,
+    upgradeTrial:
+      isPlanRequired && isTrialAvailable
+        ? onboardingConfig.upgradeCreditsReward
+        : 0,
   };
 
   const statusIndex = isDefined(onboardingStatus)
@@ -77,10 +79,6 @@ export const getOnboardingCreditsProgress = ({
 
     if (step !== onboardingStep) {
       return 0;
-    }
-
-    if (step === 'installApps') {
-      return onboardingFreeCredits.installApps;
     }
 
     if (step === 'createProfile' && hasProfileName) {
@@ -134,7 +132,9 @@ export const getOnboardingCreditsProgress = ({
     earnedCreditsByStep: ONBOARDING_CREDITS_STEPS.filter(
       (step) =>
         getCountedCredits(step) > 0 ||
-        (isStepDone(step) && rewardCreditsByStep[step] > 0),
+        (isStepDone(step) &&
+          step !== 'inviteTeam' &&
+          rewardCreditsByStep[step] > 0),
     ).map((step) => ({
       step,
       credits: getCountedCredits(step),

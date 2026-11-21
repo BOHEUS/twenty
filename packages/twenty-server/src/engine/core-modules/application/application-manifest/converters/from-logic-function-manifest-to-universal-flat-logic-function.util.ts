@@ -5,6 +5,7 @@ import { type LogicFunctionManifest } from 'twenty-shared/application';
 import { isDefined } from 'twenty-shared/utils';
 
 import { ApplicationRegistrationSourceType } from 'src/engine/core-modules/application/application-registration/enums/application-registration-source-type.enum';
+import { CONNECTION_FLOW_LOGIC_FUNCTION_TIMEOUT_SECONDS } from 'src/engine/core-modules/application/connection-provider/constants/connection-flow-logic-function-timeout-seconds.constant';
 import { isPackagedApplicationSource } from 'src/engine/core-modules/application/application-registration/utils/is-packaged-application-source.util';
 import { type AllFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/all-flat-entity-maps.type';
 import { findFlatEntityByUniversalIdentifier } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier.util';
@@ -12,18 +13,17 @@ import {
   LogicFunctionExecutionMode,
   LogicFunctionRuntime,
 } from 'src/engine/metadata-modules/logic-function/logic-function.entity';
+import { toStoredDatabaseEventTriggerSettingsOrThrow } from 'src/engine/core-modules/application/application-manifest/utils/to-stored-database-event-trigger-settings-or-throw.util';
 import { type UniversalFlatLogicFunction } from 'src/engine/workspace-manager/workspace-migration/universal-flat-entity/types/universal-flat-logic-function.type';
 
 const resolveExecutionMode = ({
   logicFunctionManifest,
   applicationSourceType,
   existingFlatLogicFunctionMaps,
-  isPrebuiltModeEnabled,
 }: {
   logicFunctionManifest: LogicFunctionManifest;
   applicationSourceType: ApplicationRegistrationSourceType;
   existingFlatLogicFunctionMaps: AllFlatEntityMaps['flatLogicFunctionMaps'];
-  isPrebuiltModeEnabled: boolean;
 }): LogicFunctionExecutionMode => {
   const existingFlatLogicFunction = findFlatEntityByUniversalIdentifier({
     flatEntityMaps: existingFlatLogicFunctionMaps,
@@ -43,7 +43,6 @@ const resolveExecutionMode = ({
   }
 
   if (
-    isPrebuiltModeEnabled &&
     isPackagedApplicationSource(applicationSourceType) &&
     isNonEmptyString(logicFunctionManifest.builtHandlerChecksum)
   ) {
@@ -58,18 +57,24 @@ export const fromLogicFunctionManifestToUniversalFlatLogicFunction = ({
   applicationUniversalIdentifier,
   applicationSourceType,
   existingFlatLogicFunctionMaps,
-  isPrebuiltModeEnabled,
+  connectionFlowLogicFunctionUniversalIdentifiers,
   now,
 }: {
   logicFunctionManifest: LogicFunctionManifest;
   applicationUniversalIdentifier: string;
   applicationSourceType: ApplicationRegistrationSourceType;
   existingFlatLogicFunctionMaps: AllFlatEntityMaps['flatLogicFunctionMaps'];
-  isPrebuiltModeEnabled: boolean;
+  connectionFlowLogicFunctionUniversalIdentifiers: Set<string>;
   now: string;
 }): UniversalFlatLogicFunction => {
   const name =
     logicFunctionManifest.name ?? parse(logicFunctionManifest.handlerName).name;
+
+  const timeoutSeconds = logicFunctionManifest.timeoutSeconds ?? 300;
+  // TODO: remove with the legacy databaseEventTriggerSettings / DATABASE_EVENT manifest form
+  const eventTriggerSettings =
+    logicFunctionManifest.eventTriggerSettings ??
+    logicFunctionManifest.databaseEventTriggerSettings;
 
   return {
     universalIdentifier: logicFunctionManifest.universalIdentifier,
@@ -77,14 +82,19 @@ export const fromLogicFunctionManifestToUniversalFlatLogicFunction = ({
     name,
     description: logicFunctionManifest.description ?? null,
     runtime: LogicFunctionRuntime.NODE22,
-    timeoutSeconds: logicFunctionManifest.timeoutSeconds ?? 300,
+    timeoutSeconds: connectionFlowLogicFunctionUniversalIdentifiers.has(
+      logicFunctionManifest.universalIdentifier,
+    )
+      ? Math.min(timeoutSeconds, CONNECTION_FLOW_LOGIC_FUNCTION_TIMEOUT_SECONDS)
+      : timeoutSeconds,
     sourceHandlerPath: logicFunctionManifest.sourceHandlerPath,
     builtHandlerPath: logicFunctionManifest.builtHandlerPath,
     handlerName: logicFunctionManifest.handlerName,
     checksum: logicFunctionManifest.builtHandlerChecksum,
     cronTriggerSettings: logicFunctionManifest.cronTriggerSettings ?? null,
-    databaseEventTriggerSettings:
-      logicFunctionManifest.databaseEventTriggerSettings ?? null,
+    databaseEventTriggerSettings: isDefined(eventTriggerSettings)
+      ? toStoredDatabaseEventTriggerSettingsOrThrow(eventTriggerSettings)
+      : null,
     httpRouteTriggerSettings:
       logicFunctionManifest.httpRouteTriggerSettings ?? null,
     serverRouteTriggerSettings:
@@ -97,7 +107,6 @@ export const fromLogicFunctionManifestToUniversalFlatLogicFunction = ({
       logicFunctionManifest,
       applicationSourceType,
       existingFlatLogicFunctionMaps,
-      isPrebuiltModeEnabled,
     }),
     createdAt: now,
     updatedAt: now,

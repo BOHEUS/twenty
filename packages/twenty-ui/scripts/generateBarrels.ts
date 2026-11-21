@@ -35,6 +35,7 @@ const SRC_PATH = path.resolve(`${PACKAGE_PATH}/src`);
 const STANDALONE_MODULES = [
   'assets',
   'components/code-editor',
+  'icon/provider',
   'styles',
   'testing',
 ];
@@ -575,6 +576,7 @@ const main = () => {
     ...new Set([
       ...moduleDirectories,
       ...getSubDirectoryPaths(path.join(SRC_PATH, 'primitives')),
+      ...getSubDirectoryPaths(path.join(SRC_PATH, 'components')),
       ...STANDALONE_MODULES.map((moduleName) =>
         path.join(SRC_PATH, moduleName),
       ),

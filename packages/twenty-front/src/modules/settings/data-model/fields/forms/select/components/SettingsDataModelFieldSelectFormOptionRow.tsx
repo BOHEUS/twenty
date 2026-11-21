@@ -1,18 +1,16 @@
 import { type FieldMetadataItemOption } from '@/object-metadata/types/FieldMetadataItem';
-import { AdvancedSettingsWrapper } from '@/settings/components/AdvancedSettingsWrapper';
 import { OPTION_VALUE_MAXIMUM_LENGTH } from '@/settings/data-model/constants/OptionValueMaximumLength';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
+import { useColorLabels } from '@/ui/input/hooks/useColorLabels';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { isDefined } from 'twenty-shared/utils';
+import { isDefined, isFieldMetadataOptionActive } from 'twenty-shared/utils';
+import { LightIconButton } from 'twenty-ui/components/input';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import {
-  Dropdown,
-  LightIconButton,
-  type ColorLabels,
-} from 'twenty-ui/components';
-import {
+  IconArchive,
+  IconArchiveOff,
   IconCheck,
   IconDotsVertical,
   IconGripVertical,
@@ -20,49 +18,27 @@ import {
   IconX,
 } from 'twenty-ui/icon';
 import { ColorSample } from 'twenty-ui/primitives/data-display';
+import { Collapsible } from 'twenty-ui/primitives/layout';
 import { MAIN_COLOR_NAMES, useTheme, themeCssVariables } from 'twenty-ui/theme';
 
-import { computeOptionValueFromLabel } from '~/pages/settings/data-model/utils/computeOptionValueFromLabel';
-
-const useColorLabels = (): ColorLabels => ({
-  gray: t`Gray`,
-  tomato: t`Tomato`,
-  red: t`Red`,
-  ruby: t`Ruby`,
-  crimson: t`Crimson`,
-  pink: t`Pink`,
-  plum: t`Plum`,
-  purple: t`Purple`,
-  violet: t`Violet`,
-  iris: t`Iris`,
-  cyan: t`Cyan`,
-  turquoise: t`Turquoise`,
-  sky: t`Sky`,
-  blue: t`Blue`,
-  jade: t`Jade`,
-  green: t`Green`,
-  grass: t`Grass`,
-  mint: t`Mint`,
-  lime: t`Lime`,
-  bronze: t`Bronze`,
-  gold: t`Gold`,
-  brown: t`Brown`,
-  orange: t`Orange`,
-  amber: t`Amber`,
-  yellow: t`Yellow`,
-});
+import { computeOptionValueFromLabel } from '@/object-metadata/utils/computeOptionValueFromLabel';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsDataModelFieldSelectFormOptionRowProps = {
   className?: string;
   isDefault?: boolean;
+  isApiValueVisible: boolean;
   onChange: (value: FieldMetadataItemOption) => void;
   onRemove?: () => void;
+  onDeactivate?: () => void;
+  onActivate?: () => void;
   onSetAsDefault?: () => void;
   onRemoveAsDefault?: () => void;
   onInputEnter?: () => void;
   option: FieldMetadataItemOption;
   isNewRow?: boolean;
   fieldIsNullable?: boolean;
+  isApiValueReadOnly?: boolean;
 };
 
 const StyledRow = styled.div`
@@ -91,10 +67,11 @@ const StyledOptionInputContainer = styled.div`
   }
 `;
 
-const StyledIconGripVerticalContainer = styled.span`
+const StyledIconGripVerticalContainer = styled.span<{ isHidden: boolean }>`
   align-items: center;
   display: flex;
   margin-right: 3px;
+  visibility: ${({ isHidden }) => (isHidden ? 'hidden' : 'visible')};
 `;
 
 const StyledLightIconButtonContainer = styled.span`
@@ -106,20 +83,26 @@ const StyledLightIconButtonContainer = styled.span`
 export const SettingsDataModelFieldSelectFormOptionRow = ({
   className,
   isDefault,
+  isApiValueVisible,
   onChange,
   onRemove,
+  onDeactivate,
+  onActivate,
   onSetAsDefault,
   onRemoveAsDefault,
   onInputEnter,
   option,
   isNewRow,
   fieldIsNullable,
+  isApiValueReadOnly = false,
 }: SettingsDataModelFieldSelectFormOptionRowProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
   const colorLabels = useColorLabels();
   const SELECT_COLOR_DROPDOWN_ID = `select-color-dropdown-${option.id}`;
   const SELECT_ACTIONS_DROPDOWN_ID = `select-actions-dropdown-${option.id}`;
 
+  const isInactive = !isFieldMetadataOptionActive(option);
   const shouldForbidRemoveAsDefault = isDefault && !fieldIsNullable;
 
   const handleInputEnter = () => {
@@ -128,37 +111,38 @@ export const SettingsDataModelFieldSelectFormOptionRow = ({
 
   return (
     <StyledRow className={className}>
-      <StyledIconGripVerticalContainer>
+      <StyledIconGripVerticalContainer isHidden={isInactive}>
         <IconGripVertical
-          style={{
-            minWidth: theme.icon.size.md,
-          }}
           size={theme.icon.size.md}
           stroke={theme.icon.stroke.sm}
           color={theme.font.color.extraLight}
         />
       </StyledIconGripVerticalContainer>
-      <AdvancedSettingsWrapper animationDimension="width" hideDot>
-        <StyledOptionInputContainer>
-          <SettingsTextInput
-            instanceId={`select-option-value-${option.id}`}
-            value={option.value}
-            onChange={(input) =>
-              onChange({
-                ...option,
-                value: computeOptionValueFromLabel(input),
-              })
-            }
-            RightIcon={isDefault ? IconCheck : undefined}
-            maxLength={OPTION_VALUE_MAXIMUM_LENGTH}
-          />
-        </StyledOptionInputContainer>
-      </AdvancedSettingsWrapper>
+      <Collapsible.Root open={isApiValueVisible}>
+        <Collapsible.Panel dimension="width" containAnimation={false}>
+          <StyledOptionInputContainer>
+            <SettingsTextInput
+              instanceId={`select-option-value-${option.id}`}
+              value={option.value}
+              onChange={(input) =>
+                onChange({
+                  ...option,
+                  value: computeOptionValueFromLabel(input),
+                })
+              }
+              RightIcon={isDefault ? IconCheck : undefined}
+              maxLength={OPTION_VALUE_MAXIMUM_LENGTH}
+              disabled={isApiValueReadOnly || isInactive}
+            />
+          </StyledOptionInputContainer>
+        </Collapsible.Panel>
+      </Collapsible.Root>
       <DropdownRoot dropdownId={SELECT_COLOR_DROPDOWN_ID} type="picker">
         <Dropdown.Trigger
           render={<StyledColorSampleContainer />}
           nativeButton={false}
           aria-label={t`Color`}
+          disabled={isInactive}
         >
           <ColorSample colorName={option.color} />
         </Dropdown.Trigger>
@@ -182,19 +166,20 @@ export const SettingsDataModelFieldSelectFormOptionRow = ({
           instanceId={`select-option-label-${option.id}`}
           value={option.label}
           onChange={(label) => {
-            const optionNameHasBeenEdited = !(
-              option.value === computeOptionValueFromLabel(option.label)
-            );
+            const shouldKeepApiValue =
+              isApiValueReadOnly ||
+              option.value !== computeOptionValueFromLabel(option.label);
             onChange({
               ...option,
               label,
-              value: optionNameHasBeenEdited
+              value: shouldKeepApiValue
                 ? option.value
                 : computeOptionValueFromLabel(label),
             });
           }}
           RightIcon={isDefault ? IconCheck : undefined}
           maxLength={OPTION_VALUE_MAXIMUM_LENGTH}
+          disabled={isInactive}
           onInputEnter={handleInputEnter}
           autoFocusOnMount={isNewRow}
           autoSelectOnMount={isNewRow}
@@ -217,16 +202,29 @@ export const SettingsDataModelFieldSelectFormOptionRow = ({
         </StyledLightIconButtonContainer>
         <DropdownContent side="right" align="start">
           <Dropdown.Section>
-            {isDefault ? (
+            {isInactive && isDefined(onActivate) && (
+              <Dropdown.ActionItem
+                startIcon={<IconArchiveOff />}
+                onClick={() => onActivate()}
+              >{t`Activate`}</Dropdown.ActionItem>
+            )}
+            {!isInactive && isDefault && (
               <Dropdown.ActionItem
                 startIcon={<IconX />}
                 onClick={() => onRemoveAsDefault?.()}
               >{t`Remove as default`}</Dropdown.ActionItem>
-            ) : (
+            )}
+            {!isInactive && !isDefault && (
               <Dropdown.ActionItem
                 startIcon={<IconCheck />}
                 onClick={() => onSetAsDefault?.()}
               >{t`Set as default`}</Dropdown.ActionItem>
+            )}
+            {isDefined(onDeactivate) && !isInactive && !isDefault && (
+              <Dropdown.ActionItem
+                startIcon={<IconArchive />}
+                onClick={() => onDeactivate()}
+              >{t`Deactivate`}</Dropdown.ActionItem>
             )}
             {isDefined(onRemove) && !isDefault && (
               <Dropdown.ActionItem

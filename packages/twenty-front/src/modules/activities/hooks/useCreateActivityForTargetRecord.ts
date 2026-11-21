@@ -3,18 +3,16 @@ import { isObjectMetadataReadOnly } from '@/object-record/read-only/utils/isObje
 import { useOpenCreateActivityDrawer } from '@/activities/hooks/useOpenCreateActivityDrawer';
 import { type ActivityTargetableObject } from '@/activities/types/ActivityTargetableEntity';
 import { useCanUpdateObjectRecords } from '@/object-record/hooks/useCanUpdateObjectRecords';
-import { type CoreObjectNameSingular } from 'twenty-shared/types';
+import { type StandardObjectNameSingular } from 'twenty-shared/types';
 
 type UseCreateActivityForTargetRecordParams = {
   targetRecord: ActivityTargetableObject;
   activityObjectNameSingular:
-    | CoreObjectNameSingular.Note
-    | CoreObjectNameSingular.Task;
+    | StandardObjectNameSingular.Note
+    | StandardObjectNameSingular.Task;
 };
 
-// Creating an activity attaches it to the target record, so it requires
-// update permission on the target object, not just create permission on the
-// activity object.
+// Attaching to the target needs update permission on its object, not just create on the activity.
 export const useCreateActivityForTargetRecord = ({
   targetRecord,
   activityObjectNameSingular,
@@ -22,7 +20,7 @@ export const useCreateActivityForTargetRecord = ({
   const { objectMetadataItem } = useObjectMetadataItem({
     objectNameSingular: targetRecord.targetObjectNameSingular,
   });
-  const { canUpdateObjectRecords } = useCanUpdateObjectRecords(
+  const { canUpdateSomeRecords } = useCanUpdateObjectRecords(
     targetRecord.targetObjectNameSingular,
   );
 
@@ -35,8 +33,7 @@ export const useCreateActivityForTargetRecord = ({
 
   return {
     canCreateActivity:
-      canUpdateObjectRecords &&
-      !isObjectMetadataReadOnly({ objectMetadataItem }),
+      canUpdateSomeRecords && !isObjectMetadataReadOnly({ objectMetadataItem }),
     createActivity,
   };
 };

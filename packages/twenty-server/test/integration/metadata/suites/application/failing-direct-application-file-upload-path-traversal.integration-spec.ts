@@ -11,6 +11,12 @@ import { v4 as uuidv4 } from 'uuid';
 const TEST_APP_ID = uuidv4();
 const UNKNOWN_APP_ID = uuidv4();
 
+const normalizeMessage = (message: string) =>
+  message.replace(
+    new RegExp(UNKNOWN_APP_ID, 'g'),
+    '<applicationUniversalIdentifier>',
+  );
+
 type FailureLevel = 'request' | 'file';
 
 type TestContext = {
@@ -134,18 +140,17 @@ const FAILING_TEST_CASES: EachTestingContext<TestContext>[] = [
     },
   },
   {
-    title:
-      'when filePath has an invalid extension for Source (.js instead of .ts)',
+    title: 'when filePath has an invalid extension for Source (.sh)',
     context: {
       applicationUniversalIdentifier: TEST_APP_ID,
       fileFolder: 'Source',
-      filePath: 'src/index.js',
+      filePath: 'src/install.sh',
       failureLevel: 'file',
     },
   },
   {
     title:
-      'when filePath has an invalid extension for Dependencies (.sh instead of .json/.lock)',
+      'when filePath has an invalid extension for Dependencies (.sh instead of .json/.lock/.gz)',
     context: {
       applicationUniversalIdentifier: TEST_APP_ID,
       fileFolder: 'Dependencies',
@@ -191,7 +196,7 @@ describe('Application file upload reservation should fail', () => {
       jest.useFakeTimers();
 
       if (context.failureLevel === 'request') {
-        expectOneNotInternalServerErrorSnapshot({ errors });
+        expectOneNotInternalServerErrorSnapshot({ errors, normalizeMessage });
 
         return;
       }

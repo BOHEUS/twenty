@@ -22,8 +22,8 @@ jest.mock('@/views/view-picker/hooks/useGetAvailableFieldsForCalendar', () => ({
 jest.mock('@/ui/utilities/state/jotai/hooks/useAtomComponentState', () => ({
   useAtomComponentState: () => ['date-field', mockSetCalendarField],
 }));
-jest.mock('twenty-ui/icon', () => ({
-  ...jest.requireActual('twenty-ui/icon'),
+jest.mock('twenty-ui/icon/provider', () => ({
+  ...jest.requireActual('twenty-ui/icon/provider'),
   useIcons: () => ({ getIcon: () => () => null }),
 }));
 
@@ -91,10 +91,12 @@ jest.mock('@/views/hooks/useUpdateCurrentView', () => ({
   })),
 }));
 jest.mock('twenty-ui/primitives/data-display', () => ({
-  Pill: ({ label }: { label: string }) => <span>{label}</span>,
+  Badge: ({ children }: { children: React.ReactNode }) => (
+    <span>{children}</span>
+  ),
 }));
-jest.mock('twenty-ui/primitives/navigation', () => ({
-  ListItem: ({
+jest.mock('twenty-ui/components/navigation', () => ({
+  ListItemButton: ({
     description,
     disabled,
     onClick,

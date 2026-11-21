@@ -1,21 +1,28 @@
 import { i18n } from '@lingui/core';
 import { I18nProvider } from '@lingui/react';
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { Provider as JotaiProvider } from 'jotai';
 import { type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { RecordShareAccessLevel } from '~/generated-metadata/graphql';
-import { RecordSharePrincipalType } from 'twenty-shared/types';
+import {
+  RecordShareAccessLevel,
+  RecordSharePrincipalType,
+  RecordShareRowCause,
+  type RecordSharingFieldsFragment,
+} from '~/generated-metadata/graphql';
 
 import { currentWorkspaceMembersState } from '@/auth/states/currentWorkspaceMembersState';
+import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
+import { mockCurrentWorkspace } from '~/testing/mock-data/users';
 import { SidePanelShareRecordContent } from '@/side-panel/pages/share-record/components/SidePanelShareRecordContent';
 import {
   jotaiStore,
   resetJotaiStore,
 } from '@/ui/utilities/state/jotai/jotaiStore';
 
+const setPrivate = jest.fn();
 const setShare = jest.fn();
+const removeShare = jest.fn();
 const refetch = jest.fn();
 const copyToClipboard = jest.fn();
 
@@ -23,19 +30,44 @@ jest.mock('~/hooks/useCopyToClipboard', () => ({
   useCopyToClipboard: () => ({ copyToClipboard }),
 }));
 
-const sharing = {
-  viewerAccessLevel: RecordShareAccessLevel.FULL,
+type Share = RecordSharingFieldsFragment['shares'][number];
+
+const sharing: RecordSharingFieldsFragment = {
+  isShareable: true,
+  isPrivate: true,
+  canManageSharing: true,
   permissions: {
     canRead: true,
     canUpdate: true,
     canDelete: true,
     canSoftDelete: true,
+    __typename: 'RecordPermissionsDTO',
   },
-  isEnabled: true,
-  hasInheritedAccess: false,
-  roles: [{ id: 'sales-role', label: 'Sales' }],
+  hasManagedGeneralAccess: false,
+  roles: [
+    {
+      id: 'sales-role',
+      label: 'Sales',
+      canRead: true,
+      canUpdate: true,
+      __typename: 'RecordSharingRoleDTO',
+    },
+  ],
   shares: [],
+  __typename: 'RecordSharingDTO',
 };
+
+const buildShare = (share: Partial<Share>): Share => ({
+  __typename: 'RecordSharingGrantDTO' as const,
+  id: 'grant',
+  principalType: RecordSharePrincipalType.WORKSPACE_MEMBER,
+  principalId: 'alice-member',
+  principalRoleId: null,
+  accessLevel: RecordShareAccessLevel.READ,
+  rowCause: RecordShareRowCause.MANUAL,
+  ...share,
+});
+
 const Wrapper = ({ children }: { children: ReactNode }) => (
   <JotaiProvider store={jotaiStore}>
     <I18nProvider i18n={i18n}>
@@ -43,31 +75,45 @@ const Wrapper = ({ children }: { children: ReactNode }) => (
     </I18nProvider>
   </JotaiProvider>
 );
-const renderSharing = (overrides = {}) => {
-  return render(
+
+const renderSharing = ({
+  sharingOverrides = {},
+  isLoading = false,
+  error,
+}: {
+  sharingOverrides?: Partial<RecordSharingFieldsFragment>;
+  isLoading?: boolean;
+  error?: Error;
+} = {}) =>
+  render(
     <SidePanelShareRecordContent
       recordUrl="https://example.com/record"
+      objectLabelPlural="Companies"
       sharingState={{
-        sharing,
+        sharing: { ...sharing, ...sharingOverrides },
+        setPrivate,
         setShare,
+        removeShare,
         refetch,
-        loading: false,
+        loading: isLoading,
         saving: false,
-        error: undefined,
-        ...overrides,
+        error,
       }}
     />,
     {
       wrapper: Wrapper,
     },
   );
-};
 
 describe('Share record side panel', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     refetch.mockResolvedValue(undefined);
     resetJotaiStore();
+    jotaiStore.set(currentWorkspaceState.atom, {
+      ...mockCurrentWorkspace,
+      displayName: 'Acme',
+    });
     jotaiStore.set(currentWorkspaceMembersState.atom, [
       {
         id: 'alice-member',
@@ -77,201 +123,66 @@ describe('Share record side panel', () => {
     ]);
   });
 
-  it('finds a workspace member by email and grants viewing access', async () => {
-    const user = userEvent.setup();
-    renderSharing();
-    await user.click(
-      screen.getByRole('button', { name: 'Add people or roles' }),
+  it('shows workspace access managed by an application', async () => {
+    renderSharing({ sharingOverrides: { hasManagedGeneralAccess: true } });
+    await waitFor(() =>
+      expect(
+        screen.getByText('Workspace access is also managed by an application.'),
+      ).toBeVisible(),
     );
-    await user.type(
-      screen.getByPlaceholderText('Search people or roles'),
-      'alice@',
-    );
-    expect(screen.queryByText('Sales')).toBeNull();
-    await user.click(screen.getByText('Alice Smith'));
-    expect(setShare).toHaveBeenCalledWith({
-      principal: { workspaceMemberId: 'alice-member' },
-      enabled: true,
-      accessLevel: 'READ',
-    });
+    expect(
+      screen.getByRole('button', { name: 'Everyone with access to Companies' }),
+    ).toBeVisible();
   });
 
-  it('finds a role by name and grants viewing access', async () => {
-    const user = userEvent.setup();
-    renderSharing();
-    await user.click(
-      screen.getByRole('button', { name: 'Add people or roles' }),
+  it('keeps loaded sharing controls available during a refresh', async () => {
+    renderSharing({ isLoading: true });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Restricted' })).toBeVisible(),
     );
-    await user.type(
-      screen.getByPlaceholderText('Search people or roles'),
-      'sales',
-    );
-    expect(screen.queryByText('Alice Smith')).toBeNull();
-    await user.click(screen.getByText('Sales'));
-    expect(setShare).toHaveBeenCalledWith({
-      principal: { roleId: 'sales-role' },
-      enabled: true,
-      accessLevel: 'READ',
-    });
+    expect(
+      screen.getByRole('searchbox', { name: 'Add people or everyone' }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('status', { name: 'Loading sharing settings' }),
+    ).toBeNull();
   });
 
-  it('enables workspace-wide viewing', async () => {
-    const user = userEvent.setup();
-    renderSharing();
-    await user.click(screen.getByRole('button', { name: 'Restricted' }));
-    await user.click(screen.getByRole('menuitemradio', { name: 'Viewer' }));
-    expect(setShare).toHaveBeenCalledWith({
-      principal: { everyone: true },
-      enabled: true,
-      accessLevel: 'READ',
-    });
-  });
-
-  it('returns to restricted access without removing named recipients', async () => {
-    const user = userEvent.setup();
+  it('hides management when the server says the viewer cannot manage sharing', async () => {
     renderSharing({
-      sharing: {
-        ...sharing,
-        shares: [
-          {
-            id: 'everyone',
-            principalType: RecordSharePrincipalType.EVERYONE,
-            principalId: 'everyone',
-            accessLevel: 'READ',
-            rowCause: 'MANUAL',
-          },
-        ],
-      },
+      sharingOverrides: { canManageSharing: false, roles: [] },
     });
-    await user.click(
-      screen.getByRole('button', { name: /^Everyone in the workspace/ }),
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'Only the creator of this record and people with full access to it can change who has access.',
+        ),
+      ).toBeVisible(),
     );
-    await user.click(screen.getByRole('menuitemradio', { name: 'Restricted' }));
-    expect(setShare).toHaveBeenCalledWith({
-      principal: { everyone: true },
-      enabled: false,
-    });
+    expect(screen.queryByText('General access')).toBeNull();
+    expect(
+      screen.queryByRole('searchbox', { name: 'Add people or everyone' }),
+    ).toBeNull();
+    expect(screen.getByText('Copy link')).toBeVisible();
   });
 
-  it.each([
-    [RecordShareAccessLevel.READ, false],
-    [RecordShareAccessLevel.READ_WRITE, true],
-    [RecordShareAccessLevel.FULL, false],
-  ])(
-    'hides management for %s with update permission %s',
-    async (viewerAccessLevel, canUpdate) => {
-      renderSharing({
-        sharing: {
-          ...sharing,
-          viewerAccessLevel,
-          permissions: {
-            canRead: true,
-            canUpdate,
-            canDelete: false,
-            canSoftDelete: false,
-          },
-          roles: [],
-        },
-      });
-      await waitFor(() =>
-        expect(
-          screen.getByText(
-            'Full access and edit permission are required to manage sharing.',
-          ),
-        ).toBeVisible(),
-      );
-      expect(screen.queryByText('General access')).toBeNull();
-      expect(screen.queryByPlaceholderText('Add people or roles')).toBeNull();
-      expect(screen.getByText('Copy link')).toBeVisible();
-    },
-  );
-
-  it('supports keyboard selection and reports empty searches', async () => {
-    const user = userEvent.setup();
-    renderSharing();
-    await user.click(
-      screen.getByRole('button', { name: 'Add people or roles' }),
-    );
-    const input = screen.getByPlaceholderText('Search people or roles');
-    await user.type(input, 'no match');
-    expect(screen.getByText('No matching people or roles')).toBeVisible();
-    await user.clear(input);
-    await user.type(input, 'sales');
-    await user.keyboard('{ArrowDown}');
-    await user.keyboard('{ArrowDown}');
-    expect(screen.getByRole('button', { name: 'Sales Role' })).toHaveFocus();
-    await user.keyboard('{Enter}');
-    expect(setShare).toHaveBeenCalledWith({
-      principal: { roleId: 'sales-role' },
-      enabled: true,
-      accessLevel: 'READ',
-    });
-  });
-
-  it('keeps invitations out of the main menu and removes access through the recipient submenu', async () => {
-    const user = userEvent.setup();
-    renderSharing({
-      sharing: {
-        ...sharing,
-        shares: [
-          {
-            id: 'grant',
-            principalType: 'WORKSPACE_MEMBER',
-            principalId: 'alice-member',
-            accessLevel: 'READ',
-            rowCause: 'MANUAL',
-          },
-        ],
-      },
-    });
-    expect(screen.queryByPlaceholderText('Search people or roles')).toBeNull();
-    expect(screen.queryByText('Remove access')).toBeNull();
-    await user.click(
-      screen.getByRole('button', { name: 'Alice Smith Viewer' }),
-    );
-    await user.click(screen.getByRole('menuitem', { name: 'Remove access' }));
-    expect(setShare).toHaveBeenCalledWith({
-      principal: { workspaceMemberId: 'alice-member' },
-      enabled: false,
-    });
-  });
-
-  it('copies the supplied record link', async () => {
-    const user = userEvent.setup();
-    renderSharing();
-    await user.click(screen.getByRole('button', { name: 'Copy link' }));
-    expect(copyToClipboard).toHaveBeenCalledWith('https://example.com/record');
-  });
-
-  it('shows a retry action when settings cannot be loaded', async () => {
-    const user = userEvent.setup();
-    renderSharing({ error: new Error('offline') });
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Sharing settings could not be loaded.',
-    );
-    await user.click(screen.getByText('Try again'));
-    expect(refetch).toHaveBeenCalledTimes(1);
-    expect(screen.queryByPlaceholderText('Add people or roles')).toBeNull();
-  });
   it('shows application and owner grants without offering to revoke them', async () => {
     renderSharing({
-      sharing: {
-        ...sharing,
+      sharingOverrides: {
         shares: [
-          {
+          buildShare({
             id: 'owner',
-            principalType: 'WORKSPACE_MEMBER',
-            principalId: 'alice-member',
-            accessLevel: 'FULL',
-            rowCause: 'OWNER',
-          },
-          {
+            accessLevel: RecordShareAccessLevel.FULL,
+            rowCause: RecordShareRowCause.OWNER,
+          }),
+          buildShare({
+            __typename: 'RecordSharingGrantDTO' as const,
             id: 'app',
-            principalType: 'ROLE',
+            principalType: RecordSharePrincipalType.ROLE,
             principalId: 'sales-role',
-            accessLevel: 'READ',
-            rowCause: 'APPLICATION',
-          },
+            rowCause: RecordShareRowCause.APPLICATION,
+          }),
         ],
       },
     });
@@ -280,111 +191,74 @@ describe('Share record side panel', () => {
     expect(screen.queryByRole('button', { name: /Remove/ })).toBeNull();
   });
 
-  it('explains inherited access instead of promising a manual revocation removes it', async () => {
-    renderSharing({ sharing: { ...sharing, hasInheritedAccess: true } });
+  it('tells managers what adding people grants', async () => {
+    renderSharing();
     await waitFor(() =>
       expect(
-        screen.getByText(/Access is also inherited from related records/),
+        screen.getByText(
+          "People you add get this record even if their role can't access Companies. Field permissions still apply.",
+        ),
       ).toBeVisible(),
     );
   });
-  it.each([
-    [
-      'Alice Smith',
-      { workspaceMemberId: 'alice-member' },
-      'Editor',
-      'READ_WRITE',
-    ],
-    ['Sales', { roleId: 'sales-role' }, 'Editor', 'READ_WRITE'],
-    [
-      'Alice Smith',
-      { workspaceMemberId: 'alice-member' },
-      'Full access',
-      'FULL',
-    ],
-    ['Sales', { roleId: 'sales-role' }, 'Full access', 'FULL'],
-  ])(
-    'can invite %s as %s',
-    async (label, principal, accessLabel, accessLevel) => {
-      const user = userEvent.setup();
-      renderSharing();
-      await user.click(
-        screen.getByRole('button', { name: 'Add people or roles' }),
-      );
-      await user.click(
-        screen.getByRole('button', { name: 'Invitation access' }),
-      );
-      await user.click(
-        screen.getByRole('menuitemradio', { name: accessLabel as string }),
-      );
-      await user.keyboard('{Escape}');
-      await user.click(screen.getByText(label as string));
-      expect(setShare).toHaveBeenCalledWith({
-        principal,
-        enabled: true,
-        accessLevel,
-      });
-    },
-  );
 
-  it.each([
-    [
-      'Alice Smith',
-      'WORKSPACE_MEMBER',
-      'alice-member',
-      { workspaceMemberId: 'alice-member' },
-    ],
-    ['Sales', 'ROLE', 'sales-role', { roleId: 'sales-role' }],
-    ['Everyone in the workspace', 'EVERYONE', 'everyone', { everyone: true }],
-  ])(
-    'can upgrade and downgrade %s without removing their grant',
-    async (label, principalType, principalId, principal) => {
-      const user = userEvent.setup();
-      const shares = [
-        {
-          id: 'grant',
-          principalType,
-          principalId,
-          accessLevel: 'READ',
-          rowCause: 'MANUAL',
-        },
-      ];
-      const view = renderSharing({ sharing: { ...sharing, shares } });
-      await user.click(
-        screen.getByRole('button', {
-          name:
-            principalType === 'EVERYONE'
-              ? /^Everyone in the workspace/
-              : new RegExp(`^${label}`),
-        }),
-      );
-      await user.click(screen.getByText('Full access'));
-      expect(setShare).toHaveBeenLastCalledWith({
-        principal,
-        enabled: true,
-        accessLevel: 'FULL',
-      });
-      view.unmount();
-      renderSharing({
-        sharing: {
-          ...sharing,
-          shares: [{ ...shares[0], accessLevel: 'FULL' }],
-        },
-      });
-      await user.click(
-        screen.getByRole('button', {
-          name:
-            principalType === 'EVERYONE'
-              ? /^Everyone in the workspace/
-              : new RegExp(`^${label}`),
-        }),
-      );
-      await user.click(screen.getAllByText('Viewer').at(-1)!);
-      expect(setShare).toHaveBeenLastCalledWith({
-        principal,
-        enabled: true,
-        accessLevel: 'READ',
-      });
-    },
-  );
+  it('tells viewers of a record open by default who can change its access', async () => {
+    renderSharing({
+      sharingOverrides: {
+        isPrivate: false,
+        canManageSharing: false,
+        roles: [],
+      },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'Only the creator of this record, people with full access to it and admins can change who has access.',
+        ),
+      ).toBeVisible(),
+    );
+  });
+
+  it('explains that records of an object without record sharing follow roles', async () => {
+    renderSharing({
+      sharingOverrides: {
+        isShareable: false,
+        canManageSharing: false,
+        isPrivate: false,
+        roles: [],
+      },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'Access to Companies is set by roles, not record by record.',
+        ),
+      ).toBeVisible(),
+    );
+    expect(screen.queryByText(/Only the creator of this record/)).toBeNull();
+  });
+
+  it('explains what a grant does for a role without access', async () => {
+    renderSharing({
+      sharingOverrides: {
+        roles: [
+          {
+            id: 'member-role',
+            label: 'Member',
+            canRead: false,
+            canUpdate: false,
+            __typename: 'RecordSharingRoleDTO',
+          },
+        ],
+        shares: [buildShare({ principalRoleId: 'member-role' })],
+      },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "Gets this record only: their role can't access Companies",
+        ),
+      ).toBeVisible(),
+    );
+  });
 });

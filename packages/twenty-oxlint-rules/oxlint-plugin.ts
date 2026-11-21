@@ -1,6 +1,10 @@
 import { definePlugin } from '@oxlint/plugins';
 
 import {
+  rule as applicationTargetGuards,
+  RULE_NAME as applicationTargetGuardsName,
+} from './rules/application-target-guards';
+import {
   rule as componentPropsNaming,
   RULE_NAME as componentPropsNamingName,
 } from './rules/component-props-naming';
@@ -77,6 +81,18 @@ import {
   RULE_NAME as noStorybookA11yDisableName,
 } from './rules/no-storybook-a11y-disable';
 import {
+  rule as noTwentyUiOverride,
+  RULE_NAME as noTwentyUiOverrideName,
+} from './rules/no-twenty-ui-override';
+import {
+  rule as moduleImportDirection,
+  RULE_NAME as moduleImportDirectionName,
+} from './rules/module-import-direction';
+import {
+  rule as noWindowOpen,
+  RULE_NAME as noWindowOpenName,
+} from './rules/no-window-open';
+import {
   rule as preferWorkspaceScopedRepository,
   RULE_NAME as preferWorkspaceScopedRepositoryName,
 } from './rules/prefer-workspace-scoped-repository';
@@ -104,6 +120,7 @@ import {
 export default definePlugin({
   meta: { name: 'twenty' },
   rules: {
+    [applicationTargetGuardsName]: applicationTargetGuards,
     [componentPropsNamingName]: componentPropsNaming,
     [effectComponentsName]: effectComponents,
     [enforceModuleBoundariesName]: enforceModuleBoundaries,
@@ -124,6 +141,9 @@ export default definePlugin({
     [noRuntimeImportFromUpgradeCommandName]: noRuntimeImportFromUpgradeCommand,
     [noStateUserefName]: noStateUseref,
     [noStorybookA11yDisableName]: noStorybookA11yDisable,
+    [noTwentyUiOverrideName]: noTwentyUiOverride,
+    [moduleImportDirectionName]: moduleImportDirection,
+    [noWindowOpenName]: noWindowOpen,
     [preferWorkspaceScopedRepositoryName]: preferWorkspaceScopedRepository,
     [restApiMethodsShouldBeGuardedName]: restApiMethodsShouldBeGuarded,
     [sortCssPropertiesAlphabeticallyName]: sortCssPropertiesAlphabetically,

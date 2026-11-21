@@ -14,9 +14,7 @@ declare global {
   }
 }
 
-// Sent from inside the page so it carries the same workspace origin and
-// session cookie as the app's own requests. The cookie is scoped to the
-// workspace subdomain, which Node-side requests can neither resolve nor reach.
+// Runs in the page: the session cookie is scoped to the workspace subdomain, which Node can't reach.
 export const postBackendGraphQL = <TData>({
   page,
   data,
@@ -31,7 +29,10 @@ export const postBackendGraphQL = <TData>({
     const response = await fetch(`${serverBaseUrl}/graphql`, {
       method: 'POST',
       credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-twenty-session-cookie': '1',
+      },
       body: JSON.stringify(requestBody),
     });
 

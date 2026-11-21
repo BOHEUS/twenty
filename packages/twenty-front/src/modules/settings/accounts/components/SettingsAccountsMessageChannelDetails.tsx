@@ -1,13 +1,11 @@
 import { useMutation } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-
 import {
   type MessageChannelContactAutoCreationPolicy,
   MessageChannelType,
   type MessageFolderImportPolicy,
 } from 'twenty-shared/types';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { IconBriefcase, IconUsers } from 'twenty-ui/icon';
 import { Card } from 'twenty-ui/primitives/surfaces';
 import { themeCssVariables } from 'twenty-ui/theme';
@@ -18,7 +16,8 @@ import { SettingsAccountsMessageFolderCard } from '@/settings/accounts/component
 import { SettingsAccountsMessageVisibilityCard } from '@/settings/accounts/components/SettingsAccountsMessageVisibilityCard';
 import { UPDATE_MESSAGE_CHANNEL } from '@/settings/accounts/graphql/mutations/updateMessageChannel';
 import { SettingsOptionCardContentSwitch } from '@/settings/components/SettingsOptions/SettingsOptionCardContentSwitch';
-import { type MessageChannelVisibility } from '~/generated/graphql';
+import { type MessageChannelVisibility } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsAccountsMessageChannelDetailsProps = {
   messageChannel: Pick<
@@ -51,6 +50,7 @@ const StyledDetailsContainer = styled.div`
 export const SettingsAccountsMessageChannelDetails = ({
   messageChannel,
 }: SettingsAccountsMessageChannelDetailsProps) => {
+  const { t } = useLingui();
   const [updateMessageChannel] = useMutation(UPDATE_MESSAGE_CHANNEL);
 
   const updateChannel = (update: MessageChannelUpdateInput) => {
@@ -129,7 +129,7 @@ export const SettingsAccountsMessageChannelDetails = ({
           title={t`Options`}
           description={t`Configure what emails should get synced`}
         />
-        <Card.Root rounded>
+        <Card.Root>
           <SettingsOptionCardContentSwitch
             Icon={IconUsers}
             title={t`Exclude group emails`}

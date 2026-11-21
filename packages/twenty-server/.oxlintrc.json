@@ -23,6 +23,8 @@
     "src/engine/core-modules/upgrade/constants/twenty-next-versions.constant.ts"
   ],
   "rules": {
+    "curly": "error",
+    "prefer-const": ["error", { "ignoreReadBeforeAssign": true }],
     "func-style": ["error", "declaration", { "allowArrowFunctions": true }],
     "no-console": [
       "warn",
@@ -30,6 +32,7 @@
     ],
     "no-control-regex": "off",
     "no-debugger": "error",
+    "no-else-return": "error",
     "no-duplicate-imports": "error",
     "no-undef": "off",
     "no-unused-vars": "off",
@@ -92,6 +95,7 @@
     "twenty/prefer-workspace-scoped-repository": "error",
     "twenty/rest-api-methods-should-be-guarded": "error",
     "twenty/graphql-resolvers-should-be-guarded": "error",
+    "twenty/application-target-guards": "error",
     "twenty/upgrade-command-filename": "error",
     "twenty/no-runtime-import-from-upgrade-command": "error",
     "twenty/no-data-mutation-in-fast-instance-command": "error",

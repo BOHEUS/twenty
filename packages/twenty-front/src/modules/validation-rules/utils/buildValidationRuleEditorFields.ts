@@ -1,12 +1,16 @@
-import { COMPOSITE_FIELD_SUB_FIELD_LABELS } from 'twenty-shared/constants';
+import { type MessageDescriptor } from '@lingui/core';
+import { t } from '@lingui/core/macro';
+import { isNonEmptyString } from '@sniptt/guards';
 import {
   compositeTypeDefinitions,
   FieldMetadataType,
 } from 'twenty-shared/types';
+import { VALIDATION_RULE_PREVIOUS_VARIABLE_NAME } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { type FieldMetadataItem } from '@/object-metadata/types/FieldMetadataItem';
+import { COMPOSITE_FIELD_SUB_FIELD_LABEL_MESSAGES } from '@/settings/data-model/constants/CompositeFieldSubFieldLabelMessages';
 import { type ValidationRuleEditorField } from '@/validation-rules/types/ValidationRuleEditorField';
 import { RelationType } from '~/generated-metadata/graphql';
 
@@ -23,14 +27,18 @@ const isRelationType = (type: FieldMetadataType) =>
   type === FieldMetadataType.MORPH_RELATION;
 
 const COMPOSITE_SUBFIELD_LABELS_BY_FIELD_TYPE: Partial<
-  Record<FieldMetadataType, Record<string, string>>
-> = COMPOSITE_FIELD_SUB_FIELD_LABELS;
+  Record<FieldMetadataType, Record<string, MessageDescriptor>>
+> = COMPOSITE_FIELD_SUB_FIELD_LABEL_MESSAGES;
 
 const getCompositeSubfieldLabel = (
   type: FieldMetadataType,
   subfieldName: string,
-): string =>
-  COMPOSITE_SUBFIELD_LABELS_BY_FIELD_TYPE[type]?.[subfieldName] ?? subfieldName;
+): string => {
+  const subfieldLabel =
+    COMPOSITE_SUBFIELD_LABELS_BY_FIELD_TYPE[type]?.[subfieldName];
+
+  return isDefined(subfieldLabel) ? t(subfieldLabel) : subfieldName;
+};
 
 const buildScalarEditorFields = ({
   fieldMetadataItem,
@@ -47,7 +55,9 @@ const buildScalarEditorFields = ({
 }): ValidationRuleEditorField[] => {
   const compositeType = compositeTypeDefinitions.get(fieldMetadataItem.type);
   const path = `${pathPrefix}${fieldMetadataItem.name}`;
-  const iconName = fieldMetadataItem.icon ?? DEFAULT_FIELD_ICON;
+  const iconName = isNonEmptyString(fieldMetadataItem.icon)
+    ? fieldMetadataItem.icon
+    : DEFAULT_FIELD_ICON;
 
   const field: ValidationRuleEditorField = {
     path,
@@ -56,7 +66,9 @@ const buildScalarEditorFields = ({
     iconName,
     type: fieldMetadataItem.type,
     objectLabelSingular: objectMetadataItem.labelSingular,
-    objectIconName: objectMetadataItem.icon ?? DEFAULT_OBJECT_ICON,
+    objectIconName: isNonEmptyString(objectMetadataItem.icon)
+      ? objectMetadataItem.icon
+      : DEFAULT_OBJECT_ICON,
     selectOptionValues:
       fieldMetadataItem.options?.map((option) => option.value) ?? [],
     isSystem: fieldMetadataItem.isSystem ?? false,
@@ -81,7 +93,7 @@ const buildScalarEditorFields = ({
   return [field, ...subfields];
 };
 
-export const buildValidationRuleEditorFields = ({
+const buildCurrentValueEditorFields = ({
   objectMetadataItem,
   objectMetadataItems,
 }: {
@@ -119,12 +131,14 @@ export const buildValidationRuleEditorFields = ({
         label: fieldMetadataItem.label,
         parentLabel: null,
         iconName:
-          fieldMetadataItem.icon ??
-          targetObjectMetadataItem?.icon ??
-          DEFAULT_OBJECT_ICON,
+          [fieldMetadataItem.icon, targetObjectMetadataItem?.icon].find(
+            isNonEmptyString,
+          ) ?? DEFAULT_OBJECT_ICON,
         type: fieldMetadataItem.type,
         objectLabelSingular: objectMetadataItem.labelSingular,
-        objectIconName: objectMetadataItem.icon ?? DEFAULT_OBJECT_ICON,
+        objectIconName: isNonEmptyString(objectMetadataItem.icon)
+          ? objectMetadataItem.icon
+          : DEFAULT_OBJECT_ICON,
         selectOptionValues: [],
         isSystem: fieldMetadataItem.isSystem ?? false,
         hasMembers: isDefined(targetObjectMetadataItem),
@@ -152,3 +166,36 @@ export const buildValidationRuleEditorFields = ({
 
       return [relationField, ...targetFields];
     });
+
+const buildPreviousValueEditorField = (
+  field: ValidationRuleEditorField,
+): ValidationRuleEditorField => {
+  const previousLabel = t`Previous`;
+
+  return {
+    ...field,
+    path: `${VALIDATION_RULE_PREVIOUS_VARIABLE_NAME}.${field.path}`,
+    parentLabel: isDefined(field.parentLabel)
+      ? `${previousLabel} › ${field.parentLabel}`
+      : previousLabel,
+  };
+};
+
+export const buildValidationRuleEditorFields = ({
+  objectMetadataItem,
+  objectMetadataItems,
+}: {
+  objectMetadataItem: ValidationRuleEditorObject;
+  objectMetadataItems: ValidationRuleEditorObject[];
+}): ValidationRuleEditorField[] => {
+  const currentValueFields = buildCurrentValueEditorFields({
+    objectMetadataItem,
+    objectMetadataItems,
+  });
+
+  const previousValueFields = currentValueFields
+    .filter((field) => !field.readsRelatedRecord)
+    .map(buildPreviousValueEditorField);
+
+  return [...currentValueFields, ...previousValueFields];
+};

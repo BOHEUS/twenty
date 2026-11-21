@@ -1,76 +1,134 @@
-import { useRefreshRecordPermissions } from '@/object-record/record-sharing/hooks/useRefreshRecordPermissions';
+import { type ApolloCache } from '@apollo/client';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
+import { useRefreshRecordPermissions } from '@/object-record/record-sharing/hooks/useRefreshRecordPermissions';
 import {
-  type RecordShareAccessLevel,
   GetRecordSharingDocument,
+  RemoveRecordShareDocument,
+  SetRecordPrivateDocument,
   SetRecordShareDocument,
+  type RecordShareAccessLevel,
   type RecordSharePrincipalInput,
-  type RecordSharingTargetInput,
+  type RecordSharingFieldsFragment,
+  type RecordTargetInput,
 } from '~/generated-metadata/graphql';
-
-const SHARING_REFRESH_INTERVAL_MS = 30_000;
 
 export const useRecordSharing = ({
   recordTarget,
-  isOpen,
 }: {
-  recordTarget: RecordSharingTargetInput;
-  isOpen: boolean;
+  recordTarget: RecordTargetInput;
 }) => {
-  const { refreshRecordPermissions } = useRefreshRecordPermissions();
+  const { setRecordPermissions } = useRefreshRecordPermissions();
+  const { enqueueToast } = useToast();
   const { data, loading, error, refetch } = useQuery(GetRecordSharingDocument, {
     variables: { target: recordTarget },
     fetchPolicy: 'network-only',
-    pollInterval: isOpen ? SHARING_REFRESH_INTERVAL_MS : 0,
-    skipPollAttempt: () => document.visibilityState !== 'visible',
     notifyOnNetworkStatusChange: false,
   });
-  const [setShareMutation, { loading: saving }] = useMutation(
-    SetRecordShareDocument,
+
+  const writeSharing = (
+    cache: ApolloCache,
+    sharing: RecordSharingFieldsFragment | undefined,
+  ) => {
+    if (!isDefined(sharing)) {
+      return;
+    }
+    cache.writeQuery({
+      query: GetRecordSharingDocument,
+      variables: { target: recordTarget },
+      data: { recordSharing: sharing },
+    });
+  };
+  const [setPrivateMutation, { loading: savingPrivate }] = useMutation(
+    SetRecordPrivateDocument,
     {
-      update: (cache, { data: mutationData }) => {
-        if (!isDefined(mutationData)) {
-          return;
-        }
-        cache.writeQuery({
-          query: GetRecordSharingDocument,
-          variables: { target: recordTarget },
-          data: { recordSharing: mutationData.setRecordShare },
-        });
-      },
+      update: (cache, { data: mutationData }) =>
+        writeSharing(cache, mutationData?.setRecordPrivate),
     },
   );
-  const { enqueueToast } = useToast();
+  const [setShareMutation, { loading: savingShare }] = useMutation(
+    SetRecordShareDocument,
+    {
+      update: (cache, { data: mutationData }) =>
+        writeSharing(cache, mutationData?.setRecordShare),
+    },
+  );
+  const [removeShareMutation, { loading: removingShare }] = useMutation(
+    RemoveRecordShareDocument,
+    {
+      update: (cache, { data: mutationData }) =>
+        writeSharing(cache, mutationData?.removeRecordShare),
+    },
+  );
 
-  const setShare = async ({
+  const changeSharing = async (
+    mutate: () => Promise<RecordSharingFieldsFragment | undefined>,
+  ) => {
+    try {
+      const sharing = await mutate();
+      if (isDefined(sharing)) {
+        setRecordPermissions(recordTarget, sharing.permissions);
+      }
+
+      return sharing;
+    } catch (mutationError) {
+      enqueueToast(getToastOptionsFromError({ error: mutationError }));
+
+      return undefined;
+    }
+  };
+
+  const setPrivate = (isPrivate: boolean) =>
+    changeSharing(
+      async () =>
+        (
+          await setPrivateMutation({
+            variables: { target: recordTarget, isPrivate },
+          })
+        ).data?.setRecordPrivate,
+    );
+
+  const setShare = ({
     principal,
-    enabled,
     accessLevel,
   }: {
     principal: RecordSharePrincipalInput;
-    enabled: boolean;
-    accessLevel?: RecordShareAccessLevel;
-  }) => {
-    try {
-      await setShareMutation({
-        variables: { target: recordTarget, principal, enabled, accessLevel },
-      });
-      await refreshRecordPermissions([recordTarget]);
-    } catch (mutationError) {
-      enqueueToast(getToastOptionsFromError({ error: mutationError }));
-    }
-  };
+    accessLevel: RecordShareAccessLevel;
+  }) =>
+    changeSharing(
+      async () =>
+        (
+          await setShareMutation({
+            variables: { target: recordTarget, principal, accessLevel },
+          })
+        ).data?.setRecordShare,
+    );
+
+  const removeShare = ({
+    principal,
+  }: {
+    principal: RecordSharePrincipalInput;
+  }) =>
+    changeSharing(
+      async () =>
+        (
+          await removeShareMutation({
+            variables: { target: recordTarget, principal },
+          })
+        ).data?.removeRecordShare,
+    );
 
   return {
     sharing: data?.recordSharing,
     loading,
     error,
-    saving,
+    saving: savingPrivate || savingShare || removingShare,
+    setPrivate,
     setShare,
+    removeShare,
     refetch,
   };
 };

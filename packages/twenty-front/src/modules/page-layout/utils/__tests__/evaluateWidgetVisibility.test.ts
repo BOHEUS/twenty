@@ -1,4 +1,4 @@
-import { type RulesLogic } from 'json-logic-js';
+import { type AdditionalOperation, type RulesLogic } from 'json-logic-js';
 
 import { evaluateWidgetVisibility } from '@/page-layout/utils/evaluateWidgetVisibility';
 
@@ -142,9 +142,9 @@ describe('evaluateWidgetVisibility', () => {
   });
 
   it('should throw error for invalid operator', () => {
-    const invalidConditionalDisplay = {
+    const invalidConditionalDisplay: RulesLogic<AdditionalOperation> = {
       invalidOperator: 'test',
-    } as unknown as RulesLogic;
+    };
 
     expect(() => {
       evaluateWidgetVisibility({
@@ -221,8 +221,6 @@ describe('evaluateWidgetVisibility', () => {
         },
       });
 
-      // Expression says MOBILE only, so DESKTOP should be hidden
-      // even though conditionalDisplay says DESKTOP is visible
       expect(result).toBe(false);
     });
 
@@ -245,8 +243,6 @@ describe('evaluateWidgetVisibility', () => {
         },
       });
 
-      // Expression is null, so conditionalDisplay takes over
-      // conditionalDisplay says MOBILE only → DESKTOP hidden
       expect(result).toBe(false);
     });
 

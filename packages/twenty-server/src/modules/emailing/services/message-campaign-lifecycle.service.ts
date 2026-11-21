@@ -12,7 +12,7 @@ import {
   EmailingDomainException,
   EmailingDomainExceptionCode,
 } from 'src/engine/core-modules/emailing-domain/exceptions/emailing-domain.exception';
-import { UserRoleService } from 'src/engine/metadata-modules/user-role/user-role.service';
+import { RolePermissionsService } from 'src/engine/permissions/role-permissions.service';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import { MessageCampaignStatisticsService } from 'src/modules/emailing/services/message-campaign-statistics.service';
@@ -26,7 +26,7 @@ type CampaignStatusTransition = {
   campaignId: string;
   from: MessageCampaignStatus;
   to: MessageCampaignStatus;
-  roleId?: string;
+  roleIds?: string[];
   scheduledAt?: Date | null;
   fromScheduledAt?: Date;
 };
@@ -35,7 +35,7 @@ type CampaignStatusTransition = {
 export class MessageCampaignLifecycleService {
   constructor(
     private readonly workspaceOrmManager: WorkspaceOrmManager,
-    private readonly userRoleService: UserRoleService,
+    private readonly rolePermissionsService: RolePermissionsService,
     private readonly messageCampaignStatisticsService: MessageCampaignStatisticsService,
   ) {}
 
@@ -44,7 +44,7 @@ export class MessageCampaignLifecycleService {
     campaignId,
     from,
     to,
-    roleId,
+    roleIds,
     scheduledAt,
     fromScheduledAt,
   }: CampaignStatusTransition): Promise<boolean> {
@@ -67,16 +67,13 @@ export class MessageCampaignLifecycleService {
       async () => {
         const campaignRepository = this.workspaceOrmManager.getRepository(
           MessageCampaignWorkspaceEntity,
-          isDefined(roleId)
-            ? { unionOf: [roleId] }
-            : { shouldBypassPermissionChecks: true },
         );
 
         const { affected } = await campaignRepository.update(criteria, update);
 
         return affected === 1;
       },
-      isDefined(roleId) ? undefined : buildSystemAuthContext(workspaceId),
+      isDefined(roleIds) ? undefined : buildSystemAuthContext(workspaceId),
     );
   }
 
@@ -90,10 +87,10 @@ export class MessageCampaignLifecycleService {
     scheduledAt: Date;
   }): Promise<boolean> {
     return this.workspaceOrmManager.executeInWorkspaceContext(async () => {
-      const campaignRepository = this.workspaceOrmManager.getRepository(
-        MessageCampaignWorkspaceEntity,
-        { shouldBypassPermissionChecks: true },
-      );
+      const campaignRepository =
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+          MessageCampaignWorkspaceEntity,
+        );
 
       return campaignRepository.existsBy({
         id: campaignId,
@@ -108,10 +105,10 @@ export class MessageCampaignLifecycleService {
   async findRunningCampaign(
     campaignId: string,
   ): Promise<MessageCampaignWorkspaceEntity | null> {
-    const campaignRepository = this.workspaceOrmManager.getRepository(
-      MessageCampaignWorkspaceEntity,
-      { shouldBypassPermissionChecks: true },
-    );
+    const campaignRepository =
+      this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+        MessageCampaignWorkspaceEntity,
+      );
 
     const campaign = await campaignRepository.findOne({
       where: { id: campaignId },
@@ -136,15 +133,16 @@ export class MessageCampaignLifecycleService {
     userWorkspaceId: string;
     campaignId: string;
   }): Promise<{ campaignId: string; canceledMessageCount: number }> {
-    const roleId = await this.userRoleService.getRoleIdForUserWorkspace({
-      workspaceId,
-      userWorkspaceId,
-    });
+    const roleIds =
+      await this.rolePermissionsService.findUserWorkspaceRoleIdsOrThrow({
+        workspaceId,
+        userWorkspaceId,
+      });
 
     const unscheduled = await this.transitionCampaignStatus({
       workspaceId,
       campaignId,
-      roleId,
+      roleIds,
       from: MessageCampaignStatus.SCHEDULED,
       to: MessageCampaignStatus.DRAFT,
       scheduledAt: null,
@@ -157,7 +155,7 @@ export class MessageCampaignLifecycleService {
     const canceled = await this.transitionCampaignStatus({
       workspaceId,
       campaignId,
-      roleId,
+      roleIds,
       from: MessageCampaignStatus.SENDING,
       to: MessageCampaignStatus.CANCELED,
     });
@@ -266,18 +264,11 @@ export class MessageCampaignLifecycleService {
     const { generatedMaps: settledDeliveries } =
       await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
         const campaignDeliveryRepository =
-          this.workspaceOrmManager.getRepository(
+          this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
             CampaignDeliveryWorkspaceEntity,
-            { shouldBypassPermissionChecks: true },
             { shouldSkipEventEmission: true },
           );
-        return campaignDeliveryRepository
-          .createQueryBuilder()
-          .where(criteria)
-          .update()
-          .set(update)
-          .returning(['id'])
-          .execute();
+        return campaignDeliveryRepository.update(criteria, update);
       }, buildSystemAuthContext(workspaceId));
 
     return settledDeliveries.length;
@@ -296,9 +287,8 @@ export class MessageCampaignLifecycleService {
     const hasUnfinishedDelivery =
       await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
         const campaignDeliveryRepository =
-          this.workspaceOrmManager.getRepository(
+          this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
             CampaignDeliveryWorkspaceEntity,
-            { shouldBypassPermissionChecks: true },
             { shouldSkipEventEmission: true },
           );
         return campaignDeliveryRepository.existsBy({
@@ -332,10 +322,10 @@ export class MessageCampaignLifecycleService {
         : [MessageCampaignStatus.SENDING];
 
     await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
-      const campaignRepository = this.workspaceOrmManager.getRepository(
-        MessageCampaignWorkspaceEntity,
-        { shouldBypassPermissionChecks: true },
-      );
+      const campaignRepository =
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+          MessageCampaignWorkspaceEntity,
+        );
 
       await campaignRepository.update(
         { id: campaignId, status: In(correctableStatuses) },

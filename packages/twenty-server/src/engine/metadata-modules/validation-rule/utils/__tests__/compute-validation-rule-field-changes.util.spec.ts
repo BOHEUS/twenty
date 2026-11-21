@@ -1,3 +1,5 @@
+/* @license Enterprise */
+
 import { FieldMetadataType } from 'twenty-shared/types';
 
 import { computeValidationRuleFieldChanges } from 'src/engine/metadata-modules/validation-rule/utils/compute-validation-rule-field-changes.util';
@@ -7,6 +9,7 @@ const AMOUNT = {
   name: 'amount',
   type: FieldMetadataType.CURRENCY,
   isActive: true,
+  applicationUniversalIdentifier: 'application',
 };
 
 const STAGE = {
@@ -14,6 +17,7 @@ const STAGE = {
   name: 'stage',
   type: FieldMetadataType.SELECT,
   isActive: true,
+  applicationUniversalIdentifier: 'application',
 };
 
 const EXISTING_FIELD_BY_UNIVERSAL_IDENTIFIER = {
@@ -22,6 +26,31 @@ const EXISTING_FIELD_BY_UNIVERSAL_IDENTIFIER = {
 };
 
 describe('computeValidationRuleFieldChanges', () => {
+  it('should see a deactivation made through a workspace override', () => {
+    expect(
+      computeValidationRuleFieldChanges({
+        updatedFields: [
+          {
+            ...STAGE,
+            overrides: {
+              'workspace-application': { isActive: false },
+            },
+          },
+        ],
+        deletedFields: [],
+        existingFieldByUniversalIdentifier:
+          EXISTING_FIELD_BY_UNIVERSAL_IDENTIFIER,
+      }),
+    ).toEqual([
+      {
+        fieldUniversalIdentifier: STAGE.universalIdentifier,
+        newFieldName: null,
+        shouldDisableRulesReadingField: true,
+        isDeleted: false,
+      },
+    ]);
+  });
+
   it('should list every change of the migration, updates and deletions alike', () => {
     expect(
       computeValidationRuleFieldChanges({
@@ -38,19 +67,19 @@ describe('computeValidationRuleFieldChanges', () => {
         fieldUniversalIdentifier: AMOUNT.universalIdentifier,
         newFieldName: 'dealValue',
         shouldDisableRulesReadingField: false,
-        shouldDetachErrorField: false,
+        isDeleted: false,
       },
       {
         fieldUniversalIdentifier: STAGE.universalIdentifier,
         newFieldName: null,
         shouldDisableRulesReadingField: true,
-        shouldDetachErrorField: true,
+        isDeleted: false,
       },
       {
         fieldUniversalIdentifier: 'score-universal-identifier',
         newFieldName: null,
         shouldDisableRulesReadingField: true,
-        shouldDetachErrorField: true,
+        isDeleted: true,
       },
     ]);
   });
@@ -68,7 +97,7 @@ describe('computeValidationRuleFieldChanges', () => {
         fieldUniversalIdentifier: STAGE.universalIdentifier,
         newFieldName: null,
         shouldDisableRulesReadingField: true,
-        shouldDetachErrorField: false,
+        isDeleted: false,
       },
     ]);
   });
@@ -84,6 +113,7 @@ describe('computeValidationRuleFieldChanges', () => {
             name: 'newField',
             type: FieldMetadataType.TEXT,
             isActive: true,
+            applicationUniversalIdentifier: 'application',
           },
         ],
         deletedFields: [],

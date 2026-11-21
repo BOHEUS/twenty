@@ -1,3 +1,4 @@
+import { isDefined } from 'twenty-shared/utils';
 import { type SettingsCustomizeVideoModalTab } from '@/settings/types/SettingsCustomizeVideoModalTab';
 import { SettingsCustomizeVideoModal } from '@/settings/components/SettingsCustomizeVideoModal';
 import { HeroPlayButton } from '@/ui/layout/hero/components/HeroPlayButton';
@@ -72,7 +73,7 @@ export const SettingsDiscoveryHeroCard = ({
 
   return (
     <>
-      <Card.Root rounded>
+      <Card.Root>
         <StyledCoverContainer coverHeight={coverHeight}>
           <StyledImage src={src} alt="" aria-hidden />
           {shouldDisplayVideo && (
@@ -84,9 +85,7 @@ export const SettingsDiscoveryHeroCard = ({
             </StyledOverlay>
           )}
         </StyledCoverContainer>
-        {footer !== undefined && footer !== null && (
-          <StyledFooter>{footer}</StyledFooter>
-        )}
+        {isDefined(footer) && <StyledFooter>{footer}</StyledFooter>}
       </Card.Root>
       {shouldDisplayVideo && (
         <SettingsCustomizeVideoModal

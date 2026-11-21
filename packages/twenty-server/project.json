@@ -7,6 +7,7 @@
     "build": {
       "executor": "nx:run-commands",
       "cache": true,
+      "inputs": ["^production", "production", "!{projectRoot}/test/**/*"],
       "options": {
         "cwd": "packages/twenty-server",
         "parallel": false,
@@ -51,7 +52,7 @@
       "dependsOn": ["^build"],
       "options": {
         "cwd": "packages/twenty-server",
-        "command": "jest --config ./jest.config.mjs --ci --runInBand"
+        "command": "jest --config ./jest.config.mjs --ci --maxWorkers=3 --workerIdleMemoryLimit=1GB --cacheDirectory=../../.cache/jest/packages/twenty-server"
       }
     },
     "build:packageJson": {
@@ -314,6 +315,14 @@
       "options": {
         "cwd": "{projectRoot}",
         "command": "lingui compile --typescript"
+      }
+    },
+    "workspace-dependencies:generate": {
+      "executor": "nx:run-commands",
+      "cache": false,
+      "options": {
+        "cwd": "{projectRoot}",
+        "command": "tsx scripts/generate-workspace-custom-application-dependencies.ts"
       }
     },
     "version:bump": {

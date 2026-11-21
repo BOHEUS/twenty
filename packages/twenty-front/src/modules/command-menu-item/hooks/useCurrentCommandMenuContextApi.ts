@@ -1,7 +1,12 @@
+import { aiChatThreadParticipantsState } from '@/ai-chat/threads/states/aiChatThreadParticipantsState';
+import { inboxSelectedChannelViewSelector } from '@/inbox/states/selectors/inboxSelectedChannelViewSelector';
+import { inboxThreadInboxStatusByThreadIdFamilySelector } from '@/inbox/states/selectors/inboxThreadInboxStatusByThreadIdFamilySelector';
 import { currentUserState } from '@/auth/states/currentUserState';
-import { currentUserWorkspaceState } from '@/auth/states/currentUserWorkspaceState';
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
-import { objectPermissionsFamilySelector } from '@/auth/states/objectPermissionsFamilySelector';
+import { EMPTY_COMMAND_MENU_CONTEXT_API } from '@/command-menu-item/constants/EmptyCommandMenuContextApi';
+import { commandMenuTargetObjectPermissionsSelector } from '@/command-menu-item/states/commandMenuTargetObjectPermissionsSelector';
+import { getCommandMenuContextApiObjectPermissions } from '@/command-menu-item/utils/getCommandMenuContextApiObjectPermissions';
+import { contextStoreCurrentCoreObjectNameComponentState } from '@/context-store/states/contextStoreCurrentCoreObjectNameComponentState';
 import { contextStoreCurrentObjectMetadataItemIdComponentState } from '@/context-store/states/contextStoreCurrentObjectMetadataItemIdComponentState';
 import { MAIN_CONTEXT_STORE_INSTANCE_ID } from '@/context-store/constants/MainContextStoreInstanceId';
 import { useContextStoreInstanceId } from '@/context-store/hooks/useContextStoreInstanceId';
@@ -15,33 +20,43 @@ import { useObjectPermissionsForObject } from '@/object-record/hooks/useObjectPe
 import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/states/isLayoutCustomizationModeEnabledState';
 import { hasAnySoftDeleteFilterOnViewComponentSelector } from '@/object-record/record-filter/states/hasAnySoftDeleteFilterOnView';
 import { recordPermissionsByRecordIdFamilySelector } from '@/object-record/record-sharing/states/recordPermissionsByRecordIdFamilySelector';
+import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { recordStoreRecordsSelector } from '@/object-record/record-store/states/selectors/recordStoreRecordsSelector';
 import { getRecordIndexIdFromObjectNamePluralAndViewId } from '@/object-record/utils/getRecordIndexIdFromObjectNamePluralAndViewId';
 import { currentPageLayoutIdState } from '@/page-layout/states/currentPageLayoutIdState';
+import { permissionFlagMapSelector } from '@/settings/roles/states/permissionFlagMapSelector';
 import { getWorkspaceFeatureFlagsMap } from '@/workspace/utils/getWorkspaceFeatureFlagsMap';
 import { isDashboardInEditModeComponentState } from '@/page-layout/states/isDashboardInEditModeComponentState';
+import { viewFromViewIdFamilySelector } from '@/views/states/selectors/viewFromViewIdFamilySelector';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { useAtomComponentSelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentSelectorValue';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomFamilySelectorValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilySelectorValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { isNonEmptyArray } from '@sniptt/guards';
-import { useAtomValue, useStore } from 'jotai';
+import { useAtomValue } from 'jotai';
 import {
   ContextStorePageType,
+  StandardObjectNameSingular,
   type CommandMenuContextApi,
 } from 'twenty-shared/types';
 import { isDefined, resolveObjectMetadataLabel } from 'twenty-shared/utils';
+import { useLocation } from 'react-router-dom';
+
+import { isInboxPath } from '~/utils/isInboxPath';
 
 export const useCurrentCommandMenuContextApi = (): CommandMenuContextApi => {
-  const store = useStore();
-
   const workspaceSurface = useWorkspaceSurface();
   const isInSidePanel = workspaceSurface.type === 'side-panel';
   const contextStoreInstanceId = useContextStoreInstanceId();
+  const location = useLocation();
 
   const contextStoreCurrentObjectMetadataItemId = useAtomComponentStateValue(
     contextStoreCurrentObjectMetadataItemIdComponentState,
+  );
+
+  const contextStoreCurrentCoreObjectName = useAtomComponentStateValue(
+    contextStoreCurrentCoreObjectNameComponentState,
   );
 
   const contextStoreTargetedRecordsRule = useAtomComponentStateValue(
@@ -89,38 +104,66 @@ export const useCurrentCommandMenuContextApi = (): CommandMenuContextApi => {
     },
   );
 
-  // Records shared at a lower access level than the role grants carry their
-  // own permissions, which availability expressions read per record
-  const selectedRecords = storedSelectedRecords.map((record) =>
-    isDefined(recordPermissionsByRecordId[record.id])
-      ? { ...record, recordPermissions: recordPermissionsByRecordId[record.id] }
-      : record,
+  // A chat's read and done state belongs to the member, not to the record,
+  // so the inbox commands read it from here. They stay hidden until the
+  // member state loads rather than offering the wrong half of a pair
+  const aiChatThreadParticipants = useAtomStateValue(
+    aiChatThreadParticipantsState,
   );
+  const inboxStatusThreadIds =
+    objectMetadataItem?.nameSingular ===
+      StandardObjectNameSingular.AgentChatThread &&
+    aiChatThreadParticipants.isLoaded
+      ? (recordIds ?? [])
+      : [];
+  const inboxSelectedChannelView = useAtomStateValue(
+    inboxSelectedChannelViewSelector,
+  );
+  const inboxThreadInboxStatusByThreadId = useAtomFamilySelectorValue(
+    inboxThreadInboxStatusByThreadIdFamilySelector,
+    {
+      threadIds: inboxStatusThreadIds,
+      // Every menu on the inbox page, the open chat's included, files the
+      // chats of the channel on screen for the channel
+      channelId: isInboxPath(location.pathname)
+        ? (inboxSelectedChannelView?.channelId ?? null)
+        : null,
+    },
+  );
+
+  // Records shared below the role's access level carry their own permissions, which availability expressions read per record
+  const selectedRecords = storedSelectedRecords.map((record): ObjectRecord => ({
+    ...record,
+    ...(isDefined(recordPermissionsByRecordId[record.id]) && {
+      recordPermissions: recordPermissionsByRecordId[record.id],
+    }),
+    ...(isDefined(inboxThreadInboxStatusByThreadId[record.id]) && {
+      inboxStatus: inboxThreadInboxStatusByThreadId[record.id],
+    }),
+  }));
 
   const currentPageLayoutId = useAtomStateValue(currentPageLayoutIdState);
 
   const dashboardPageLayoutIdForCommandMenu =
     selectedRecords[0]?.pageLayoutId ?? currentPageLayoutId ?? '';
 
-  const objectPermissionsFromHook = useObjectPermissionsForObject(
+  const currentObjectPermissions = useObjectPermissionsForObject(
     objectMetadataItem?.id ?? '',
   );
   const objectPermissions = isDefined(objectMetadataItem)
-    ? objectPermissionsFromHook
-    : {
-        canReadObjectRecords: false,
-        canUpdateObjectRecords: false,
-        canSoftDeleteObjectRecords: false,
-        canDestroyObjectRecords: false,
-        restrictedFields: {},
-        objectMetadataId: '',
-        rowLevelPermissionPredicates: [],
-        rowLevelPermissionPredicateGroups: [],
-      };
+    ? getCommandMenuContextApiObjectPermissions({
+        objectMetadataId: objectMetadataItem.id,
+        objectRecordsPermissions: currentObjectPermissions,
+      })
+    : EMPTY_COMMAND_MENU_CONTEXT_API.objectPermissions;
 
   const contextStoreCurrentViewId = useAtomComponentStateValue(
     contextStoreCurrentViewIdComponentState,
   );
+
+  const currentView = useAtomFamilySelectorValue(viewFromViewIdFamilySelector, {
+    viewId: contextStoreCurrentViewId ?? '',
+  });
 
   const baseRecordIndexId = getRecordIndexIdFromObjectNamePluralAndViewId(
     objectMetadataItem?.namePlural ?? '',
@@ -164,32 +207,14 @@ export const useCurrentCommandMenuContextApi = (): CommandMenuContextApi => {
     currentWorkspace?.featureFlags,
   );
 
-  const currentUserWorkspace = useAtomStateValue(currentUserWorkspaceState);
-
-  const permissionFlags: Record<string, boolean> = {};
-
-  for (const flag of currentUserWorkspace?.permissionFlags ?? []) {
-    permissionFlags[flag] = true;
-  }
+  const permissionFlagMap = useAtomStateValue(permissionFlagMapSelector);
 
   const currentUser = useAtomStateValue(currentUserState);
   const canImpersonate = currentUser?.canImpersonate === true;
   const canAccessFullAdminPanel = currentUser?.canAccessFullAdminPanel === true;
 
-  const targetObjectReadPermissions: Record<string, boolean> = {};
-  const targetObjectWritePermissions: Record<string, boolean> = {};
-
-  for (const metadataItem of objectMetadataItems) {
-    const permissions = store.get(
-      objectPermissionsFamilySelector.selectorFamily({
-        objectNameSingular: metadataItem.nameSingular,
-      }),
-    );
-    targetObjectReadPermissions[metadataItem.nameSingular] =
-      permissions.canRead;
-    targetObjectWritePermissions[metadataItem.nameSingular] =
-      permissions.canUpdate;
-  }
+  const { targetObjectReadPermissions, targetObjectWritePermissions } =
+    useAtomStateValue(commandMenuTargetObjectPermissionsSelector);
 
   const objectMetadataLabel = isDefined(objectMetadataItem)
     ? resolveObjectMetadataLabel({
@@ -210,12 +235,21 @@ export const useCurrentCommandMenuContextApi = (): CommandMenuContextApi => {
     objectPermissions,
     selectedRecords,
     featureFlags,
-    permissionFlags,
+    permissionFlags: permissionFlagMap,
     targetObjectReadPermissions,
     targetObjectWritePermissions,
     canImpersonate,
     canAccessFullAdminPanel,
     objectMetadataItem: objectMetadataItem ?? {},
     objectMetadataLabel,
+    coreObjectName: contextStoreCurrentCoreObjectName,
+    // Record pages keep the object's last visited view in the context store
+    currentView:
+      pageType === ContextStorePageType.Index && isDefined(currentView)
+        ? {
+            id: currentView.id,
+            universalIdentifier: currentView.universalIdentifier ?? null,
+          }
+        : null,
   };
 };

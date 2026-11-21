@@ -1,7 +1,8 @@
 import { styled } from '@linaria/react';
 
 import { contextStoreCurrentViewIdComponentState } from '@/context-store/states/contextStoreCurrentViewIdComponentState';
-import { Dropdown, IconButton } from 'twenty-ui/components';
+import { IconButton } from 'twenty-ui/components/input';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { isDropdownOpenComponentState } from '@/ui/layout/dropdown/states/isDropdownOpenComponentState';
@@ -21,20 +22,20 @@ import { useSaveCurrentViewFiltersAndSorts } from '@/views/hooks/useSaveCurrentV
 import { getViewPickerDropdownId } from '@/views/view-picker/utils/getViewPickerDropdownId';
 import { useViewPickerMode } from '@/views/view-picker/hooks/useViewPickerMode';
 import { viewPickerReferenceViewIdComponentState } from '@/views/view-picker/states/viewPickerReferenceViewIdComponentState';
-import { t } from '@lingui/core/macro';
 import { isDefined } from 'twenty-shared/utils';
 import { IconChevronDown, IconPlus } from 'twenty-ui/icon';
 import { Button, ButtonGroup } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledContainer = styled.div`
-  border-radius: ${themeCssVariables.border.radius.md};
   display: inline-flex;
   margin-right: ${themeCssVariables.spacing[2]};
   position: relative;
 `;
 
 export const UpdateViewButtonGroup = () => {
+  const { t } = useLingui();
   const { saveCurrentViewFilterAndSorts } = useSaveCurrentViewFiltersAndSorts();
   const { canPersistChanges } = useCanPersistViewChanges();
 
@@ -79,7 +80,9 @@ export const UpdateViewButtonGroup = () => {
   };
 
   const handleUpdateViewClick = async () => {
-    if (!canPersistChanges) return;
+    if (!canPersistChanges) {
+      return;
+    }
     await saveCurrentViewFilterAndSorts();
   };
 

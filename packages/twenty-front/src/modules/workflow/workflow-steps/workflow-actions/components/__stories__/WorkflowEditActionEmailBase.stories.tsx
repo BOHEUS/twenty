@@ -2,10 +2,11 @@ import {
   type WorkflowDraftEmailAction,
   type WorkflowSendEmailAction,
 } from '@/workflow/types/Workflow';
+import { serializePlainTextAsAdvancedTextEditorDocument } from '@/advanced-text-editor/utils/serializePlainTextAsAdvancedTextEditorDocument';
 import { WorkflowEditActionEmailBase } from '@/workflow/workflow-steps/workflow-actions/components/WorkflowEditActionEmailBase';
 import { type Meta, type StoryObj } from '@storybook/react-vite';
 import { HttpResponse, graphql } from 'msw';
-import { expect, fn, userEvent, within } from 'storybook/test';
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test';
 import { ComponentDecorator } from 'twenty-ui/testing';
 import { ObjectMetadataItemsDecorator } from '~/testing/decorators/ObjectMetadataItemsDecorator';
 import { ToastDecorator } from '~/testing/decorators/ToastDecorator';
@@ -32,8 +33,9 @@ const mockedConnectedAccounts = [
     lastSignedInAt: null,
     userWorkspaceId: '20202020-0687-4c41-b707-ed1bfca972a7',
     connectionProviderId: null,
+    applicationId: null,
     name: 'Tim Apple',
-    visibility: 'SHARE_EVERYTHING',
+    scope: 'USER',
     lastCredentialsRefreshedAt: null,
     connectionParameters: null,
     createdAt: '2026-02-27T01:17:25.392Z',
@@ -85,7 +87,9 @@ const CONFIGURED_SEND_EMAIL_ACTION: WorkflowSendEmailAction = {
         bcc: '',
       },
       subject: 'Welcome to Twenty!',
-      body: 'Dear Tim,\n\nWelcome to Twenty! We are excited to have you on board.\n\nBest regards,\nThe Team',
+      body: serializePlainTextAsAdvancedTextEditorDocument(
+        'Dear Tim,\n\nWelcome to Twenty! We are excited to have you on board.\n\nBest regards,\nThe Team',
+      ),
       files: [],
       inReplyTo: '',
     },
@@ -156,7 +160,7 @@ const VARIABLE_SENDER_SEND_EMAIL_ACTION: WorkflowSendEmailAction = {
         bcc: '',
       },
       subject: 'Welcome to Twenty!',
-      body: 'Hello',
+      body: serializePlainTextAsAdvancedTextEditorDocument('Hello'),
       files: [],
       inReplyTo: '',
     },
@@ -186,7 +190,7 @@ const VARIABLE_SENDER_DRAFT_EMAIL_ACTION: WorkflowDraftEmailAction = {
         bcc: '',
       },
       subject: 'Welcome to Twenty!',
-      body: 'Hello',
+      body: serializePlainTextAsAdvancedTextEditorDocument('Hello'),
       files: [],
       inReplyTo: '',
     },
@@ -264,7 +268,25 @@ export const Default: Story = {
     expect(await canvas.findByText('To')).toBeVisible();
     expect(await canvas.findByText('Subject')).toBeVisible();
     expect(await canvas.findByText('Body')).toBeVisible();
-    expect(await canvas.findByText('Advanced options')).toBeVisible();
+    for (const field of ['CC', 'BCC', 'In-Reply-To']) {
+      await userEvent.click(
+        await canvas.findByRole('button', { name: 'Advanced options' }),
+      );
+      await userEvent.click(
+        await screen.findByRole('menuitem', { name: `Add ${field}` }),
+      );
+
+      expect(await canvas.findByText(field)).toBeVisible();
+      await waitFor(() => {
+        expect(
+          screen.queryByRole('menu', { name: 'Advanced options' }),
+        ).not.toBeInTheDocument();
+      });
+    }
+
+    expect(
+      canvas.queryByRole('button', { name: 'Advanced options' }),
+    ).not.toBeInTheDocument();
   },
 };
 
@@ -380,7 +402,7 @@ export const DraftEmailMissingScopesWithoutPermission: Story = {
 
     expect(
       await canvas.findByText(
-        'Ask a workspace admin for the Sync Account permission to reconnect this account.',
+        'Ask a workspace admin for the User Apps permission to reconnect this account.',
       ),
     ).toBeVisible();
     expect(
@@ -426,5 +448,20 @@ export const VariableSenderSendEmail: Story = {
         'Pick an address to send from or set a workspace member as variable',
       ),
     ).toBeVisible();
+  },
+};
+
+export const ReadOnly: Story = {
+  args: {
+    action: CONFIGURED_SEND_EMAIL_ACTION,
+    actionOptions: { readonly: true },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+
+    expect(await canvas.findByText('Subject')).toBeVisible();
+    expect(
+      canvas.queryByRole('button', { name: 'Advanced options' }),
+    ).not.toBeInTheDocument();
   },
 };

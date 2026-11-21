@@ -1,19 +1,19 @@
-import { SKELETON_LOADER_HEIGHT_SIZES } from '@/activities/components/SkeletonLoader';
+import { SkeletonLine } from '@/ui/feedback/skeleton/components/SkeletonLine';
 import { FieldContext } from '@/object-record/record-field/ui/contexts/FieldContext';
 import { FieldInputEventContext } from '@/object-record/record-field/ui/contexts/FieldInputEventContext';
-import { useRegisterInputEvents } from '@/object-record/record-field/ui/meta-types/input/hooks/useRegisterInputEvents';
+import { useRegisterInputEvents } from '@/ui/input/hooks/useRegisterInputEvents';
 import { RecordFieldComponentInstanceContext } from '@/object-record/record-field/ui/states/contexts/RecordFieldComponentInstanceContext';
 import { type FieldRichTextMetadata } from '@/object-record/record-field/ui/types/FieldMetadata';
 import { useOpenRichTextInSidePanel } from '@/side-panel/hooks/useOpenRichTextInSidePanel';
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { Suspense, lazy, useContext, useRef } from 'react';
-import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
-import { IconButton } from 'twenty-ui/components';
+import { SKELETON_HEIGHT_SIZES } from 'twenty-ui/primitives/feedback';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
+import { IconButton } from 'twenty-ui/components/input';
 import { IconLayoutSidebarLeftCollapse } from 'twenty-ui/icon';
-import { useTheme, themeCssVariables } from 'twenty-ui/theme';
+import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const ActivityRichTextEditor = lazy(() =>
   import('@/activities/components/ActivityRichTextEditor').then((module) => ({
@@ -58,27 +58,24 @@ const StyledCollapseButton = styled.div`
 `;
 
 const LoadingSkeleton = () => {
-  const theme = useTheme();
   return (
-    <SkeletonTheme
-      baseColor={theme.background.tertiary}
-      highlightColor={theme.background.transparent.lighter}
+    <SkeletonLine
+      height={SKELETON_HEIGHT_SIZES.s}
       borderRadius={themeCssVariables.border.radius.md}
-    >
-      <Skeleton height={SKELETON_LOADER_HEIGHT_SIZES.standard.s} />
-    </SkeletonTheme>
+    />
   );
 };
 
 const isActivityObject = (
   objectNameSingular: string,
 ): objectNameSingular is
-  | CoreObjectNameSingular.Note
-  | CoreObjectNameSingular.Task =>
-  objectNameSingular === CoreObjectNameSingular.Note ||
-  objectNameSingular === CoreObjectNameSingular.Task;
+  | StandardObjectNameSingular.Note
+  | StandardObjectNameSingular.Task =>
+  objectNameSingular === StandardObjectNameSingular.Note ||
+  objectNameSingular === StandardObjectNameSingular.Task;
 
 export const RichTextFieldInput = () => {
+  const { t } = useLingui();
   const { fieldDefinition, recordId } = useContext(FieldContext);
 
   const metadata = (fieldDefinition as { metadata: FieldRichTextMetadata })

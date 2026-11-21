@@ -55,7 +55,6 @@ export class MicrosoftAPIsAuthController {
     NoPermissionGuard,
   )
   async MicrosoftAuth() {
-    // As this method is protected by Microsoft Auth guard, it will trigger Microsoft SSO flow
     return;
   }
 
@@ -140,7 +139,7 @@ export class MicrosoftAPIsAuthController {
 
       const { pathname, searchParams, hash } = parseRelativeUrl(
         redirectLocation ||
-          getSettingsPath(SettingsPath.AccountsConfiguration, {
+          getSettingsPath(SettingsPath.AppPreferencesAccountConfiguration, {
             connectedAccountId,
           }),
       );

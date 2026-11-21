@@ -14,7 +14,7 @@ import { MESSAGE_SUPPRESSIONS_PAGE_SIZE } from '@/settings/unsubscribers/constan
 import { SETTINGS_UNSUBSCRIBERS_ALL_FILTER } from '@/settings/unsubscribers/constants/SettingsUnsubscribersAllFilter';
 import { useMessageSuppressions } from '@/settings/unsubscribers/hooks/useMessageSuppressions';
 import { getMessageSuppressionReasonBadge } from '@/settings/unsubscribers/utils/getMessageSuppressionReasonBadge';
-import { SearchInput } from 'twenty-ui/components';
+import { SearchInput } from 'twenty-ui/components/input';
 import { Status } from 'twenty-ui/primitives/data-display';
 import { themeCssVariables } from 'twenty-ui/theme';
 import {
@@ -110,7 +110,7 @@ export const SettingsUnsubscribersList = () => {
     unsubscribeTopicId,
   }: Pick<MessageSuppression, 'reason' | 'unsubscribeTopicId'>) => {
     if (reason === MessageSuppressionReason.TRACKING) {
-      return t`Clicks only`;
+      return t`Opens and clicks only`;
     }
 
     if (!isDefined(unsubscribeTopicId)) {
@@ -132,7 +132,7 @@ export const SettingsUnsubscribersList = () => {
     <StyledContainer>
       <SettingsTableListSection<MessageSuppression>
         title={t`Opt-outs`}
-        description={t`Email addresses that opted out of campaign emails, a topic, or click tracking`}
+        description={t`Email addresses that opted out of campaign emails, a topic, or open and click tracking`}
         toolbar={
           <StyledToolbar>
             <StyledSearch>

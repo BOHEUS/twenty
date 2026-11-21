@@ -9,7 +9,7 @@ import { useMutation } from '@apollo/client/react';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { capitalize } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import { IconGoogle, IconMicrosoft, IconPassword } from 'twenty-ui/icon';
 import { Card } from 'twenty-ui/primitives/surfaces';
 import { themeCssVariables } from 'twenty-ui/theme';
@@ -39,7 +39,9 @@ export const SettingsSecurityAuthBypassOptionsList = () => {
   const isValidAuthProvider = (
     key: string,
   ): key is Exclude<keyof typeof currentWorkspace, '__typename'> => {
-    if (!currentWorkspace) return false;
+    if (!currentWorkspace) {
+      return false;
+    }
     return Reflect.has(currentWorkspace, key);
   };
 
@@ -82,14 +84,13 @@ export const SettingsSecurityAuthBypassOptionsList = () => {
 
   return (
     <StyledSettingsSecurityOptionsList>
-      <Card.Root rounded>
+      <Card.Root>
         {authProviders.google === true && (
           <SettingsOptionCardContentSwitch
             Icon={IconGoogle}
             title={t`Google`}
             description={t`Allow Google-based login for users with SSO bypass permissions.`}
             checked={currentWorkspace.isGoogleAuthBypassEnabled}
-            advancedMode
             divider
             onChange={() => toggleAuthBypassMethod('google')}
           />
@@ -100,7 +101,6 @@ export const SettingsSecurityAuthBypassOptionsList = () => {
             title={t`Microsoft`}
             description={t`Allow Microsoft-based login for users with SSO bypass permissions.`}
             checked={currentWorkspace.isMicrosoftAuthBypassEnabled}
-            advancedMode
             divider
             onChange={() => toggleAuthBypassMethod('microsoft')}
           />
@@ -111,7 +111,6 @@ export const SettingsSecurityAuthBypassOptionsList = () => {
             title={t`Password`}
             description={t`Allow email & password login for SSO bypass users.`}
             checked={currentWorkspace.isPasswordAuthBypassEnabled}
-            advancedMode
             onChange={() => toggleAuthBypassMethod('password')}
           />
         )}

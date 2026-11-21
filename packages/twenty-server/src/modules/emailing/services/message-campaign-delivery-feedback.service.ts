@@ -40,18 +40,14 @@ export class MessageCampaignDeliveryFeedbackService {
     const {
       generatedMaps: [updatedDelivery],
     } = await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
-      const campaignDeliveryRepository = this.workspaceOrmManager.getRepository(
-        CampaignDeliveryWorkspaceEntity,
-        { shouldBypassPermissionChecks: true },
-        { shouldSkipEventEmission: true },
-      );
-      return campaignDeliveryRepository
-        .createQueryBuilder()
-        .where({ providerMessageId })
-        .update()
-        .set(update)
-        .returning(['campaignId'])
-        .execute();
+      const campaignDeliveryRepository =
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+          CampaignDeliveryWorkspaceEntity,
+          { shouldSkipEventEmission: true },
+        );
+      return campaignDeliveryRepository.update({ providerMessageId }, update, {
+        columnsToReturn: ['campaignId'],
+      });
     }, buildSystemAuthContext(workspaceId));
 
     if (!isDefined(updatedDelivery)) {

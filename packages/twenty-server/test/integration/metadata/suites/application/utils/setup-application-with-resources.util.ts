@@ -1,3 +1,6 @@
+import { type LegacyObjectPermissionManifest } from 'twenty-shared/application';
+import { HTTPMethod } from 'twenty-shared/types';
+import { TEST_APPLICATION_PACKAGE_JSON_CHECKSUM } from 'test/integration/metadata/suites/application/constants/test-application-package-json.constant';
 import { buildBaseManifest } from 'test/integration/metadata/suites/application/utils/build-base-manifest.util';
 import { seedBuiltFrontComponentSharedDependenciesFile } from 'test/integration/metadata/suites/application/utils/seed-built-front-component-shared-dependencies-file.util';
 import { setupApplicationForSync } from 'test/integration/metadata/suites/application/utils/setup-application-for-sync.util';
@@ -30,7 +33,7 @@ const BUILT_FRONT_COMPONENT_PATH = 'src/front-components/component.mjs';
 const SHARED_DEPENDENCIES_BUILT_PATH =
   'src/front-component-shared-dependencies.mjs';
 
-const DEFAULT_PERMISSION_FLAG_UNIVERSAL_IDENTIFIERS = [
+export const DEFAULT_PERMISSION_FLAG_UNIVERSAL_IDENTIFIERS = [
   SystemPermissionFlag.APPLICATIONS,
   SystemPermissionFlag.API_KEYS_AND_WEBHOOKS,
   SystemPermissionFlag.WORKFLOWS,
@@ -62,9 +65,15 @@ const findIdByUniversalIdentifier = async ({
 export const setupApplicationWithResources = async ({
   name,
   permissionFlagUniversalIdentifiers = DEFAULT_PERMISSION_FLAG_UNIVERSAL_IDENTIFIERS,
+  canReadAndUpdateAllObjectRecords = false,
+  objectPermissions,
+  shouldAssignDefaultRoleToAgent = false,
 }: {
   name: string;
   permissionFlagUniversalIdentifiers?: string[];
+  canReadAndUpdateAllObjectRecords?: boolean;
+  objectPermissions?: LegacyObjectPermissionManifest[];
+  shouldAssignDefaultRoleToAgent?: boolean;
 }): Promise<ApplicationWithResources> => {
   const applicationUniversalIdentifier = uuidv4();
   const roleUniversalIdentifier = uuidv4();
@@ -108,7 +117,7 @@ export const setupApplicationWithResources = async ({
           displayName: name,
           description: `${name} for cross-application access tests`,
           applicationVariables: {},
-          packageJsonChecksum: null,
+          packageJsonChecksum: TEST_APPLICATION_PACKAGE_JSON_CHECKSUM,
           yarnLockChecksum: null,
         },
         roles: [
@@ -117,7 +126,10 @@ export const setupApplicationWithResources = async ({
             label: `${name} role`,
             description: 'Reaches application resources',
             canUpdateAllSettings: false,
+            canReadAllObjectRecords: canReadAndUpdateAllObjectRecords,
+            canUpdateAllObjectRecords: canReadAndUpdateAllObjectRecords,
             permissionFlagUniversalIdentifiers,
+            objectPermissions,
           },
         ],
         logicFunctions: [
@@ -131,7 +143,7 @@ export const setupApplicationWithResources = async ({
             builtHandlerChecksum: 'handler-checksum',
             httpRouteTriggerSettings: {
               path: `/${slug}`,
-              httpMethod: 'POST',
+              httpMethod: HTTPMethod.POST,
               isAuthRequired: true,
             },
             toolTriggerSettings: {},
@@ -167,6 +179,9 @@ export const setupApplicationWithResources = async ({
             description: 'An agent owned by the application',
             icon: 'IconRobot',
             prompt: `You are the ${name} agent.`,
+            ...(shouldAssignDefaultRoleToAgent
+              ? { roleUniversalIdentifier }
+              : {}),
           },
         ],
         skills: [

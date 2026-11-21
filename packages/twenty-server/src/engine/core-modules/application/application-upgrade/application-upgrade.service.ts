@@ -21,8 +21,11 @@ import {
   type UpgradeWorkspaceApplicationJobData,
 } from 'src/engine/core-modules/application/jobs/upgrade-workspace-application.job-constants';
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
+import { type MessageQueueJobProgressContext } from 'src/engine/core-modules/message-queue/interfaces/message-queue-job.interface';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
 import { MessageQueueService } from 'src/engine/core-modules/message-queue/services/message-queue.service';
+import { formatValidationErrors } from 'src/engine/workspace-manager/workspace-migration/utils/format-validation-errors.util';
+import { WorkspaceMigrationBuilderException } from 'src/engine/workspace-manager/workspace-migration/exceptions/workspace-migration-builder-exception';
 import { WorkspaceVersionService } from 'src/engine/workspace-manager/workspace-version/services/workspace-version.service';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
@@ -165,7 +168,7 @@ export class ApplicationUpgradeService {
       applications,
       UPGRADE_WORKSPACE_APPLICATION_JOB_ENQUEUE_BATCH_SIZE,
     )) {
-      const batchJobIds =
+      const { jobs: batchJobs } =
         await this.applicationUpgradeQueueService.bulkAdd<UpgradeWorkspaceApplicationJobData>(
           UPGRADE_WORKSPACE_APPLICATION_JOB_NAME,
           applicationsBatch.map((application) => ({
@@ -174,11 +177,13 @@ export class ApplicationUpgradeService {
               workspaceId: application.workspaceId,
               onlyAutoUpgrade,
             },
+            workspaceId: application.workspaceId,
+            applicationUniversalIdentifier: application.universalIdentifier,
           })),
           UPGRADE_WORKSPACE_APPLICATION_JOB_OPTIONS,
         );
 
-      jobIds.push(...batchJobIds);
+      jobIds.push(...batchJobs.map(({ jobId }) => jobId));
     }
 
     return jobIds;
@@ -295,6 +300,8 @@ export class ApplicationUpgradeService {
     targetVersion: string;
     workspaceId: string;
     skipWorkspaceCompatibilityCheck?: boolean;
+    updateProgress?: MessageQueueJobProgressContext['updateProgress'];
+    shouldDeferActions?: boolean;
   }): Promise<boolean> {
     const appRegistration = await this.appRegistrationRepository.findOneOrFail({
       where: { id: params.appRegistrationId },
@@ -305,6 +312,8 @@ export class ApplicationUpgradeService {
       targetVersion: params.targetVersion,
       workspaceId: params.workspaceId,
       skipWorkspaceCompatibilityCheck: params.skipWorkspaceCompatibilityCheck,
+      updateProgress: params.updateProgress,
+      shouldDeferActions: params.shouldDeferActions,
     });
   }
 
@@ -313,6 +322,8 @@ export class ApplicationUpgradeService {
     targetVersion: string;
     workspaceId: string;
     skipWorkspaceCompatibilityCheck?: boolean;
+    updateProgress?: MessageQueueJobProgressContext['updateProgress'];
+    shouldDeferActions?: boolean;
   }): Promise<boolean> {
     const { appRegistration } = params;
 
@@ -335,6 +346,8 @@ export class ApplicationUpgradeService {
         version: params.targetVersion,
         workspaceId: params.workspaceId,
         skipWorkspaceCompatibilityCheck: params.skipWorkspaceCompatibilityCheck,
+        updateProgress: params.updateProgress,
+        shouldDeferActions: params.shouldDeferActions,
       });
     } catch (error) {
       const appName =
@@ -346,8 +359,11 @@ export class ApplicationUpgradeService {
         throw error;
       }
 
+      // The message is all the CLI, the front and the job's failedReason show
       throw new ApplicationException(
-        `Upgrade failed for ${appName}`,
+        error instanceof WorkspaceMigrationBuilderException
+          ? `Upgrade failed for ${appName}. ${formatValidationErrors(error)}`
+          : `Upgrade failed for ${appName}`,
         ApplicationExceptionCode.UPGRADE_FAILED,
       );
     }

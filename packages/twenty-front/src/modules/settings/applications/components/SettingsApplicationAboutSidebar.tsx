@@ -1,10 +1,13 @@
 import { AppChip } from '@/applications/components/AppChip';
 import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
+import { type ApplicationContentLink } from '@/settings/applications/types/ApplicationContentLink';
 import { getInstallCountEstimate } from '@/settings/applications/utils/getInstallCountEstimate';
+import { css } from '@linaria/core';
 import { styled } from '@linaria/react';
-import { plural, t } from '@lingui/core/macro';
+import { Link } from 'react-router-dom';
+import { plural } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
-import { isDefined, isSafeUrl } from 'twenty-shared/utils';
+import { emailSchema, isDefined, isSafeUrl } from 'twenty-shared/utils';
 import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
 import {
   IconAlertTriangle,
@@ -13,6 +16,7 @@ import {
   IconCurrencyDollar,
   IconDownload,
   IconLink,
+  IconListDetails,
   IconMail,
   IconShare2,
   IconTag,
@@ -22,6 +26,7 @@ import {
 } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 export type DeveloperLinks = {
   websiteUrl?: string;
@@ -42,7 +47,9 @@ type SettingsApplicationAboutSidebarProps = {
   installCount?: number;
   category?: string;
   pricingDescription?: string;
+  billsCredits?: boolean;
   developerLinks?: DeveloperLinks;
+  contentLink?: ApplicationContentLink;
 };
 
 type AboutRow = {
@@ -57,6 +64,15 @@ type ResourceLink = AboutRow & {
 
 const isResourceLinkUrl = (url: string | undefined): url is string =>
   isNonEmptyString(url) && isSafeUrl(url);
+
+const isSupportEmail = (email: string | undefined): email is string =>
+  isNonEmptyString(email) && emailSchema.safeParse(email.trim()).success;
+
+const toTrimmedText = (text: string | undefined): string | undefined => {
+  const trimmedText = text?.trim();
+
+  return isNonEmptyString(trimmedText) ? trimmedText : undefined;
+};
 
 const StyledSidebar = styled.div`
   display: flex;
@@ -119,7 +135,7 @@ const StyledRow = styled.div`
   min-height: ${themeCssVariables.spacing[6]};
 `;
 
-const StyledResourceLink = styled.a`
+const sidebarLinkClassName = css`
   align-items: center;
   color: ${themeCssVariables.font.color.secondary};
   display: flex;
@@ -151,10 +167,18 @@ export const SettingsApplicationAboutSidebar = ({
   installCount,
   category,
   pricingDescription,
+  billsCredits = false,
   developerLinks,
+  contentLink,
 }: SettingsApplicationAboutSidebarProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
   const { formatNumber } = useNumberFormat();
+
+  const trimmedAuthor = toTrimmedText(author);
+  const trimmedVersion = toTrimmedText(version);
+  const trimmedCategory = toTrimmedText(category);
+  const trimmedPricingDescription = toTrimmedText(pricingDescription);
 
   const getInstallCountRows = (): AboutRow[] => {
     if (!isDefined(installCount) || installCount <= 0) {
@@ -183,16 +207,24 @@ export const SettingsApplicationAboutSidebar = ({
   };
 
   const aboutRows: AboutRow[] = [
-    ...(isNonEmptyString(author)
-      ? [{ Icon: IconUserCircle, label: t`by ${author}` }]
+    ...(isDefined(trimmedAuthor)
+      ? [{ Icon: IconUserCircle, label: t`by ${trimmedAuthor}` }]
       : []),
-    ...(isNonEmptyString(version)
-      ? [{ Icon: IconVersions, label: version }]
+    ...(isDefined(trimmedVersion)
+      ? [{ Icon: IconVersions, label: trimmedVersion }]
       : []),
     ...getInstallCountRows(),
-    ...(isNonEmptyString(category) ? [{ Icon: IconTag, label: category }] : []),
-    ...(isNonEmptyString(pricingDescription)
-      ? [{ Icon: IconCurrencyDollar, label: pricingDescription }]
+    ...(isDefined(trimmedCategory)
+      ? [{ Icon: IconTag, label: trimmedCategory }]
+      : []),
+    ...(billsCredits
+      ? [
+          {
+            Icon: IconCurrencyDollar,
+            label: t`Bills credits`,
+            tooltip: trimmedPricingDescription,
+          },
+        ]
       : []),
   ];
 
@@ -211,12 +243,12 @@ export const SettingsApplicationAboutSidebar = ({
     ...(isResourceLinkUrl(termsUrl)
       ? [{ Icon: IconLink, label: t`Terms / Privacy`, href: termsUrl }]
       : []),
-    ...(isNonEmptyString(emailSupport)
+    ...(isSupportEmail(emailSupport)
       ? [
           {
             Icon: IconMail,
             label: t`Email support`,
-            href: `mailto:${emailSupport}`,
+            href: `mailto:${emailSupport.trim()}`,
           },
         ]
       : []),
@@ -241,7 +273,7 @@ export const SettingsApplicationAboutSidebar = ({
           applicationId={applicationId}
           logoUrl={logoUrl}
           fallbackApplicationData={{ name: displayName }}
-          size="xl"
+          size="xxl"
           chipOnly
         />
         <StyledIdentity>
@@ -262,7 +294,7 @@ export const SettingsApplicationAboutSidebar = ({
         )}
       </StyledHeader>
 
-      {aboutRows.length > 0 && (
+      {(aboutRows.length > 0 || isDefined(contentLink)) && (
         <StyledSection>
           <StyledSectionLabel>{t`About`}</StyledSectionLabel>
           {aboutRows.map(({ Icon, label, tooltip }) => (
@@ -277,6 +309,17 @@ export const SettingsApplicationAboutSidebar = ({
               />
             </StyledRow>
           ))}
+          {isDefined(contentLink) && (
+            <Link className={sidebarLinkClassName} to={contentLink.path}>
+              <StyledRowIcon>
+                <IconListDetails size={theme.icon.size.sm} />
+              </StyledRowIcon>
+              {plural(contentLink.itemCount, {
+                one: `${formatNumber(contentLink.itemCount)} resource`,
+                other: `${formatNumber(contentLink.itemCount)} resources`,
+              })}
+            </Link>
+          )}
         </StyledSection>
       )}
 
@@ -284,7 +327,8 @@ export const SettingsApplicationAboutSidebar = ({
         <StyledSection>
           <StyledSectionLabel>{t`Resources`}</StyledSectionLabel>
           {resourceLinks.map(({ Icon, label, href }) => (
-            <StyledResourceLink
+            <a
+              className={sidebarLinkClassName}
               key={label}
               href={href}
               target="_blank"
@@ -294,7 +338,7 @@ export const SettingsApplicationAboutSidebar = ({
                 <Icon size={theme.icon.size.sm} />
               </StyledRowIcon>
               <OverflowingTextWithTooltip text={label} />
-            </StyledResourceLink>
+            </a>
           ))}
         </StyledSection>
       )}

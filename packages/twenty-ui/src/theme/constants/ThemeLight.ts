@@ -107,6 +107,7 @@ export const THEME_LIGHT = {
     invertedPrimary: 'color(display-p3 0.2 0.2 0.2)',
     invertedSecondary: 'color(display-p3 0.4 0.4 0.4)',
     danger: 'color(display-p3 0.985 0.925 0.925)',
+    dangerSolid: 'color(display-p3 0.744 0.234 0.222)',
     transparent: {
       primary: 'color(display-p3 1 1 1 / 0.5)',
       secondary: 'color(display-p3 1 1 1 / 0.4)',
@@ -151,6 +152,7 @@ export const THEME_LIGHT = {
       md: '8px',
       smRound: '4px',
       mdRound: '8px',
+      lgRound: '12px',
       lg: '16px',
       xl: '20px',
       xxl: '40px',
@@ -178,6 +180,7 @@ export const THEME_LIGHT = {
       light: 'color(display-p3 0.702 0.702 0.702)',
       extraLight: 'color(display-p3 0.8 0.8 0.8)',
       inverted: 'color(display-p3 1 1 1)',
+      onAccent: 'color(display-p3 1 1 1)',
       danger: 'color(display-p3 0.83 0.329 0.324)',
     },
     size: {

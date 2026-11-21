@@ -5,16 +5,18 @@ import { SettingsPageContainer } from '@/settings/components/SettingsPageContain
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { plural, t } from '@lingui/core/macro';
+import { plural } from '@lingui/core/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { Section, useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 import {
   GetInstanceAndAllWorkspacesUpgradeStatusDocument,
   RefreshUpgradeStatusDocument,
 } from '~/generated-admin/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledRefreshButtonContainer = styled.div`
   display: flex;
@@ -24,12 +26,13 @@ const StyledRefreshButtonContainer = styled.div`
 `;
 
 const StyledAccordionCardsContainer = styled.div`
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: ${themeCssVariables.spacing[3]};
+  grid-template-columns: minmax(0, 1fr);
 `;
 
 export const SettingsAdminWorkspacesStatus = () => {
+  const { t } = useLingui();
   const apolloAdminClient = useApolloAdminClient();
   const { enqueueToast } = useToast();
 
@@ -55,12 +58,12 @@ export const SettingsAdminWorkspacesStatus = () => {
       await refreshUpgradeStatus();
       await refetch();
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Upgrade status refreshed`,
       });
     } catch (error) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children:
           error instanceof Error
             ? error.message

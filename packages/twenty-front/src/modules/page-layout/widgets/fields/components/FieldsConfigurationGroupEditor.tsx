@@ -1,7 +1,7 @@
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { Fragment, useRef } from 'react';
-import { type DropdownDismissEvent } from 'twenty-ui/components';
+import { type DropdownDismissEvent } from 'twenty-ui/components/navigation';
 
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { FieldsConfigurationEmptyGroupDropZone } from '@/page-layout/widgets/fields/components/FieldsConfigurationEmptyGroupDropZone';
@@ -48,7 +48,7 @@ const StyledGroupHeaderRow = styled.div`
   width: 100%;
 `;
 
-const StyledMenuItemDraggableWrapper = styled.div`
+const StyledGroupHeaderContent = styled.div`
   flex: 1;
   min-width: 0;
 `;
@@ -119,11 +119,11 @@ export const FieldsConfigurationGroupEditor = ({
   return (
     <StyledGroupContainer isDragging={isDragging}>
       <StyledGroupHeaderRow>
-        <StyledMenuItemDraggableWrapper ref={groupHeaderRef}>
+        <StyledGroupHeaderContent ref={groupHeaderRef}>
           <DragDropItemSortableHandle fill>
             <FieldsConfigurationGroupDraggableHeader text={group.name} />
           </DragDropItemSortableHandle>
-        </StyledMenuItemDraggableWrapper>
+        </StyledGroupHeaderContent>
         <DropdownRoot
           dropdownId={renameDropdownId}
           type="panel"

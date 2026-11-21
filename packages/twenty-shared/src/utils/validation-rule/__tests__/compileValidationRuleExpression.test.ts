@@ -1,3 +1,4 @@
+import { VALIDATION_RULE_EXPRESSION_MAX_LENGTH } from '@/constants/ValidationRuleExpressionMaxLength';
 import { FieldMetadataType } from '@/types/FieldMetadataType';
 import { RelationType } from '@/types/RelationType';
 import { type ValidationRuleFieldDescriptor } from '@/types/ValidationRuleFieldDescriptor';
@@ -32,6 +33,11 @@ const OPPORTUNITY_FIELDS: ValidationRuleFieldDescriptor[] = [
     name: 'isQualified',
     type: FieldMetadataType.BOOLEAN,
     universalIdentifier: 'opportunity-is-qualified',
+  },
+  {
+    name: 'tags',
+    type: FieldMetadataType.MULTI_SELECT,
+    universalIdentifier: 'opportunity-tags',
   },
   {
     name: 'company',
@@ -82,6 +88,8 @@ describe('compileValidationRuleExpression', () => {
     expect(compile('closeDate > now')).toEqual({
       isValid: false,
       errorMessage: 'Unknown field "closeDate"',
+      errorCode: 'UNKNOWN_FIELD',
+      errorParams: { fieldName: 'closeDate' },
     });
   });
 
@@ -89,6 +97,8 @@ describe('compileValidationRuleExpression', () => {
     expect(compile('amount.value > 0')).toEqual({
       isValid: false,
       errorMessage: '"value" is not a subfield of "amount"',
+      errorCode: 'UNKNOWN_SUBFIELD',
+      errorParams: { subfieldName: 'value', fieldName: 'amount' },
     });
   });
 
@@ -96,6 +106,8 @@ describe('compileValidationRuleExpression', () => {
     expect(compile('arrayLength(pointOfContacts) > 0')).toEqual({
       isValid: false,
       errorMessage: '"pointOfContacts" is not a to-one relation',
+      errorCode: 'NOT_A_TO_ONE_RELATION',
+      errorParams: { fieldName: 'pointOfContacts' },
     });
   });
 
@@ -103,6 +115,8 @@ describe('compileValidationRuleExpression', () => {
     expect(compile('isDefined(company.people)')).toEqual({
       isValid: false,
       errorMessage: '"company.people" goes more than one relation deep',
+      errorCode: 'RELATION_TOO_DEEP',
+      errorParams: { path: 'company.people' },
     });
   });
 
@@ -110,6 +124,8 @@ describe('compileValidationRuleExpression', () => {
     expect(compile('random() > 1')).toEqual({
       isValid: false,
       errorMessage: 'Unknown field "random"',
+      errorCode: 'UNKNOWN_FIELD',
+      errorParams: { fieldName: 'random' },
     });
   });
 
@@ -117,6 +133,7 @@ describe('compileValidationRuleExpression', () => {
     expect(compile('stage')).toEqual({
       isValid: false,
       errorMessage: 'Expression did not return true or false',
+      errorCode: 'NON_BOOLEAN_RESULT',
     });
     expect(compile('amount.amountMicros + 1').isValid).toBe(false);
   });
@@ -125,6 +142,7 @@ describe('compileValidationRuleExpression', () => {
     expect(compile('company["industry"] == "SaaS"')).toEqual({
       isValid: false,
       errorMessage: 'Bracket access is not supported, use dot access instead',
+      errorCode: 'BRACKET_ACCESS',
     });
     expect(
       compile('stage == "WON" and amount["amountMicros"] > 0').isValid,
@@ -135,6 +153,8 @@ describe('compileValidationRuleExpression', () => {
     expect(compile('company . industry == "SaaS"')).toEqual({
       isValid: false,
       errorMessage: 'Write company.industry without spaces around the dot',
+      errorCode: 'SPACED_MEMBER_DOT',
+      errorParams: { path: 'company.industry' },
     });
     expect(
       compile('company.industry == "SaaS" or company . industry == "B2B"')
@@ -157,22 +177,111 @@ describe('compileValidationRuleExpression', () => {
     expect(compile('stage in ["WON", "LOST"]').isValid).toBe(true);
   });
 
+  it('should accept a value in a list field', () => {
+    expect(compile('"PRIORITY" in tags')).toEqual({
+      isValid: true,
+      bindings: { tags: 'opportunity-tags' },
+    });
+  });
+
   it('should reject assignments', () => {
     expect(compile('stage = "WON"').isValid).toBe(false);
   });
 
-  it('should reject a syntax error', () => {
-    expect(compile('stage ==').isValid).toBe(false);
+  it('should report an incomplete expression', () => {
+    expect(compile('stage ==')).toEqual({
+      isValid: false,
+      errorMessage: 'Expression is incomplete',
+      errorCode: 'INCOMPLETE_EXPRESSION',
+    });
+    expect(compile('(stage == "WON"')).toMatchObject({
+      errorCode: 'INCOMPLETE_EXPRESSION',
+    });
+  });
+
+  it('should report a text value missing its closing quote', () => {
+    expect(compile('stage == "WON')).toEqual({
+      isValid: false,
+      errorMessage: 'A text value is missing its closing quote',
+      errorCode: 'UNCLOSED_TEXT',
+    });
+  });
+
+  it('should name the unexpected character or operator', () => {
+    expect(compile('stage = "WON"')).toEqual({
+      isValid: false,
+      errorMessage: 'Unexpected "="',
+      errorCode: 'INVALID_SYNTAX',
+      errorParams: { token: '=' },
+    });
+    expect(compile('stage == and "WON"')).toMatchObject({
+      errorParams: { token: 'and' },
+    });
   });
 
   it('should reject an empty expression', () => {
     expect(compile('   ')).toEqual({
       isValid: false,
       errorMessage: 'Expression is empty',
+      errorCode: 'EMPTY_EXPRESSION',
     });
   });
 
   it('should reject an expression over the length cap', () => {
-    expect(compile(`stage == "${'x'.repeat(2000)}"`).isValid).toBe(false);
+    expect(compile(`stage == "${'x'.repeat(2000)}"`)).toEqual({
+      isValid: false,
+      errorMessage: `Expression is longer than ${VALIDATION_RULE_EXPRESSION_MAX_LENGTH} characters`,
+      errorCode: 'EXPRESSION_TOO_LONG',
+      errorParams: { maxLength: VALIDATION_RULE_EXPRESSION_MAX_LENGTH },
+    });
+  });
+});
+
+describe('compileValidationRuleExpression with previous values', () => {
+  it('should bind a previous value to the field it reads', () => {
+    expect(
+      compile('previous.stage == stage or previous.stage != "WON"'),
+    ).toEqual({
+      isValid: true,
+      bindings: {
+        stage: 'opportunity-stage',
+        'previous.stage': 'opportunity-stage',
+      },
+    });
+  });
+
+  it('should accept a composite subfield of a previous value', () => {
+    expect(
+      compile('amount.amountMicros >= previous.amount.amountMicros'),
+    ).toEqual({
+      isValid: true,
+      bindings: {
+        amount: 'opportunity-amount',
+        'previous.amount': 'opportunity-amount',
+      },
+    });
+  });
+
+  it('should reject previous on its own', () => {
+    expect(compile('isDefined(previous)')).toMatchObject({
+      isValid: false,
+      errorCode: 'NOT_A_VALUE',
+    });
+  });
+
+  it('should reject the previous value of a relation', () => {
+    expect(compile('previous.company.industry == "SaaS"')).toMatchObject({
+      isValid: false,
+      errorCode: 'PREVIOUS_VALUE_OF_RELATION',
+      errorParams: { path: 'previous.company.industry' },
+    });
+  });
+
+  it('should reject the previous value of an unknown field', () => {
+    expect(compile('previous.closeDate == stage')).toMatchObject({
+      isValid: false,
+      errorCode: 'UNKNOWN_FIELD',
+      errorParams: { fieldName: 'closeDate' },
+    });
   });
 });

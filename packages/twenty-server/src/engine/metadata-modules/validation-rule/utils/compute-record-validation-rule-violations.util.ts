@@ -1,3 +1,5 @@
+/* @license Enterprise */
+
 import {
   type ObjectRecord,
   type ValidationRuleFieldDescriptor,
@@ -18,6 +20,7 @@ export const computeRecordValidationRuleViolations = ({
   fields,
   now,
   inputIndexByRecordId,
+  previousRecordById,
   maxViolations,
 }: {
   records: ObjectRecord[];
@@ -28,6 +31,7 @@ export const computeRecordValidationRuleViolations = ({
   fields: ValidationRuleFieldDescriptor[];
   now: string;
   inputIndexByRecordId: Map<string, number>;
+  previousRecordById?: Map<string, ObjectRecord>;
   maxViolations: number;
 }): ComputeRecordValidationRuleViolationsResult => {
   const violations: RecordValidationRuleViolation[] = [];
@@ -47,7 +51,11 @@ export const computeRecordValidationRuleViolations = ({
         return { violations, evaluationErrors };
       }
 
-      const evaluationResult = evaluate({ record, now });
+      const evaluationResult = evaluate({
+        record,
+        previousRecord: previousRecordById?.get(String(record.id)),
+        now,
+      });
 
       if (evaluationResult.status === 'passed') {
         continue;

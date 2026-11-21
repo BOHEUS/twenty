@@ -4,19 +4,50 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
+import { type AiChatThreadRecord } from '@/ai-chat/threads/types/AiChatThreadRecord';
 import { ChatThreadsCardContent } from '@/page-layout/widgets/chat-threads/components/ChatThreadsCardContent';
 import { getJestMetadataAndApolloMocksWrapper } from '~/testing/jest/getJestMetadataAndApolloMocksWrapper';
 
 const NETWORK_ERROR = new Error('Failed to fetch');
 
+const handleThreadClick = jest.fn();
+type UseAiChatThreadClickOptions = { resetNavigationStack?: boolean };
+
+const useAiChatThreadClick = jest.fn(
+  (_options: UseAiChatThreadClickOptions) => ({
+    handleThreadClick,
+  }),
+);
+
+jest.mock('@/ai-chat/threads/hooks/useAiChatThreadClick', () => ({
+  useAiChatThreadClick: (options: UseAiChatThreadClickOptions) =>
+    useAiChatThreadClick(options),
+}));
+
+jest.mock('@/inbox/components/InboxThreadActionsDropdown', () => ({
+  InboxThreadActionsDropdown: () => null,
+}));
+
+const THREAD: AiChatThreadRecord = {
+  __typename: 'AgentChatThread',
+  id: '20202020-0000-4000-8000-0000000000aa',
+  title: 'Pricing questions',
+  deletedAt: null,
+  createdAt: '2026-10-01T10:00:00.000Z',
+  updatedAt: '2026-10-01T10:00:00.000Z',
+  lastActivityAt: '2026-10-01T10:00:00.000Z',
+};
+
 const renderContent = ({
   loading = false,
   error,
   onRetry = jest.fn(),
+  threads = [],
 }: {
   loading?: boolean;
   error?: unknown;
   onRetry?: () => void;
+  threads?: AiChatThreadRecord[];
 }) =>
   render(
     <I18nProvider i18n={i18n}>
@@ -26,16 +57,34 @@ const renderContent = ({
           error={error}
           onRetry={onRetry}
           onDetachThread={jest.fn()}
-          threads={[]}
+          threads={threads}
         />
       </MemoryRouter>
     </I18nProvider>,
-    { wrapper: getJestMetadataAndApolloMocksWrapper({}) },
+    {
+      wrapper: getJestMetadataAndApolloMocksWrapper({}),
+    },
   );
 
 describe('ChatThreadsCardContent', () => {
-  // Every state below renders with no threads in hand, which is exactly when
-  // the card could claim "No conversations" without knowing that to be true.
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('opens a chat on top of the side panel, so back returns to the record', async () => {
+    renderContent({ threads: [THREAD] });
+
+    await userEvent.click(screen.getByText('Pricing questions'));
+
+    expect(useAiChatThreadClick).toHaveBeenCalledWith({
+      resetNavigationStack: false,
+    });
+    expect(handleThreadClick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: THREAD.id }),
+      expect.anything(),
+    );
+  });
+
   it('does not claim the record has no conversations while loading', () => {
     renderContent({ loading: true });
 

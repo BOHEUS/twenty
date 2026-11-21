@@ -4,11 +4,12 @@ import { SettingsPageContainer } from '@/settings/components/SettingsPageContain
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { FormatPreferencesSettings } from '@/settings/experience/components/FormatPreferencesSettings';
 import { OpenRecordInPreferencePicker } from '@/settings/experience/components/OpenRecordInPreferencePicker';
+import { SettingsExperienceNotificationsSection } from '@/settings/experience/components/SettingsExperienceNotificationsSection';
 import { UiScalePicker } from '@/settings/experience/components/UiScalePicker';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { themeCssVariables } from 'twenty-ui/theme';
 import { SettingsAppearance } from '~/pages/settings/profile/appearance/components/SettingsAppearance';
 import { LocalePicker } from '~/pages/settings/profile/appearance/components/LocalePicker';
@@ -54,6 +55,8 @@ export const SettingsExperience = () => {
           />
           <OpenRecordInPreferencePicker />
         </Section.Root>
+
+        <SettingsExperienceNotificationsSection />
 
         <Section.Root>
           <Section.Header

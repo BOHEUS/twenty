@@ -11,6 +11,7 @@ const SESSION_ACTOR_METADATA_KEY = 'twentySessionActor';
 type GetOrCreateSessionSandboxArgs = {
   sandboxApi: SandboxApi;
   apiKey: string;
+  template: string;
   sessionId: string;
   actorKey?: string;
   timeoutMs: number;
@@ -36,8 +37,7 @@ const listSandboxesForSession = async (
     sandboxes.push(...(await paginator.nextItems()));
   }
 
-  // Re-check the tag client-side so a loose server-side match can never reuse
-  // another tenant's sandbox.
+  // A loose server-side tag match must never reuse another tenant's sandbox.
   return sandboxes.filter(
     (sandbox) => sandbox.metadata?.[SESSION_SANDBOX_METADATA_KEY] === sessionId,
   );
@@ -62,7 +62,6 @@ const connectAndKeepAlive = async (
 
     return sandbox;
   } catch {
-    // Couldn't refresh the timeout — kill it instead of leaking a running sandbox.
     await sandbox.kill().catch(() => undefined);
 
     return undefined;
@@ -78,11 +77,12 @@ const killSandboxById = (
 const createSessionSandbox = (
   sandboxApi: SandboxApi,
   apiKey: string,
+  template: string,
   sessionId: string,
   timeoutMs: number,
   actorKey?: string,
 ) =>
-  sandboxApi.create({
+  sandboxApi.create(template, {
     apiKey,
     timeoutMs,
     lifecycle: { onTimeout: 'pause', autoResume: true },
@@ -97,6 +97,7 @@ const createSessionSandbox = (
 export const getOrCreateSessionSandbox = async ({
   sandboxApi,
   apiKey,
+  template,
   sessionId,
   timeoutMs,
   idleTimeoutMs,
@@ -105,8 +106,6 @@ export const getOrCreateSessionSandbox = async ({
   sandbox: Sandbox;
   isReused: boolean;
 }> => {
-  // The sandbox must outlive a single execution and the idle window before it
-  // auto-pauses, so take the larger of the two.
   const aliveTimeoutMs = Math.max(timeoutMs, idleTimeoutMs);
 
   const sessionSandboxes = await listSandboxesForSession(
@@ -150,6 +149,7 @@ export const getOrCreateSessionSandbox = async ({
   const sandbox = await createSessionSandbox(
     sandboxApi,
     apiKey,
+    template,
     sessionId,
     aliveTimeoutMs,
     actorKey,

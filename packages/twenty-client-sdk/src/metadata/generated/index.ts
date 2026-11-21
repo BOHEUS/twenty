@@ -69,8 +69,7 @@ function(options?: ClientOptions): Client {
 // MetadataApiClient (auto-injected by twenty-client-sdk)
 import type { TwentyClientRunAs } from '../shared/twenty-client-run-as.type';
 
-// Ambient type stubs for the genql-generated code this template gets
-// injected into. They enable full typecheck/lint on this file.
+// Ambient stubs for the genql-generated code this template is injected into.
 
 const APP_ACCESS_TOKEN_ENV_KEY = 'TWENTY_APP_ACCESS_TOKEN';
 const APP_APPLICATION_ACCESS_TOKEN_ENV_KEY =
@@ -190,7 +189,7 @@ const hasAuthenticationErrorInGraphqlPayload = (
 };
 
 const defaultOptions: MetadataApiClientOptions = {
-  url: `${process.env.TWENTY_API_URL}/metadata`,
+  url: `${process.env.TWENTY_INTERNAL_API_URL || process.env.TWENTY_API_URL}/metadata`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -232,8 +231,6 @@ export class MetadataApiClient {
       typeof headers === 'function' ? undefined : headers,
     );
 
-    // Priority: explicit header > the token for the requested access > api key
-    // (legacy).
     this.authorizationToken =
       tokenFromHeaders ??
       processEnvironment[
@@ -266,7 +263,7 @@ export class MetadataApiClient {
     filename,
     fieldMetadataUniversalIdentifier,
   }: {
-    fileBuffer: Buffer;
+    fileBuffer: Uint8Array;
     filename: string;
     fieldMetadataUniversalIdentifier: string;
   }): Promise<FilesFieldUploadedFile> {
@@ -303,7 +300,7 @@ export class MetadataApiClient {
     fileBuffer,
     uploadTarget,
   }: {
-    fileBuffer: Buffer;
+    fileBuffer: Uint8Array;
     uploadTarget: FilesFieldUploadTarget;
   }): Promise<void> {
     const fetchImplementation = this.getFetchImplementationOrThrow();

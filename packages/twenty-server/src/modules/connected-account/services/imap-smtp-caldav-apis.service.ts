@@ -65,9 +65,6 @@ export class ImapSmtpCalDavApiService {
     handle: string;
     userWorkspaceId: string;
     workspaceId: string;
-    // Caller (resolver) has already validated the input through
-    // `ImapSmtpCaldavService.validateAndTestConnectionParameters`, which
-    // produces fully plaintext passwords ready for re-encryption.
     connectionParameters: PlaintextImapSmtpCaldavParams;
     existingAccount?: ConnectedAccountEntity | null;
   }): Promise<string> {
@@ -230,6 +227,10 @@ export class ImapSmtpCalDavApiService {
       await this.messageQueueService.add<MessagingMessageListFetchJobData>(
         MessagingMessageListFetchJob.name,
         { workspaceId, messageChannelId: existingMessageChannel.id },
+        {
+          workspaceId,
+          isWorkspaceJob: true,
+        },
       );
     }
 
@@ -247,6 +248,10 @@ export class ImapSmtpCalDavApiService {
       await this.calendarQueueService.add<CalendarEventListFetchJobData>(
         CalendarEventListFetchJob.name,
         { workspaceId, calendarChannelId: existingCalendarChannel.id },
+        {
+          workspaceId,
+          isWorkspaceJob: true,
+        },
       );
     }
 

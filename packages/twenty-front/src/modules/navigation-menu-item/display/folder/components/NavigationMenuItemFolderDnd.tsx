@@ -10,8 +10,9 @@ import { useLingui } from '@lingui/react/macro';
 import React, { Fragment, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { isDefined } from 'twenty-shared/utils';
-import { LightIconButton } from 'twenty-ui/components';
-import { IconHeartOff, IconPlus, useIcons } from 'twenty-ui/icon';
+import { LightIconButton } from 'twenty-ui/components/input';
+import { IconHeartOff, IconPlus } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { themeCssVariables } from 'twenty-ui/theme';
 import { useIsMobile } from 'twenty-ui/utilities';
 import { type NavigationMenuItem } from '~/generated-metadata/graphql';
@@ -20,13 +21,14 @@ import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/st
 import { FOLDER_ICON_DEFAULT } from '@/navigation-menu-item/common/constants/FolderIconDefault';
 import { DEFAULT_NAVIGATION_MENU_ITEM_COLOR_FOLDER } from '@/navigation-menu-item/common/constants/NavigationMenuItemDefaultColorFolder';
 import { NAVIGATION_MENU_ITEM_SECTION_DROPPABLE_CONFIG } from '@/navigation-menu-item/common/constants/NavigationMenuItemSectionDroppableConfig';
-import { NavigationSections } from '@/navigation-menu-item/common/constants/NavigationSections.constants';
+import { NavigationSections } from '@/navigation-menu-item/common/constants/NavigationSections';
 import { NavigationDropTargetContext } from '@/navigation-menu-item/common/contexts/NavigationDropTargetContext';
 import { NavigationMenuItemDragContext } from '@/navigation-menu-item/common/contexts/NavigationMenuItemDragContext';
 import { SortableDropTargetRefContext } from '@/navigation-menu-item/common/contexts/SortableDropTargetRefContext';
 import { useDeleteManyNavigationMenuItems } from '@/navigation-menu-item/common/hooks/useDeleteManyNavigationMenuItems';
 import type { NavigationMenuItemSection } from '@/navigation-menu-item/common/types/NavigationMenuItemSection';
 import { getDndKitDropTargetId } from '@/navigation-menu-item/common/utils/getDndKitDropTargetId';
+import { getNavigationMenuItemListDroppableId } from '@/navigation-menu-item/common/utils/getNavigationMenuItemListDroppableId';
 import { NavigationItemDropTarget } from '@/navigation-menu-item/display/dnd/components/NavigationItemDropTarget';
 import {
   FOLDER_HEADER_SLOT_COLLISION_PRIORITY,
@@ -37,7 +39,7 @@ import { NavigationMenuItemSortableItem } from '@/navigation-menu-item/display/d
 import { useIsDropDisabledForSection } from '@/navigation-menu-item/display/dnd/hooks/useIsDropDisabledForSection';
 import { NavigationMenuItemFolderLayout } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderLayout';
 import { NavigationMenuItemFolderNavigationDrawerItemDropdown } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderNavigationDrawerItemDropdown';
-import { NavigationMenuItemFolderSubItem } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderSubItem';
+import { NavigationMenuItemFolderSubItemDispatcher } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderSubItemDispatcher';
 import { useNavigationMenuItemFolderOpenState } from '@/navigation-menu-item/display/folder/hooks/useNavigationMenuItemFolderOpenState';
 import { useIsNavigationMenuItemEditHighlighted } from '@/navigation-menu-item/display/hooks/useIsNavigationMenuItemEditHighlighted';
 import type { NavigationMenuItemClickParams } from '@/navigation-menu-item/display/hooks/useNavigationMenuItemSectionItems';
@@ -125,7 +127,7 @@ export const NavigationMenuItemFolderDnd = ({
     : 'workspace';
   const insertionIndex =
     navigationMenuItemInsertionPreview?.section === section &&
-    navigationMenuItemInsertionPreview.folderId === folderId
+    navigationMenuItemInsertionPreview.parentId === folderId
       ? navigationMenuItemInsertionPreview.index
       : null;
   const hasInsertionPreview = isDefined(insertionIndex);
@@ -164,12 +166,15 @@ export const NavigationMenuItemFolderDnd = ({
   );
   const isFolderEditHighlighted = useIsNavigationMenuItemEditHighlighted({
     id: folderId,
-    folderId: null,
+    parentId: null,
   });
 
   const config = NAVIGATION_MENU_ITEM_SECTION_DROPPABLE_CONFIG[section];
   const folderHeaderDroppableId = `${config.folderHeaderPrefix}${folderId}`;
-  const folderContentDroppableId = `${config.folderPrefix}${folderId}`;
+  const folderContentDroppableId = getNavigationMenuItemListDroppableId({
+    parentId: folderId,
+    navigationMenuItemSection: section,
+  });
   const folderHeaderSlotId = getDndKitDropTargetId(folderHeaderDroppableId, 0);
 
   const isForbiddenDropTarget =
@@ -245,7 +250,10 @@ export const NavigationMenuItemFolderDnd = ({
     >
       {showInsertBeforeZone && (
         <NavigationMenuItemInsertBeforeDroppableZone
-          orphanDroppableId={config.orphanDroppableId}
+          orphanDroppableId={getNavigationMenuItemListDroppableId({
+            parentId: item.parentId,
+            navigationMenuItemSection: section,
+          })}
           orphanIndex={orphanIndex}
           itemId={folderId}
           disabled={dropDisabled}
@@ -342,7 +350,7 @@ export const NavigationMenuItemFolderDnd = ({
             {navigationMenuItems.map((navigationMenuItem, index) => (
               <Fragment key={navigationMenuItem.id}>
                 <NavigationItemDropTarget
-                  folderId={folderId}
+                  parentId={folderId}
                   index={index}
                   sectionId={sectionId}
                   compact={isCompact}
@@ -362,7 +370,7 @@ export const NavigationMenuItemFolderDnd = ({
                       : dropDisabled
                   }
                 >
-                  <NavigationMenuItemFolderSubItem
+                  <NavigationMenuItemFolderSubItemDispatcher
                     navigationMenuItem={navigationMenuItem}
                     index={getIndexWithInsertionPreview(index)}
                     arrayLength={folderContentLength}
@@ -398,7 +406,7 @@ export const NavigationMenuItemFolderDnd = ({
               collisionPriority={FOLDER_HEADER_SLOT_COLLISION_PRIORITY}
             >
               <NavigationItemDropTarget
-                folderId={folderId}
+                parentId={folderId}
                 index={navigationMenuItems.length}
                 sectionId={sectionId}
                 compact={isCompact}
@@ -414,7 +422,7 @@ export const NavigationMenuItemFolderDnd = ({
                 <StyledAddMenuItem isHidden={isAddingFavoriteFolderItem}>
                   <NavigationMenuItemEntrance>
                     <NavigationMenuItemAddDropdown
-                      folderId={folderId}
+                      parentId={folderId}
                       section={section}
                       position={navigationMenuItems.length}
                     >

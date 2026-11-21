@@ -16,7 +16,7 @@ export const hydrateAgentHistoryFiles = async ({
     if ('fileId' in record) {
       parts.push(record);
     }
-    for (const relation of ['parts', 'messages', 'turns', 'evaluations']) {
+    for (const relation of ['parts', 'messages', 'turns']) {
       if (Array.isArray(record[relation])) {
         record[relation].forEach(collectParts);
       }
@@ -32,5 +32,7 @@ export const hydrateAgentHistoryFiles = async ({
         .find({ where: { id: In(fileIds), workspaceId } })
     : [];
   const filesById = new Map(files.map((file) => [file.id, file]));
-  for (const part of parts) part.file = filesById.get(part.fileId) ?? null;
+  for (const part of parts) {
+    part.file = filesById.get(part.fileId) ?? null;
+  }
 };

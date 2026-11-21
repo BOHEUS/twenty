@@ -7,12 +7,15 @@ import {
 export const buildAgentChatThreadStandardFlatIndexMetadatas = (
   args: Omit<CreateStandardIndexArgs<'agentChatThread'>, 'context'>,
 ): Record<string, FlatIndexMetadata> => ({
-  ownerIndex: createStandardIndexFlatMetadata({
+  directMessagePairUniqueIndex: createStandardIndexFlatMetadata({
     ...args,
     context: {
-      indexName: 'ownerIndex',
-      relatedFieldNames: ['userWorkspaceId'],
-      isUnique: false,
+      indexName: 'directMessagePairUniqueIndex',
+      relatedFieldNames: [
+        'directMessageFirstWorkspaceMemberId',
+        'directMessageSecondWorkspaceMemberId',
+      ],
+      isUnique: true,
       indexWhereClause: null,
     },
   }),
@@ -25,11 +28,20 @@ export const buildAgentChatThreadStandardFlatIndexMetadatas = (
       indexWhereClause: null,
     },
   }),
-  workflowRunIndex: createStandardIndexFlatMetadata({
+  assigneeIndex: createStandardIndexFlatMetadata({
     ...args,
     context: {
-      indexName: 'workflowRunIndex',
-      relatedFieldNames: ['workflowRun'],
+      indexName: 'assigneeIndex',
+      relatedFieldNames: ['assignee'],
+      isUnique: false,
+      indexWhereClause: null,
+    },
+  }),
+  channelLastActivityIndex: createStandardIndexFlatMetadata({
+    ...args,
+    context: {
+      indexName: 'channelLastActivityIndex',
+      relatedFieldNames: ['channelId', 'lastActivityAt'],
       isUnique: false,
       indexWhereClause: null,
     },

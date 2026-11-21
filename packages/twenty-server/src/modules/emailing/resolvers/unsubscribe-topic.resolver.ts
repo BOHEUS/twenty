@@ -2,7 +2,6 @@ import { UseFilters, UseGuards, UsePipes } from '@nestjs/common';
 import { Args, Mutation, Query } from '@nestjs/graphql';
 
 import { PermissionFlagType } from 'twenty-shared/constants';
-import { FeatureFlagKey } from 'twenty-shared/types';
 
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
 import { CreateUnsubscribeTopicInput } from 'src/engine/core-modules/emailing-domain/dtos/create-unsubscribe-topic.input';
@@ -13,29 +12,25 @@ import { EmailGroupAccessService } from 'src/engine/core-modules/emailing-domain
 import { ResolverValidationPipe } from 'src/engine/core-modules/graphql/pipes/resolver-validation.pipe';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import {
-  FeatureFlagGuard,
-  RequireFeatureFlag,
-} from 'src/engine/guards/feature-flag.guard';
-import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
-import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
 import { UnsubscribeTopicService } from 'src/modules/emailing/services/unsubscribe-topic.service';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
 @UseGuards(
-  AuthPrincipalGuard({
-    userSession: {
-      standard: true,
-      impersonated: true,
-      playground: true,
-      workspaceAgnostic: false,
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: true,
+      oauthClient: true,
+      application: true,
     },
-    apiKey: true,
-    oauthClient: true,
-    application: true,
+    requiredPermissionFlags: [PermissionFlagType.WORKSPACE],
   }),
-  FeatureFlagGuard,
-  SettingsPermissionGuard(PermissionFlagType.WORKSPACE),
 )
 @UseFilters(
   EmailGroupAccessGraphqlApiExceptionFilter,
@@ -50,7 +45,6 @@ export class UnsubscribeTopicResolver {
   ) {}
 
   @Query(() => [UnsubscribeTopicDTO])
-  @RequireFeatureFlag(FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED)
   async unsubscribeTopics(
     @AuthWorkspace() currentWorkspace: WorkspaceEntity,
   ): Promise<UnsubscribeTopicDTO[]> {
@@ -62,7 +56,6 @@ export class UnsubscribeTopicResolver {
   }
 
   @Mutation(() => UnsubscribeTopicDTO)
-  @RequireFeatureFlag(FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED)
   async createUnsubscribeTopic(
     @Args('input') input: CreateUnsubscribeTopicInput,
     @AuthWorkspace() currentWorkspace: WorkspaceEntity,
@@ -76,7 +69,6 @@ export class UnsubscribeTopicResolver {
   }
 
   @Mutation(() => UnsubscribeTopicDTO)
-  @RequireFeatureFlag(FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED)
   async updateUnsubscribeTopic(
     @Args('input') input: UpdateUnsubscribeTopicInput,
     @AuthWorkspace() currentWorkspace: WorkspaceEntity,
@@ -90,7 +82,6 @@ export class UnsubscribeTopicResolver {
   }
 
   @Mutation(() => Boolean)
-  @RequireFeatureFlag(FeatureFlagKey.IS_MESSAGE_CAMPAIGN_ENABLED)
   async deleteUnsubscribeTopic(
     @Args('id') id: string,
     @AuthWorkspace() currentWorkspace: WorkspaceEntity,

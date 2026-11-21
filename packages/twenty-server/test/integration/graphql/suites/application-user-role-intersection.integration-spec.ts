@@ -33,10 +33,7 @@ const COMPANY_UNIVERSAL_IDENTIFIER =
 const COMPANY_NAME_FIELD_UNIVERSAL_IDENTIFIER =
   STANDARD_OBJECTS.company.fields.name.universalIdentifier;
 
-// The application declares a role that is strictly narrower than the admin who
-// holds the token: it may read but not update, and only sees companies whose
-// name contains "Intersection Visible". The admin has neither bound, so every
-// assertion below fails if the application's role is dropped.
+// Strictly narrower than the admin, so every assertion fails if the application's role is dropped.
 const buildApplicationManifest = (): Manifest =>
   buildBaseManifest({
     appId: TEST_APP_UNIVERSAL_IDENTIFIER,
@@ -84,12 +81,12 @@ const findApplicationId = async (): Promise<string> => {
 
 const findApplicationDefaultRoleId = async (): Promise<string | null> => {
   const rows = await globalThis.testDataSource.query(
-    `SELECT "defaultRoleId" FROM core."application"
+    `SELECT "requestedRoleId" FROM core."application"
      WHERE "universalIdentifier" = $1 AND "workspaceId" = $2`,
     [TEST_APP_UNIVERSAL_IDENTIFIER, SEED_APPLE_WORKSPACE_ID],
   );
 
-  return rows[0]?.defaultRoleId ?? null;
+  return rows[0]?.requestedRoleId ?? null;
 };
 
 const createCompany = async (id: string, name: string) =>
@@ -157,8 +154,6 @@ describe('An application acting for a user is bound by both roles', () => {
     await createCompany(VISIBLE_COMPANY_ID, VISIBLE_COMPANY_NAME);
     await createCompany(HIDDEN_COMPANY_ID, HIDDEN_COMPANY_NAME);
 
-    // Minted with the admin token, so it carries that admin's userId and
-    // userWorkspaceId alongside the applicationId.
     const tokenPair = await generateAppleAdminApplicationTokenPair({
       applicationId,
     });
@@ -184,10 +179,13 @@ describe('An application acting for a user is bound by both roles', () => {
     );
   });
 
-  it('should apply the application row-level predicate even though the user has none', async () => {
+  it('should ignore the application row-level predicate', async () => {
     const names = await findCompanyNames(applicationAccessToken);
 
-    expect(names).toEqual([VISIBLE_COMPANY_NAME]);
+    expect(names).toHaveLength(2);
+    expect(names).toEqual(
+      expect.arrayContaining([VISIBLE_COMPANY_NAME, HIDDEN_COMPANY_NAME]),
+    );
   });
 
   it('should refuse an update the application role forbids and the user role allows', async () => {

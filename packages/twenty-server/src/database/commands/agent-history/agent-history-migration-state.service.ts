@@ -10,8 +10,7 @@ import { AGENT_HISTORY_MIGRATION_STORAGE_KEY } from 'src/database/commands/agent
 import { getWorkspaceSchemaName } from 'src/engine/workspace-datasource/utils/get-workspace-schema-name.util';
 import { escapeIdentifier } from 'src/engine/workspace-manager/workspace-migration/utils/remove-sql-injection.util';
 
-// This frozen protocol intentionally remains compatible with deployed 2.42 servers.
-// Runtime changes must not redefine the persisted migration cursor.
+// Frozen to stay compatible with deployed 2.42 servers: never redefine the persisted migration cursor
 @Injectable()
 export class AgentHistoryMigrationStateService {
   async readState(
@@ -74,8 +73,9 @@ export class AgentHistoryMigrationStateService {
           );
         }
       }
-      for (const workspaceId of missing)
+      for (const workspaceId of missing) {
         states.set(workspaceId, { storage: 'core' });
+      }
     }
     return states;
   }

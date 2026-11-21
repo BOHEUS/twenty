@@ -1,7 +1,8 @@
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
-import Skeleton from 'react-loading-skeleton';
 
+import { useGetIsMetadataItemCustom } from '@/object-metadata/hooks/useGetIsMetadataItemCustom';
+import { SkeletonLine } from '@/ui/feedback/skeleton/components/SkeletonLine';
 import { SortableTableHeader } from '@/ui/layout/table/components/SortableTableHeader';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableHeader } from '@/ui/layout/table/components/TableHeader';
@@ -35,6 +36,7 @@ export const SettingsAgentSkillsTable = ({
 }: SettingsAgentSkillsTableProps) => {
   const theme = useTheme();
   const { t } = useLingui();
+  const getIsMetadataItemCustom = useGetIsMetadataItemCustom();
 
   const showSkeleton = loading && skills.length === 0;
 
@@ -59,7 +61,7 @@ export const SettingsAgentSkillsTable = ({
       </StyledTableHeaderRowContainer>
       {showSkeleton
         ? Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton height={32} borderRadius={4} key={index} />
+            <SkeletonLine height={32} key={index} />
           ))
         : skills.map((skill) => (
             <SettingsSkillTableRow
@@ -73,7 +75,7 @@ export const SettingsAgentSkillsTable = ({
                   />
                 ) : (
                   <SettingsSkillInactiveMenuDropDown
-                    isCustomSkill={skill.isCustom}
+                    isCustomSkill={getIsMetadataItemCustom(skill)}
                     skillId={skill.id}
                     onActivate={() => onActivate(skill.id)}
                     onDelete={() => onDelete(skill.id)}

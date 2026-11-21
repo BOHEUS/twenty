@@ -2,12 +2,12 @@ import { useMutation } from '@apollo/client/react';
 
 import { SEND_MESSAGE_CAMPAIGN_TEST } from '@/activities/emails/graphql/mutations/sendMessageCampaignTest';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
-import { t } from '@lingui/core/macro';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   type SendMessageCampaignTestMutation,
   type SendMessageCampaignTestMutationVariables,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type SendMessageCampaignTestParams = {
   toAddress: string;
@@ -18,6 +18,7 @@ type SendMessageCampaignTestParams = {
 };
 
 export const useSendMessageCampaignTest = () => {
+  const { t } = useLingui();
   const [sendMessageCampaignTestMutation, { loading }] = useMutation<
     SendMessageCampaignTestMutation,
     SendMessageCampaignTestMutationVariables
@@ -35,7 +36,7 @@ export const useSendMessageCampaignTest = () => {
 
       if (!result.data?.sendMessageCampaignTest) {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`Failed to send test email`,
         });
 
@@ -43,7 +44,7 @@ export const useSendMessageCampaignTest = () => {
       }
 
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Test email sent to ${params.toAddress}`,
       });
 

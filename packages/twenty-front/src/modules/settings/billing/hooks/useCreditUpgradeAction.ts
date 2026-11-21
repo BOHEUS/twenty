@@ -3,15 +3,16 @@ import { useApplyCurrentWorkspaceBillingUpdate } from '@/settings/billing/hooks/
 import { useGetNextResourceCreditPrice } from '@/settings/billing/hooks/useGetNextResourceCreditPrice';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   SetResourceCreditSubscriptionPriceDocument,
   SubscriptionInterval,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 export const useCreditUpgradeAction = () => {
+  const { t } = useLingui();
   const nextPrice = useGetNextResourceCreditPrice();
   const { formatNumber } = useNumberFormat();
   const { enqueueToast } = useToast();
@@ -45,7 +46,7 @@ export const useCreditUpgradeAction = () => {
     }
 
     try {
-      enqueueToast({ variant: 'info', children: t`Upgrading subscription...` });
+      enqueueToast({ status: 'info', children: t`Upgrading subscription...` });
 
       const { data } = await setResourceCreditSubscriptionPrice({
         variables: { priceId: nextPrice.stripePriceId },
@@ -69,10 +70,10 @@ export const useCreditUpgradeAction = () => {
         },
       );
 
-      enqueueToast({ variant: 'success', children: t`Credit plan upgraded.` });
+      enqueueToast({ status: 'success', children: t`Credit plan upgraded.` });
     } catch (error) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to upgrade credit plan.`,
       });
 

@@ -1,9 +1,13 @@
 import { Inject } from '@nestjs/common';
 
+import { msg } from '@lingui/core/macro';
+import {
+  isValidUniversalIdentifier,
+  MINIMUM_UNIVERSAL_IDENTIFIER_UUID_VERSION,
+} from 'twenty-shared/application';
 import { type AllMetadataName } from 'twenty-shared/metadata';
 import { type FromTo } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { validate as uuidValidate, version as uuidVersion } from 'uuid';
 
 import { LoggerService } from 'src/engine/core-modules/logger/logger.service';
 import { WORKSPACE_MIGRATION_DURATION_MS_BUCKET_BOUNDARIES } from 'src/engine/core-modules/metrics/constants/workspace-migration-duration-ms-bucket-boundaries.constant';
@@ -42,10 +46,10 @@ import { FlatEntityUpdateValidationArgs } from 'src/engine/workspace-manager/wor
 import { UniversalFlatEntityValidationArgs } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-validation-args.type';
 import { UniversalFlatEntityValidationReturnType } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/universal-flat-entity-validation-result.type';
 import { AllUniversalWorkspaceMigrationAction } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/workspace-migration-action-common.type';
-import { type WorkspaceMigrationBuilderOptions } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/workspace-migration-builder-options.type';
+import { type WorkspaceMigrationValidationBuildOptions } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-builder/types/workspace-migration-builder-options.type';
 
 export type ValidateAndBuildArgs<T extends AllMetadataName> = {
-  buildOptions: WorkspaceMigrationBuilderOptions;
+  buildOptions: WorkspaceMigrationValidationBuildOptions;
   dependencyOptimisticFlatEntityMaps: AllUniversalFlatEntityMaps;
   workspaceId: string;
   additionalCacheDataMaps: WorkspaceMigrationBuilderAdditionalCacheDataMaps;
@@ -338,9 +342,27 @@ export abstract class WorkspaceEntityMigrationBuilderService<
         additionalCacheDataMaps,
         universalIdentifier: flatEntityToUpdateUniversalIdentifier,
       });
+      const divergenceErrors = this.validateNoNonUpdatablePropertyDivergence(
+        flatEntityUpdate.nonUpdatablePropertyDivergences,
+      );
 
       if (validationResult.status === 'fail') {
-        allValidationResult.push(validationResult);
+        allValidationResult.push({
+          ...validationResult,
+          errors: [...validationResult.errors, ...divergenceErrors],
+        });
+        continue;
+      }
+
+      if (divergenceErrors.length > 0) {
+        allValidationResult.push({
+          flatEntityMinimalInformation: {
+            universalIdentifier: flatEntityToUpdateUniversalIdentifier,
+          } as Partial<MetadataFlatEntity<T>>,
+          errors: divergenceErrors,
+          metadataName: this.metadataName,
+          type: 'update',
+        });
         continue;
       }
 
@@ -473,17 +495,24 @@ export abstract class WorkspaceEntityMigrationBuilderService<
     });
   }
 
+  private validateNoNonUpdatablePropertyDivergence(
+    nonUpdatablePropertyDivergences: string[],
+  ): FlatEntityValidationError[] {
+    return nonUpdatablePropertyDivergences.map((property) => ({
+      code: 'NON_UPDATABLE_PROPERTY_DIVERGENCE',
+      message: `${this.metadataName} property "${property}" cannot be updated`,
+      userFriendlyMessage: msg`Property ${property} cannot be updated`,
+    }));
+  }
+
   private validateUniversalIdentifier({
     flatEntityToValidate: { universalIdentifier },
   }: UniversalFlatEntityValidationArgs<T>): FlatEntityValidationError[] {
-    if (
-      !uuidValidate(universalIdentifier) ||
-      uuidVersion(universalIdentifier) < 4
-    ) {
+    if (!isValidUniversalIdentifier(universalIdentifier)) {
       return [
         {
           code: FlatEntityMapsExceptionCode.ENTITY_MALFORMED,
-          message: `Invalid universalIdentifier: "${universalIdentifier}" is not a valid UUID, uuid version should be greater than 4`,
+          message: `Invalid universalIdentifier: "${universalIdentifier}" is not a valid UUID, uuid version should be greater than ${MINIMUM_UNIVERSAL_IDENTIFIER_UUID_VERSION}`,
           value: universalIdentifier,
         },
       ];

@@ -3,6 +3,7 @@ import { getPageLayoutTabListInitialActiveTabId } from '@/page-layout/utils/getP
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { activeTabIdComponentState } from '@/ui/layout/tab-list/states/activeTabIdComponentState';
 import { type TabListProps } from '@/ui/layout/tab-list/types/TabListProps';
+import { parseTabRouteHash } from '@/ui/layout/tab-list/utils/parseTabRouteHash';
 import { useIsMobile } from 'twenty-ui/utilities';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useStore } from 'jotai';
@@ -47,7 +48,7 @@ export const PageLayoutTabListEffect = ({
   });
 
   const shouldSyncWithUrl = !isInEditMode && workspaceSurface.ownsRouteLocation;
-  const routeTabId = hash.replace('#', '');
+  const { tabId: routeTabId } = parseTabRouteHash(hash);
   const nextActiveTabId =
     shouldSyncWithUrl && tabs.some((tab) => tab.id === routeTabId)
       ? routeTabId
@@ -67,8 +68,8 @@ export const PageLayoutTabListEffect = ({
   }, [componentInstanceId, nextActiveTabId, onChangeTab, store]);
 
   useEffect(() => {
-    // Cancelling customization can pin the active tab again. Replace its stale
-    // hash without overwriting a different deep link or the main URL from a panel.
+    // Cancelling customization can re-pin the active tab; replace its stale hash
+    // without overwriting another deep link or the main URL from a panel.
     if (
       shouldSyncWithUrl &&
       isDefined(activeTabId) &&

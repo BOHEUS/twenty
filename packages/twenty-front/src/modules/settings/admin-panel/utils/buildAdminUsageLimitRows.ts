@@ -25,7 +25,9 @@ export const buildAdminUsageLimitRows = (
       const override = isDefined(usageLimitDefault.overriddenByUsageLimitId)
         ? usageLimitById.get(usageLimitDefault.overriddenByUsageLimitId)
         : undefined;
-      const defaultValue = Number(usageLimitDefault.limitValue);
+      const defaultValue = isDefined(usageLimitDefault.limitValue)
+        ? Number(usageLimitDefault.limitValue)
+        : null;
 
       return {
         id: `usage-limit-default-${index}`,
@@ -35,7 +37,7 @@ export const buildAdminUsageLimitRows = (
         limitKind: usageLimitDefault.limitKind,
         periodCount: override?.periodCount ?? usageLimitDefault.periodCount,
         periodUnit: override?.periodUnit ?? usageLimitDefault.periodUnit,
-        meter: usageLimitDefault.meter,
+        unit: usageLimitDefault.unit,
         defaultValue,
         limitValue: isDefined(override)
           ? Number(override.limitValue)
@@ -45,6 +47,7 @@ export const buildAdminUsageLimitRows = (
             ? Number(override.burstValue)
             : null,
         usageLimitId: override?.id ?? null,
+        endsAt: override?.endsAt ?? null,
         isOverridden: isDefined(override),
       };
     })

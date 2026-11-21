@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   definePageLayoutWidget,
-  PageLayoutTabLayoutMode,
   type StandalonePageLayoutWidgetManifest,
 } from '@/sdk/define';
 
@@ -11,7 +10,7 @@ const WIDGET_CONFIG: StandalonePageLayoutWidgetManifest = {
   pageLayoutTabUniversalIdentifier: '22222222-2222-4222-8222-222222222222',
   title: 'Docs',
   type: 'IFRAME',
-  position: { layoutMode: PageLayoutTabLayoutMode.VERTICAL_LIST, index: 1000 },
+  position: { layoutMode: 'VERTICAL_LIST', index: 1000 },
   configuration: {
     configurationType: 'IFRAME',
     url: 'https://example.com/docs',
@@ -26,18 +25,15 @@ describe('definePageLayoutWidget', () => {
     expect(result.errors).toEqual([]);
   });
 
-  it('rejects a widget without a tab or a position', () => {
+  it('rejects a widget without a tab', () => {
     const result = definePageLayoutWidget({
       ...WIDGET_CONFIG,
       pageLayoutTabUniversalIdentifier: '',
-      position:
-        undefined as unknown as StandalonePageLayoutWidgetManifest['position'],
     });
 
     expect(result.success).toBe(false);
     expect(result.errors).toEqual([
       'PageLayoutWidget must have a pageLayoutTabUniversalIdentifier when defined standalone (use the universalIdentifier of the tab it is added to)',
-      'PageLayoutWidget must have a position when defined standalone (its tab is not in the manifest, so the layout mode cannot be inferred)',
     ]);
   });
 

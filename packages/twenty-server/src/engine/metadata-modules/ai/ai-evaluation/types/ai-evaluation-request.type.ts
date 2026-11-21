@@ -1,3 +1,4 @@
+import { type UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
 import {
   type AiEvaluationModelInput,
   type AiEvaluationModelQuestion,
@@ -5,9 +6,9 @@ import {
 
 export type AiEvaluationRequest = {
   workspaceId: string;
-  // Attributes the spend to the member who triggered the run, and is the
-  // spender the quota check is made against.
+  // spend attribution and quota check target
   userWorkspaceId?: string | null;
+  operationType?: UsageOperationType;
   state: AiEvaluationModelInput;
   questions: Record<string, AiEvaluationModelQuestion>;
   abortSignal?: AbortSignal;

@@ -9,15 +9,15 @@ import { type SettingSecurityNewSsoIdentityFormValues } from '@/settings/securit
 import { ssoIdentityProviderDefaultValues } from '@/settings/security/utils/ssoIdentityProviderDefaultValues';
 import { ssoIdentitiesProvidersParamsSchema } from '@/settings/security/validation-schemas/ssoIdentityProviderSchema';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { t } from '@lingui/core/macro';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { FormProvider, useForm } from 'react-hook-form';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
 
 export const SettingsSecuritySsoIdentifyProvider = () => {
+  const { t } = useLingui();
   const navigate = useNavigateSettings();
 
   const { enqueueToast } = useToast();

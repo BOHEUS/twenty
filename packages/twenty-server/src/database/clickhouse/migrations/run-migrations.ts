@@ -17,7 +17,9 @@ config({
 const clickHouseUrl = () => {
   const url = process.env.CLICKHOUSE_URL;
 
-  if (url) return url;
+  if (url) {
+    return url;
+  }
 
   throw new Error(
     'CLICKHOUSE_URL environment variable is not set. Please set it to the ClickHouse URL.',
@@ -92,6 +94,9 @@ async function runMigrations() {
     url: clickHouseUrl(),
     clickhouse_settings: {
       allow_experimental_json_type: 1,
+      // Without waiting on all replicas, the next ALTER fails with CANNOT_ASSIGN_ALTER
+      alter_sync: '2',
+      mutations_sync: '2',
     },
     log: { level: ClickHouseLogLevel.OFF },
   });

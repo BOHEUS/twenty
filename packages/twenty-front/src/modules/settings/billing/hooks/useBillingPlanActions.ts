@@ -1,14 +1,20 @@
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { useBillingPortalSession } from '@/settings/billing/hooks/useBillingPortalSession';
+import { useBillingWording } from '@/settings/billing/hooks/useBillingWording';
 import { useNextInterval } from '@/settings/billing/hooks/useNextInterval';
 import { useNextPlan } from '@/settings/billing/hooks/useNextPlan';
+import { usePlanByPlanKey } from '@/settings/billing/hooks/usePlanByPlanKey';
 import { type BillingSubscriptionChange } from '@/settings/billing/types/BillingSubscriptionChange';
+import { type SettingsBillingComparedPlan } from '@/settings/billing/types/SettingsBillingComparedPlan';
 import { type SettingsBillingPlanAction } from '@/settings/billing/types/SettingsBillingPlanAction';
-import { type SettingsBillingPlanInterval } from '@/settings/billing/types/SettingsBillingPlanComparison';
+import {
+  type SettingsBillingComparedPlanKeys,
+  type SettingsBillingPlanInterval,
+} from '@/settings/billing/types/SettingsBillingPlanComparison';
 import { getBillingPlanCell } from '@/settings/billing/utils/getBillingPlanCell';
 import { isBillingSubscriptionChangeUpgrade } from '@/settings/billing/utils/isBillingSubscriptionChangeUpgrade';
 import { isSubscriptionPaymentOverdue } from '@/settings/billing/utils/isSubscriptionPaymentOverdue';
-import { usePermissionFlagMap } from '@/settings/roles/hooks/usePermissionFlagMap';
+import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSubscriptionStatus } from '@/workspace/hooks/useSubscriptionStatus';
 import { useLingui } from '@lingui/react/macro';
@@ -17,6 +23,7 @@ import {
   assertUnreachable,
   getSettingsPath,
   isDefined,
+  isNonEmptyArray,
 } from 'twenty-shared/utils';
 import {
   IconArrowDown,
@@ -25,7 +32,7 @@ import {
   IconCircleX,
 } from 'twenty-ui/icon';
 import {
-  BillingPlanKey,
+  type BillingPlanKey,
   PermissionFlagType,
   SubscriptionInterval,
   SubscriptionStatus,
@@ -33,6 +40,7 @@ import {
 
 type UseBillingPlanActionsParams = {
   billingInterval: SettingsBillingPlanInterval;
+  comparedPlanKeys: SettingsBillingComparedPlanKeys;
   currentPlanKey: BillingPlanKey;
   isApplyingBillingSubscriptionChange: boolean;
   onBillingSubscriptionChangeRequested: (
@@ -42,16 +50,29 @@ type UseBillingPlanActionsParams = {
 
 export const useBillingPlanActions = ({
   billingInterval,
+  comparedPlanKeys,
   currentPlanKey,
   isApplyingBillingSubscriptionChange,
   onBillingSubscriptionChangeRequested,
 }: UseBillingPlanActionsParams) => {
   const { t } = useLingui();
+  const { getBillingPlanLabel } = useBillingWording();
+  const { getPlanByPlanKey } = usePlanByPlanKey();
+  const currentPlan = getPlanByPlanKey(currentPlanKey);
+  const canCurrentPlanSwitch =
+    isNonEmptyArray(currentPlan.upgradePlanKeys) ||
+    isNonEmptyArray(currentPlan.downgradePlanKeys);
+  const displayedPlanKeys = comparedPlanKeys.includes(currentPlanKey)
+    ? comparedPlanKeys
+    : [currentPlanKey, ...comparedPlanKeys];
+  const hasShortChangeTitles = displayedPlanKeys.length > 2;
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
   const subscriptionStatus = useSubscriptionStatus();
   const { nextPlan } = useNextPlan();
   const { nextInterval } = useNextInterval();
-  const permissionMap = usePermissionFlagMap();
+  const hasPermissionToManageBilling = useHasPermissionFlag(
+    PermissionFlagType.BILLING,
+  );
 
   const { isBillingPortalSessionDisabled, openBillingPortal } =
     useBillingPortalSession(getSettingsPath(SettingsPath.BillingPlans));
@@ -59,8 +80,6 @@ export const useBillingPlanActions = ({
   const currentBillingSubscription =
     currentWorkspace?.currentBillingSubscription;
   const currentInterval = currentBillingSubscription?.interval;
-  const hasPermissionToManageBilling =
-    permissionMap[PermissionFlagType.BILLING] ?? false;
 
   const shouldUpdatePayment = isSubscriptionPaymentOverdue(subscriptionStatus);
   const isSubscriptionCanceled =
@@ -85,12 +104,46 @@ export const useBillingPlanActions = ({
     variant: 'outline',
   });
 
-  const getChangeTitle = (change: BillingSubscriptionChange) => {
+  const getSwitchPlanTitle = ({
+    isUpgrade,
+    targetPlanKey,
+  }: {
+    isUpgrade: boolean;
+    targetPlanKey: BillingPlanKey;
+  }) => {
+    const planLabel = getBillingPlanLabel(targetPlanKey);
+
+    if (planLabel === getBillingPlanLabel(currentPlanKey)) {
+      return t`Move to the new ${planLabel} plan`;
+    }
+
+    return isUpgrade ? t`Upgrade to ${planLabel}` : t`Switch to ${planLabel}`;
+  };
+
+  const getChangeTitle = ({
+    change,
+    isUpgrade,
+  }: {
+    change: BillingSubscriptionChange;
+    isUpgrade: boolean;
+  }) => {
+    if (hasShortChangeTitles) {
+      if (
+        change.type === 'CANCEL_PLAN_SWITCH' ||
+        change.type === 'CANCEL_INTERVAL_SWITCH'
+      ) {
+        return t`Cancel switch`;
+      }
+
+      return isUpgrade ? t`Upgrade` : t`Switch`;
+    }
+
     switch (change.type) {
       case 'SWITCH_PLAN':
-        return change.targetPlanKey === BillingPlanKey.ENTERPRISE
-          ? t`Upgrade to Organization`
-          : t`Switch to Pro`;
+        return getSwitchPlanTitle({
+          isUpgrade,
+          targetPlanKey: change.targetPlanKey,
+        });
       case 'SWITCH_INTERVAL':
         return change.targetInterval === SubscriptionInterval.Year
           ? t`Upgrade to annual`
@@ -133,7 +186,7 @@ export const useBillingPlanActions = ({
     Icon: getChangeIcon({ change, isUpgrade }),
     isLoading: isApplyingBillingSubscriptionChange,
     onClick: () => onBillingSubscriptionChangeRequested(change),
-    title: getChangeTitle(change),
+    title: getChangeTitle({ change, isUpgrade }),
     variant: isUpgrade ? 'solid' : 'outline',
   });
 
@@ -172,6 +225,23 @@ export const useBillingPlanActions = ({
       };
     }
 
+    const isPlanSwitchUnavailable =
+      cell.change.type === 'SWITCH_PLAN' &&
+      !currentPlan.upgradePlanKeys.includes(planKey) &&
+      !currentPlan.downgradePlanKeys.includes(planKey);
+    const isLegacyIntervalSwitchDeferred =
+      cell.change.type === 'SWITCH_INTERVAL' &&
+      !getPlanByPlanKey(planKey).isSellable &&
+      canCurrentPlanSwitch;
+
+    if (isPlanSwitchUnavailable || isLegacyIntervalSwitchDeferred) {
+      return {
+        disabled: true,
+        title: t`Unavailable`,
+        variant: 'outline',
+      };
+    }
+
     if (shouldUpdatePayment) {
       return createBillingPortalAction(t`Update payment`);
     }
@@ -192,16 +262,20 @@ export const useBillingPlanActions = ({
       change: cell.change,
       isUpgrade: isBillingSubscriptionChangeUpgrade({
         change: cell.change,
+        currentPlan,
         upcomingInterval,
         upcomingPlanKey,
       }),
     });
   };
 
-  return {
-    planActions: {
-      [BillingPlanKey.PRO]: getPlanAction(BillingPlanKey.PRO),
-      [BillingPlanKey.ENTERPRISE]: getPlanAction(BillingPlanKey.ENTERPRISE),
-    },
-  };
+  const comparedPlans: SettingsBillingComparedPlan[] = displayedPlanKeys.map(
+    (planKey) => ({
+      action: getPlanAction(planKey),
+      isLegacy: !getPlanByPlanKey(planKey).isSellable,
+      planKey,
+    }),
+  );
+
+  return { comparedPlans };
 };

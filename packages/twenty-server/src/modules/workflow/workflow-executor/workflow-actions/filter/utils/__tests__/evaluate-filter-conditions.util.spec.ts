@@ -5,6 +5,7 @@ import {
   ViewFilterOperand,
 } from 'twenty-shared/types';
 
+import { WorkflowStepExecutorExceptionCode } from 'src/modules/workflow/workflow-executor/exceptions/workflow-step-executor.exception';
 import { evaluateFilterConditions } from 'src/modules/workflow/workflow-executor/workflow-actions/filter/utils/evaluate-filter-conditions.util';
 
 describe('evaluateFilterConditions', () => {
@@ -1480,6 +1481,53 @@ describe('evaluateFilterConditions', () => {
       });
     });
 
+    describe('raw JSON operands', () => {
+      const jsonValue = { name: 'Acme', tags: ['vip-gold'] };
+
+      const evaluateRawJson = (
+        operand: ViewFilterOperand,
+        leftOperand: unknown,
+        rightOperand: unknown = '',
+      ) =>
+        evaluateFilterConditions({
+          filters: [
+            createFilter(operand, leftOperand, rightOperand, 'RAW_JSON'),
+          ],
+        });
+
+      it('should search inside JSON values case-insensitively', () => {
+        expect(
+          evaluateRawJson(ViewFilterOperand.CONTAINS, jsonValue, 'acme'),
+        ).toBe(true);
+        expect(
+          evaluateRawJson(
+            ViewFilterOperand.CONTAINS,
+            JSON.stringify(jsonValue),
+            'VIP',
+          ),
+        ).toBe(true);
+        expect(
+          evaluateRawJson(
+            ViewFilterOperand.DOES_NOT_CONTAIN,
+            jsonValue,
+            'Acme',
+          ),
+        ).toBe(false);
+      });
+
+      it('should treat missing values and a stringified null as empty', () => {
+        expect(evaluateRawJson(ViewFilterOperand.IS_EMPTY, 'null')).toBe(true);
+        expect(evaluateRawJson(ViewFilterOperand.IS_EMPTY, null)).toBe(true);
+        expect(evaluateRawJson(ViewFilterOperand.IS_EMPTY, '')).toBe(true);
+        expect(evaluateRawJson(ViewFilterOperand.IS_NOT_EMPTY, jsonValue)).toBe(
+          true,
+        );
+        expect(
+          evaluateRawJson(ViewFilterOperand.DOES_NOT_CONTAIN, null, 'Acme'),
+        ).toBe(true);
+      });
+    });
+
     describe('error cases', () => {
       it('should throw error for unknown operand', () => {
         const filter = createFilter(
@@ -1492,6 +1540,43 @@ describe('evaluateFilterConditions', () => {
         expect(() => evaluateFilterConditions({ filters: [filter] })).toThrow();
       });
 
+      it.each([
+        { type: 'TEXT', leftOperand: 'value' },
+        { type: 'RAW_JSON', leftOperand: 'value' },
+        { type: 'BOOLEAN', leftOperand: 'true' },
+        { type: 'DATE', leftOperand: '2026-01-01T00:00:00Z' },
+        { type: 'UUID', leftOperand: 'value' },
+        { type: 'RATING', leftOperand: 'RATING_1' },
+        { type: 'RELATION', leftOperand: 'value' },
+        {
+          type: 'CURRENCY',
+          leftOperand: 'EUR',
+          compositeFieldSubFieldName: 'currencyCode',
+        },
+        { type: 'NUMBER', leftOperand: '1' },
+        { type: 'SELECT', leftOperand: 'value' },
+        { type: 'STRING', leftOperand: 'value' },
+      ])(
+        'should reject an unsupported operand on a $type filter as invalid step input',
+        ({ type, leftOperand, compositeFieldSubFieldName }) => {
+          const filter = {
+            ...createFilter(
+              ViewFilterOperand.IS_NOT_NULL,
+              leftOperand,
+              '',
+              type,
+            ),
+            compositeFieldSubFieldName,
+          };
+
+          expect(() => evaluateFilterConditions({ filters: [filter] })).toThrow(
+            expect.objectContaining({
+              code: WorkflowStepExecutorExceptionCode.INVALID_STEP_INPUT,
+            }),
+          );
+        },
+      );
+
       it('should handle unsupported filter type with default filter logic', () => {
         const filter = createFilter(
           ViewFilterOperand.CONTAINS,
@@ -1500,7 +1585,6 @@ describe('evaluateFilterConditions', () => {
           'UNSUPPORTED_TYPE',
         );
 
-        // Unsupported types fall through to default filter logic
         expect(evaluateFilterConditions({ filters: [filter] })).toBe(true);
       });
     });

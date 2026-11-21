@@ -11,6 +11,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  IsUUID,
   Max,
   ValidateIf,
   type ValidationError,
@@ -20,14 +21,17 @@ import {
   ENTERPRISE_INSTANCE_TYPE,
   type EnterpriseInstanceType,
 } from 'twenty-shared/constants';
-import { isDefined } from 'twenty-shared/utils';
+import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 import { type LoggerOptions } from 'typeorm/logger/LoggerOptions';
 
+import { IsLambdaResourceTags } from 'src/engine/core-modules/logic-function/logic-function-drivers/drivers/lambda/decorators/is-lambda-resource-tags.decorator';
 import { LogicFunctionDriverType } from 'src/engine/core-modules/logic-function/logic-function-drivers/interfaces/logic-function-driver.interface';
 import { type AwsRegion } from 'src/engine/core-modules/twenty-config/interfaces/aws-region.interface';
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
 import { SupportDriver } from 'src/engine/core-modules/twenty-config/interfaces/support.interface';
 
+import { IsBillingPlansConfig } from 'src/engine/core-modules/billing/decorators/is-billing-plans-config.decorator';
+import { type BillingPlansConfig } from 'src/engine/core-modules/billing/types/billing-plans-config.type';
 import { CaptchaDriverType } from 'src/engine/core-modules/captcha/interfaces';
 import { CodeInterpreterDriverType } from 'src/engine/core-modules/code-interpreter/code-interpreter.interface';
 import { DpaRegion } from 'src/engine/core-modules/dpa/enums/dpa-region.enum';
@@ -57,12 +61,14 @@ import { IsOptionalOrEmptyString } from 'src/engine/core-modules/twenty-config/d
 import { IsStrictlyLowerThan } from 'src/engine/core-modules/twenty-config/decorators/is-strictly-lower-than.decorator';
 import { IsTwentySemVer } from 'src/engine/core-modules/twenty-config/decorators/is-twenty-semver.decorator';
 import { ConfigVariableType } from 'src/engine/core-modules/twenty-config/enums/config-variable-type.enum';
+import { getMissingServerAdminIdentityAssertionVariables } from 'src/engine/core-modules/twenty-config/utils/get-missing-server-admin-identity-assertion-variables.util';
 import { ConfigVariablesGroup } from 'src/engine/core-modules/twenty-config/enums/config-variables-group.enum';
 import {
   ConfigVariableException,
   ConfigVariableExceptionCode,
 } from 'src/engine/core-modules/twenty-config/twenty-config.exception';
 import { type OnboardingEnrichmentCreditRewardTier } from 'src/engine/core-modules/onboarding/types/onboarding-enrichment-credit-reward-tier.type';
+import { type PlanUsageLimitDefaults } from 'src/engine/core-modules/usage-limit/types/plan-usage-limit-defaults.type';
 import { type AiProvidersConfig } from 'src/engine/metadata-modules/ai/ai-models/types/ai-providers-config.type';
 import {
   DEFAULT_DISABLED_MODELS,
@@ -108,6 +114,15 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ADVANCED_SETTINGS,
     description:
+      'Accept IMAP and SMTP servers whose TLS certificate cannot be verified, e.g. self-signed. Prefer adding your CA with NODE_EXTRA_CA_CERTS, which keeps verification on.',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  IMAP_SMTP_ALLOW_SELF_SIGNED = false;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
       'Deprecated: set OUTBOUND_HTTP_ALLOWED_INTERNAL_HOSTS to * instead. While this is false every private address is reachable and OUTBOUND_HTTP_ALLOWED_INTERNAL_HOSTS is ignored.',
     type: ConfigVariableType.BOOLEAN,
   })
@@ -141,6 +156,16 @@ export class ConfigVariables {
   @IsPositiveDuration()
   @IsOptional()
   PASSWORD_RESET_TOKEN_EXPIRES_IN = '5m';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.TOKENS_DURATION,
+    description:
+      'Duration for which an admin-issued two-factor authentication recovery code is valid',
+    type: ConfigVariableType.STRING,
+  })
+  @IsPositiveDuration()
+  @IsOptional()
+  TWO_FACTOR_AUTHENTICATION_RECOVERY_CODE_EXPIRES_IN = '1h';
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.GOOGLE_AUTH,
@@ -581,15 +606,69 @@ export class ConfigVariables {
     isHiddenInAdminPanel: true,
     type: ConfigVariableType.ENUM,
     options: Object.values(DpaRegion),
-    // Deployment-fixed: must mirror where data actually lives. Allowing a
-    // runtime DB/admin override could advertise a hosting location that does
-    // not match where data resides, so this is only configurable via
-    // environment variable.
+    // Env-only: a runtime override could advertise a hosting location that does not match where data lives.
     isEnvOnly: true,
   })
   @IsOptional()
   @IsEnum(DpaRegion)
   DPA_DEPLOYMENT_REGION: DpaRegion = DpaRegion.EU;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description:
+      'Id of the only workspace server admin privileges (admin panel, server-level impersonation) can be used from. Leave unset to allow them from any workspace.',
+    type: ConfigVariableType.STRING,
+    // Env-only: the admin panel must not be able to lift its own restriction.
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  @IsUUID()
+  SERVER_ADMIN_WORKSPACE_ID: string | undefined;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description:
+      'Request header carrying the signed identity assertion (a JWT) that an identity-aware proxy adds in front of the server admin workspace, for example Cf-Access-Jwt-Assertion. Setting it requires the three other SERVER_ADMIN_IDENTITY_ASSERTION variables and SERVER_ADMIN_WORKSPACE_ID: every request into that workspace must then carry an assertion issued to the email of its user.',
+    type: ConfigVariableType.STRING,
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  SERVER_ADMIN_IDENTITY_ASSERTION_HEADER: string | undefined;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description:
+      'URL of the JSON Web Key Set the server admin identity assertions are signed with',
+    type: ConfigVariableType.STRING,
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  @IsUrl({ protocols: ['https'], require_tld: false, require_protocol: true })
+  SERVER_ADMIN_IDENTITY_ASSERTION_JWKS_URL: string | undefined;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description: 'Issuer the server admin identity assertions must carry',
+    type: ConfigVariableType.STRING,
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  SERVER_ADMIN_IDENTITY_ASSERTION_ISSUER: string | undefined;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description: 'Audience the server admin identity assertions must carry',
+    type: ConfigVariableType.STRING,
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  SERVER_ADMIN_IDENTITY_ASSERTION_AUDIENCE: string | undefined;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.STORAGE_CONFIG,
@@ -704,22 +783,22 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.STORAGE_CONFIG,
     description:
-      'Maximum bytes of file storage a single workspace may hold, all its files counted. An upload that would cross it is refused',
+      'Maximum bytes of file storage a single workspace may hold, all its files counted. No limit when unset. USAGE_LIMIT_DEFAULTS_BY_PLAN can set it per billing plan',
     type: ConfigVariableType.NUMBER,
   })
   @CastToPositiveNumber()
   @IsOptional()
-  WORKSPACE_STORAGE_LIMIT_BYTES: number = 100 * 1024 * 1024 * 1024;
+  WORKSPACE_STORAGE_LIMIT_BYTES?: number;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.STORAGE_CONFIG,
     description:
-      'Maximum number of records a single workspace may hold across its objects, system objects other than messages and calendar events left out, soft-deleted records included. A write that would cross it is refused',
+      'Maximum number of records a single workspace may hold across its objects, system objects other than messages and calendar events left out, soft-deleted records included. No limit when unset. USAGE_LIMIT_DEFAULTS_BY_PLAN can set it per billing plan',
     type: ConfigVariableType.NUMBER,
   })
   @CastToPositiveNumber()
   @IsOptional()
-  WORKSPACE_RECORD_LIMIT: number = 10_000_000;
+  WORKSPACE_RECORD_LIMIT?: number;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
@@ -785,6 +864,18 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
+    description:
+      'Resource tags applied when creating AWS Lambda functions (JSON object with up to 48 string values)',
+    type: ConfigVariableType.JSON,
+  })
+  @ValidateIf(
+    (env) => env.LOGIC_FUNCTION_TYPE === LogicFunctionDriverType.LAMBDA,
+  )
+  @IsLambdaResourceTags()
+  LOGIC_FUNCTION_LAMBDA_RESOURCE_TAGS: Record<string, string> = {};
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
     isSensitive: true,
     description: 'Access key ID for AWS Lambda functions',
     type: ConfigVariableType.STRING,
@@ -809,7 +900,8 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
-    description: 'S3 bucket for uploading Lambda layer zip files',
+    description:
+      'S3 bucket for uploading Lambda layer zip files. Required with the Lambda driver unless STORAGE_S3_NAME is set.',
     type: ConfigVariableType.STRING,
   })
   @ValidateIf(
@@ -830,6 +922,18 @@ export class ConfigVariables {
   @IsOptional()
   @IsAWSRegion()
   LOGIC_FUNCTION_LAMBDA_LAYER_BUCKET_REGION?: AwsRegion;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LOGIC_FUNCTION_CONFIG,
+    description:
+      'Custom Lambda endpoint URL. Optional, only needed for Lambda-compatible emulators (e.g. http://floci:4566). Omit for AWS Lambda, where the SDK resolves the endpoint from the region.',
+    type: ConfigVariableType.STRING,
+  })
+  @ValidateIf(
+    (env) => env.LOGIC_FUNCTION_TYPE === LogicFunctionDriverType.LAMBDA,
+  )
+  @IsOptional()
+  LOGIC_FUNCTION_LAMBDA_ENDPOINT?: string;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.CODE_INTERPRETER_CONFIG,
@@ -855,6 +959,15 @@ export class ConfigVariables {
     (env) => env.CODE_INTERPRETER_TYPE === CodeInterpreterDriverType.E_2_B,
   )
   E2B_API_KEY?: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CODE_INTERPRETER_CONFIG,
+    description:
+      'E2B template for code interpreter sandboxes; build one with the libraries the PDF and Office skills need using scripts/build-code-interpreter-e2b-template.ts (default: code-interpreter-v1)',
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  E2B_TEMPLATE: string = 'code-interpreter-v1';
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.CODE_INTERPRETER_CONFIG,
@@ -954,6 +1067,17 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.BILLING_CONFIG,
+    description:
+      'Required when billing is enabled. How each billing plan is sold, as {"PRO":{"isDefault":true,"upgradePlanKeys":["ENTERPRISE"]},"ENTERPRISE":{"downgradePlanKeys":["PRO"]}}. Upgrades apply now with proration, downgrades at period end. A plan left out has no switch. The plans some plan can switch to are the two plans on sale, and the one marked isDefault is the default plan at signup',
+    isHiddenInAdminPanel: true,
+    type: ConfigVariableType.JSON,
+  })
+  @IsBillingPlansConfig()
+  @ValidateIf((env) => env.IS_BILLING_ENABLED === true)
+  BILLING_PLANS: BillingPlansConfig = {};
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BILLING_CONFIG,
     description: 'Duration of free trial with credit card in days',
     type: ConfigVariableType.NUMBER,
   })
@@ -975,6 +1099,15 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.BILLING_CONFIG,
     description:
+      'Email domains whose users keep the free trial on every workspace, however many trialing workspaces they are already in (twenty.com, acme.com). Exact domain match, subdomains not included',
+    type: ConfigVariableType.ARRAY,
+  })
+  @IsOptional()
+  BILLING_TRIAL_LIMIT_EXEMPT_EMAIL_DOMAINS: string[] = [];
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BILLING_CONFIG,
+    description:
       'Amount of credits for the free trial without credit card (in microCredits)',
     type: ConfigVariableType.NUMBER,
   })
@@ -991,6 +1124,26 @@ export class ConfigVariables {
   @CastToPositiveNumber()
   @ValidateIf((env) => env.IS_BILLING_ENABLED === true)
   BILLING_FREE_WORKFLOW_CREDITS_FOR_TRIAL_PERIOD_WITH_CREDIT_CARD = 2_500_000;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BILLING_CONFIG,
+    description:
+      'User credits each user can spend on AI chat and web search per period of the AI user credit limit default, before workspace credits (in microCredits). No user credits when unset. USAGE_LIMIT_DEFAULTS_BY_PLAN can set it per billing plan',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  AI_USER_CREDITS_LIMIT?: number;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.BILLING_CONFIG,
+    description:
+      'Quota and stock usage limit default values per billing plan, keyed by plan key then by the default\'s config variable, as {"PRO":{"WORKSPACE_RECORD_LIMIT":1000000},"ENTERPRISE":{"WORKSPACE_RECORD_LIMIT":null},"TRIAL":{"AI_USER_CREDITS_LIMIT":null}}. TRIAL applies to every trialing subscription and wins over its plan. null means no limit, and a variable left out keeps its own value',
+    isHiddenInAdminPanel: true,
+    type: ConfigVariableType.JSON,
+  })
+  @IsOptional()
+  USAGE_LIMIT_DEFAULTS_BY_PLAN: Record<string, PlanUsageLimitDefaults> = {};
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.BILLING_CONFIG,
@@ -1118,17 +1271,6 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.BILLING_CONFIG,
     description:
-      'Free credits granted for installing apps during the install-apps onboarding step, whatever the number of apps (in microCredits)',
-    type: ConfigVariableType.NUMBER,
-  })
-  @CastToPositiveNumber()
-  @IsInt()
-  @IsOptional()
-  ONBOARDING_INSTALL_APPS_CREDITS_REWARD = 500_000;
-
-  @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.BILLING_CONFIG,
-    description:
       'Credit reward tiers for workspaces enrichment matched to a real company, keyed by tier name, as {"midMarket":{"minEmployeeCount":20,"amountMicro":5000000}} (amounts in microCredits). The most generous matching tier wins; no tiers disables the reward. Independent of ONBOARDING_BOOK_CALL_MIN_EMPLOYEE_COUNT, so credits and the book-a-call offer can target different companies.',
     isHiddenInAdminPanel: true,
     type: ConfigVariableType.JSON,
@@ -1172,6 +1314,15 @@ export class ConfigVariables {
   })
   @ValidateIf((env) => env.IS_MULTIWORKSPACE_ENABLED)
   DEFAULT_SUBDOMAIN = 'app';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description:
+      'Additional subdomains no workspace can use when multi-workspace is enabled (status, internal-tools). The built-in reserved list still applies. Exact match, no patterns',
+    type: ConfigVariableType.ARRAY,
+  })
+  @IsOptional()
+  ADDITIONAL_RESERVED_SUBDOMAINS: string[] = [];
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ADVANCED_SETTINGS,
@@ -1338,7 +1489,7 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LOGGING,
     description:
-      'Share of sampled server traces that are also profiled, between 0 and 1. Read before the config store is available, so it cannot be overridden from the database.',
+      'Share of server processes that profile their sampled traces, between 0 and 1. Read before the config store is available, so it cannot be overridden from the database.',
     type: ConfigVariableType.NUMBER,
     isEnvOnly: true,
   })
@@ -1488,6 +1639,17 @@ export class ConfigVariables {
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Optional prefix for cache-storage keys. Empty preserves existing key names. Use a Redis hash tag (e.g. "{twenty-cache}") to place all cache-storage keys in one hash slot and avoid CROSSSLOT errors. Changing it switches cache namespaces and requires all servers and workers to restart with the same value.',
+    isEnvOnly: true,
+    type: ConfigVariableType.STRING,
+  })
+  @IsOptional()
+  @IsString()
+  REDIS_CACHE_PREFIX: string = '';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
     isSensitive: true,
     description:
       'Optional separate Redis connection for queues with a different eviction policy (advanced production use case, most self-hosters do not need this)',
@@ -1532,6 +1694,49 @@ export class ConfigVariables {
   })
   @IsOptional()
   WORKER_EXCLUDED_QUEUES: string[] = [];
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Maximum size in bytes of a single job (serialized data and options)',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  JOB_QUEUE_MAX_JOB_SIZE_BYTES = 20_971_520;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Share of the free job queue memory a single workspace may use. Any value below 1 keeps Redis below capacity',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  @Max(1)
+  JOB_QUEUE_MEMORY_SHARE_BY_WORKSPACE_ID = 0.4;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Share of the free job queue memory a single application, across all workspaces, may use. Any value below 1 keeps Redis below capacity',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  @Max(1)
+  JOB_QUEUE_MEMORY_SHARE_BY_APPLICATION_UNIVERSAL_IDENTIFIER = 0.6;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
+    description:
+      'Share of Redis maxmemory never given to job queue tenants (allocator error, non-job keys, Redis reserved memory)',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  @Max(1)
+  JOB_QUEUE_MEMORY_RESERVE = 0.1;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.SERVER_CONFIG,
@@ -1586,6 +1791,17 @@ export class ConfigVariables {
   @IsUrl({ require_tld: false, require_protocol: true })
   @IsOptional()
   SERVER_URL = 'http://localhost:3000';
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.SERVER_CONFIG,
+    description:
+      'Private URL logic functions use to call the server, e.g. http://server:3000 with Docker Compose, so their requests skip an authenticating proxy in front of SERVER_URL. Must be reachable from the server and worker. Local driver only: leave it unset with the Lambda driver, whose functions run outside your network and cannot reach it. Falls back to SERVER_URL.',
+    type: ConfigVariableType.STRING,
+    isEnvOnly: true,
+  })
+  @IsOptionalOrEmptyString()
+  @IsUrl({ require_tld: false, require_protocol: true })
+  SERVER_INTERNAL_URL?: string;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.SERVER_CONFIG,
@@ -1777,7 +1993,7 @@ export class ConfigVariables {
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.RATE_LIMITING,
     description:
-      'Maximum number of emails a single workspace may send per UTC day, campaign and one-off sends counted together. A workspace limit configured in the app replaces it',
+      'Maximum number of emails a single workspace may send per UTC day, campaign and one-off sends counted together. USAGE_LIMIT_DEFAULTS_BY_PLAN can set it per billing plan, and a workspace limit configured in the app replaces it',
     type: ConfigVariableType.NUMBER,
   })
   @CastToPositiveNumber()
@@ -1877,7 +2093,7 @@ export class ConfigVariables {
     type: ConfigVariableType.NUMBER,
   })
   @CastToPositiveNumber()
-  INVITATION_SENDING_BY_WORKSPACE_THROTTLE_TTL_IN_MS = 604_800_000; // 7 days
+  INVITATION_SENDING_BY_WORKSPACE_THROTTLE_TTL_IN_MS = 604_800_000;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.RATE_LIMITING,
@@ -1895,7 +2111,7 @@ export class ConfigVariables {
     type: ConfigVariableType.NUMBER,
   })
   @CastToPositiveNumber()
-  INVITATION_SENDING_BY_EMAIL_THROTTLE_TTL_IN_MS = 604_800_000; // 7 days
+  INVITATION_SENDING_BY_EMAIL_THROTTLE_TTL_IN_MS = 604_800_000;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.RATE_LIMITING,
@@ -1969,6 +2185,19 @@ export class ConfigVariables {
   CLOUDFLARE_DCV_DELEGATION_ID: string;
 
   @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CLOUDFLARE_CONFIG,
+    description:
+      'Store the visitor location headers Cloudflare adds (cf-ipcountry, ' +
+      'cf-region, cf-ipcity) on user sessions. Only enable when every ' +
+      'request reaches the server through Cloudflare: otherwise clients ' +
+      'can forge them.',
+    type: ConfigVariableType.BOOLEAN,
+    isEnvOnly: true,
+  })
+  @IsOptional()
+  IS_CLOUDFLARE_GEOLOCATION_ENABLED = false;
+
+  @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LLM,
     isSensitive: true,
     description: 'API key for OpenAI models (GPT, o-series)',
@@ -2035,11 +2264,20 @@ export class ConfigVariables {
     group: ConfigVariablesGroup.LLM,
     isSensitive: true,
     description:
-      'AI provider configurations. Custom providers are deep-merged on top of the built-in catalog (ai-providers.json). Use for custom endpoints, extra regions, or credentials set via admin panel.',
+      'AI provider configurations. An entry with the same name as a built-in provider (ai-providers.json) replaces it and keeps only the models it lists. Use for custom endpoints, extra regions, or credentials set via admin panel.',
     type: ConfigVariableType.JSON,
   })
   @IsOptional()
   AI_PROVIDERS: AiProvidersConfig = {};
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LLM,
+    description:
+      'Send AI providers a signed link to files when this server is public. Turn off when the server URL looks public but providers cannot reach it, for example behind a VPN, or when file links must not leave this server. Files are then sent as bytes.',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  AI_SIGNED_FILE_URLS_ENABLED = true;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.LLM,
@@ -2105,6 +2343,15 @@ export class ConfigVariables {
   AI_MODELS_DEFAULT_DISABLED: string[] = DEFAULT_DISABLED_MODELS;
 
   @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.LLM,
+    description:
+      'Ask OpenAI and Azure reasoning models for reasoning summaries in AI chat. Disable it if your OpenAI organization is not verified, since OpenAI rejects these requests.',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  IS_OPENAI_REASONING_SUMMARY_ENABLED = true;
+
+  @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.SERVER_CONFIG,
     description: 'Enable or disable multi-workspace support',
     type: ConfigVariableType.BOOLEAN,
@@ -2156,42 +2403,6 @@ export class ConfigVariables {
   MAX_NUMBER_OF_WORKSPACES_DELETED_PER_EXECUTION = 5;
 
   @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.RATE_LIMITING,
-    description:
-      'Throttle limit for workflow execution. Remaining will not be enqueued immediately.',
-    type: ConfigVariableType.NUMBER,
-  })
-  @CastToPositiveNumber()
-  WORKFLOW_EXEC_SOFT_THROTTLE_LIMIT = 100;
-
-  @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.RATE_LIMITING,
-    description:
-      'Time-to-live for workflow execution throttle in milliseconds. Remaining will not be enqueued immediately.',
-    type: ConfigVariableType.NUMBER,
-  })
-  @CastToPositiveNumber()
-  WORKFLOW_EXEC_SOFT_THROTTLE_TTL = 60_000;
-
-  @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.RATE_LIMITING,
-    description:
-      'Throttle limit for workflow execution. Remaining will be marked as failed.',
-    type: ConfigVariableType.NUMBER,
-  })
-  @CastToPositiveNumber()
-  WORKFLOW_EXEC_HARD_THROTTLE_LIMIT = 5000;
-
-  @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.RATE_LIMITING,
-    description:
-      'Time-to-live for workflow execution throttle in milliseconds. Remaining will be marked as failed.',
-    type: ConfigVariableType.NUMBER,
-  })
-  @CastToPositiveNumber()
-  WORKFLOW_EXEC_HARD_THROTTLE_TTL = 3_600_000; // 1 hour;
-
-  @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.CAPTCHA_CONFIG,
     description: 'Driver for captcha integration',
     type: ConfigVariableType.ENUM,
@@ -2218,6 +2429,24 @@ export class ConfigVariables {
   })
   @IsOptional()
   CAPTCHA_SECRET_KEY?: string;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CAPTCHA_CONFIG,
+    description:
+      'Minimum Google reCAPTCHA v3 score, between 0 and 1, required to accept a request',
+    type: ConfigVariableType.NUMBER,
+  })
+  @CastToPositiveNumber()
+  @IsOptional()
+  CAPTCHA_MIN_SCORE = 0;
+
+  @ConfigVariablesMetadata({
+    group: ConfigVariablesGroup.CAPTCHA_CONFIG,
+    description: 'Require a valid captcha to create a new workspace',
+    type: ConfigVariableType.BOOLEAN,
+  })
+  @IsOptional()
+  IS_WORKSPACE_CREATION_CAPTCHA_ENABLED = false;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.SERVER_CONFIG,
@@ -2329,28 +2558,6 @@ export class ConfigVariables {
   })
   @IsOptional()
   IS_ONBOARDING_AI_CHAT_ENABLED = false;
-
-  @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
-    isSensitive: true,
-    description: 'Mintlify API key for documentation search',
-    isEnvOnly: true,
-    isHiddenInAdminPanel: true,
-    type: ConfigVariableType.STRING,
-  })
-  @IsOptional()
-  MINTLIFY_API_KEY: string;
-
-  @ConfigVariablesMetadata({
-    group: ConfigVariablesGroup.ADVANCED_SETTINGS,
-    isSensitive: true,
-    description: 'Mintlify subdomain for documentation search',
-    isEnvOnly: true,
-    isHiddenInAdminPanel: true,
-    type: ConfigVariableType.STRING,
-  })
-  @IsOptional()
-  MINTLIFY_SUBDOMAIN: string;
 
   @ConfigVariablesMetadata({
     group: ConfigVariablesGroup.AWS_SES_SETTINGS,
@@ -2602,6 +2809,19 @@ export const validate = (config: Record<string, unknown>): ConfigVariables => {
 
   if (validationErrors.length > 0) {
     logValidatonErrors(validationErrors, 'error');
+    throw new ConfigVariableException(
+      'Config variables validation failed',
+      ConfigVariableExceptionCode.VALIDATION_FAILED,
+    );
+  }
+
+  const missingServerAdminIdentityAssertionVariables =
+    getMissingServerAdminIdentityAssertionVariables(validatedConfig);
+
+  if (isNonEmptyArray(missingServerAdminIdentityAssertionVariables)) {
+    Logger.error(
+      `The server admin identity assertion is partially configured, missing: ${missingServerAdminIdentityAssertionVariables.join(', ')}`,
+    );
     throw new ConfigVariableException(
       'Config variables validation failed',
       ConfigVariableExceptionCode.VALIDATION_FAILED,

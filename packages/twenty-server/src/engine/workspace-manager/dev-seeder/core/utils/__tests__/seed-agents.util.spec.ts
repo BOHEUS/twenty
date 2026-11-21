@@ -1,5 +1,3 @@
-import { type QueryRunner } from 'typeorm';
-
 import {
   SEED_APPLE_WORKSPACE_ID,
   SEED_YCOMBINATOR_WORKSPACE_ID,
@@ -8,12 +6,13 @@ import { seedAgents } from 'src/engine/workspace-manager/dev-seeder/core/utils/s
 
 type SeedRow = {
   id: string;
-  workspaceId: string;
   threadId?: string;
   turnId?: string;
   messageId?: string;
   createdAt: Date;
 };
+
+const SCHEMA_NAME = 'workspace_seed';
 
 describe('seedAgents', () => {
   it.each([
@@ -46,12 +45,14 @@ describe('seedAgents', () => {
         return queryBuilder;
       });
       const queryRunner = {
-        manager: { createQueryBuilder: () => queryBuilder },
-      } as unknown as QueryRunner;
+        manager: {
+          createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
+        },
+      };
 
       await seedAgents({
         queryRunner,
-        schemaName: 'core',
+        schemaName: SCHEMA_NAME,
         workspaceId,
         chatReferenceIds: {
           applicationId: 'application-id',
@@ -61,30 +62,28 @@ describe('seedAgents', () => {
         },
       });
 
-      const threads = tables.get('core.agentChatThread') ?? [];
-      const turns = tables.get('core.agentTurn') ?? [];
-      const messages = tables.get('core.agentMessage') ?? [];
-      const parts = tables.get('core.agentMessagePart') ?? [];
+      const threads = tables.get(`${SCHEMA_NAME}.agentChatThread`) ?? [];
+      const turns = tables.get(`${SCHEMA_NAME}.agentTurn`) ?? [];
+      const messages = tables.get(`${SCHEMA_NAME}.agentMessage`) ?? [];
+      const parts = tables.get(`${SCHEMA_NAME}.agentMessagePart`) ?? [];
 
       expect(threads).toHaveLength(threadCount);
       expect(messages).toHaveLength(messageCount);
       expect(parts).toHaveLength(messageCount);
       expect(turns).toHaveLength(turnCount);
-      expect(queryBuilder.where).toHaveBeenCalledWith(
-        'id = :threadId AND "workspaceId" = :workspaceId',
-        { threadId: threads[0].id, workspaceId },
-      );
+      expect(queryBuilder.where).toHaveBeenCalledWith('id = :threadId', {
+        threadId: threads[0].id,
+      });
       expect(queryBuilder.andWhere).toHaveBeenCalledWith('title IS NULL');
       expect(new Set(turns.map((turn) => turn.id)).size).toBe(turns.length);
       for (const message of messages) {
         expect(threads).toContainEqual(
-          expect.objectContaining({ id: message.threadId, workspaceId }),
+          expect.objectContaining({ id: message.threadId }),
         );
         expect(turns).toContainEqual(
           expect.objectContaining({
             id: message.turnId,
             threadId: message.threadId,
-            workspaceId,
           }),
         );
       }
@@ -97,7 +96,7 @@ describe('seedAgents', () => {
       }
       for (const part of parts) {
         expect(messages).toContainEqual(
-          expect.objectContaining({ id: part.messageId, workspaceId }),
+          expect.objectContaining({ id: part.messageId }),
         );
       }
     },

@@ -10,10 +10,11 @@ import { useRunWorkflowVersion } from '@/workflow/hooks/useRunWorkflowVersion';
 import { useStore } from 'jotai';
 import { useCallback } from 'react';
 import {
-  CoreObjectNameSingular,
+  StandardObjectNameSingular,
   type RecordGqlOperationFilter,
 } from 'twenty-shared/types';
 import { isNonEmptyArray } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const TriggerWorkflowVersionEngineCommand = () => {
   const mountedCommandState = useHeadlessCommandContextApi();
@@ -21,7 +22,9 @@ export const TriggerWorkflowVersionEngineCommand = () => {
 
   if (!isHeadlessTriggerWorkflowVersionCommandContextApi(mountedCommandState)) {
     throw new Error(
-      'TriggerWorkflowVersionEngineCommand requires a workflow trigger context',
+      doNotTranslate(
+        'TriggerWorkflowVersionEngineCommand requires a workflow trigger context',
+      ),
     );
   }
 
@@ -30,7 +33,7 @@ export const TriggerWorkflowVersionEngineCommand = () => {
   const { fetchAllRecords } = useLazyFetchAllRecords({
     objectNameSingular:
       mountedCommandState.objectMetadataItem?.nameSingular ??
-      CoreObjectNameSingular.Person,
+      StandardObjectNameSingular.Person,
     filter: mountedCommandState.graphqlFilter ?? noMatchFilter,
     limit: DEFAULT_QUERY_PAGE_SIZE,
   });

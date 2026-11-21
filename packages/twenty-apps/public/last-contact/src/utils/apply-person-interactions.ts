@@ -16,7 +16,7 @@ import {
 } from 'src/utils/upsert-records-in-batches';
 
 export const applyPersonInteractions = async (
-  client: CoreApiClient,
+  client: Pick<CoreApiClient, 'query' | 'mutation'>,
   interactionsByPersonId: Map<string, Interaction[]>,
 ): Promise<void> => {
   const personIds = [...interactionsByPersonId.keys()];
@@ -61,5 +61,9 @@ export const applyPersonInteractions = async (
   }
 
   await upsertRecordsInBatches(client, 'createPeople', updates);
-  await updateRelatedLastContactForPeople(client, contactByPersonId);
+  await updateRelatedLastContactForPeople(
+    client,
+    contactByPersonId,
+    stateByPersonId,
+  );
 };

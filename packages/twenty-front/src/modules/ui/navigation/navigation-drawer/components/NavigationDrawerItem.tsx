@@ -1,58 +1,39 @@
-import { useIsNavigationDrawerContentExpanded } from '@/navigation/hooks/useIsNavigationDrawerContentExpanded';
+import { type NavigationDrawerItemProps } from '@/ui/navigation/navigation-drawer/types/NavigationDrawerItemProps';
+import { VisuallyHidden } from 'twenty-ui/primitives/accessibility';
+import { isObject } from '@sniptt/guards';
+import { useIsNavigationDrawerContentExpanded } from '@/ui/navigation/navigation-drawer/hooks/useIsNavigationDrawerContentExpanded';
 import { TooltipDelay } from '@/ui/layout/tooltip/constants/TooltipDelay';
 import { NavigationDrawerAnimatedCollapseWrapper } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerAnimatedCollapseWrapper';
 import { NavigationDrawerItemBreadcrumb } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItemBreadcrumb';
+import { NavigationDrawerItemIcon } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItemIcon';
+import { StyledNavigationDrawerUnreadDot } from '@/ui/navigation/navigation-drawer/components/StyledNavigationDrawerUnreadDot';
 import { NAVIGATION_DRAWER_COLLAPSED_BUTTON_SIZE } from '@/ui/navigation/navigation-drawer/constants/NavigationDrawerCollapsedButtonSize';
 import { NavigationDrawerItemEditingContext } from '@/ui/navigation/navigation-drawer/contexts/NavigationDrawerItemEditingContext';
 import { useNavigationDrawerTooltip } from '@/ui/navigation/navigation-drawer/hooks/useNavigationDrawerTooltip';
-import { type NavigationDrawerSubItemState } from '@/ui/navigation/navigation-drawer/types/NavigationDrawerSubItemState';
+import { useShortcutAccessibleKeyLabels } from '@/ui/navigation/hooks/useShortcutAccessibleKeyLabels';
 import { isNavigationDrawerExpandedState } from '@/ui/navigation/states/isNavigationDrawerExpanded';
-import { useMouseDownNavigation } from '@/ui/navigation/utils/hooks/useMouseDownNavigation';
-import { type TriggerEventType } from '@/ui/navigation/utils/types/TriggerEventType';
+import { useMouseDownNavigation } from '@/ui/navigation/hooks/useMouseDownNavigation';
 import { useIsMobile } from 'twenty-ui/utilities';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { type JSX, type ReactNode, useContext } from 'react';
+import { useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { isDefined } from 'twenty-shared/utils';
-import { type IconComponent, type TablerIconsProps } from 'twenty-ui/icon';
-import { Pill } from 'twenty-ui/primitives/data-display';
+import { isAbsoluteUrl, isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { Badge } from 'twenty-ui/primitives/data-display';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
 import {
-  Text,
+  Shortcut,
   OverflowingTextWithTooltip,
 } from 'twenty-ui/primitives/typography';
 import { MOBILE_VIEWPORT, useTheme, themeCssVariables } from 'twenty-ui/theme';
+import { openUrlInNewTab } from '~/utils/openUrlInNewTab';
+import { useLingui } from '@lingui/react/macro';
+
 const DEFAULT_INDENTATION_LEVEL = 1;
-
-export type NavigationDrawerItemIndentationLevel = 1 | 2;
-
-export type NavigationDrawerItemModifier =
-  | 'soon'
-  | 'new'
-  | { keyboard: string[] };
-
-export type NavigationDrawerItemProps = {
-  className?: string;
-  label: string;
-  secondaryLabel?: string;
-  indentationLevel?: NavigationDrawerItemIndentationLevel;
-  subItemState?: NavigationDrawerSubItemState;
-  to?: string;
-  onClick?: () => void;
-  Icon?: IconComponent | ((props: TablerIconsProps) => JSX.Element);
-  active?: boolean;
-  modifier?: NavigationDrawerItemModifier;
-  rightOptions?: ReactNode;
-  alwaysShowRightOptions?: boolean;
-  isDragging?: boolean;
-  isRightOptionsDropdownOpen?: boolean;
-  triggerEvent?: TriggerEventType;
-  preventCollapseOnMobile?: boolean;
-  isSelectedInEditMode?: boolean;
-  variant?: 'default' | 'tertiary' | 'placeholder';
-};
+const INTERACTIVE_OPTIONS_SELECTOR = doNotTranslate(
+  'button, a, [role="button"]',
+);
 
 type StyledItemProps = Pick<
   NavigationDrawerItemProps,
@@ -137,8 +118,9 @@ const StyledItem = styled.button<StyledItemProps>`
         : themeCssVariables.font.color.primary};
   }
 
-  &:hover .keyboard-shortcuts {
-    visibility: visible;
+  &:has(.navigation-drawer-item-label:focus-visible) {
+    outline: 2px solid ${themeCssVariables.color.blue};
+    outline-offset: -2px;
   }
 
   @media (max-width: ${MOBILE_VIEWPORT}px) {
@@ -160,30 +142,24 @@ const StyledLabelParent = styled.div`
   overflow: hidden;
   text-overflow: clip;
   white-space: nowrap;
+
+  &:focus-visible {
+    outline: none;
+  }
 `;
 
-const StyledItemLabel = styled.span`
-  font-weight: ${themeCssVariables.font.weight.medium};
+const StyledItemLabel = styled.span<{ $isUnread: boolean }>`
+  color: ${({ $isUnread }) =>
+    $isUnread ? themeCssVariables.font.color.primary : 'inherit'};
+  font-weight: ${({ $isUnread }) =>
+    $isUnread
+      ? themeCssVariables.font.weight.semiBold
+      : themeCssVariables.font.weight.medium};
 `;
 
 const StyledItemSecondaryLabel = styled.span`
   color: ${themeCssVariables.font.color.light};
   font-weight: ${themeCssVariables.font.weight.regular};
-`;
-
-const StyledKeyBoardShortcut = styled.span`
-  align-items: center;
-  background: ${themeCssVariables.background.transparent.lighter};
-  border: 1px solid ${themeCssVariables.border.color.strong};
-  border-radius: ${themeCssVariables.border.radius.md};
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: ${themeCssVariables.spacing[2]};
-
-  height: ${themeCssVariables.spacing[4]};
-  justify-content: center;
-  width: ${themeCssVariables.spacing[4]};
 `;
 
 const StyledNavigationDrawerItemContainer = styled.div`
@@ -195,6 +171,11 @@ const StyledSpacer = styled.span`
   flex-grow: 1;
 `;
 
+const StyledShortcutContainer = styled.span`
+  display: flex;
+  padding-right: ${themeCssVariables.spacing[1]};
+`;
+
 const StyledIcon = styled.div`
   align-items: center;
   display: flex;
@@ -202,6 +183,7 @@ const StyledIcon = styled.div`
   flex-shrink: 0;
   justify-content: center;
   margin-right: ${themeCssVariables.spacing[2]};
+  position: relative;
 `;
 
 const StyledRightOptionsContainer = styled.div`
@@ -245,11 +227,15 @@ export const NavigationDrawerItem = ({
   secondaryLabel,
   indentationLevel = DEFAULT_INDENTATION_LEVEL,
   Icon,
+  trailingIcon,
+  'aria-expanded': ariaExpanded,
+  'aria-controls': ariaControls,
   to,
   onClick,
   active,
   modifier,
   subItemState,
+  subItemIndentation = 'default',
   rightOptions,
   alwaysShowRightOptions = false,
   isDragging,
@@ -258,8 +244,11 @@ export const NavigationDrawerItem = ({
   preventCollapseOnMobile = false,
   isSelectedInEditMode = false,
   variant = 'default',
+  isUnread = false,
 }: NavigationDrawerItemProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
+  const accessibleKeyLabels = useShortcutAccessibleKeyLabels();
   const editingContent = useContext(NavigationDrawerItemEditingContext);
   const isMobile = useIsMobile();
   const isExpanded = useIsNavigationDrawerContentExpanded();
@@ -271,13 +260,18 @@ export const NavigationDrawerItem = ({
 
   const isSoon = modifier === 'soon';
   const isNew = modifier === 'new';
-  const keyboardKeys =
-    isDefined(modifier) && typeof modifier === 'object'
-      ? modifier.keyboard
-      : undefined;
+  const keyboardKeys = isObject(modifier) ? modifier.keyboard : undefined;
 
   const showBreadcrumb = indentationLevel === 2;
   const showStyledSpacer = isDefined(modifier) || isDefined(rightOptions);
+  const isRowButton =
+    !isDefined(editingContent) &&
+    !isDefined(to) &&
+    isDefined(rightOptions) &&
+    isDefined(onClick);
+  const isRowKeyboardEnabled =
+    isRowButton && !isSoon && variant !== 'placeholder';
+  const ariaCurrentWhenActive = isDefined(to) ? 'page' : true;
 
   const handleMobileNavigation = () => {
     if (isMobile && !preventCollapseOnMobile) {
@@ -285,14 +279,13 @@ export const NavigationDrawerItem = ({
     }
   };
 
-  const isExternalLink =
-    isDefined(to) && (to.startsWith('http://') || to.startsWith('https://'));
+  const isExternalLink = isDefined(to) && isAbsoluteUrl(to);
   const isInternalLink = isDefined(to) && !isExternalLink;
 
   const handleExternalLinkClick = () => {
     handleMobileNavigation();
     if (isDefined(to)) {
-      window.open(to, '_blank', 'noopener,noreferrer');
+      openUrlInNewTab(to);
     }
   };
 
@@ -347,7 +340,11 @@ export const NavigationDrawerItem = ({
             handleMouseDown(event);
           }}
           active={active}
-          aria-current={isDefined(to) && active ? 'page' : undefined}
+          aria-current={
+            active && !isRowButton ? ariaCurrentWhenActive : undefined
+          }
+          aria-expanded={isRowButton ? undefined : ariaExpanded}
+          aria-controls={isRowButton ? undefined : ariaControls}
           isSoon={isSoon}
           variant={variant}
           disabled={variant === 'placeholder'}
@@ -359,11 +356,6 @@ export const NavigationDrawerItem = ({
             isSelectedInEditMode || editingContent?.isSelected
           }
           as={elementType}
-          role={
-            !isDefined(editingContent) && !to && isDefined(rightOptions)
-              ? 'button'
-              : undefined
-          }
           to={isInternalLink ? to : undefined}
           href={isExternalLink ? to : undefined}
           target={isExternalLink ? '_blank' : undefined}
@@ -373,7 +365,10 @@ export const NavigationDrawerItem = ({
           <StyledItemElementsContainer>
             {showBreadcrumb && (
               <NavigationDrawerAnimatedCollapseWrapper>
-                <NavigationDrawerItemBreadcrumb state={subItemState} />
+                <NavigationDrawerItemBreadcrumb
+                  state={subItemState}
+                  isCompact={subItemIndentation === 'compact'}
+                />
               </NavigationDrawerAnimatedCollapseWrapper>
             )}
 
@@ -382,25 +377,60 @@ export const NavigationDrawerItem = ({
             ) : (
               isDefined(Icon) && (
                 <StyledIcon>
-                  <Icon
-                    size={theme.icon.size.md}
-                    stroke={theme.icon.stroke.md}
+                  <NavigationDrawerItemIcon
+                    Icon={Icon}
                     color={
                       showBreadcrumb && !isExpanded
                         ? theme.font.color.light
                         : 'currentColor'
                     }
                   />
+                  {isUnread && !isExpanded && (
+                    <StyledNavigationDrawerUnreadDot />
+                  )}
                 </StyledIcon>
               )
             )}
 
-            <StyledLabelParent>
+            <StyledLabelParent
+              className="navigation-drawer-item-label"
+              role={isRowButton ? 'button' : undefined}
+              tabIndex={isRowKeyboardEnabled ? 0 : undefined}
+              aria-current={
+                active && isRowButton ? ariaCurrentWhenActive : undefined
+              }
+              aria-expanded={isRowButton ? ariaExpanded : undefined}
+              aria-controls={isRowButton ? ariaControls : undefined}
+              onKeyDown={(event) => {
+                const isRowKeyboardActivation =
+                  event.target === event.currentTarget &&
+                  isRowKeyboardEnabled &&
+                  (event.key === 'Enter' || event.key === ' ');
+
+                if (!isRowKeyboardActivation) {
+                  return;
+                }
+
+                event.preventDefault();
+
+                if (event.repeat) {
+                  return;
+                }
+
+                handleMobileNavigation();
+                onClick?.();
+              }}
+            >
               {editingContent?.label ?? (
                 <OverflowingTextWithTooltip
                   text={
                     <>
-                      <StyledItemLabel>{label}</StyledItemLabel>
+                      <StyledItemLabel $isUnread={isUnread}>
+                        {label}
+                        {isUnread && (
+                          <VisuallyHidden>{t`, unread`}</VisuallyHidden>
+                        )}
+                      </StyledItemLabel>
                       {secondaryLabel && (
                         <StyledItemSecondaryLabel>
                           {' · '}
@@ -420,21 +450,25 @@ export const NavigationDrawerItem = ({
 
             {isSoon && (
               <NavigationDrawerAnimatedCollapseWrapper>
-                <Pill label={t`Soon`} />
+                <Badge>{t`Soon`}</Badge>
               </NavigationDrawerAnimatedCollapseWrapper>
             )}
 
             {isNew && (
               <NavigationDrawerAnimatedCollapseWrapper>
-                <Pill label={t`New`} />
+                <Badge>{t`New`}</Badge>
               </NavigationDrawerAnimatedCollapseWrapper>
             )}
 
             {isDefined(keyboardKeys) && (
               <NavigationDrawerAnimatedCollapseWrapper>
-                <StyledKeyBoardShortcut className="keyboard-shortcuts">
-                  <StyledDisplayLabel>{keyboardKeys}</StyledDisplayLabel>
-                </StyledKeyBoardShortcut>
+                <StyledShortcutContainer>
+                  <Shortcut
+                    shortcut={keyboardKeys}
+                    sequenceJoinLabel={t`then`}
+                    accessibleKeyLabels={accessibleKeyLabels}
+                  />
+                </StyledShortcutContainer>
               </NavigationDrawerAnimatedCollapseWrapper>
             )}
 
@@ -447,6 +481,19 @@ export const NavigationDrawerItem = ({
                     stopPropagation blocks Link's own preventDefault */}
                 <StyledRightOptionsContainer
                   onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(event) => {
+                    const interactiveOption =
+                      event.target instanceof Element
+                        ? event.target.closest(INTERACTIVE_OPTIONS_SELECTOR)
+                        : null;
+                    const isClickInsideInteractiveOption =
+                      isDefined(interactiveOption) &&
+                      event.currentTarget.contains(interactiveOption);
+
+                    if (isClickInsideInteractiveOption) {
+                      event.stopPropagation();
+                    }
+                  }}
                   onClickCapture={(event) => {
                     const isClickInsideLinkedOptions =
                       isDefined(to) &&
@@ -472,15 +519,15 @@ export const NavigationDrawerItem = ({
                 </StyledRightOptionsContainer>
               </NavigationDrawerAnimatedCollapseWrapper>
             )}
+
+            {isDefined(trailingIcon) && (
+              <NavigationDrawerAnimatedCollapseWrapper>
+                {trailingIcon}
+              </NavigationDrawerAnimatedCollapseWrapper>
+            )}
           </StyledItemElementsContainer>
         </StyledItem>
       </Tooltip>
     </StyledNavigationDrawerItemContainer>
   );
 };
-
-const StyledDisplayLabel = styled(Text)`
-  color: var(--t-font-color-light);
-  font-size: 11px;
-  font-weight: var(--t-font-weight-semi-bold);
-`;

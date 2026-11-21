@@ -4,15 +4,20 @@ import { type CalendarEventComposerTarget } from '@/activities/calendar/types/Ca
 import { RecordChip } from '@/object-record/components/RecordChip';
 import { MultipleRecordPicker } from '@/object-record/record-picker/multiple-record-picker/components/MultipleRecordPicker';
 import { type RecordPickerPickableMorphItem } from '@/object-record/record-picker/types/RecordPickerPickableMorphItem';
-import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
+import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
+import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
-import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
-import { ExpandableList } from '@/ui/layout/expandable-list/components/ExpandableList';
+import { useToggleDropdown } from '@/ui/layout/dropdown/hooks/useToggleDropdown';
+import { IconButton } from 'twenty-ui/components/input';
+import { OverflowingList } from 'twenty-ui/components/layout';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { useId } from 'react';
-import { isDefined } from 'twenty-shared/utils';
+import { type MouseEvent, useId, useState } from 'react';
+import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
+import { IconPlus } from 'twenty-ui/icon';
+import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledClickableContainer = styled.div`
   align-items: center;
@@ -21,7 +26,6 @@ const StyledClickableContainer = styled.div`
   gap: ${themeCssVariables.spacing[1]};
   min-height: 24px;
   min-width: 0;
-  overflow: hidden;
   width: 100%;
 `;
 
@@ -39,10 +43,13 @@ export const CalendarEventComposerTargetsInput = ({
   targets,
   onTargetChange,
 }: CalendarEventComposerTargetsInputProps) => {
+  const { t } = useLingui();
   const componentId = useId();
   const dropdownId = `calendar-event-composer-targets-${componentId}`;
 
-  const { closeDropdown } = useCloseDropdown();
+  const [containerElement, setContainerElement] =
+    useState<HTMLDivElement | null>(null);
+  const { toggleDropdown } = useToggleDropdown();
   const { openCalendarEventTargetsPicker } =
     useOpenCalendarEventTargetsPicker();
 
@@ -52,6 +59,20 @@ export const CalendarEventComposerTargetsInput = ({
   if (searchableObjectMetadataItems.length === 0) {
     return null;
   }
+
+  const handleToggleDropdown = (event: MouseEvent) => {
+    const isButtonClick =
+      event.target instanceof Element &&
+      isDefined(event.target.closest('button'));
+
+    if (isButtonClick || event.defaultPrevented) {
+      return;
+    }
+
+    event.stopPropagation();
+    event.preventDefault();
+    toggleDropdown({ dropdownComponentInstanceIdFromProps: dropdownId });
+  };
 
   const handleOpenDropdown = () => {
     openCalendarEventTargetsPicker({
@@ -81,32 +102,68 @@ export const CalendarEventComposerTargetsInput = ({
       );
     })
     .filter(isDefined);
+  const hasChips = isNonEmptyArray(chips);
+  const pickerLabel = t`Add a related record`;
 
   return (
-    <Dropdown
+    <DropdownRoot
       dropdownId={dropdownId}
-      dropdownPlacement="bottom-start"
-      clickableComponentWidth="100%"
-      onOpen={handleOpenDropdown}
-      clickableComponent={
-        <StyledClickableContainer>
-          {chips.length > 0 ? (
-            <ExpandableList isChipCountDisplayed>{chips}</ExpandableList>
-          ) : (
-            <StyledPlaceholder>{t`Add a related record`}</StyledPlaceholder>
-          )}
-        </StyledClickableContainer>
-      }
-      dropdownComponents={
+      type="picker"
+      multiple
+      onOpenChange={(open) => {
+        if (open) {
+          handleOpenDropdown();
+        }
+      }}
+    >
+      <StyledClickableContainer
+        ref={setContainerElement}
+        onClick={handleToggleDropdown}
+      >
+        {hasChips ? (
+          <>
+            <OverflowingList
+              overflowLabel={t`Show all items`}
+              showOverflowCount
+            >
+              {chips}
+            </OverflowingList>
+            <Dropdown.Trigger
+              render={
+                <IconButton
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  aria-label={pickerLabel}
+                >
+                  <IconPlus />
+                </IconButton>
+              }
+            />
+          </>
+        ) : (
+          <Dropdown.Trigger
+            render={
+              <Button type="button" size="sm" variant="ghost">
+                <StyledPlaceholder>{pickerLabel}</StyledPlaceholder>
+              </Button>
+            }
+          />
+        )}
+      </StyledClickableContainer>
+      <DropdownContent
+        anchor={containerElement}
+        side="bottom"
+        align="start"
+        width={GenericDropdownContentWidth.ExtraLarge}
+        aria-label={pickerLabel}
+      >
         <MultipleRecordPicker
           componentInstanceId={dropdownId}
-          focusId={dropdownId}
           onChange={onTargetChange}
-          onSubmit={() => closeDropdown(dropdownId)}
-          onClickOutside={() => closeDropdown(dropdownId)}
-          dropdownWidth={GenericDropdownContentWidth.ExtraLarge}
+          layoutDirection="search-bar-on-bottom"
         />
-      }
-    />
+      </DropdownContent>
+    </DropdownRoot>
   );
 };

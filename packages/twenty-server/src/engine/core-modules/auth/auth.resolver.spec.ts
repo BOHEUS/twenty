@@ -13,6 +13,7 @@ import { RefreshTokenService } from 'src/engine/core-modules/auth/token/services
 import { SsoExchangeTokenService } from 'src/engine/core-modules/auth/token/services/sso-exchange-token.service';
 import { WorkspaceAgnosticTokenService } from 'src/engine/core-modules/auth/token/services/workspace-agnostic-token.service';
 import { CaptchaGuard } from 'src/engine/core-modules/captcha/captcha.guard';
+import { WorkspaceCreationCaptchaGuard } from 'src/engine/core-modules/captcha/workspace-creation-captcha.guard';
 import { EmailPasswordResetLinkInput } from 'src/engine/core-modules/auth/dto/email-password-reset-link.input';
 import { type I18nContext } from 'src/engine/core-modules/i18n/types/i18n-context.type';
 import {
@@ -31,12 +32,14 @@ import { UserSessionService } from 'src/engine/core-modules/user-session/service
 import { SsoService } from 'src/engine/core-modules/sso/services/sso.service';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { TwoFactorAuthenticationService } from 'src/engine/core-modules/two-factor-authentication/two-factor-authentication.service';
+import { TwoFactorAuthenticationRecoveryService } from 'src/engine/core-modules/two-factor-authentication/services/two-factor-authentication-recovery.service';
 import { UserWorkspaceEntity } from 'src/engine/core-modules/user-workspace/user-workspace.entity';
 import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/user-workspace.service';
 import { UserService } from 'src/engine/core-modules/user/services/user.service';
 import { UserEntity } from 'src/engine/core-modules/user/user.entity';
 import { AuthProviderEnum } from 'src/engine/core-modules/workspace/types/workspace.type';
-import { PermissionsService } from 'src/engine/metadata-modules/permissions/permissions.service';
+import { AccessPolicyService } from 'src/engine/guards/access-policy/access-policy.service';
+import { SettingPermissionsService } from 'src/engine/permissions/setting-permissions.service';
 
 import { AuthResolver } from './auth.resolver';
 
@@ -100,6 +103,7 @@ describe('AuthResolver', () => {
             checkAccessForSignIn: jest.fn(),
             findWorkspaceForSignInUp: jest.fn(),
             formatUserDataPayload: jest.fn(),
+            joinWorkspaceIfInvited: jest.fn(),
             signInUp: jest.fn(),
           },
         },
@@ -224,9 +228,10 @@ describe('AuthResolver', () => {
           useValue: {},
         },
         {
-          provide: PermissionsService,
+          provide: SettingPermissionsService,
           useValue: {},
         },
+        AccessPolicyService,
         {
           provide: FeatureFlagService,
           useValue: {},
@@ -237,6 +242,10 @@ describe('AuthResolver', () => {
         },
         {
           provide: TwoFactorAuthenticationService,
+          useValue: {},
+        },
+        {
+          provide: TwoFactorAuthenticationRecoveryService,
           useValue: {},
         },
         {
@@ -254,6 +263,8 @@ describe('AuthResolver', () => {
       ],
     })
       .overrideGuard(CaptchaGuard)
+      .useValue(mock_CaptchaGuard)
+      .overrideGuard(WorkspaceCreationCaptchaGuard)
       .useValue(mock_CaptchaGuard)
       .compile();
 

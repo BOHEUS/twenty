@@ -12,7 +12,7 @@ import { Select } from '@/ui/input/components/Select';
 import { SelectControl } from '@/ui/input/components/SelectControl';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
-import { Dropdown } from 'twenty-ui/components';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
 import { useAvailableComponentInstanceId } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceId';
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
@@ -21,7 +21,6 @@ import { useAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useAtomC
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useUpdateCurrentView } from '@/views/hooks/useUpdateCurrentView';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { format } from 'date-fns';
 import { Temporal } from 'temporal-polyfill';
 import { type Nullable } from 'twenty-shared/types';
@@ -29,11 +28,13 @@ import {
   isDefined,
   turnPlainDateToShiftedDateInSystemTimeZone,
 } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { IconChevronLeft, IconChevronRight } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 import { ViewCalendarLayout } from '~/generated-metadata/graphql';
-import { dateLocaleState } from '~/localization/states/dateLocaleState';
+import { dateLocaleState } from '@/localization/states/dateLocaleState';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledContainer = styled.div`
   align-items: center;
@@ -61,6 +62,7 @@ const StyledNavigationSection = styled.div`
 `;
 
 export const RecordCalendarTopBar = () => {
+  const { t } = useLingui();
   const recordCalendarId = useAvailableComponentInstanceIdOrThrow(
     RecordCalendarComponentInstanceContext,
   );
@@ -72,9 +74,7 @@ export const RecordCalendarTopBar = () => {
     isRecordCalendarReadOnlyComponentState,
   );
 
-  // The layout switcher persists via updateCurrentView (an index-page write),
-  // so it must never render inside a dashboard widget; widget calendars drive
-  // their layout from the side-panel settings instead.
+  // The layout switcher writes the index view, so widget calendars must never render it.
   const widgetInstanceId = useAvailableComponentInstanceId(
     WidgetComponentInstanceContext,
   );
@@ -149,7 +149,7 @@ export const RecordCalendarTopBar = () => {
             turnPlainDateToShiftedDateInSystemTimeZone(
               recordCalendarSelectedDate,
             ),
-            'MMMM yyyy',
+            doNotTranslate('MMMM yyyy'),
             { locale: dateLocale.localeCatalog },
           );
 

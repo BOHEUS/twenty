@@ -1,10 +1,9 @@
 import { fetchArtificialAnalysisBenchmarks } from '../utils/fetch-artificial-analysis-benchmarks.util';
 
 const respondWith = (models: unknown[]): void => {
-  global.fetch = jest.fn().mockResolvedValue({
-    ok: true,
-    json: async () => ({ data: models }),
-  }) as unknown as typeof fetch;
+  global.fetch = jest.fn(
+    async () => new Response(JSON.stringify({ data: models })),
+  );
 };
 
 const measuredModel = {
@@ -52,9 +51,8 @@ describe('fetchArtificialAnalysisBenchmarks', () => {
   ])(
     'keeps the highest-scoring configuration whatever the order (%s)',
     async (_label, bestFirst) => {
-      // The rows for one model are the same model at different reasoning
-      // efforts. Picking by how populated a row is scored Sonnet 4.6 at low
-      // effort against Sonnet 5 at max, and the gap read as capability.
+      // A model's rows differ only by reasoning effort; picking the most populated one once scored
+      // Sonnet 4.6 at low effort against Sonnet 5 at max, and the gap read as capability
       const lowEffort = {
         slug: 'claude-sonnet-4-6',
         name: 'Claude Sonnet 4.6 (Non-reasoning, Low Effort)',
@@ -78,8 +76,7 @@ describe('fetchArtificialAnalysisBenchmarks', () => {
       );
 
       expect(record?.intelligenceIndex).toBe(36.2);
-      // The whole row travels together, so speed and cost describe the same
-      // configuration the index was measured in.
+      // The whole row travels together, so speed and cost match the index's configuration
       expect(record?.outputTokensPerSecond).toBe(80);
       expect(record?.costPerTask).toBeUndefined();
     },
@@ -166,12 +163,16 @@ describe('fetchArtificialAnalysisBenchmarks', () => {
         pagination: { page: 2, has_more: false },
       },
     ];
-    const fetchMock = jest.fn(async (url: URL) => ({
-      ok: true,
-      json: async () => pages[Number(url.searchParams.get('page')) - 1],
-    }));
+    const fetchMock = jest.fn(
+      async (url: RequestInfo | URL) =>
+        new Response(
+          JSON.stringify(
+            pages[Number(new URL(String(url)).searchParams.get('page')) - 1],
+          ),
+        ),
+    );
 
-    global.fetch = fetchMock as unknown as typeof fetch;
+    global.fetch = fetchMock;
 
     const index = await fetchArtificialAnalysisBenchmarks('key');
 
@@ -199,8 +200,7 @@ describe('fetchArtificialAnalysisBenchmarks', () => {
 
     const index = await fetchArtificialAnalysisBenchmarks('key');
 
-    // The bare key still carries the ceiling, so nothing a consumer reads today
-    // changes.
+    // The bare key still carries the ceiling, so nothing a consumer reads today changes
     expect(index.get('gpt56sol')?.intelligenceIndex).toBe(47.1);
     expect(index.get('gpt56sol')?.effort).toBe('max');
     expect(index.get('gpt56sol@max')?.intelligenceIndex).toBe(47.1);

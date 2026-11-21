@@ -3,7 +3,7 @@ import { type ReactNode } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 
 import { TimelineActivityContext } from '@/activities/timeline-activities/contexts/TimelineActivityContext';
-import { WorkspaceRouteUnavailable } from '@/app/routing/components/WorkspaceRouteUnavailable';
+import { WorkspaceRouteUnavailable } from '@/ui/layout/page/components/WorkspaceRouteUnavailable';
 import { RecordShowCommandMenu } from '@/command-menu-item/components/RecordShowCommandMenu';
 import { CommandMenuComponentInstanceContext } from '@/command-menu/states/contexts/CommandMenuComponentInstanceContext';
 import { isLayoutCustomizationModeEnabledState } from '@/layout-customization/states/isLayoutCustomizationModeEnabledState';
@@ -19,8 +19,8 @@ import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { useWorkspaceSurfaceScopedComponentInstanceId } from '@/ui/layout/hooks/useWorkspaceSurfaceScopedComponentInstanceId';
 import { PageCardLayout } from '@/ui/layout/page/components/PageCardLayout';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { RecordShowPageHeader } from '~/pages/object-record/RecordShowPageHeader';
-import { RecordShowPageTitle } from '~/pages/object-record/RecordShowPageTitle';
+import { RecordShowPageHeader } from '@/object-record/record-show/components/RecordShowPageHeader';
+import { RecordShowPageTitle } from '@/object-record/record-show/components/RecordShowPageTitle';
 
 type RecordShowPageShellProps = {
   objectNameSingular: string;
@@ -29,6 +29,9 @@ type RecordShowPageShellProps = {
   loading: boolean;
   error?: ErrorLike;
   headerActions?: ReactNode;
+  headerTitle?: ReactNode;
+  headerTitlePrefix?: ReactNode;
+  headerTitleAccessory?: ReactNode;
   headerTitleMode?: RecordShowPageHeaderTitleMode;
   isRecordIdentifierBarHidden?: boolean;
 };
@@ -40,6 +43,9 @@ export const RecordShowPageShell = ({
   loading,
   error,
   headerActions,
+  headerTitle,
+  headerTitlePrefix,
+  headerTitleAccessory,
   headerTitleMode,
   isRecordIdentifierBarHidden = false,
 }: RecordShowPageShellProps) => {
@@ -87,15 +93,18 @@ export const RecordShowPageShell = ({
             <RecordShowPageHeader
               objectNameSingular={objectNameSingular}
               objectRecordId={objectRecordId}
+              title={headerTitle}
               titleMode={headerTitleMode}
+              titlePrefix={headerTitlePrefix}
+              titleAccessory={headerTitleAccessory}
             >
               {!isInSidePanel && (
                 <>
                   <RecordShowCommandMenu />
+                  {headerActions}
                   {!isLayoutCustomizationModeEnabled && (
                     <SidePanelToggleButton />
                   )}
-                  {headerActions}
                 </>
               )}
             </RecordShowPageHeader>

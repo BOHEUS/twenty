@@ -1,4 +1,3 @@
-import { ListItem } from 'twenty-ui/primitives/navigation';
 import { type ConnectedAccount } from '@/accounts/types/ConnectedAccount';
 import { buildConnectedAccountSenderOptions } from '@/accounts/utils/buildConnectedAccountSenderOptions';
 import { getMissingDraftEmailScopes } from '@/accounts/utils/hasMissingDraftEmailScopes';
@@ -11,16 +10,15 @@ import { useMyConnectedAccounts } from '@/settings/accounts/hooks/useMyConnected
 import { useTriggerApisOAuth } from '@/settings/accounts/hooks/useTriggerApiOAuth';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
-import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
-import { LegacyDropdownContent } from '@/ui/layout/dropdown/components/LegacyDropdownContent';
-import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
+import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
+import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { GenericDropdownContentWidth } from '@/ui/layout/dropdown/constants/GenericDropdownContentWidth';
-import { useCloseDropdown } from '@/ui/layout/dropdown/hooks/useCloseDropdown';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { WORKFLOW_STEP_CONNECTED_ACCOUNT_HANDLE } from '@/workflow/graphql/queries/workflowStepConnectedAccountHandle';
 import { useWorkflowWithCurrentVersion } from '@/workflow/hooks/useWorkflowWithCurrentVersion';
 import { workflowVisualizerWorkflowIdComponentState } from '@/workflow/states/workflowVisualizerWorkflowIdComponentState';
 import { type WorkflowEmailAction } from '@/workflow/types/WorkflowEmailAction';
+import { getWorkflowStepDisplayName } from '@/workflow/utils/getWorkflowStepDisplayName';
 import { WorkflowStepBody } from '@/workflow/workflow-steps/components/WorkflowStepBody';
 import { WorkflowStepFooter } from '@/workflow/workflow-steps/components/WorkflowStepFooter';
 import { WorkflowSendEmailAttachments } from '@/workflow/workflow-steps/workflow-actions/components/WorkflowSendEmailAttachments';
@@ -28,7 +26,6 @@ import { WORKFLOW_EMAIL_BODY_EDITOR_PROFILE } from '@/workflow/workflow-steps/wo
 import { useEmailForm } from '@/workflow/workflow-steps/workflow-actions/hooks/useEmailForm';
 import { WorkflowVariablePicker } from '@/workflow/workflow-variables/components/WorkflowVariablePicker';
 import { useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useEffect, useState } from 'react';
 import {
@@ -42,11 +39,13 @@ import {
   isDefined,
 } from 'twenty-shared/utils';
 import { isStandaloneVariableString } from 'twenty-shared/workflow';
-import { Callout } from 'twenty-ui/components';
+import { Callout } from 'twenty-ui/components/feedback';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { IconPlus } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { PermissionFlagType } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import { useLingui } from '@lingui/react/macro';
 
 type WorkflowEditActionEmailBaseProps = {
   action: WorkflowEmailAction;
@@ -64,6 +63,7 @@ export const WorkflowEditActionEmailBase = ({
   action,
   actionOptions,
 }: WorkflowEditActionEmailBaseProps) => {
+  const { t } = useLingui();
   const { triggerApisOAuth } = useTriggerApisOAuth();
   const hasConnectedAccountsPermission = useHasPermissionFlag(
     PermissionFlagType.CONNECTED_ACCOUNTS,
@@ -95,13 +95,11 @@ export const WorkflowEditActionEmailBase = ({
     const inputRecipients = action.settings.input.recipients;
 
     return {
-      cc: Boolean(inputRecipients?.cc),
-      bcc: Boolean(inputRecipients?.bcc),
-      inReplyTo: Boolean(action.settings.input.inReplyTo),
+      cc: isNonEmptyString(inputRecipients?.cc),
+      bcc: isNonEmptyString(inputRecipients?.bcc),
+      inReplyTo: isNonEmptyString(action.settings.input.inReplyTo),
     };
   });
-
-  const { closeDropdown } = useCloseDropdown();
 
   const advancedOptionsDropdownId = `${action.id}-email-advanced-options`;
 
@@ -248,7 +246,7 @@ export const WorkflowEditActionEmailBase = ({
                 ? {
                     onClick: () => {
                       closeSidePanelMenu();
-                      navigate(SettingsPath.NewAccount);
+                      navigate(SettingsPath.AppPreferencesNewAccount);
                     },
                     Icon: IconPlus,
                     text: t`Add account`,
@@ -259,17 +257,20 @@ export const WorkflowEditActionEmailBase = ({
           {isDefined(missingScopes) && (
             <>
               <Callout
-                variant={'error'}
+                status={'error'}
                 title={t`Missing email draft permission.`}
                 description={
                   hasConnectedAccountsPermission
                     ? t`This account is connected, but we don't have permission to draft emails on your behalf yet. You'll be redirected to approve this access.`
-                    : t`Ask a workspace admin for the Sync Account permission to reconnect this account.`
+                    : t`Ask a workspace admin for the User Apps permission to reconnect this account.`
                 }
                 action={
-                  hasConnectedAccountsPermission
-                    ? { label: t`Reauthorize`, onClick: handleReauthorize }
-                    : undefined
+                  hasConnectedAccountsPermission ? (
+                    <Callout.Action
+                      type="button"
+                      onClick={handleReauthorize}
+                    >{t`Reauthorize`}</Callout.Action>
+                  ) : undefined
                 }
               />
             </>
@@ -330,57 +331,48 @@ export const WorkflowEditActionEmailBase = ({
             />
           )}
           {!actionOptions.readonly && hasAvailableAdvancedOptions && (
-            <Dropdown
-              dropdownId={advancedOptionsDropdownId}
-              dropdownPlacement="bottom-start"
-              clickableComponent={
-                <Button
-                  size="sm"
-                  variant="outline"
-                >{t`Advanced options`}</Button>
-              }
-              dropdownComponents={
-                <LegacyDropdownContent
-                  widthInPixels={GenericDropdownContentWidth.Medium}
-                >
-                  <DropdownMenuItemsContainer>
-                    {!visibleAdvancedFields.cc && (
-                      <ListItem
-                        onClick={() => {
-                          setVisibleAdvancedFields((prev) => ({
-                            ...prev,
-                            cc: true,
-                          }));
-                          closeDropdown(advancedOptionsDropdownId);
-                        }}
-                      >{t`Add CC`}</ListItem>
-                    )}
-                    {!visibleAdvancedFields.bcc && (
-                      <ListItem
-                        onClick={() => {
-                          setVisibleAdvancedFields((prev) => ({
-                            ...prev,
-                            bcc: true,
-                          }));
-                          closeDropdown(advancedOptionsDropdownId);
-                        }}
-                      >{t`Add BCC`}</ListItem>
-                    )}
-                    {!visibleAdvancedFields.inReplyTo && (
-                      <ListItem
-                        onClick={() => {
-                          setVisibleAdvancedFields((prev) => ({
-                            ...prev,
-                            inReplyTo: true,
-                          }));
-                          closeDropdown(advancedOptionsDropdownId);
-                        }}
-                      >{t`Add In-Reply-To`}</ListItem>
-                    )}
-                  </DropdownMenuItemsContainer>
-                </LegacyDropdownContent>
-              }
-            />
+            <DropdownRoot dropdownId={advancedOptionsDropdownId} type="menu">
+              <Dropdown.Trigger render={<Button size="sm" variant="outline" />}>
+                {t`Advanced options`}
+              </Dropdown.Trigger>
+              <DropdownContent
+                width={GenericDropdownContentWidth.Medium}
+                align="start"
+              >
+                <Dropdown.Section>
+                  {!visibleAdvancedFields.cc && (
+                    <Dropdown.ActionItem
+                      onClick={() => {
+                        setVisibleAdvancedFields((previousFields) => ({
+                          ...previousFields,
+                          cc: true,
+                        }));
+                      }}
+                    >{t`Add CC`}</Dropdown.ActionItem>
+                  )}
+                  {!visibleAdvancedFields.bcc && (
+                    <Dropdown.ActionItem
+                      onClick={() => {
+                        setVisibleAdvancedFields((previousFields) => ({
+                          ...previousFields,
+                          bcc: true,
+                        }));
+                      }}
+                    >{t`Add BCC`}</Dropdown.ActionItem>
+                  )}
+                  {!visibleAdvancedFields.inReplyTo && (
+                    <Dropdown.ActionItem
+                      onClick={() => {
+                        setVisibleAdvancedFields((previousFields) => ({
+                          ...previousFields,
+                          inReplyTo: true,
+                        }));
+                      }}
+                    >{t`Add In-Reply-To`}</Dropdown.ActionItem>
+                  )}
+                </Dropdown.Section>
+              </DropdownContent>
+            </DropdownRoot>
           )}
           <FormTextFieldInput
             label={t`Subject`}
@@ -407,7 +399,12 @@ export const WorkflowEditActionEmailBase = ({
                 href: '#',
               },
               {
-                children: isDefined(action.name) ? action.name : t`Email`,
+                children: isDefined(action.name)
+                  ? getWorkflowStepDisplayName({
+                      name: action.name,
+                      type: action.type,
+                    })
+                  : t`Email`,
                 href: '#',
               },
               {

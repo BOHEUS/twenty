@@ -1,9 +1,9 @@
 import { useMutation } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
 import { SettingsPath } from 'twenty-shared/types';
-import { Section, useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { IconArchive, IconArchiveOff, IconTrash } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
@@ -11,6 +11,7 @@ import { themeCssVariables } from 'twenty-ui/theme';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
 import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDialog';
 import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
+import { useGetIsMetadataItemCustom } from '@/object-metadata/hooks/useGetIsMetadataItemCustom';
 import {
   ActivateSkillDocument,
   DeactivateSkillDocument,
@@ -18,6 +19,7 @@ import {
   type FindOneSkillQuery,
 } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledDangerButtonsContainer = styled.div`
   display: flex;
@@ -29,17 +31,19 @@ const DELETE_SKILL_MODAL_ID = 'delete-skill-modal';
 type SettingsSkillDangerZoneProps = {
   skill: Pick<
     NonNullable<FindOneSkillQuery['skill']>,
-    'id' | 'isActive' | 'isCustom'
+    'id' | 'isActive' | 'applicationId'
   >;
 };
 
 export const SettingsSkillDangerZone = ({
   skill,
 }: SettingsSkillDangerZoneProps) => {
+  const { t } = useLingui();
   const navigate = useNavigateSettings();
   const { enqueueToast } = useToast();
   const { openDialog, closeDialog } = useDialog();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const getIsMetadataItemCustom = useGetIsMetadataItemCustom();
 
   const [deleteSkill] = useMutation(DeleteSkillDocument);
   const [activateSkill] = useMutation(ActivateSkillDocument);
@@ -84,7 +88,7 @@ export const SettingsSkillDangerZone = ({
         >
           {skill.isActive ? t`Deactivate` : t`Activate`}
         </Button>
-        {skill.isCustom && (
+        {getIsMetadataItemCustom(skill) && (
           <Button
             startIcon={<IconTrash />}
             size="sm"

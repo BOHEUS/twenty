@@ -17,7 +17,6 @@ const HISTORY_IDENTIFIERS: string[] = [
   STANDARD_OBJECTS.agentTurn.universalIdentifier,
   STANDARD_OBJECTS.agentMessage.universalIdentifier,
   STANDARD_OBJECTS.agentMessagePart.universalIdentifier,
-  STANDARD_OBJECTS.agentTurnEvaluation.universalIdentifier,
 ];
 
 // A workspace about to be migrated: every other standard object is installed.
@@ -48,20 +47,6 @@ describe('getAgentHistorySchemaAdditions', () => {
     expect(
       additions.objects.map((object) => object.universalIdentifier).sort(),
     ).toEqual([...HISTORY_IDENTIFIERS].sort());
-    expect(
-      additions.objects.every(
-        (object) =>
-          object.readability === MetadataReadability.SYSTEM &&
-          object.writability === MetadataWritability.SYSTEM,
-      ),
-    ).toBe(true);
-    expect(
-      additions.fields
-        .filter((field) =>
-          HISTORY_IDENTIFIERS.includes(field.objectMetadataUniversalIdentifier),
-        )
-        .every((field) => field.writability === MetadataWritability.SYSTEM),
-    ).toBe(true);
     expect(additions.fields.length).toBeGreaterThan(0);
     expect(additions.indexes.length).toBeGreaterThan(0);
     const historyIdentifiers = new Set<string>(HISTORY_IDENTIFIERS);
@@ -129,30 +114,6 @@ describe('getAgentHistorySchemaAdditions', () => {
     );
   });
 
-  it('keeps the attachment side of the chat thread target standard', () => {
-    const standard = createStandardMetadata();
-    const additions = getAgentHistorySchemaAdditions({
-      existing: {
-        flatObjectMetadataMaps: createExistingObjectsWithoutHistory(standard),
-        flatFieldMetadataMaps: createEmptyFlatEntityMaps(),
-        flatIndexMaps: createEmptyFlatEntityMaps(),
-      },
-      standard,
-    });
-    const targetIdentifier =
-      STANDARD_OBJECTS.attachment.fields.targetAgentChatThread
-        .universalIdentifier;
-
-    expect(
-      additions.fields.find(
-        (field) => field.universalIdentifier === targetIdentifier,
-      )?.writability,
-    ).toBe(
-      standard.flatFieldMetadataMaps.byUniversalIdentifier[targetIdentifier]
-        ?.writability,
-    );
-  });
-
   it('leaves agentChatThreadTarget and both legs of its thread relation out', () => {
     const additions = getAgentHistorySchemaAdditions({
       existing: {
@@ -165,8 +126,7 @@ describe('getAgentHistorySchemaAdditions', () => {
     const targetIdentifier =
       STANDARD_OBJECTS.agentChatThreadTarget.universalIdentifier;
 
-    // The target is provisioned by its own command, later in the upgrade, so
-    // anything emitted here would land on an object that does not exist yet.
+    // The target is provisioned later in the upgrade by its own command, so nothing here may reference it yet
     expect(
       additions.fields
         .filter(
@@ -263,24 +223,8 @@ describe('getAgentHistorySchemaAdditions', () => {
       objects: [],
       fields: [],
       indexes: [],
+      protectedFieldUniversalIdentifiers: [],
     });
-  });
-
-  it('accepts protected legacy history before the sharing upgrade', () => {
-    const standard = createStandardMetadata();
-    const existing = createStandardMetadata();
-    Object.assign(
-      existing.flatObjectMetadataMaps.byUniversalIdentifier[
-        STANDARD_OBJECTS.agentChatThread.universalIdentifier
-      ]!,
-      {
-        readability: MetadataReadability.SYSTEM,
-        writability: MetadataWritability.SYSTEM,
-      },
-    );
-    expect(
-      getAgentHistorySchemaAdditions({ existing, standard }).objects,
-    ).toEqual([]);
   });
 
   it('repairs missing fields and indexes without recreating existing objects', () => {
@@ -299,11 +243,29 @@ describe('getAgentHistorySchemaAdditions', () => {
   });
 
   it.each([
-    { readability: MetadataReadability.OPEN },
+    {
+      readability: MetadataReadability.OPEN,
+      writability: MetadataWritability.SYSTEM,
+    },
     {
       readability: MetadataReadability.SYSTEM,
       writability: MetadataWritability.OPEN,
     },
+  ])('rejects legacy protection drift: %o', (legacyObjectAccess) => {
+    const standard = createStandardMetadata();
+    expect(() =>
+      getAgentHistorySchemaAdditions({
+        existing: createStandardMetadata(),
+        standard,
+        legacyObjectAccessByUniversalIdentifier: {
+          [STANDARD_OBJECTS.agentChatThread.universalIdentifier]:
+            legacyObjectAccess,
+        },
+      }),
+    ).toThrow('protections have drifted');
+  });
+
+  it.each([
     { isSearchable: true },
     { isAuditLogged: true },
     { nameSingular: 'unexpectedName' },

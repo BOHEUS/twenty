@@ -1,10 +1,11 @@
 import styled from '@emotion/styled';
 import { isNonEmptyString } from '@sniptt/guards';
+import { useEffect, useState } from 'react';
 import { isDefined } from 'twenty-sdk/utils';
-import { Avatar, Tag } from 'twenty-ui/data-display';
-import { Button } from 'twenty-ui/input';
-import { OverflowingTextWithTooltip } from 'twenty-ui/surfaces';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { Avatar, Tag, type TagColor } from 'twenty-ui/primitives/data-display';
+import { Button } from 'twenty-ui/primitives/input';
+import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 import {
   SlackTable,
@@ -17,14 +18,10 @@ import { SLACK_USER_LINK_CONSENT_STATE } from 'src/logic-functions/constants/sla
 import { SLACK_USER_LINK_SOURCE } from 'src/logic-functions/constants/slack-user-link-source';
 import { type SlackUserLinkConsentState } from 'src/logic-functions/types/slack-user-link-consent-state.type';
 import { isSlackUserLinkConsentState } from 'src/logic-functions/utils/is-slack-user-link-consent-state';
-import { useArmedRemoval } from 'src/front-components/hooks/use-armed-removal';
 import { type SlackUserLinkRecord } from 'src/front-components/types/slack-user-link-record.type';
-import {
-  DISCONNECTED_SLACK_WORKSPACE_LABEL,
-  isFromDisconnectedSlackWorkspace,
-} from 'src/front-components/utils/is-from-disconnected-slack-workspace.util';
 
 const LINKS_GRID_TEMPLATE_COLUMNS = 'minmax(0, 2fr) minmax(0, 2fr) 320px 156px';
+const REMOVAL_CONFIRM_TIMEOUT_MS = 4000;
 
 const StyledIdentity = styled.div`
   align-items: center;
@@ -61,8 +58,6 @@ const StyledEmptyState = styled.div`
   padding: ${() => themeCssVariables.spacing[2]};
 `;
 
-type TagColor = 'blue' | 'green' | 'orange' | 'red' | 'gray';
-
 const getSourceLabel = (source: string | null): string =>
   source === SLACK_USER_LINK_SOURCE.MANUAL
     ? 'Set manually'
@@ -97,6 +92,19 @@ const CONSENT_COLORS: Record<SlackUserLinkConsentState, TagColor> = {
   [SLACK_USER_LINK_CONSENT_STATE.ADMIN_SET]: 'gray',
 };
 
+const DISCONNECTED_WORKSPACE_LABEL = 'Slack workspace disconnected';
+
+const isFromDisconnectedSlackWorkspace = ({
+  slackUserLink,
+  installedSlackTeamId,
+}: {
+  slackUserLink: SlackUserLinkRecord;
+  installedSlackTeamId: string | undefined;
+}): boolean =>
+  isNonEmptyString(installedSlackTeamId) &&
+  isNonEmptyString(slackUserLink.slackTeamId) &&
+  slackUserLink.slackTeamId !== installedSlackTeamId;
+
 type SlackUserLinksListProps = {
   slackUserLinks: SlackUserLinkRecord[];
   canManage: boolean;
@@ -118,11 +126,22 @@ export const SlackUserLinksList = ({
   removingLinkId,
   resendingLinkId,
 }: SlackUserLinksListProps) => {
-  const {
-    armedId: removalArmedLinkId,
-    arm: armLinkRemoval,
-    disarm: disarmLinkRemoval,
-  } = useArmedRemoval();
+  const [removalArmedLinkId, setRemovalArmedLinkId] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (removalArmedLinkId === null) {
+      return undefined;
+    }
+
+    const disarmTimer = setTimeout(
+      () => setRemovalArmedLinkId(null),
+      REMOVAL_CONFIRM_TIMEOUT_MS,
+    );
+
+    return () => clearTimeout(disarmTimer);
+  }, [removalArmedLinkId]);
 
   const isActionInFlight =
     isDefined(removingLinkId) || isDefined(resendingLinkId);
@@ -142,7 +161,7 @@ export const SlackUserLinksList = ({
       <SlackTableBody>
         {slackUserLinks.map((slackUserLink) => {
           const isDisconnected = isFromDisconnectedSlackWorkspace({
-            slackTeamId: slackUserLink.slackTeamId,
+            slackUserLink,
             installedSlackTeamId,
           });
           const consentState = toDisplayedConsentState(
@@ -162,9 +181,9 @@ export const SlackUserLinksList = ({
               <SlackTableCell>
                 <StyledIdentity>
                   <Avatar
-                    placeholder={displayedName}
-                    placeholderColorSeed={slackUserLink.id}
-                    type="rounded"
+                    name={displayedName}
+                    colorSeed={slackUserLink.id}
+                    shape="circle"
                     size="md"
                   />
                   <StyledDetails>
@@ -187,19 +206,17 @@ export const SlackUserLinksList = ({
               </SlackTableCell>
               <SlackTableCell>
                 {isDisconnected ? (
-                  <Tag color="gray" text={DISCONNECTED_SLACK_WORKSPACE_LABEL} />
+                  <Tag color="gray">{DISCONNECTED_WORKSPACE_LABEL}</Tag>
                 ) : (
                   isDefined(consentState) && (
-                    <Tag
-                      color={CONSENT_COLORS[consentState]}
-                      text={CONSENT_LABELS[consentState]}
-                    />
+                    <Tag color={CONSENT_COLORS[consentState]}>
+                      {CONSENT_LABELS[consentState]}
+                    </Tag>
                   )
                 )}
-                <Tag
-                  color={getSourceColor(slackUserLink.source)}
-                  text={getSourceLabel(slackUserLink.source)}
-                />
+                <Tag color={getSourceColor(slackUserLink.source)}>
+                  {getSourceLabel(slackUserLink.source)}
+                </Tag>
               </SlackTableCell>
               <SlackTableCell align="right">
                 {canManage && (
@@ -207,43 +224,42 @@ export const SlackUserLinksList = ({
                     {isPending && removalArmedLinkId !== slackUserLink.id && (
                       <Button
                         type="button"
-                        title={
-                          resendingLinkId === slackUserLink.id
-                            ? 'Resending…'
-                            : 'Resend'
-                        }
-                        size="small"
-                        variant="secondary"
+                        size="sm"
+                        variant="outline"
                         disabled={isActionInFlight}
                         onClick={() => onResend(slackUserLink)}
-                      />
+                      >
+                        {resendingLinkId === slackUserLink.id
+                          ? 'Resending…'
+                          : 'Resend'}
+                      </Button>
                     )}
                     {removalArmedLinkId === slackUserLink.id ? (
                       <Button
                         type="button"
-                        title={
-                          removingLinkId === slackUserLink.id
-                            ? 'Removing…'
-                            : 'Confirm removal'
-                        }
-                        size="small"
-                        variant="secondary"
-                        accent="danger"
+                        size="sm"
+                        variant="outline"
+                        color="danger"
                         disabled={isActionInFlight}
                         onClick={() => {
-                          disarmLinkRemoval();
+                          setRemovalArmedLinkId(null);
                           onRemove(slackUserLink);
                         }}
-                      />
+                      >
+                        {removingLinkId === slackUserLink.id
+                          ? 'Removing…'
+                          : 'Confirm removal'}
+                      </Button>
                     ) : (
                       <Button
                         type="button"
-                        title="Remove"
-                        size="small"
-                        variant="secondary"
+                        size="sm"
+                        variant="outline"
                         disabled={isActionInFlight}
-                        onClick={() => armLinkRemoval(slackUserLink.id)}
-                      />
+                        onClick={() => setRemovalArmedLinkId(slackUserLink.id)}
+                      >
+                        Remove
+                      </Button>
                     )}
                   </>
                 )}

@@ -7,10 +7,11 @@ import { type WorkflowFormActionField } from '@/workflow/workflow-steps/workflow
 import { type WorkflowFormFieldType } from '@/workflow/workflow-steps/workflow-actions/form-action/types/WorkflowFormFieldType';
 import { getDefaultFormFieldSettings } from '@/workflow/workflow-steps/workflow-actions/form-action/utils/getDefaultFormFieldSettings';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { LightIconButton } from 'twenty-ui/components';
+import { LightIconButton } from 'twenty-ui/components/input';
 import { IconSettingsAutomation, IconX } from 'twenty-ui/icon';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
+
 type WorkflowEditActionFormFieldSettingsProps = {
   field: WorkflowFormActionField;
   onChange: (field: WorkflowFormActionField) => void;
@@ -61,6 +62,7 @@ export const WorkflowEditActionFormFieldSettings = ({
   onChange,
   onClose,
 }: WorkflowEditActionFormFieldSettingsProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
 
   return (
@@ -89,7 +91,10 @@ export const WorkflowEditActionFormFieldSettings = ({
         <FormFieldInputContainer>
           <InputLabel>{t`Type`}</InputLabel>
           <FormSelectFieldInput
-            options={FORM_SELECT_FIELD_TYPE_OPTIONS}
+            options={FORM_SELECT_FIELD_TYPE_OPTIONS.map((option) => ({
+              ...option,
+              label: t(option.label),
+            }))}
             onChange={(newType: string | null) => {
               if (newType === null) {
                 return;

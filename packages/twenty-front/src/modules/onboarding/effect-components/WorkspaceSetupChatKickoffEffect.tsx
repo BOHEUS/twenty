@@ -1,18 +1,15 @@
-import { useApplyAgentChatThreadUpdate } from '@/ai/hooks/useApplyAgentChatThreadUpdate';
-import { useRefreshAgentChatThreadPermissions } from '@/ai/hooks/useRefreshAgentChatThreadPermissions';
+import { useAddInboxThread } from '@/inbox/hooks/useAddInboxThread';
+import { useAiChatInstanceOrThrow } from '@/ai-chat/hooks/useAiChatInstanceOrThrow';
+import { useRefreshAiChatThreadPermissions } from '@/ai-chat/threads/hooks/useRefreshAiChatThreadPermissions';
 import { useMutation } from '@apollo/client/react';
 import { useStore } from 'jotai';
 import { useEffect, useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
 
-import { AGENT_CHAT_INSTANCE_ID } from '@/ai/constants/AgentChatInstanceId';
-import { agentChatIsAwaitingFirstChunkComponentFamilyState } from '@/ai/states/agentChatIsAwaitingFirstChunkComponentFamilyState';
-import { currentAiChatThreadState } from '@/ai/states/currentAiChatThreadState';
-import { currentAiChatThreadTitleComponentFamilyState } from '@/ai/states/currentAiChatThreadTitleComponentFamilyState';
-import { hasInitializedAgentChatThreadsState } from '@/ai/states/hasInitializedAgentChatThreadsState';
-import { skipMessagesSkeletonUntilLoadedState } from '@/ai/states/skipMessagesSkeletonUntilLoadedState';
+import { aiChatThreadReplyStatusFamilyState } from '@/ai-chat/states/reply/aiChatThreadReplyStatusFamilyState';
+import { getAiChatReplyStatusUnlessStreaming } from '@/ai-chat/utils/getAiChatReplyStatusUnlessStreaming';
 import { WORKSPACE_SETUP_CHAT_ENRICHMENT_MAX_WAIT_MS } from '@/onboarding/constants/WorkspaceSetupChatEnrichmentMaxWaitMs';
-import { shouldOpenAiChatAfterOnboardingState } from '@/onboarding/states/shouldOpenAiChatAfterOnboardingState';
+import { shouldOpenAiChatAfterOnboardingState } from '@/ai-chat/states/shouldOpenAiChatAfterOnboardingState';
 import { companyEnrichmentState } from '@/onboarding/states/companyEnrichmentState';
 import { hasRequestedWorkspaceSetupChatState } from '@/onboarding/states/hasRequestedWorkspaceSetupChatState';
 import { isCompanyEnrichmentFetchInFlightState } from '@/onboarding/states/isCompanyEnrichmentFetchInFlightState';
@@ -28,9 +25,10 @@ export const WorkspaceSetupChatKickoffEffect = () => {
     StartWorkspaceSetupChatDocument,
   );
   const store = useStore();
-  const { refreshAgentChatThreadPermissions } =
-    useRefreshAgentChatThreadPermissions();
-  const { addAgentChatThread } = useApplyAgentChatThreadUpdate();
+  const { onThreadChange } = useAiChatInstanceOrThrow();
+  const { refreshAiChatThreadPermissions } =
+    useRefreshAiChatThreadPermissions();
+  const { addInboxThread } = useAddInboxThread();
   const isCompanyEnrichmentFetchInFlight = useAtomStateValue(
     isCompanyEnrichmentFetchInFlightState,
   );
@@ -88,36 +86,25 @@ export const WorkspaceSetupChatKickoffEffect = () => {
           return;
         }
 
-        addAgentChatThread({
+        addInboxThread({
           id: thread.id,
           title: thread.title ?? null,
           createdAt: thread.createdAt,
           updatedAt: thread.updatedAt,
           deletedAt: null,
         });
-        void refreshAgentChatThreadPermissions([thread.id]);
-
-        store.set(
-          currentAiChatThreadTitleComponentFamilyState.atomFamily({
-            instanceId: AGENT_CHAT_INSTANCE_ID,
-            familyKey: { threadId: thread.id },
-          }),
-          thread.title ?? null,
-        );
+        void refreshAiChatThreadPermissions([thread.id]);
 
         if (result.outcome === WorkspaceSetupChatOutcome.STARTED) {
           store.set(
-            agentChatIsAwaitingFirstChunkComponentFamilyState.atomFamily({
-              instanceId: AGENT_CHAT_INSTANCE_ID,
-              familyKey: { threadId: thread.id },
+            aiChatThreadReplyStatusFamilyState.atomFamily({
+              threadId: thread.id,
             }),
-            true,
+            getAiChatReplyStatusUnlessStreaming('awaiting-first-chunk'),
           );
         }
 
-        store.set(hasInitializedAgentChatThreadsState.atom, true);
-        store.set(skipMessagesSkeletonUntilLoadedState.atom, true);
-        store.set(currentAiChatThreadState.atom, thread.id);
+        onThreadChange(thread.id);
       } catch {
         store.set(hasRequestedWorkspaceSetupChatState.atom, false);
 
@@ -128,9 +115,10 @@ export const WorkspaceSetupChatKickoffEffect = () => {
     void startWorkspaceSetupChat();
   }, [
     startWorkspaceSetupChatMutation,
-    refreshAgentChatThreadPermissions,
+    refreshAiChatThreadPermissions,
     store,
-    addAgentChatThread,
+    onThreadChange,
+    addInboxThread,
     isCompanyEnrichmentFetchInFlight,
     hasWaitedForCompanyEnrichment,
   ]);

@@ -1,9 +1,6 @@
 import { msg } from '@lingui/core/macro';
 
-// This file exists solely for Lingui string extraction.
-// The strings defined here correspond to standard page layout widget titles
-// so they appear in the .po catalogs and can be translated at resolve time
-// via generateMessageId hash lookups.
+// Exists solely so Lingui extracts these into the .po catalogs for resolve-time translation
 export const getStandardPageLayoutWidgetTitles = () => [
   msg({ message: `Fields`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Timeline`, context: 'pageLayoutWidget.title' }),
@@ -11,11 +8,13 @@ export const getStandardPageLayoutWidgetTitles = () => [
   msg({ message: `Notes`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Files`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Emails`, context: 'pageLayoutWidget.title' }),
+  msg({ message: `Messages`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Calendar`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Note`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Task`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Flow`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Thread`, context: 'pageLayoutWidget.title' }),
+  msg({ message: `Chat`, context: 'pageLayoutWidget.title' }),
   msg({ message: `People`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Opportunities`, context: 'pageLayoutWidget.title' }),
   msg({ message: `Company`, context: 'pageLayoutWidget.title' }),

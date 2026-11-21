@@ -1,13 +1,15 @@
+import { ApplicationService } from 'src/engine/core-modules/application/application.service';
 import { Injectable } from '@nestjs/common';
 
 import { msg } from '@lingui/core/macro';
-import { WorkflowVisibility } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { In } from 'typeorm';
+import { In, Not } from 'typeorm';
 
+import { type FlatApplication } from 'src/engine/core-modules/application/types/flat-application.type';
+import { getReachableApplications } from 'src/engine/core-modules/application/utils/get-reachable-applications.util';
 import { WorkflowVersionEntity } from 'src/engine/core-modules/workflow/entities/workflow-version.entity';
 import { WorkflowEntity } from 'src/engine/core-modules/workflow/entities/workflow.entity';
-import { canChangeCoreWorkflowVisibility } from 'src/engine/core-modules/workflow/utils/can-change-core-workflow-visibility.util';
+import { isCoreWorkflowVisibleToUser } from 'src/engine/core-modules/workflow/utils/is-core-workflow-visible-to-user.util';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 import {
@@ -15,17 +17,115 @@ import {
   WorkflowQueryValidationExceptionCode,
 } from 'src/modules/workflow/common/exceptions/workflow-query-validation.exception';
 
-// A workflow's versions carry its whole definition, so reaching one by id has
-// to answer to the same rule as reaching the workflow. Both asserts live here
-// so a private workflow has one deny to audit rather than one per entry point.
+// Versions carry the whole definition, so they answer to the workflow's rule; both asserts live here so a private
+// workflow has one deny to audit.
 @Injectable()
 export class CoreWorkflowAccessService {
   constructor(
+    private readonly applicationService: ApplicationService,
     @InjectWorkspaceScopedRepository(WorkflowEntity)
     private readonly coreWorkflowRepository: WorkspaceScopedRepository<WorkflowEntity>,
     @InjectWorkspaceScopedRepository(WorkflowVersionEntity)
     private readonly coreWorkflowVersionRepository: WorkspaceScopedRepository<WorkflowVersionEntity>,
   ) {}
+
+  async assertCoreWorkflowsAreEditableOrThrow(args: {
+    workspaceId: string;
+    userWorkspaceId: string | undefined;
+    coreWorkflowIds: string[];
+  }): Promise<void> {
+    if (args.coreWorkflowIds.length === 0) {
+      return;
+    }
+
+    await this.assertCoreWorkflowsAreAccessibleOrThrow(args);
+    const { workspaceCustomFlatApplication, twentyStandardFlatApplication } =
+      await this.applicationService.findWorkspaceTwentyStandardAndCustomApplicationOrThrow(
+        { workspaceId: args.workspaceId },
+      );
+    const workflows = await this.coreWorkflowRepository.find(args.workspaceId, {
+      where: { id: In(args.coreWorkflowIds) },
+      select: { id: true, applicationId: true },
+    });
+    if (
+      workflows.some(
+        (workflow) =>
+          workflow.applicationId !== workspaceCustomFlatApplication.id &&
+          workflow.applicationId !== twentyStandardFlatApplication.id,
+      )
+    ) {
+      throw new WorkflowQueryValidationException(
+        'Application workflows can only be changed by synchronizing their application',
+        WorkflowQueryValidationExceptionCode.FORBIDDEN,
+        {
+          userFriendlyMessage: msg`This workflow is managed by an application and is read-only`,
+        },
+      );
+    }
+  }
+
+  async assertCoreWorkflowVersionsAreStartableByApplicationOrThrow({
+    workspaceId,
+    workspaceCustomApplicationId,
+    callerApplication,
+    coreWorkflowVersionIds,
+  }: {
+    workspaceId: string;
+    workspaceCustomApplicationId: string;
+    callerApplication: FlatApplication | undefined;
+    coreWorkflowVersionIds: string[];
+  }): Promise<void> {
+    const reachableApplications = getReachableApplications({
+      callingApplication: callerApplication,
+      operation: 'trigger',
+      workspaceCustomApplicationId,
+    });
+
+    if (
+      reachableApplications.type === 'all' ||
+      coreWorkflowVersionIds.length === 0
+    ) {
+      return;
+    }
+
+    const coreWorkflowVersions = await this.coreWorkflowVersionRepository.find(
+      workspaceId,
+      {
+        where: { id: In(coreWorkflowVersionIds) },
+        select: { id: true, coreWorkflowId: true },
+      },
+    );
+
+    const coreWorkflowIds = [
+      ...new Set(
+        coreWorkflowVersions
+          .map(({ coreWorkflowId }) => coreWorkflowId)
+          .filter(isDefined),
+      ),
+    ];
+
+    if (coreWorkflowIds.length === 0) {
+      return;
+    }
+
+    const hasWorkflowOfAnotherApplication =
+      await this.coreWorkflowRepository.exists(workspaceId, {
+        where: {
+          id: In(coreWorkflowIds),
+          applicationId: Not(reachableApplications.applicationId),
+        },
+      });
+
+    if (hasWorkflowOfAnotherApplication) {
+      throw new WorkflowQueryValidationException(
+        `Application '${reachableApplications.applicationId}' cannot start a workflow owned by another application`,
+        WorkflowQueryValidationExceptionCode.FORBIDDEN,
+        {
+          userFriendlyMessage: msg`An application can only start its own workflows.`,
+        },
+      );
+    }
+  }
 
   async assertCoreWorkflowsAreAccessibleOrThrow({
     workspaceId,
@@ -51,8 +151,7 @@ export class CoreWorkflowAccessService {
         `Core workflow '${inaccessibleCoreWorkflow.id}' is private to another member`,
         WorkflowQueryValidationExceptionCode.FORBIDDEN,
         {
-          // the same message a missing workflow gets, so a private one does not
-          // announce that it exists
+          // Same message as a missing workflow, so a private one does not announce that it exists.
           userFriendlyMessage: msg`Workflow not found`,
         },
       );
@@ -95,86 +194,32 @@ export class CoreWorkflowAccessService {
     });
   }
 
-  // The legacy resolvers are keyed by the workspace mirror's ids rather than
-  // the core ones, so they need the same rule reached from the other side.
-  async assertWorkspaceWorkflowVersionsAreAccessibleOrThrow({
+  // The command menu lists every member's manual triggers in one read, so the rule comes back as a filter.
+  async findInaccessibleWorkflowVersionIds({
     workspaceId,
     userWorkspaceId,
+    coreWorkflowVersionIds,
     workspaceWorkflowVersionIds,
   }: {
     workspaceId: string;
     userWorkspaceId: string | undefined;
-    workspaceWorkflowVersionIds: string[];
-  }): Promise<void> {
-    if (workspaceWorkflowVersionIds.length === 0) {
-      return;
-    }
-
-    const coreWorkflowVersions = await this.coreWorkflowVersionRepository.find(
-      workspaceId,
-      {
-        where: { workspaceWorkflowVersionId: In(workspaceWorkflowVersionIds) },
-        select: { id: true, coreWorkflowId: true },
-      },
-    );
-
-    await this.assertCoreWorkflowsAreAccessibleOrThrow({
-      workspaceId,
-      userWorkspaceId,
-      coreWorkflowIds: [
-        ...new Set(
-          coreWorkflowVersions
-            .map(({ coreWorkflowId }) => coreWorkflowId)
-            .filter(isDefined),
-        ),
-      ],
-    });
-  }
-
-  async assertWorkspaceWorkflowsAreAccessibleOrThrow({
-    workspaceId,
-    userWorkspaceId,
-    workspaceWorkflowIds,
-  }: {
-    workspaceId: string;
-    userWorkspaceId: string | undefined;
-    workspaceWorkflowIds: string[];
-  }): Promise<void> {
-    if (workspaceWorkflowIds.length === 0) {
-      return;
-    }
-
-    const coreWorkflows = await this.coreWorkflowRepository.find(workspaceId, {
-      where: { workspaceWorkflowId: In(workspaceWorkflowIds) },
-      select: { id: true },
-    });
-
-    await this.assertCoreWorkflowsAreAccessibleOrThrow({
-      workspaceId,
-      userWorkspaceId,
-      coreWorkflowIds: coreWorkflows.map(({ id }) => id),
-    });
-  }
-
-  // The command menu lists every member's manual triggers in one read, so the
-  // rule has to come back as a filter rather than a deny.
-  async findInaccessibleWorkspaceWorkflowVersionIds({
-    workspaceId,
-    userWorkspaceId,
-    workspaceWorkflowVersionIds,
-  }: {
-    workspaceId: string;
-    userWorkspaceId: string | undefined;
+    coreWorkflowVersionIds: string[];
     workspaceWorkflowVersionIds: string[];
   }): Promise<Set<string>> {
-    if (workspaceWorkflowVersionIds.length === 0) {
+    if (
+      coreWorkflowVersionIds.length === 0 &&
+      workspaceWorkflowVersionIds.length === 0
+    ) {
       return new Set();
     }
 
     const coreWorkflowVersions = await this.coreWorkflowVersionRepository.find(
       workspaceId,
       {
-        where: { workspaceWorkflowVersionId: In(workspaceWorkflowVersionIds) },
+        where: [
+          { id: In(coreWorkflowVersionIds) },
+          { workspaceWorkflowVersionId: In(workspaceWorkflowVersionIds) },
+        ],
         select: {
           id: true,
           coreWorkflowId: true,
@@ -201,11 +246,10 @@ export class CoreWorkflowAccessService {
 
     return new Set(
       coreWorkflowVersions.flatMap(
-        ({ coreWorkflowId, workspaceWorkflowVersionId }) =>
+        ({ id, coreWorkflowId, workspaceWorkflowVersionId }) =>
           isDefined(coreWorkflowId) &&
-          isDefined(workspaceWorkflowVersionId) &&
           inaccessibleCoreWorkflowIds.has(coreWorkflowId)
-            ? [workspaceWorkflowVersionId]
+            ? [id, workspaceWorkflowVersionId].filter(isDefined)
             : [],
       ),
     );
@@ -267,12 +311,11 @@ export class CoreWorkflowAccessService {
       },
     });
 
-    // An id nobody owns keeps behaving exactly as it did before, so an unknown
-    // or already deleted workflow is still a no-op rather than a refusal.
+    // Unknown or deleted ids stay a no-op rather than a refusal.
     return coreWorkflows.filter(
       (coreWorkflow) =>
-        coreWorkflow.visibility === WorkflowVisibility.PRIVATE &&
-        !canChangeCoreWorkflowVisibility({
+        !isCoreWorkflowVisibleToUser({
+          visibility: coreWorkflow.visibility,
           createdByUserWorkspaceId: coreWorkflow.createdByUserWorkspaceId,
           userWorkspaceId,
         }),

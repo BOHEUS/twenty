@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { useQuery } from '@apollo/client/react';
 import { isDefined } from 'twenty-shared/utils';
@@ -12,7 +12,7 @@ import { sortedFieldByTableFamilyState } from '@/ui/layout/table/states/sortedFi
 import { type TableSortValue } from '@/ui/layout/table/types/TableSortValue';
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   CoreWorkflowOrderByDirection,
   CoreWorkflowOrderByField,
@@ -37,8 +37,7 @@ const ORDER_BY_FIELD_BY_FIELD_NAME: Record<string, CoreWorkflowOrderByField> = {
   updatedAt: CoreWorkflowOrderByField.UPDATED_AT,
 };
 
-// Two refreshes racing each other would otherwise append the same page twice,
-// and the ids are what make the merge idempotent.
+// Merging by id keeps racing refreshes from appending the same page twice.
 const mergeFetchedCoreWorkflowPage = (
   previousResult: GetCoreWorkflowsQuery,
   { fetchMoreResult }: { fetchMoreResult: GetCoreWorkflowsQuery },
@@ -55,6 +54,12 @@ const mergeFetchedCoreWorkflowPage = (
         ...previousResult.coreWorkflows.edges,
         ...fetchMoreResult.coreWorkflows.edges.filter(
           (edge) => !alreadyLoadedIds.has(edge.node.id),
+        ),
+      ],
+      runSummaries: [
+        ...previousResult.coreWorkflows.runSummaries,
+        ...fetchMoreResult.coreWorkflows.runSummaries.filter(
+          (runSummary) => !alreadyLoadedIds.has(runSummary.coreWorkflowId),
         ),
       ],
     },
@@ -111,6 +116,22 @@ export const useCoreWorkflows = ({
   );
   const connection = (data ?? previousData)?.coreWorkflows;
 
+  const coreWorkflows = useMemo(
+    () => connection?.edges.map((edge) => edge.node) ?? [],
+    [connection],
+  );
+
+  const runSummaryByCoreWorkflowId = useMemo(
+    () =>
+      new Map(
+        (connection?.runSummaries ?? []).map((runSummary) => [
+          runSummary.coreWorkflowId,
+          runSummary,
+        ]),
+      ),
+    [connection],
+  );
+
   const { enqueueToast } = useToast();
 
   const fetchNextPage = async () => {
@@ -135,9 +156,7 @@ export const useCoreWorkflows = ({
 
   const loadedCount = connection?.edges.length ?? 0;
 
-  // A plain refetch re-runs the first page and drops what fetchMore accumulated,
-  // so ask for as many rows as are displayed and page back up to them when that
-  // is more than one request may return.
+  // A plain refetch drops fetchMore pages, so re-request every displayed row.
   const refetchLoadedCoreWorkflows = useCallback(async () => {
     const targetCount = Math.max(loadedCount, CORE_WORKFLOWS_PAGE_SIZE);
 
@@ -165,7 +184,8 @@ export const useCoreWorkflows = ({
   }, [fetchMore, loadedCount, refetch]);
 
   return {
-    coreWorkflows: connection?.edges.map((edge) => edge.node) ?? [],
+    coreWorkflows,
+    runSummaryByCoreWorkflowId,
     totalCount: connection?.totalCount ?? 0,
     hasNextPage: connection?.pageInfo.hasNextPage ?? false,
     fetchNextPage,

@@ -7,9 +7,15 @@ import { type Readable, type Writable } from 'stream';
 import { isDefined } from 'twenty-shared/utils';
 import { v4 as uuidv4 } from 'uuid';
 
-import { DEFAULT_CODE_INTERPRETER_TIMEOUT_MS } from 'src/engine/core-modules/code-interpreter/code-interpreter.constants';
-import { LOCAL_DRIVER_PERSISTENT_KERNEL_SCRIPT } from 'src/engine/core-modules/code-interpreter/drivers/local-driver-kernel.const';
+import {
+  CODE_INTERPRETER_MAX_OUTPUT_FILE_COUNT,
+  CODE_INTERPRETER_MAX_OUTPUT_FILE_SIZE_BYTES,
+  CODE_INTERPRETER_MAX_OUTPUT_LENGTH,
+  DEFAULT_CODE_INTERPRETER_TIMEOUT_MS,
+} from 'src/engine/core-modules/code-interpreter/code-interpreter.constants';
+import { LOCAL_DRIVER_PERSISTENT_KERNEL_SCRIPT } from 'src/engine/core-modules/code-interpreter/drivers/local-driver-kernel.constant';
 import { getMimeType } from 'src/engine/core-modules/code-interpreter/utils/get-mime-type.util';
+import { truncateCodeInterpreterOutput } from 'src/engine/core-modules/code-interpreter/utils/truncate-code-interpreter-output.util';
 
 import {
   type CodeExecutionResult,
@@ -86,8 +92,7 @@ const buildEnvSetup = (env?: Record<string, string>): string => {
   return `import os\n${assignments}\n\n`;
 };
 
-// WARNING: This driver is UNSAFE and can be used for development only.
-// It executes arbitrary Python code on the server without any sandboxing.
+// UNSAFE: executes arbitrary Python on the server without sandboxing; development only.
 export class LocalDriver implements CodeInterpreterDriver {
   private readonly sessions = new Map<string, LocalSession>();
 
@@ -112,8 +117,6 @@ export class LocalDriver implements CodeInterpreterDriver {
     return this.executeEphemeral(code, files, context, callbacks);
   }
 
-  // Persistent path: reuse a per-session process + work dir so state survives
-  // between calls (variables, imports, files).
   private async executeInSession(
     sessionId: string,
     code: string,
@@ -127,8 +130,7 @@ export class LocalDriver implements CodeInterpreterDriver {
       context?.actorKey,
     );
 
-    // /home/user/output is cleared at the start of every call (matching the E2B
-    // behavior and the tool contract).
+    // Cleared on every call to match E2B behavior and the tool contract.
     await fs.rm(session.outputDir, { recursive: true, force: true });
     await fs.mkdir(session.outputDir, { recursive: true });
 
@@ -154,9 +156,6 @@ export class LocalDriver implements CodeInterpreterDriver {
     try {
       response = await this.runInSession(session, submission, timeoutMs);
     } catch (error) {
-      // A timeout or a dead kernel: kill the (possibly wedged) process so the
-      // next call recreates a clean one. The 'exit' handler reclaims the work
-      // dir.
       session.hasExited = true;
       if (this.sessions.get(sessionId) === session) {
         this.sessions.delete(sessionId);
@@ -180,15 +179,13 @@ export class LocalDriver implements CodeInterpreterDriver {
     );
 
     return {
-      stdout: response.stdout,
-      stderr: response.stderr,
+      stdout: truncateCodeInterpreterOutput(response.stdout),
+      stderr: truncateCodeInterpreterOutput(response.stderr),
       exitCode: response.exitCode,
       files: outputFiles,
     };
   }
 
-  // Ephemeral path (no session): fresh work dir + process per call, cleaned up
-  // afterwards. State does NOT persist between calls here.
   private async executeEphemeral(
     code: string,
     files: InputFile[] | undefined,
@@ -257,7 +254,6 @@ export class LocalDriver implements CodeInterpreterDriver {
     scriptsDir: string,
     outputDir: string,
   ): string {
-    // Rewrite E2B-style paths to local paths for compatibility
     return code
       .replace(/\/home\/user\/scripts\//g, `${scriptsDir}/`)
       .replace(/\/home\/user\/scripts/g, scriptsDir)
@@ -279,8 +275,19 @@ export class LocalDriver implements CodeInterpreterDriver {
       });
 
       for (const entry of outputEntries) {
+        if (outputFiles.length >= CODE_INTERPRETER_MAX_OUTPUT_FILE_COUNT) {
+          break;
+        }
+
         if (entry.isFile()) {
-          const content = await fs.readFile(join(outputDir, entry.name));
+          const filePath = join(outputDir, entry.name);
+          const { size } = await fs.stat(filePath);
+
+          if (size > CODE_INTERPRETER_MAX_OUTPUT_FILE_SIZE_BYTES) {
+            continue;
+          }
+
+          const content = await fs.readFile(filePath);
           const outputFile: OutputFile = {
             filename: entry.name,
             content,
@@ -426,8 +433,6 @@ export class LocalDriver implements CodeInterpreterDriver {
       }
       session.pending?.reject(new Error('Python kernel process exited'));
       session.pending = undefined;
-      // The kernel self-terminates (idle watchdog) or dies on its own; reclaim
-      // its work dir here so it doesn't leak.
       void fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
     };
 
@@ -513,7 +518,10 @@ export class LocalDriver implements CodeInterpreterDriver {
       child.stdout.on('data', (data: Buffer) => {
         const text = data.toString();
 
-        stdout += text;
+        if (stdout.length <= CODE_INTERPRETER_MAX_OUTPUT_LENGTH) {
+          stdout = truncateCodeInterpreterOutput(stdout + text);
+        }
+
         const lines = text.split('\n');
 
         for (const line of lines) {
@@ -526,7 +534,10 @@ export class LocalDriver implements CodeInterpreterDriver {
       child.stderr.on('data', (data: Buffer) => {
         const text = data.toString();
 
-        stderr += text;
+        if (stderr.length <= CODE_INTERPRETER_MAX_OUTPUT_LENGTH) {
+          stderr = truncateCodeInterpreterOutput(stderr + text);
+        }
+
         const lines = text.split('\n');
 
         for (const line of lines) {

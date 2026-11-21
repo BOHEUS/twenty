@@ -10,6 +10,7 @@ describe('getActionIconColorOrThrow', () => {
       'SEND_EMAIL',
       'DRAFT_EMAIL',
       'LOGIC_FUNCTION',
+      'MCP_TOOL',
       'CREATE_CALENDAR_EVENT',
     ];
     redActions.forEach((actionType) => {
@@ -35,11 +36,14 @@ describe('getActionIconColorOrThrow', () => {
     });
   });
 
-  it('returns orange9 for FORM', () => {
-    expect(getActionIconColorOrThrow('FORM')).toBe(
-      themeCssVariables.color.orange9,
-    );
-  });
+  it.each(['FORM', 'SEND_CHAT_MESSAGE'] as const)(
+    'returns orange9 for %s',
+    (type) => {
+      expect(getActionIconColorOrThrow(type)).toBe(
+        themeCssVariables.color.orange9,
+      );
+    },
+  );
 
   it('returns green9 for ITERATOR, EMPTY, FILTER, IF_ELSE, DELAY', () => {
     const greenActions: WorkflowActionType[] = [

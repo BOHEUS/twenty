@@ -1,3 +1,4 @@
+import { TemplateVariableWithFallbackTag } from '@/advanced-text-editor/extensions/variable-tag/TemplateVariableWithFallbackTag';
 import { getInitialEditorContent } from '@/advanced-text-editor/utils/getInitialEditorContent';
 import { WorkflowVariableTag } from '@/workflow/workflow-variables/extensions/WorkflowVariableTag';
 import Document from '@tiptap/extension-document';
@@ -11,6 +12,7 @@ import { Slice } from '@tiptap/pm/model';
 import { type Editor, useEditor } from '@tiptap/react';
 import { useEffect } from 'react';
 import { isDefined, parseJson } from 'twenty-shared/utils';
+import { CAPTURE_ALL_VARIABLE_TAG_INNER_REGEX } from 'twenty-shared/workflow';
 import { type JsonValue } from 'type-fest';
 
 type UseTextVariableEditorProps = {
@@ -20,11 +22,10 @@ type UseTextVariableEditorProps = {
   defaultValue: string | undefined | null;
   onUpdate: (editor: Editor) => void;
   ariaLabelledBy?: string;
+  ariaLabel?: string;
+  enableTemplateVariableFallback?: boolean;
 };
 
-/**
- * Checks if the given text is a valid JSON object (not array, primitive, or null)
- */
 const isJsonObject = (text: string): boolean => {
   try {
     const parsed = JSON.parse(text);
@@ -41,7 +42,13 @@ export const useTextVariableEditor = ({
   defaultValue,
   onUpdate,
   ariaLabelledBy,
+  ariaLabel,
+  enableTemplateVariableFallback = false,
 }: UseTextVariableEditorProps) => {
+  const variableTagExtension = enableTemplateVariableFallback
+    ? TemplateVariableWithFallbackTag
+    : WorkflowVariableTag;
+
   const editor = useEditor({
     extensions: [
       Document,
@@ -50,7 +57,7 @@ export const useTextVariableEditor = ({
       Placeholder.configure({
         placeholder,
       }),
-      WorkflowVariableTag,
+      variableTagExtension,
       ...(multiline
         ? [
             HardBreak.configure({
@@ -68,13 +75,13 @@ export const useTextVariableEditor = ({
       onUpdate(editor);
     },
     editorProps: {
-      // Re-applied props replace Tiptap's default attributes, so the role
-      // has to be restated here or the editor loses it.
+      // Re-applied props replace Tiptap's default attributes, so the role must be restated.
       attributes: {
         role: 'textbox',
         ...(isDefined(ariaLabelledBy)
           ? { 'aria-labelledby': ariaLabelledBy }
           : {}),
+        ...(isDefined(ariaLabel) ? { 'aria-label': ariaLabel } : {}),
       },
       handleKeyDown: (view, event) => {
         if (event.key === 'Enter' && !event.shiftKey) {
@@ -117,7 +124,16 @@ export const useTextVariableEditor = ({
           return true;
         }
 
-        if (multiline && plainText.includes('\n')) {
+        const isMultilinePasteIntoMultilineEditor =
+          multiline && plainText.includes('\n');
+        const isSingleLinePasteWithVariableTags =
+          !plainText.includes('\n') &&
+          isDefined(plainText.match(CAPTURE_ALL_VARIABLE_TAG_INNER_REGEX));
+
+        if (
+          isMultilinePasteIntoMultilineEditor ||
+          isSingleLinePasteWithVariableTags
+        ) {
           const docNode = schema.nodeFromJSON(
             getInitialEditorContent(plainText),
           );

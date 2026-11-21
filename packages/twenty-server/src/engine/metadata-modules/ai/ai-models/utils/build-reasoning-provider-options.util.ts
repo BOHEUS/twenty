@@ -8,8 +8,9 @@ import {
   AI_SDK_GOOGLE,
   AI_SDK_MISTRAL,
   AI_SDK_OPENAI,
+  AI_SDK_OPENAI_COMPATIBLE,
   AI_SDK_XAI,
-} from 'src/engine/metadata-modules/ai/ai-models/constants/ai-sdk-package.const';
+} from 'src/engine/metadata-modules/ai/ai-models/constants/ai-sdk-package.constant';
 import { type RegisteredAiModel } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-registry.service';
 import { isAdaptiveThinkingClaudeModel } from 'src/engine/metadata-modules/ai/ai-models/utils/is-adaptive-thinking-claude-model.util';
 
@@ -18,10 +19,22 @@ export const buildReasoningProviderOptions = (
     RegisteredAiModel,
     'modelId' | 'sdkPackage' | 'supportsReasoning' | 'effort'
   >,
+  {
+    shouldIncludeReasoningSummary = false,
+    isOpenAiReasoningSummaryEnabled = false,
+  }: {
+    shouldIncludeReasoningSummary?: boolean;
+    isOpenAiReasoningSummaryEnabled?: boolean;
+  } = {},
 ): ProviderOptions => {
   const { effort } = model;
   const thinksAdaptively =
     model.supportsReasoning && isAdaptiveThinkingClaudeModel(model.modelId);
+  // OpenAI and Gemini keep their reasoning hidden unless asked for a summary.
+  const includesReasoningSummary =
+    shouldIncludeReasoningSummary &&
+    model.supportsReasoning &&
+    effort !== 'none';
 
   switch (model.sdkPackage) {
     case AI_SDK_ANTHROPIC:
@@ -49,17 +62,48 @@ export const buildReasoningProviderOptions = (
         },
       };
     case AI_SDK_OPENAI:
-      return isDefined(effort) ? { openai: { reasoningEffort: effort } } : {};
-    case AI_SDK_AZURE:
-      return isDefined(effort) ? { azure: { reasoningEffort: effort } } : {};
+    case AI_SDK_AZURE: {
+      // OpenAI rejects summary requests from organizations it has not verified.
+      const includesOpenAiReasoningSummary =
+        includesReasoningSummary && isOpenAiReasoningSummaryEnabled;
+
+      if (!isDefined(effort) && !includesOpenAiReasoningSummary) {
+        return {};
+      }
+
+      const providerKey =
+        model.sdkPackage === AI_SDK_OPENAI ? 'openai' : 'azure';
+
+      return {
+        [providerKey]: {
+          ...(isDefined(effort) ? { reasoningEffort: effort } : {}),
+          ...(includesOpenAiReasoningSummary
+            ? { reasoningSummary: 'auto' }
+            : {}),
+        },
+      };
+    }
     case AI_SDK_GOOGLE:
-      return isDefined(effort)
-        ? { google: { thinkingConfig: { thinkingLevel: effort } } }
-        : {};
+      if (!isDefined(effort) && !includesReasoningSummary) {
+        return {};
+      }
+
+      return {
+        google: {
+          thinkingConfig: {
+            ...(isDefined(effort) ? { thinkingLevel: effort } : {}),
+            ...(includesReasoningSummary ? { includeThoughts: true } : {}),
+          },
+        },
+      };
     case AI_SDK_MISTRAL:
       return isDefined(effort) ? { mistral: { reasoningEffort: effort } } : {};
     case AI_SDK_XAI:
       return isDefined(effort) ? { xai: { reasoningEffort: effort } } : {};
+    case AI_SDK_OPENAI_COMPATIBLE:
+      return isDefined(effort)
+        ? { openaiCompatible: { reasoningEffort: effort } }
+        : {};
     default:
       return {};
   }

@@ -102,9 +102,8 @@ const RECORD_PAGE_FIELDS_VIEW_NAME_BY_OBJECT: Partial<
   opportunity: 'opportunityRecordPageFields',
   person: 'personRecordPageFields',
   task: 'taskRecordPageFields',
-  workflowAutomatedTrigger: 'workflowAutomatedTriggerRecordPageFields',
   workflowRun: 'workflowRunRecordPageFields',
-  workflowVersion: 'workflowVersionRecordPageFields',
+  workspaceMember: 'workspaceMemberRecordPageFields',
 };
 
 const buildRecordPageWidgetConfigurations = ({
@@ -323,8 +322,7 @@ const buildFieldWidgetConfiguration = ({
       fieldDisplayMode,
       viewId: embeddedViewId,
     },
-    // The universal FIELD configuration carries the view universal identifier
-    // under viewId, resolved to the workspace view id at migration time.
+    // viewId holds the view universal identifier until migration resolves it
     universalConfiguration: {
       configurationType: WidgetConfigurationType.FIELD,
       fieldMetadataId: fieldUniversalIdentifier,

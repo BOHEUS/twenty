@@ -1,8 +1,8 @@
 import { type AllStandardObjectFieldName } from 'src/engine/workspace-manager/twenty-standard-application/types/all-standard-object-field-name.type';
 import { msg } from '@lingui/core/macro';
+import { AgentChatThreadConversationType } from 'twenty-shared/ai';
 import {
   FieldMetadataType,
-  MetadataWritability,
   RelationOnDeleteAction,
   RelationType,
 } from 'twenty-shared/types';
@@ -13,6 +13,7 @@ import {
   createStandardFieldFlatMetadata,
 } from 'src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/create-standard-field-flat-metadata.util';
 import { createStandardRelationFieldFlatMetadata } from 'src/engine/workspace-manager/twenty-standard-application/utils/field-metadata/create-standard-relation-field-flat-metadata.util';
+import { PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS } from 'src/engine/workspace-manager/twenty-standard-application/constants/standard-disabled-field-permission-actions.constant';
 import { i18nLabel } from 'src/engine/workspace-manager/twenty-standard-application/utils/i18n-label.util';
 
 export const buildAgentChatThreadStandardFlatFieldMetadatas = (
@@ -43,34 +44,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: 'uuid',
       },
     }),
-    writability: MetadataWritability.SYSTEM,
-    isAuditLogged: false,
-  },
-  userWorkspaceId: {
-    ...createStandardFieldFlatMetadata({
-      ...args,
-      context: {
-        fieldName: 'userWorkspaceId',
-        type: FieldMetadataType.UUID,
-        label: i18nLabel(
-          msg({ message: 'User Workspace ID', context: 'fieldMetadata.label' }),
-        ),
-        description: i18nLabel(
-          msg({
-            message: 'User Workspace ID',
-            context: 'fieldMetadata.description',
-          }),
-        ),
-        icon: 'IconId',
-        isSystem: true,
-        isUIEditable: false,
-        // A workflow run's conversation has no owner: it is read through the
-        // run. The column goes away with the owner contract step
-        // (twentyhq/core-team-issues#2925).
-        isNullable: true,
-      },
-    }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   title: {
@@ -91,7 +66,141 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         isNullable: true,
       },
     }),
-    writability: MetadataWritability.OPEN,
+    isAuditLogged: false,
+  },
+  conversationType: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'conversationType',
+        type: FieldMetadataType.SELECT,
+        label: i18nLabel(
+          msg({ message: 'Conversation type', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message:
+              'Whether this is a regular chat or a canonical direct message',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconMessages',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: false,
+        defaultValue: `'${AgentChatThreadConversationType.STANDARD}'`,
+        options: [
+          {
+            id: '3236f63d-b8f8-4339-9562-1f45814338fd',
+            value: AgentChatThreadConversationType.STANDARD,
+            label: i18nLabel(
+              msg({ message: 'Regular chat', context: 'fieldMetadata.label' }),
+            ),
+            position: 0,
+            color: 'gray',
+          },
+          {
+            id: '293035d8-eaa1-4f12-8a78-e9eec497ef10',
+            value: AgentChatThreadConversationType.DIRECT_MESSAGE,
+            label: i18nLabel(
+              msg({
+                message: 'Direct message',
+                context: 'fieldMetadata.label',
+              }),
+            ),
+            position: 1,
+            color: 'blue',
+          },
+        ],
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  directMessageFirstWorkspaceMemberId: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'directMessageFirstWorkspaceMemberId',
+        type: FieldMetadataType.UUID,
+        label: i18nLabel(
+          msg({
+            message: 'First direct message member ID',
+            context: 'fieldMetadata.label',
+          }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'The first member in the fixed direct message pair',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconUser',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  directMessageSecondWorkspaceMemberId: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'directMessageSecondWorkspaceMemberId',
+        type: FieldMetadataType.UUID,
+        label: i18nLabel(
+          msg({
+            message: 'Second direct message member ID',
+            context: 'fieldMetadata.label',
+          }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'The second member in the fixed direct message pair',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconUser',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  isAssistantParticipant: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'isAssistantParticipant',
+        type: FieldMetadataType.BOOLEAN,
+        label: i18nLabel(
+          msg({
+            message: 'Assistant participant',
+            context: 'fieldMetadata.label',
+          }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'Whether the assistant participates in this conversation',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconSparkles',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: false,
+        defaultValue: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   totalInputTokens: {
@@ -119,7 +228,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: 0,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   totalOutputTokens: {
@@ -147,7 +257,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: 0,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   contextWindowTokens: {
@@ -174,7 +285,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         isNullable: true,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   conversationSize: {
@@ -199,7 +311,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: 0,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   totalInputCredits: {
@@ -227,7 +340,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: "'0'",
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   totalOutputCredits: {
@@ -255,7 +369,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: "'0'",
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   totalCacheReadTokens: {
@@ -283,7 +398,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: "'0'",
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   totalCacheCreationTokens: {
@@ -311,7 +427,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: "'0'",
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   activeStreamId: {
@@ -335,7 +452,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         isNullable: true,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   pendingQuestionMessageId: {
@@ -362,31 +480,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         isNullable: true,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
-    isAuditLogged: false,
-  },
-  lastStreamError: {
-    ...createStandardFieldFlatMetadata({
-      ...args,
-      context: {
-        fieldName: 'lastStreamError',
-        type: FieldMetadataType.RAW_JSON,
-        label: i18nLabel(
-          msg({ message: 'Last Stream Error', context: 'fieldMetadata.label' }),
-        ),
-        description: i18nLabel(
-          msg({
-            message: 'Last Stream Error',
-            context: 'fieldMetadata.description',
-          }),
-        ),
-        icon: 'IconCode',
-        isSystem: true,
-        isUIEditable: false,
-        isNullable: true,
-      },
-    }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   deletedAt: {
@@ -407,7 +502,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         isNullable: true,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   archivedAt: {
@@ -428,7 +524,112 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         isNullable: true,
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  lastActivityAt: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'lastActivityAt',
+        type: FieldMetadataType.DATE_TIME,
+        label: i18nLabel(
+          msg({ message: 'Last activity', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'When the thread was created or last received a message',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconCalendarClock',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  lastMessageText: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'lastMessageText',
+        type: FieldMetadataType.TEXT,
+        label: i18nLabel(
+          msg({ message: 'Last message', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'The start of the last message in the thread',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconMessage',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  lastMessageSenderWorkspaceMemberId: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'lastMessageSenderWorkspaceMemberId',
+        type: FieldMetadataType.UUID,
+        label: i18nLabel(
+          msg({
+            message: 'Last message sender',
+            context: 'fieldMetadata.label',
+          }),
+        ),
+        description: i18nLabel(
+          msg({
+            message:
+              'The member who wrote the last message, empty when the agent or an application did',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconUser',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  writerWorkspaceMemberIds: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'writerWorkspaceMemberIds',
+        type: FieldMetadataType.ARRAY,
+        label: i18nLabel(
+          msg({ message: 'Writers', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'The members who wrote in the thread',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconUsers',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   createdAt: {
@@ -450,7 +651,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: 'now',
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   updatedAt: {
@@ -472,7 +674,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         defaultValue: 'now',
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   turns: {
@@ -499,7 +702,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         },
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   workspaceMember: {
@@ -519,9 +723,7 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         ),
         icon: 'IconUsers',
         isUIEditable: false,
-        // Stays optional for a workflow run's conversation, which is read
-        // through its run rather than owned. Every other thread gets an owner
-        // with the owner contract step (twentyhq/core-team-issues#2925).
+        // Stays nullable for workflow run conversations, read through the run; other threads get an owner with the owner contract step (twentyhq/core-team-issues#2925)
         isNullable: true,
         targetObjectName: 'workspaceMember',
         targetFieldName: 'agentChatThreads',
@@ -533,38 +735,126 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         },
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
-  workflowRun: {
-    ...createStandardRelationFieldFlatMetadata({
+  // Set through the move mutation, which also rewrites the grants the
+  // channel gives on the chat
+  channelId: {
+    ...createStandardFieldFlatMetadata({
       ...args,
       context: {
-        fieldName: 'workflowRun',
-        type: FieldMetadataType.RELATION,
+        fieldName: 'channelId',
+        type: FieldMetadataType.UUID,
         label: i18nLabel(
-          msg({ message: 'Workflow Run', context: 'fieldMetadata.label' }),
+          msg({ message: 'Channel', context: 'fieldMetadata.label' }),
         ),
         description: i18nLabel(
           msg({
-            message: 'Workflow run whose agent step held this conversation',
+            message: 'Channel the thread is triaged in',
             context: 'fieldMetadata.description',
           }),
         ),
-        icon: 'IconHistoryToggle',
+        icon: 'IconHash',
+        isSystem: true,
         isUIEditable: false,
         isNullable: true,
-        targetObjectName: 'workflowRun',
-        targetFieldName: 'agentChatThreads',
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  channelArchivedAt: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'channelArchivedAt',
+        type: FieldMetadataType.DATE_TIME,
+        label: i18nLabel(
+          msg({
+            message: 'Channel archived at',
+            context: 'fieldMetadata.label',
+          }),
+        ),
+        description: i18nLabel(
+          msg({
+            message:
+              'When the thread was marked as done or snoozed in its channel',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconCalendar',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  channelSnoozedUntil: {
+    ...createStandardFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'channelSnoozedUntil',
+        type: FieldMetadataType.DATE_TIME,
+        label: i18nLabel(
+          msg({
+            message: 'Channel snoozed until',
+            context: 'fieldMetadata.label',
+          }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'When a thread snoozed in its channel comes back to it',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconCalendar',
+        isSystem: true,
+        isUIEditable: false,
+        isNullable: true,
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  // Set through the assign mutation, which also lets the assignee reply and
+  // brings the chat to their inbox
+  assignee: {
+    ...createStandardRelationFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'assignee',
+        type: FieldMetadataType.RELATION,
+        label: i18nLabel(
+          msg({ message: 'Assignee', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'Workspace member responsible for the thread',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconUsers',
+        isUIEditable: false,
+        isNullable: true,
+        targetObjectName: 'workspaceMember',
+        targetFieldName: 'assignedAgentChatThreads',
         morphId: null,
         settings: {
           relationType: RelationType.MANY_TO_ONE,
-          onDelete: RelationOnDeleteAction.CASCADE,
-          joinColumnName: 'workflowRunId',
+          onDelete: RelationOnDeleteAction.SET_NULL,
+          joinColumnName: 'assigneeId',
         },
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   messages: {
@@ -591,7 +881,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         },
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   attachments: {
@@ -623,7 +914,8 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         },
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
   recordTargets: {
@@ -653,7 +945,39 @@ export const buildAgentChatThreadStandardFlatFieldMetadatas = (
         },
       },
     }),
-    writability: MetadataWritability.SYSTEM,
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
+    isAuditLogged: false,
+  },
+  participants: {
+    ...createStandardRelationFieldFlatMetadata({
+      ...args,
+      context: {
+        fieldName: 'participants',
+        type: FieldMetadataType.RELATION,
+        label: i18nLabel(
+          msg({ message: 'Participants', context: 'fieldMetadata.label' }),
+        ),
+        description: i18nLabel(
+          msg({
+            message: 'Read and inbox state of each member in this thread',
+            context: 'fieldMetadata.description',
+          }),
+        ),
+        icon: 'IconUsers',
+        isUIEditable: false,
+        isNullable: true,
+        targetObjectName: 'agentChatThreadParticipant',
+        targetFieldName: 'thread',
+        morphId: null,
+        settings: {
+          relationType: RelationType.ONE_TO_MANY,
+          joinColumnName: null,
+        },
+      },
+    }),
+    disabledFieldPermissionActions:
+      PLATFORM_WRITTEN_DISABLED_FIELD_PERMISSION_ACTIONS,
     isAuditLogged: false,
   },
 });

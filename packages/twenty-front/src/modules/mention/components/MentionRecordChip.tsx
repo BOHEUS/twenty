@@ -1,17 +1,17 @@
+import { getChipLabel } from '@/ui/field/display/utils/getChipLabel';
 import { getLinkToShowPage } from '@/object-metadata/utils/getLinkToShowPage';
 import { AvatarOrIcon } from '@/ui/field/display/components/internal/AvatarOrIcon/AvatarOrIcon';
 import { LinkChip } from '@/ui/navigation/link/components/LinkChip/LinkChip';
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { Chip } from 'twenty-ui/primitives/data-display';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
+import { useLingui } from '@lingui/react/macro';
 
 type MentionRecordChipProps = {
   recordId: string;
   objectNameSingular: string;
   label: string;
   imageUrl: string;
-  className?: string;
 };
 
 export const MentionRecordChip = ({
@@ -19,26 +19,14 @@ export const MentionRecordChip = ({
   objectNameSingular,
   label,
   imageUrl,
-  className,
 }: MentionRecordChipProps) => {
+  const { t } = useLingui();
   if (!isNonEmptyString(objectNameSingular)) {
-    return (
-      <Chip
-        variant="ghost"
-        disabled
-        style={{ paddingInlineStart: 0 }}
-      >{t`Unknown object`}</Chip>
-    );
+    return <Chip variant="plain" aria-disabled>{t`Unknown object`}</Chip>;
   }
 
   if (!isNonEmptyString(recordId)) {
-    return (
-      <Chip
-        variant="ghost"
-        disabled
-        style={{ paddingInlineStart: 0 }}
-      >{t`Deleted record`}</Chip>
-    );
+    return <Chip variant="plain" aria-disabled>{t`Deleted record`}</Chip>;
   }
 
   const linkToShowPage = getLinkToShowPage(objectNameSingular, {
@@ -47,10 +35,8 @@ export const MentionRecordChip = ({
 
   return (
     <LinkChip
-      emptyLabel={t`Untitled`}
       to={linkToShowPage}
       variant="soft"
-      className={className}
       startElement={
         <AvatarOrIcon
           name={label}
@@ -60,7 +46,7 @@ export const MentionRecordChip = ({
         />
       }
     >
-      {label}
+      {getChipLabel(label).content}
     </LinkChip>
   );
 };

@@ -1,5 +1,7 @@
+import { AgentChatDirectMessageIdentityService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-direct-message-identity.service';
+import { AgentChatMemberMessageSenderService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-member-message-sender.service';
+import { AgentChatQueueService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-queue.service';
 import { AuthWorkspaceMemberId } from 'src/engine/decorators/auth/auth-workspace-member-id.decorator';
-import { AuthPrincipalGuard } from 'src/engine/guards/auth-principal.guard';
 import { AgentChatThreadLifecycleService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread-lifecycle.service';
 import { AgentChatSharingService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-sharing.service';
 import { UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
@@ -14,7 +16,7 @@ import {
 
 import GraphQLJSON from 'graphql-type-json';
 import { PermissionFlagType } from 'twenty-shared/constants';
-import { isDefined, isNonEmptyString } from 'twenty-shared/utils';
+import { isDefined } from 'twenty-shared/utils';
 
 import { MetadataResolver } from 'src/engine/api/graphql/graphql-config/decorators/metadata-resolver.decorator';
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
@@ -22,19 +24,16 @@ import { toDisplayCredits } from 'src/engine/core-modules/usage/utils/to-display
 import { type WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
-import { AgentMessageDTO } from 'src/engine/metadata-modules/ai/ai-agent-execution/dtos/agent-message.dto';
 import { type BrowsingContextType } from 'src/engine/metadata-modules/ai/ai-agent/types/browsing-context.type';
 import { AgentChatThreadDTO } from 'src/engine/metadata-modules/ai/ai-chat/dtos/agent-chat-thread.dto';
 import { FileAttachmentInput } from 'src/engine/metadata-modules/ai/ai-chat/dtos/file-attachment.input';
 import { AiSystemPromptPreviewDTO } from 'src/engine/metadata-modules/ai/ai-chat/dtos/ai-system-prompt-preview.dto';
-import { ChatStreamCatchupChunksDTO } from 'src/engine/metadata-modules/ai/ai-chat/dtos/chat-stream-catchup-chunks.dto';
 import { SendChatMessageResultDTO } from 'src/engine/metadata-modules/ai/ai-chat/dtos/send-chat-message-result.dto';
 import { AgentChatThreadWorkspaceEntity } from 'src/engine/metadata-modules/ai/ai-history/standard-objects/agent-chat-thread.workspace-entity';
 import { AgentChatEventPublisherService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-event-publisher.service';
 import { AgentChatStreamingService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-streaming.service';
 import { AgentChatTurnPreflightService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-turn-preflight.service';
-import { AgentChatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat.service';
+import { AgentChatThreadService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread.service';
 import { SystemPromptBuilderService } from 'src/engine/metadata-modules/ai/ai-chat/services/system-prompt-builder.service';
 import { tagAiChatStreamScope } from 'src/engine/metadata-modules/ai/ai-chat/utils/tag-ai-chat-stream-scope.util';
 import {
@@ -45,20 +44,23 @@ import { BillingGraphqlApiExceptionFilter } from 'src/engine/core-modules/billin
 import { UsageLimitGraphqlApiExceptionFilter } from 'src/engine/core-modules/usage-limit/filters/usage-limit-graphql-api-exception.filter';
 import { AiGraphqlApiExceptionInterceptor } from 'src/engine/metadata-modules/ai/interceptors/ai-graphql-api-exception.interceptor';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
 @UseGuards(
-  AuthPrincipalGuard({
-    userSession: {
-      standard: true,
-      impersonated: true,
-      playground: true,
-      workspaceAgnostic: false,
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: false,
+      oauthClient: { withUser: true, withoutUser: false },
+      application: { withUser: true, withoutUser: false },
     },
-    apiKey: false,
-    oauthClient: { withUser: true, withoutUser: false },
-    application: { withUser: true, withoutUser: false },
+    requiredPermissionFlags: [PermissionFlagType.AI],
   }),
-  SettingsPermissionGuard(PermissionFlagType.AI),
 )
 @UseInterceptors(AiGraphqlApiExceptionInterceptor)
 @UseFilters(
@@ -69,13 +71,16 @@ import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filt
 @MetadataResolver(() => AgentChatThreadDTO)
 export class AgentChatResolver {
   constructor(
-    private readonly agentChatService: AgentChatService,
+    private readonly agentChatQueueService: AgentChatQueueService,
+    private readonly threadService: AgentChatThreadService,
     private readonly sharingService: AgentChatSharingService,
     private readonly agentChatStreamingService: AgentChatStreamingService,
     private readonly eventPublisherService: AgentChatEventPublisherService,
     private readonly systemPromptBuilderService: SystemPromptBuilderService,
     private readonly turnPreflightService: AgentChatTurnPreflightService,
     private readonly threadLifecycleService: AgentChatThreadLifecycleService,
+    private readonly memberMessageSenderService: AgentChatMemberMessageSenderService,
+    private readonly directMessageIdentityService: AgentChatDirectMessageIdentityService,
   ) {}
 
   @Query(() => AgentChatThreadDTO)
@@ -92,67 +97,31 @@ export class AgentChatResolver {
     });
   }
 
-  @Query(() => [AgentMessageDTO])
-  async chatMessages(
-    @Args('threadId', { type: () => UUIDScalarType }) threadId: string,
-
+  @Mutation(() => UUIDScalarType)
+  async openDirectMessage(
+    @Args('workspaceMemberId', { type: () => UUIDScalarType })
+    peerWorkspaceMemberId: string,
     @AuthWorkspaceMemberId() workspaceMemberId: string,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ) {
-    return this.agentChatService.getMessagesForThread({
-      threadId,
-      workspaceMemberId,
+  ): Promise<string> {
+    return this.directMessageIdentityService.open({
       workspaceId,
+      firstWorkspaceMemberId: workspaceMemberId,
+      secondWorkspaceMemberId: peerWorkspaceMemberId,
     });
-  }
-
-  @Query(() => ChatStreamCatchupChunksDTO)
-  async chatStreamCatchupChunks(
-    @Args('threadId', { type: () => UUIDScalarType }) threadId: string,
-
-    @AuthWorkspaceMemberId() workspaceMemberId: string,
-    @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
-  ) {
-    const thread = await this.sharingService.getReadableThread({
-      threadId,
-      workspaceMemberId,
-      workspaceId,
-    });
-
-    const interruptedError =
-      await this.agentChatStreamingService.reapDeadStream({
-        thread,
-        workspaceId,
-      });
-
-    if (interruptedError) {
-      thread.activeStreamId = null;
-      thread.lastStreamError = interruptedError;
-    }
-
-    const { chunks, maxSeq } =
-      await this.eventPublisherService.getAccumulatedChunks(threadId);
-
-    return {
-      chunks,
-      maxSeq,
-      error: thread.lastStreamError
-        ? {
-            code: thread.lastStreamError.code,
-            message: thread.lastStreamError.message,
-          }
-        : null,
-    };
   }
 
   @Mutation(() => AgentChatThreadDTO)
   async createChatThread(
     @AuthWorkspaceMemberId() workspaceMemberId: string,
     @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args('channelId', { type: () => UUIDScalarType, nullable: true })
+    channelId?: string | null,
   ) {
-    return this.agentChatService.createThread({
+    return this.threadService.createThread({
       workspaceMemberId,
       workspaceId: workspace.id,
+      channelId: channelId ?? undefined,
     });
   }
 
@@ -170,92 +139,66 @@ export class AgentChatResolver {
       nullable: true,
     })
     fileAttachments: FileAttachmentInput[] | null,
+    @Args('mentionedWorkspaceMemberIds', {
+      type: () => [UUIDScalarType],
+      nullable: true,
+    })
+    mentionedWorkspaceMemberIds: string[] | null,
+    // First message only: null files the chat in no channel, omitted keeps its channel
+    @Args('channelId', { type: () => UUIDScalarType, nullable: true })
+    channelId: string | null | undefined,
     @AuthUserWorkspaceId() userWorkspaceId: string,
     @AuthWorkspaceMemberId() workspaceMemberId: string,
     @AuthWorkspace() workspace: WorkspaceEntity,
+    @Args('shouldAssistantReply', { type: () => Boolean, nullable: true })
+    shouldAssistantReply?: boolean | null,
+    @Args('isAssistantParticipant', { type: () => Boolean, nullable: true })
+    isAssistantParticipant?: boolean | null,
+    @Args('isAssistantMentioned', { type: () => Boolean, nullable: true })
+    isAssistantMentioned?: boolean | null,
+    @Args('recipientWorkspaceMemberIds', {
+      type: () => [UUIDScalarType],
+      nullable: true,
+    })
+    recipientWorkspaceMemberIds?: string[] | null,
   ): Promise<SendChatMessageResultDTO> {
-    const thread = await this.turnPreflightService.assertCanStartChatTurn({
-      threadId,
-      modelId,
-      userWorkspaceId,
-      workspaceMemberId,
-      workspace,
-    });
-
-    if (isDefined(thread.deletedAt)) {
-      await this.agentChatService.restoreThread({
-        threadId,
-        workspaceMemberId,
-        workspaceId: workspace.id,
-      });
-    }
-
-    if (isNonEmptyString(thread.activeStreamId)) {
-      const interruptedError =
-        await this.agentChatStreamingService.reapDeadStream({
-          thread,
-          workspaceId: workspace.id,
-        });
-
-      if (interruptedError) {
-        thread.activeStreamId = null;
-        thread.lastStreamError = interruptedError;
-      }
-    }
-
-    if (isNonEmptyString(thread.activeStreamId)) {
-      const queuedMessage = await this.agentChatService.queueMessage({
-        threadId,
-        text,
+    const result = await this.memberMessageSenderService.sendMemberMessage({
+      actor: { workspaceId: workspace.id, workspaceMemberId, userWorkspaceId },
+      target: { threadId, channelId },
+      message: {
         id: messageId,
-        fileAttachments: fileAttachments ?? undefined,
-        workspaceId: workspace.id,
-        userWorkspaceId,
-        workspaceMemberId,
-      });
-
-      await this.eventPublisherService.publish({
-        threadId,
-        workspaceId: workspace.id,
-        event: { type: 'queue-updated' },
-      });
-
-      return { messageId: queuedMessage.id, queued: true };
-    }
-
-    const result = await this.agentChatStreamingService.streamAgentChat({
-      threadId,
-      browsingContext: browsingContext ?? null,
-      modelId,
-      userWorkspaceId,
-      workspaceMemberId,
-      workspace,
-      text,
-      messageId,
-      fileAttachments: fileAttachments ?? undefined,
+        text,
+        attachments: fileAttachments ?? undefined,
+      },
+      addressing: {
+        mentionedWorkspaceMemberIds: mentionedWorkspaceMemberIds ?? [],
+        initialRecipientWorkspaceMemberIds: recipientWorkspaceMemberIds ?? [],
+      },
+      assistant: {
+        isMentioned: isAssistantMentioned ?? false,
+        isInitiallyIncluded: isAssistantParticipant ?? true,
+        isReplyRequested: shouldAssistantReply ?? true,
+      },
+      execution: { modelId, browsingContext: browsingContext ?? null },
     });
 
-    if (result.queued) {
-      await this.eventPublisherService.publish({
+    if (isDefined(result.streamId) && isDefined(result.turnId)) {
+      tagAiChatStreamScope({
+        streamId: result.streamId,
+        turnId: result.turnId,
         threadId,
         workspaceId: workspace.id,
-        event: { type: 'queue-updated' },
       });
-
-      return { messageId: result.messageId, queued: true };
     }
-
-    tagAiChatStreamScope({
-      streamId: result.streamId,
-      turnId: result.turnId,
-      threadId,
-      workspaceId: workspace.id,
-    });
 
     return {
       messageId: result.messageId,
-      queued: false,
+      queued: result.isQueued,
       streamId: result.streamId,
+      mentionedParticipantWorkspaceMemberIds:
+        result.delivery.deliveredMentionWorkspaceMemberIds,
+      recipientParticipantWorkspaceMemberIds:
+        result.delivery.deliveredRecipientWorkspaceMemberIds,
     };
   }
 
@@ -305,7 +248,7 @@ export class AgentChatResolver {
     @AuthWorkspaceMemberId() workspaceMemberId: string,
     @AuthWorkspace() { id: workspaceId }: WorkspaceEntity,
   ): Promise<boolean> {
-    const thread = await this.agentChatService.getWritableThread({
+    const thread = await this.threadService.getWritableThread({
       threadId,
       workspaceMemberId,
       workspaceId,
@@ -323,7 +266,7 @@ export class AgentChatResolver {
     @AuthWorkspaceMemberId() workspaceMemberId: string,
     @AuthWorkspace() workspace: WorkspaceEntity,
   ): Promise<boolean> {
-    const message = await this.agentChatService.findQueuedMessage({
+    const message = await this.agentChatQueueService.findQueuedMessage({
       messageId,
       workspaceId: workspace.id,
     });
@@ -335,12 +278,12 @@ export class AgentChatResolver {
       );
     }
 
-    await this.agentChatService.getWritableThread({
+    await this.threadService.getWritableThread({
       threadId: message.threadId,
       workspaceMemberId,
       workspaceId: workspace.id,
     });
-    const deleted = await this.agentChatService.deleteQueuedMessage({
+    const deleted = await this.agentChatQueueService.deleteQueuedMessage({
       messageId,
       workspaceId: workspace.id,
     });
@@ -361,11 +304,12 @@ export class AgentChatResolver {
     @AuthWorkspace() workspace: WorkspaceEntity,
     @AuthUserWorkspaceId() userWorkspaceId: string,
   ) {
-    return this.systemPromptBuilderService.buildPreview(
-      workspace.id,
+    return this.systemPromptBuilderService.buildPreview({
+      workspaceId: workspace.id,
       userWorkspaceId,
-      workspace.aiAdditionalInstructions ?? undefined,
-    );
+      workspaceInstructions: workspace.aiAdditionalInstructions ?? undefined,
+      assistantProfile: workspace.aiChatAssistantProfile,
+    });
   }
 
   @ResolveField(() => Date)

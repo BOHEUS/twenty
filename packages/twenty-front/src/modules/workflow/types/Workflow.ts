@@ -10,10 +10,12 @@ import {
   type workflowCronTriggerSchema,
   type workflowDatabaseEventTriggerSchema,
   type workflowDelayActionSchema,
+  type workflowWaitForEventActionSchema,
   type workflowDeleteRecordActionSchema,
   type workflowDraftEmailActionSchema,
   type workflowEmptyActionSchema,
   type workflowFilterActionSchema,
+  type recordSortSchema,
   type workflowFindRecordsActionSchema,
   type workflowFormActionSchema,
   type workflowHttpRequestActionSchema,
@@ -21,11 +23,13 @@ import {
   type workflowIteratorActionSchema,
   type workflowLogicFunctionActionSchema,
   type workflowManualTriggerSchema,
+  type workflowMcpToolActionSchema,
   type workflowPickRecordActionSchema,
   type workflowRunSchema,
   type workflowRunStateSchema,
   type workflowRunStatusSchema,
   type workflowRunStepStatusSchema,
+  type workflowSendChatMessageActionSchema,
   type workflowSendEmailActionSchema,
   type workflowTriggerSchema,
   type workflowUpdateRecordActionSchema,
@@ -38,11 +42,15 @@ export type WorkflowCodeAction = z.infer<typeof workflowCodeActionSchema>;
 export type WorkflowLogicFunctionAction = z.infer<
   typeof workflowLogicFunctionActionSchema
 >;
+export type WorkflowMcpToolAction = z.infer<typeof workflowMcpToolActionSchema>;
 export type WorkflowSendEmailAction = z.infer<
   typeof workflowSendEmailActionSchema
 >;
 export type WorkflowDraftEmailAction = z.infer<
   typeof workflowDraftEmailActionSchema
+>;
+export type WorkflowSendChatMessageAction = z.infer<
+  typeof workflowSendChatMessageActionSchema
 >;
 export type WorkflowCreateCalendarEventAction = z.infer<
   typeof workflowCreateCalendarEventActionSchema
@@ -62,10 +70,14 @@ export type WorkflowUpsertRecordAction = z.infer<
 export type WorkflowFindRecordsAction = z.infer<
   typeof workflowFindRecordsActionSchema
 >;
+export type WorkflowRecordSort = z.infer<typeof recordSortSchema>;
 export type WorkflowPickRecordAction = z.infer<
   typeof workflowPickRecordActionSchema
 >;
 export type WorkflowDelayAction = z.infer<typeof workflowDelayActionSchema>;
+export type WorkflowWaitForEventAction = z.infer<
+  typeof workflowWaitForEventActionSchema
+>;
 export type WorkflowFilterAction = z.infer<typeof workflowFilterActionSchema>;
 export type WorkflowFormAction = z.infer<typeof workflowFormActionSchema>;
 export type WorkflowIfElseAction = z.infer<typeof workflowIfElseActionSchema>;
@@ -84,8 +96,10 @@ export type WorkflowEmptyAction = z.infer<typeof workflowEmptyActionSchema>;
 export type WorkflowAction =
   | WorkflowCodeAction
   | WorkflowLogicFunctionAction
+  | WorkflowMcpToolAction
   | WorkflowSendEmailAction
   | WorkflowDraftEmailAction
+  | WorkflowSendChatMessageAction
   | WorkflowCreateCalendarEventAction
   | WorkflowCreateRecordAction
   | WorkflowUpdateRecordAction
@@ -101,6 +115,7 @@ export type WorkflowAction =
   | WorkflowClassifyAction
   | WorkflowIteratorAction
   | WorkflowDelayAction
+  | WorkflowWaitForEventAction
   | WorkflowEmptyAction;
 
 export type WorkflowActionType = WorkflowAction['type'];

@@ -46,4 +46,13 @@ export class DeleteWorkflowActionHandlerService extends WorkspaceMigrationRunner
   ): Promise<void> {
     return;
   }
+
+  protected override getDeferredOperation({
+    flatAction,
+  }: WorkspaceMigrationActionRunnerContext<FlatDeleteWorkflowAction>) {
+    return {
+      name: 'delete_workflowRuns' as const,
+      payload: { coreWorkflowId: flatAction.entityId },
+    };
+  }
 }

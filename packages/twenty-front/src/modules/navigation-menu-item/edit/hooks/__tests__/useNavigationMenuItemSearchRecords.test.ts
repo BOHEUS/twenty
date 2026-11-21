@@ -57,7 +57,13 @@ describe('navigation record search duplicates', () => {
     jest.mocked(useObjectRecordSearchRecords).mockReturnValue({
       loading: false,
       searchRecords: [
-        { ...record, objectLabelSingular: 'Person', tsRankCD: 1, tsRank: 1 },
+        {
+          ...record,
+          objectLabelSingular: 'Person',
+          tsRankCD: 1,
+          tsRank: 1,
+          __typename: 'SearchRecord',
+        },
       ],
       error: undefined,
     });
@@ -65,8 +71,9 @@ describe('navigation record search duplicates', () => {
       id: 'navigation-ivan',
       type: NavigationMenuItemType.RECORD,
       targetRecordId: record.recordId,
-      folderId: 'folder',
+      parentId: 'folder',
       position: 0,
+      isActive: true,
       createdAt: '',
       updatedAt: '',
     };

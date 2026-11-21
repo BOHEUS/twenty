@@ -1,8 +1,10 @@
 import { useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
+import { type MessageDescriptor } from '@lingui/core';
+import { msg } from '@lingui/core/macro';
 import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { Tag } from 'twenty-ui/primitives/data-display';
 import {
   IconBox,
@@ -21,6 +23,7 @@ import {
 import { type ThemeColor, themeCssVariables } from 'twenty-ui/theme';
 
 import { useApolloAdminClient } from '@/settings/admin-panel/apollo/hooks/useApolloAdminClient';
+import { SettingsAdminWorkspaceBillingArrangementsSection } from '@/settings/admin-panel/components/SettingsAdminWorkspaceBillingArrangementsSection';
 import { SettingsAdminWorkspaceCreditGrantModal } from '@/settings/admin-panel/components/SettingsAdminWorkspaceCreditGrantModal';
 import { SettingsAdminWorkspaceCreditGrantsTable } from '@/settings/admin-panel/components/SettingsAdminWorkspaceCreditGrantsTable';
 import { SettingsAdminWorkspaceUsageLimitsSection } from '@/settings/admin-panel/components/SettingsAdminWorkspaceUsageLimitsSection';
@@ -63,10 +66,6 @@ const StyledExternalLink = styled.a`
   display: inline-flex;
   gap: ${themeCssVariables.spacing[1]};
   text-decoration: none;
-
-  &:hover {
-    color: ${themeCssVariables.font.color.primary};
-  }
 `;
 
 const StyledMono = styled.span`
@@ -90,23 +89,21 @@ const STATUS_COLORS: Record<SubscriptionStatus, ThemeColor> = {
   [SubscriptionStatus.IncompleteExpired]: 'gray',
 };
 
-const STATUS_LABELS: Record<SubscriptionStatus, string> = {
-  [SubscriptionStatus.Active]: 'Active',
-  [SubscriptionStatus.Trialing]: 'Trialing',
-  [SubscriptionStatus.PastDue]: 'Past Due',
-  [SubscriptionStatus.Canceled]: 'Canceled',
-  [SubscriptionStatus.Unpaid]: 'Unpaid',
-  [SubscriptionStatus.Paused]: 'Paused',
-  [SubscriptionStatus.Incomplete]: 'Incomplete',
-  [SubscriptionStatus.IncompleteExpired]: 'Incomplete Expired',
+const STATUS_LABELS: Record<SubscriptionStatus, MessageDescriptor> = {
+  [SubscriptionStatus.Active]: msg`Active`,
+  [SubscriptionStatus.Trialing]: msg`Trialing`,
+  [SubscriptionStatus.PastDue]: msg`Past Due`,
+  [SubscriptionStatus.Canceled]: msg`Canceled`,
+  [SubscriptionStatus.Unpaid]: msg`Unpaid`,
+  [SubscriptionStatus.Paused]: msg`Paused`,
+  [SubscriptionStatus.Incomplete]: msg`Incomplete`,
+  [SubscriptionStatus.IncompleteExpired]: msg`Incomplete Expired`,
 };
 
 const toBillingPlanKey = (planKey: string): BillingPlanKey | null =>
-  planKey === BillingPlanKey.PRO
-    ? BillingPlanKey.PRO
-    : planKey === BillingPlanKey.ENTERPRISE
-      ? BillingPlanKey.ENTERPRISE
-      : null;
+  Object.values(BillingPlanKey).find(
+    (billingPlanKey) => billingPlanKey === planKey,
+  ) ?? null;
 
 const StripeLink = ({
   path,
@@ -161,6 +158,9 @@ export const SettingsAdminWorkspaceBillingContent = ({
             description={t`No billing data is available for this workspace.`}
           />
         </Section.Root>
+        <SettingsAdminWorkspaceBillingArrangementsSection
+          workspaceId={workspaceId}
+        />
         <SettingsAdminWorkspaceUsageLimitsSection workspaceId={workspaceId} />
       </StyledContainer>
     );
@@ -211,23 +211,23 @@ export const SettingsAdminWorkspaceBillingContent = ({
         {
           Icon: IconChartBar,
           label: t`Credits used`,
-          value: `${formatCredits(usage.usedCredits)} / ${formatCredits(usage.totalGrantedCredits)}`,
+          value: `${formatCredits(usage.workspaceCreditsUsed)} / ${formatCredits(usage.workspaceCreditsTotalGranted)}`,
         },
         ...(!isTrialing
           ? [
               {
                 Icon: IconCoins,
                 label: t`Base credits`,
-                value: formatCredits(usage.grantedCredits),
+                value: formatCredits(usage.workspaceCreditsGranted),
               },
             ]
           : []),
-        ...(usage.rolloverCredits > 0
+        ...(usage.workspaceCreditsExtraGranted > 0
           ? [
               {
                 Icon: IconCoins,
                 label: t`Granted credits`,
-                value: formatCredits(usage.rolloverCredits),
+                value: formatCredits(usage.workspaceCreditsExtraGranted),
               },
             ]
           : []),
@@ -265,7 +265,7 @@ export const SettingsAdminWorkspaceBillingContent = ({
           label: t`Status`,
           value: (
             <Tag color={STATUS_COLORS[subscription.status]}>
-              {STATUS_LABELS[subscription.status]}
+              {t(STATUS_LABELS[subscription.status])}
             </Tag>
           ),
         },
@@ -362,11 +362,7 @@ export const SettingsAdminWorkspaceBillingContent = ({
           title={t`Customer`}
           description={t`Stripe customer linked to this workspace`}
         />
-        <SettingsTableCard
-          rounded
-          items={customerItems}
-          gridAutoColumns="3fr 8fr"
-        />
+        <SettingsTableCard items={customerItems} gridAutoColumns="3fr 8fr" />
       </Section.Root>
 
       <Section.Root>
@@ -379,11 +375,7 @@ export const SettingsAdminWorkspaceBillingContent = ({
           }
         />
         {isDefined(usage) && (
-          <SettingsTableCard
-            rounded
-            items={usageItems}
-            gridAutoColumns="3fr 8fr"
-          />
+          <SettingsTableCard items={usageItems} gridAutoColumns="3fr 8fr" />
         )}
       </Section.Root>
 
@@ -398,12 +390,15 @@ export const SettingsAdminWorkspaceBillingContent = ({
         />
         {subscription && (
           <SettingsTableCard
-            rounded
             items={subscriptionItems}
             gridAutoColumns="3fr 8fr"
           />
         )}
       </Section.Root>
+
+      <SettingsAdminWorkspaceBillingArrangementsSection
+        workspaceId={workspaceId}
+      />
 
       <SettingsAdminWorkspaceUsageLimitsSection workspaceId={workspaceId} />
 

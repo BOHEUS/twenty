@@ -1,8 +1,7 @@
-// Allowlist of safe WHERE clause patterns for partial indexes.
-// Any new pattern must be reviewed for SQL injection safety before being added.
+// Any new pattern must be reviewed for SQL injection before being allowlisted
 const ALLOWED_INDEX_WHERE_CLAUSES = new Set([
   '"deletedAt" IS NULL',
-  '"isHidden" = true AND "deletedAt" IS NULL',
+  '"_isPrivate"',
 ]);
 
 export const validateAndReturnIndexWhereClause = (

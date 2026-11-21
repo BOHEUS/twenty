@@ -4,18 +4,19 @@ import { START_SUBSCRIPTION_AFTER_PAYMENT_METHOD_QUERY_PARAM } from '@/settings/
 import { useApplyCurrentWorkspaceBillingUpdate } from '@/settings/billing/hooks/useApplyCurrentWorkspaceBillingUpdate';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
 import { useLazyQuery, useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   BillingPortalSessionDocument,
   EndSubscriptionTrialPeriodDocument,
   GetResourceCreditUsageDocument,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 export const useEndSubscriptionTrialPeriod = () => {
+  const { t } = useLingui();
   const { enqueueToast } = useToast();
   const [endSubscriptionTrialPeriod] = useMutation(
     EndSubscriptionTrialPeriodDocument,
@@ -66,7 +67,7 @@ export const useEndSubscriptionTrialPeriod = () => {
     }
 
     enqueueToast({
-      variant: 'error',
+      status: 'error',
       children: t`No payment method found. Please update your billing details.`,
     });
   };
@@ -80,7 +81,7 @@ export const useEndSubscriptionTrialPeriod = () => {
 
       if (options?.skipPaymentMethodRedirect === true) {
         enqueueToast({
-          variant: 'info',
+          status: 'info',
           children: t`Activating subscription...`,
         });
       }
@@ -154,14 +155,14 @@ export const useEndSubscriptionTrialPeriod = () => {
       );
 
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Subscription activated.`,
       });
 
       return { success: true, hasPaymentMethod: true };
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Error while ending trial period. Please contact Twenty team.`,
       });
       return { success: false };

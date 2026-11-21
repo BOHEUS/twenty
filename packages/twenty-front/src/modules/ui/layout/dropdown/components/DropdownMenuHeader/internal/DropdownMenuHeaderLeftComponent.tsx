@@ -1,13 +1,13 @@
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { type MouseEvent, type ReactElement } from 'react';
-import { LightIconButton } from 'twenty-ui/components';
+import { LightIconButton } from 'twenty-ui/components/input';
 import { type IconComponent } from 'twenty-ui/icon';
 import {
   type Avatar,
   type AvatarProps,
 } from 'twenty-ui/primitives/data-display';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledNonClickableStartIcon = styled.div`
   align-items: center;
@@ -41,6 +41,7 @@ export const DropdownMenuHeaderLeftComponent = ({
     }
   | Record<never, never>
 )) => {
+  const { t } = useLingui();
   const theme = useTheme();
   return (
     <>

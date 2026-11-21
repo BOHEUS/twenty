@@ -1,7 +1,7 @@
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
+import { isNonEmptyString } from '@sniptt/guards';
 
-import { getActivitySummary } from '@/activities/utils/getActivitySummary';
+import { LinkifiedText } from '@/ui/field/display/components/LinkifiedText/LinkifiedText';
 import { beautifyExactDate, hasDatePassed } from '~/utils/date-utils';
 
 import { ActivityRow } from '@/activities/components/ActivityRow';
@@ -15,11 +15,14 @@ import { RecordFieldComponentInstanceContext } from '@/object-record/record-fiel
 import { RecordInlineCell } from '@/object-record/record-inline-cell/components/RecordInlineCell';
 import { getRecordFieldInputInstanceId } from '@/object-record/utils/getRecordFieldInputId';
 import { useOpenRecordInSidePanel } from '@/side-panel/hooks/useOpenRecordInSidePanel';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { getRichTextFieldTextLines } from '@/object-record/record-field/ui/utils/getRichTextFieldTextLines';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
 import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
 import { IconCalendar } from 'twenty-ui/icon';
 import { Checkbox } from 'twenty-ui/primitives/input';
+import { Card } from 'twenty-ui/primitives/surfaces';
 import { useTheme, themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledTaskBody = styled.div`
   color: ${themeCssVariables.font.color.tertiary};
@@ -86,16 +89,23 @@ const StyledCheckboxContainer = styled.div`
   display: flex;
 `;
 
-export const TaskRow = ({ task }: { task: Task }) => {
+export const TaskRow = ({
+  task,
+  divider = false,
+}: {
+  task: Task;
+  divider?: boolean;
+}) => {
+  const { t } = useLingui();
   const theme = useTheme();
   const { openRecordInSidePanel } = useOpenRecordInSidePanel();
 
-  const body = getActivitySummary(task?.bodyV2?.blocknote ?? null);
+  const body = getRichTextFieldTextLines(task?.bodyV2)[0] ?? '';
 
   const { completeTask } = useCompleteTask(task);
 
   const junctionFieldName = useObjectMorphJunctionConfigOrThrow({
-    objectNameSingular: CoreObjectNameSingular.Task,
+    objectNameSingular: StandardObjectNameSingular.Task,
   }).junctionField.name;
 
   const instanceIdPrefix =
@@ -108,31 +118,35 @@ export const TaskRow = ({ task }: { task: Task }) => {
 
   return (
     <ActivityRow
+      divider={divider}
+      label={isNonEmptyString(task.title) ? task.title : t`Task title`}
       onClick={() => {
         openRecordInSidePanel({
           recordId: task.id,
-          objectNameSingular: CoreObjectNameSingular.Task,
+          objectNameSingular: StandardObjectNameSingular.Task,
         });
       }}
     >
       <StyledLeftSideContainer>
-        <StyledCheckboxContainer
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
+        <Card.Control
+          render={<StyledCheckboxContainer />}
+          onClick={(event) => event.stopPropagation()}
         >
           <Checkbox
             checked={task.status === 'DONE'}
             shape={'round'}
             onCheckedChange={completeTask}
           />
-        </StyledCheckboxContainer>
+        </Card.Control>
         <StyledTaskTitle completed={task.status === 'DONE'}>
           {task.title || <StyledPlaceholder>{t`Task title`}</StyledPlaceholder>}
         </StyledTaskTitle>
-        <StyledTaskBody>
-          <OverflowingTextWithTooltip text={body} />
-        </StyledTaskBody>
+        <Card.Control render={<StyledTaskBody />}>
+          <OverflowingTextWithTooltip
+            text={<LinkifiedText text={body} />}
+            tooltipContent={body}
+          />
+        </Card.Control>
       </StyledLeftSideContainer>
       <StyledRightSideContainer>
         {task.dueAt && (
@@ -144,9 +158,9 @@ export const TaskRow = ({ task }: { task: Task }) => {
           </StyledDueDate>
         )}
         {
-          <StyledActivityTargetsContainer>
+          <Card.Control render={<StyledActivityTargetsContainer />}>
             <FieldContextProvider
-              objectNameSingular={CoreObjectNameSingular.Task}
+              objectNameSingular={StandardObjectNameSingular.Task}
               objectRecordId={task.id}
               fieldMetadataName={junctionFieldName}
               fieldPosition={0}
@@ -162,7 +176,7 @@ export const TaskRow = ({ task }: { task: Task }) => {
                 </RecordFieldComponentInstanceContext.Provider>
               </StopPropagationContainer>
             </FieldContextProvider>
-          </StyledActivityTargetsContainer>
+          </Card.Control>
         }
       </StyledRightSideContainer>
     </ActivityRow>

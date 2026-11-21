@@ -36,15 +36,10 @@ const StyledPillAnchor = styled.div`
 
 const StyledTrigger = styled.button`
   align-items: center;
-  background: none;
-  border: none;
   border-radius: ${themeCssVariables.border.radius.pill};
   color: ${themeCssVariables.font.color.tertiary};
   corner-shape: round;
-  cursor: pointer;
   display: flex;
-  font-family: inherit;
-  padding: 0;
 
   &:hover > span,
   &[data-popup-open] > span {
@@ -103,6 +98,10 @@ const StyledInfoPart = styled(StyledTriggerPart)`
   &:not([data-highlighted='earned']) {
     border-left-color: ${themeCssVariables.border.color.transparentStrong};
   }
+`;
+
+const StyledPopup = styled(Popover.Popup)`
+  width: 300px;
 `;
 
 const StyledTooltipContents = styled.div`
@@ -247,42 +246,50 @@ export const OnboardingFreeCreditsPill = ({
               <IconInfoCircle size={theme.icon.size.md} color="currentColor" />
             </StyledInfoPart>
           </Popover.Trigger>
-          <Popover.Popup side="bottom" align="end" aria-label={t`Free credits`}>
-            <OnboardingFreeCreditsPopoverContent
-              earnedCredits={earnedCredits}
-              earnedCreditsByStep={earnedCreditsByStep}
-            />
-          </Popover.Popup>
+          <Popover.Portal>
+            <Popover.Positioner side="bottom" align="end">
+              <StyledPopup aria-label={t`Free credits`}>
+                <OnboardingFreeCreditsPopoverContent
+                  earnedCredits={earnedCredits}
+                  earnedCreditsByStep={earnedCreditsByStep}
+                />
+              </StyledPopup>
+            </Popover.Positioner>
+          </Popover.Portal>
         </Popover.Root>
       </StyledPillAnchor>
       <Tooltip.Root
         open={!isPopoverShown && !isModalFocused && isDefined(tooltipContent)}
       >
-        <Tooltip.Popup
-          anchor={pillRef}
-          side="bottom"
-          align="end"
-          arrow
-          withExitAnimation
-        >
-          <StyledTooltipContents>
-            <AnimatePresence initial={false}>
-              {isDefined(tooltipContent) && (
-                <StyledTooltipContent
-                  key={tooltipContent.title}
-                  initial={{ opacity: 0, y: tooltipSlideOffset }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -tooltipSlideOffset }}
-                  transition={{ duration: theme.animation.duration.normal }}
-                >
-                  <Tooltip.Content description={tooltipContent.description}>
-                    {tooltipContent.title}
-                  </Tooltip.Content>
-                </StyledTooltipContent>
-              )}
-            </AnimatePresence>
-          </StyledTooltipContents>
-        </Tooltip.Popup>
+        <Tooltip.Portal>
+          <Tooltip.Positioner
+            anchor={pillRef}
+            side="bottom"
+            align="end"
+            sideOffset={10}
+          >
+            <Tooltip.Popup withExitAnimation>
+              <StyledTooltipContents>
+                <AnimatePresence initial={false}>
+                  {isDefined(tooltipContent) && (
+                    <StyledTooltipContent
+                      key={tooltipContent.title}
+                      initial={{ opacity: 0, y: tooltipSlideOffset }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -tooltipSlideOffset }}
+                      transition={{ duration: theme.animation.duration.normal }}
+                    >
+                      <Tooltip.Body description={tooltipContent.description}>
+                        {tooltipContent.title}
+                      </Tooltip.Body>
+                    </StyledTooltipContent>
+                  )}
+                </AnimatePresence>
+              </StyledTooltipContents>
+              <Tooltip.Arrow />
+            </Tooltip.Popup>
+          </Tooltip.Positioner>
+        </Tooltip.Portal>
       </Tooltip.Root>
     </StyledContainer>
   );

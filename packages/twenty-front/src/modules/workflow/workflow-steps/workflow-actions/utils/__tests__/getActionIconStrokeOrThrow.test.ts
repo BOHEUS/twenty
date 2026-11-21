@@ -4,6 +4,7 @@ describe('getActionIconStrokeOrThrow', () => {
   it.each([
     'CODE',
     'LOGIC_FUNCTION',
+    'MCP_TOOL',
     'HTTP_REQUEST',
     'SEND_EMAIL',
     'DRAFT_EMAIL',
@@ -21,6 +22,7 @@ describe('getActionIconStrokeOrThrow', () => {
 
   it.each([
     'FORM',
+    'SEND_CHAT_MESSAGE',
     'ITERATOR',
     'EMPTY',
     'FILTER',

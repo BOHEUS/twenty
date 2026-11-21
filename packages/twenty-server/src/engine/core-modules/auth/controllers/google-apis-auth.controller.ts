@@ -55,7 +55,6 @@ export class GoogleAPIsAuthController {
     NoPermissionGuard,
   )
   async googleAuth() {
-    // As this method is protected by Google Auth guard, it will trigger Google SSO flow
     return;
   }
 
@@ -133,7 +132,7 @@ export class GoogleAPIsAuthController {
 
       const { pathname, searchParams, hash } = parseRelativeUrl(
         redirectLocation ||
-          getSettingsPath(SettingsPath.AccountsConfiguration, {
+          getSettingsPath(SettingsPath.AppPreferencesAccountConfiguration, {
             connectedAccountId,
           }),
       );
@@ -154,7 +153,7 @@ export class GoogleAPIsAuthController {
             subdomain: this.twentyConfigService.get('DEFAULT_SUBDOMAIN'),
             customDomain: null,
           },
-          pathname: getSettingsPath(SettingsPath.Accounts),
+          pathname: getSettingsPath(SettingsPath.AppPreferences),
         }),
       );
     }

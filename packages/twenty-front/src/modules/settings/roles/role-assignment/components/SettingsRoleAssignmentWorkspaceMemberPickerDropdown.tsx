@@ -1,12 +1,12 @@
 import { ToastOnQueryErrorEffect } from '@/apollo/components/ToastOnQueryErrorEffect';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
 import { useObjectRecordSearchRecords } from '@/object-record/hooks/useObjectRecordSearchRecords';
 import { type SearchRecord } from '~/generated/graphql';
 import { SettingsRoleAssignmentWorkspaceMemberPickerDropdownContent } from '@/settings/roles/role-assignment/components/SettingsRoleAssignmentWorkspaceMemberPickerDropdownContent';
 import { type PartialWorkspaceMember } from '@/settings/roles/types/RoleWithPartialMembers';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
-import { Dropdown } from 'twenty-ui/components';
+import { Dropdown } from 'twenty-ui/components/navigation';
 
 type SettingsRoleAssignmentWorkspaceMemberPickerDropdownProps = {
   excludedWorkspaceMemberIds: string[];
@@ -24,7 +24,7 @@ export const SettingsRoleAssignmentWorkspaceMemberPickerDropdown = ({
     searchRecords: workspaceMembers,
     error,
   } = useObjectRecordSearchRecords({
-    objectNameSingulars: [CoreObjectNameSingular.WorkspaceMember],
+    objectNameSingulars: [StandardObjectNameSingular.WorkspaceMember],
     searchInput: searchFilter,
   });
 
