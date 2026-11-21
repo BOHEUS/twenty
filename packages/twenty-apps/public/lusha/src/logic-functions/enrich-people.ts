@@ -39,7 +39,7 @@ const ENRICH_PEOPLE_INPUT_SCHEMA: InputJsonSchema = {
   additionalProperties: false,
 };
 
-const handler = (input: BulkEnrichmentFunctionInput) =>
+export const enrichPeopleHandler = (input: BulkEnrichmentFunctionInput) =>
   runBulkEnrichment({
     input: toBulkEnrichmentInput(input),
     adapter: personEnrichmentAdapter,
@@ -51,7 +51,7 @@ export default defineLogicFunction({
   description:
     'Enrich Person records with Lusha: job title, seniority, departments, location, work emails and, when revealed, phone numbers. Spends Lusha credits.',
   timeoutSeconds: ENRICHMENT_TIMEOUT_SECONDS,
-  handler,
+  handler: enrichPeopleHandler,
   httpRouteTriggerSettings: {
     path: LUSHA_LOGIC_FUNCTION_ROUTE_PATHS.enrichPeople,
     httpMethod: 'POST',

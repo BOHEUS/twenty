@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CoreApiClient } from 'twenty-client-sdk/core';
 import { MetadataApiClient } from 'twenty-client-sdk/metadata';
-import { functionExecute } from 'twenty-sdk/cli';
 import { describe, expect, it } from 'vitest';
 
 import { LUSHA_API_KEY_MISSING_MESSAGE } from 'src/constants/enrichment-messages.constant';
@@ -10,6 +9,7 @@ import {
   APPLICATION_UNIVERSAL_IDENTIFIER,
   LUSHA_LOGIC_FUNCTION_ROUTE_PATHS,
 } from 'src/constants/universal-identifiers';
+import { enrichPeopleHandler } from 'src/logic-functions/enrich-people';
 
 const APP_PATH = process.cwd();
 
@@ -64,30 +64,22 @@ describe('Lusha app', () => {
     }
 
     try {
-      const execution = await functionExecute({
-        appPath: APP_PATH,
-        functionName: 'enrich-people',
-        payload: {
-          headers: {},
-          queryStringParameters: {},
-          pathParameters: {},
-          body: { recordIds: [personId] },
-          isBase64Encoded: false,
-          requestContext: {
-            http: {
-              method: 'POST',
-              path: LUSHA_LOGIC_FUNCTION_ROUTE_PATHS.enrichPeople,
-            },
+      const result = await enrichPeopleHandler({
+        headers: {},
+        queryStringParameters: {},
+        pathParameters: {},
+        body: { recordIds: [personId] },
+        isBase64Encoded: false,
+        requestContext: {
+          http: {
+            method: 'POST',
+            path: LUSHA_LOGIC_FUNCTION_ROUTE_PATHS.enrichPeople,
           },
         },
+        userWorkspaceId: null,
       });
 
-      if (!execution.success) {
-        throw new Error(execution.error.message);
-      }
-
-      expect(execution.data.status).toBe('SUCCESS');
-      expect(execution.data.data).toMatchObject({
+      expect(result).toMatchObject({
         success: false,
         total: 1,
         errored: 1,
