@@ -81,6 +81,14 @@ import {
   RULE_NAME as noStorybookA11yDisableName,
 } from './rules/no-storybook-a11y-disable';
 import {
+  rule as noTwentyUiOverride,
+  RULE_NAME as noTwentyUiOverrideName,
+} from './rules/no-twenty-ui-override';
+import {
+  rule as moduleImportDirection,
+  RULE_NAME as moduleImportDirectionName,
+} from './rules/module-import-direction';
+import {
   rule as noWindowOpen,
   RULE_NAME as noWindowOpenName,
 } from './rules/no-window-open';
@@ -133,6 +141,8 @@ export default definePlugin({
     [noRuntimeImportFromUpgradeCommandName]: noRuntimeImportFromUpgradeCommand,
     [noStateUserefName]: noStateUseref,
     [noStorybookA11yDisableName]: noStorybookA11yDisable,
+    [noTwentyUiOverrideName]: noTwentyUiOverride,
+    [moduleImportDirectionName]: moduleImportDirection,
     [noWindowOpenName]: noWindowOpen,
     [preferWorkspaceScopedRepositoryName]: preferWorkspaceScopedRepository,
     [restApiMethodsShouldBeGuardedName]: restApiMethodsShouldBeGuarded,

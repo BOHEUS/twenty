@@ -40,7 +40,9 @@ export const useWorkspaceFromInviteHash = () => {
 
   // TODO: Rework this useEffect - Charles will refactor as part of auth rework
   useEffect(() => {
-    if (!workspaceFromInviteHash || hasRedirected) return;
+    if (!workspaceFromInviteHash || hasRedirected) {
+      return;
+    }
 
     const inviteWorkspace = workspaceFromInviteHash.findWorkspaceFromInviteHash;
 
@@ -53,7 +55,7 @@ export const useWorkspaceFromInviteHash = () => {
       const workspaceDisplayName = inviteWorkspace.displayName;
       initiallyLoggedIn &&
         enqueueToast({
-          variant: 'info',
+          status: 'info',
           children: workspaceDisplayName
             ? t`You already belong to the workspace ${workspaceDisplayName}`
             : t`You already belong to this workspace`,

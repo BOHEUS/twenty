@@ -15,6 +15,8 @@ import { IsNull, Not, Repository } from 'typeorm';
 import { v4 } from 'uuid';
 import { z } from 'zod';
 
+import { buildBundledApplicationPackageJson } from 'src/engine/core-modules/application/application-bundled/utils/build-bundled-application-package-json.util';
+import { findBundledApplication } from 'src/engine/core-modules/application/application-bundled/utils/find-bundled-application.util';
 import { assertValidNpmPackageName } from 'src/engine/core-modules/application/application-package/utils/assert-valid-npm-package-name.util';
 import { extractTarballSecurely } from 'src/engine/core-modules/application/application-package/utils/extract-tarball-securely.util';
 import { assertValidNpmVersionSpec } from 'src/engine/core-modules/application/application-package/utils/is-valid-npm-version-spec.util';
@@ -29,7 +31,7 @@ import {
 } from 'src/engine/core-modules/application/application.exception';
 import { FileStorageService } from 'src/engine/core-modules/file-storage/services/file-storage.service';
 import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
-import { removeFileFolderFromFileEntityPath } from 'src/engine/core-modules/file/utils/remove-file-folder-from-file-entity-path.utils';
+import { removeFileFolderFromFileEntityPath } from 'src/engine/core-modules/file/utils/remove-file-folder-from-file-entity-path.util';
 import { MAX_REQUEST_BODY_SIZE } from 'src/engine/constants/max-request-body-size.constant';
 import { SecureHttpClientService } from 'src/engine/core-modules/secure-http-client/secure-http-client.service';
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
@@ -45,6 +47,7 @@ export type ResolvedPackage = {
   cleanupDir: string;
   manifest: Manifest;
   packageJson: PackageJson;
+  registryTarballUrl?: string;
 };
 
 const registryVersionMetadataSchema = z.object({
@@ -123,9 +126,44 @@ export class ApplicationPackageFetcherService implements OnModuleInit {
         );
       case ApplicationRegistrationSourceType.TARBALL:
         return this.resolveFromTarball(appRegistration);
+      case ApplicationRegistrationSourceType.BUNDLED:
+        return this.resolveFromBundled({
+          appRegistration,
+          targetVersion: options?.targetVersion,
+        });
       case ApplicationRegistrationSourceType.LOCAL:
       case ApplicationRegistrationSourceType.OAUTH_ONLY:
         return null;
+    }
+  }
+
+  async findRegistryTarballUrl({
+    packageName,
+    version,
+  }: {
+    packageName: string;
+    version: string;
+  }): Promise<string | null> {
+    try {
+      assertValidNpmPackageName(packageName);
+      assertValidNpmVersionSpec(version);
+
+      return await this.fetchRegistryTarballUrlOrThrow(
+        this.twentyConfigService.get('APP_REGISTRY_URL'),
+        packageName,
+        version,
+        this.twentyConfigService.get('APP_REGISTRY_TOKEN'),
+      );
+    } catch (error) {
+      if (!(error instanceof ApplicationException)) {
+        throw error;
+      }
+
+      this.logger.warn(
+        `No registry artifact for ${packageName}@${version}: ${error.message}`,
+      );
+
+      return null;
     }
   }
 
@@ -155,7 +193,7 @@ export class ApplicationPackageFetcherService implements OnModuleInit {
 
       assertValidNpmVersionSpec(versionSpec);
 
-      const tarballUrl = await this.fetchTarballUrl(
+      const tarballUrl = await this.fetchRegistryTarballUrlOrThrow(
         registryUrl,
         sourcePackage,
         versionSpec,
@@ -171,7 +209,7 @@ export class ApplicationPackageFetcherService implements OnModuleInit {
       const tarballPath = join(workDir, 'package.tgz');
 
       await fs.writeFile(tarballPath, tarballBuffer);
-      await extractTarballSecurely(tarballPath, workDir);
+      await extractTarballSecurely({ tarballPath, targetDir: workDir });
       await fs.rm(tarballPath);
 
       const contentDir = await resolvePackageContentDir(workDir);
@@ -196,6 +234,7 @@ export class ApplicationPackageFetcherService implements OnModuleInit {
         cleanupDir: workDir,
         manifest,
         packageJson,
+        registryTarballUrl: tarballUrl,
       };
     } catch (error) {
       await this.cleanupExtractedDir(workDir);
@@ -256,7 +295,7 @@ export class ApplicationPackageFetcherService implements OnModuleInit {
       const tarballPath = join(workDir, 'app.tar.gz');
 
       await fs.writeFile(tarballPath, tarballBuffer);
-      await extractTarballSecurely(tarballPath, workDir);
+      await extractTarballSecurely({ tarballPath, targetDir: workDir });
       await fs.rm(tarballPath);
 
       const contentDir = await resolvePackageContentDir(workDir);
@@ -289,7 +328,64 @@ export class ApplicationPackageFetcherService implements OnModuleInit {
     }
   }
 
-  private async fetchTarballUrl(
+  // Install reads package files from a directory, so the embedded manifest is written to one
+  private async resolveFromBundled({
+    appRegistration,
+    targetVersion,
+  }: {
+    appRegistration: Pick<
+      ApplicationRegistrationEntity,
+      'id' | 'universalIdentifier'
+    >;
+    targetVersion?: string;
+  }): Promise<ResolvedPackage> {
+    const bundledApplication = findBundledApplication(
+      appRegistration.universalIdentifier,
+    );
+
+    if (!isDefined(bundledApplication)) {
+      throw new ApplicationException(
+        `App registration ${appRegistration.id} has sourceType=bundled but this server ships no such application`,
+        ApplicationExceptionCode.PACKAGE_RESOLUTION_FAILED,
+      );
+    }
+
+    // During a rollout an older worker still ships the previous version
+    if (
+      isDefined(targetVersion) &&
+      targetVersion !== bundledApplication.version
+    ) {
+      throw new ApplicationException(
+        `Bundled application ${appRegistration.universalIdentifier}@${targetVersion} was requested but this server ships ${bundledApplication.version}`,
+        ApplicationExceptionCode.PACKAGE_RESOLUTION_FAILED,
+      );
+    }
+
+    const workDir = join(APP_FETCHER_TMPDIR, v4());
+    const packageJson = buildBundledApplicationPackageJson({
+      universalIdentifier: appRegistration.universalIdentifier,
+      version: bundledApplication.version,
+    });
+
+    await fs.mkdir(workDir, { recursive: true });
+    await fs.writeFile(
+      join(workDir, 'manifest.json'),
+      JSON.stringify(bundledApplication.manifest),
+    );
+    await fs.writeFile(
+      join(workDir, 'package.json'),
+      JSON.stringify(packageJson),
+    );
+
+    return {
+      extractedDir: workDir,
+      cleanupDir: workDir,
+      manifest: bundledApplication.manifest,
+      packageJson,
+    };
+  }
+
+  private async fetchRegistryTarballUrlOrThrow(
     registryUrl: string,
     sourcePackage: string,
     versionSpec: string,

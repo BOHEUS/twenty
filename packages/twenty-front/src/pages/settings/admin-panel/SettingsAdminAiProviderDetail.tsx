@@ -19,7 +19,6 @@ import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDi
 import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { RoundedLink } from '@/ui/navigation/link/components/RoundedLink/RoundedLink';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { SettingsPath } from 'twenty-shared/types';
@@ -43,11 +42,13 @@ import {
   type AdminAiModelConfig,
   SetAdminAiModelEnabledDocument,
 } from '~/generated-admin/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 const REMOVE_PROVIDER_MODAL_ID = 'settings-ai-provider-remove';
 const REMOVE_MODEL_MODAL_ID = 'settings-ai-model-remove';
 
 export const SettingsAdminAiProviderDetail = () => {
+  const { t } = useLingui();
   const { providerName } = useParams<{ providerName: string }>();
   const apolloAdminClient = useApolloAdminClient();
   const navigate = useNavigate();
@@ -103,13 +104,13 @@ export const SettingsAdminAiProviderDetail = () => {
         ],
       });
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Provider "${provider?.label ?? providerName}" removed`,
       });
       navigate(AI_ADMIN_PATH);
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to remove provider`,
       });
     }
@@ -133,12 +134,12 @@ export const SettingsAdminAiProviderDetail = () => {
       });
       await refetchClientConfig();
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Model "${modelToRemove.label}" removed`,
       });
       setModelToRemove(null);
     } catch {
-      enqueueToast({ variant: 'error', children: t`Failed to remove model` });
+      enqueueToast({ status: 'error', children: t`Failed to remove model` });
     }
   };
 
@@ -187,7 +188,7 @@ export const SettingsAdminAiProviderDetail = () => {
       await refetchClientConfig();
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to update model availability`,
       });
     }
@@ -292,7 +293,7 @@ export const SettingsAdminAiProviderDetail = () => {
     }
 
     return items;
-  }, [provider, navigate, isCustomProvider]);
+  }, [provider, navigate, isCustomProvider, t]);
 
   const newModelPath = providerName
     ? getSettingsPath(SettingsPath.AdminPanelNewAiModel, { providerName })
@@ -327,7 +328,6 @@ export const SettingsAdminAiProviderDetail = () => {
 
           {provider && (
             <SettingsTableCard
-              rounded
               items={providerInfoItems}
               gridAutoColumns="120px 1fr"
             />
@@ -371,7 +371,9 @@ export const SettingsAdminAiProviderDetail = () => {
                   )
                   .map((model) => model.modelId);
 
-                if (modelIds.length === 0) return;
+                if (modelIds.length === 0) {
+                  return;
+                }
 
                 try {
                   await setModelsEnabled({
@@ -382,7 +384,7 @@ export const SettingsAdminAiProviderDetail = () => {
                   });
                 } catch {
                   enqueueToast({
-                    variant: 'error',
+                    status: 'error',
                     children: t`Failed to update model availability`,
                   });
                 } finally {

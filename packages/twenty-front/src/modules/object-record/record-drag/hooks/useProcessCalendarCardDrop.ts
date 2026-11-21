@@ -20,6 +20,7 @@ import { recordIndexCalendarFieldMetadataIdComponentState } from '@/object-recor
 import { Temporal } from 'temporal-polyfill';
 import { FieldMetadataType } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const useProcessCalendarCardDrop = () => {
   const store = useStore();
@@ -50,7 +51,9 @@ export const useProcessCalendarCardDrop = () => {
       // Read before any await: the drag provider clears it once this call returns
       const draggedRecordIds = store.get(draggedRecordIdsCallbackState);
 
-      if (!recordIndexCalendarFieldMetadataId) return;
+      if (!recordIndexCalendarFieldMetadataId) {
+        return;
+      }
 
       const destinationPlainDate = Temporal.PlainDate.from(destinationDate);
       const sourcePlainDate = Temporal.PlainDate.from(sourceDate);
@@ -59,7 +62,9 @@ export const useProcessCalendarCardDrop = () => {
         (field) => field.id === recordIndexCalendarFieldMetadataId,
       );
 
-      if (!calendarFieldMetadata) return;
+      if (!calendarFieldMetadata) {
+        return;
+      }
 
       const destinationRecordIdsIncludingDraggedRecord = store.get(
         calendarDayRecordIdsSelector({
@@ -110,7 +115,9 @@ export const useProcessCalendarCardDrop = () => {
 
         if (!isDefined(targetRecord)) {
           throw new Error(
-            `targetRecord cannot be found in passed recordsWithPosition, this should not happen.`,
+            doNotTranslate(
+              `targetRecord cannot be found in passed recordsWithPosition, this should not happen.`,
+            ),
           );
         }
 

@@ -1,7 +1,5 @@
-import { type AgentResponseSchema } from 'twenty-shared/ai';
-import { AGENT_TRIGGER_LIMITS } from 'twenty-shared/application';
+import { t } from '@lingui/core/macro';
 import { z } from 'zod';
-import { coreAgentTriggerSchema } from '@/object-core/agents/validation-schemas/coreAgentTriggerSchema';
 import { zodNonEmptyString } from '~/types/ZodNonEmptyString';
 
 export const coreAgentFormSchema = z.object({
@@ -9,10 +7,10 @@ export const coreAgentFormSchema = z.object({
   label: zodNonEmptyString,
   description: z.string().nullish(),
   icon: z.string().optional(),
-  modelId: z.string().min(1, 'Model is required'),
-  role: z.string().nullish(),
+  avatarColor: z.string().nullish(),
+  avatarShape: z.string().nullish(),
+  modelId: z.string().min(1, { error: () => t`Model is required` }),
   prompt: zodNonEmptyString,
-  isCustom: z.boolean().default(true),
   modelConfiguration: z
     .object({
       webSearch: z
@@ -29,16 +27,6 @@ export const coreAgentFormSchema = z.object({
         .optional(),
     })
     .optional(),
-  responseFormat: z
-    .object({
-      type: z.enum(['text', 'json']),
-      schema: z.custom<AgentResponseSchema>().optional(),
-    })
-    .optional(),
-  triggers: z
-    .array(coreAgentTriggerSchema)
-    .max(AGENT_TRIGGER_LIMITS.MAX_TRIGGERS_PER_AGENT)
-    .default([]),
 });
 
 export type CoreAgentFormValues = z.infer<typeof coreAgentFormSchema>;

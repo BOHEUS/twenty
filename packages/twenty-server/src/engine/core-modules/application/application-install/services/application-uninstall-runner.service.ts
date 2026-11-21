@@ -1,29 +1,36 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { isDefined } from 'twenty-shared/utils';
 
 import { ApplicationSyncService } from 'src/engine/core-modules/application/application-manifest/application-sync.service';
-import { ApplicationException } from 'src/engine/core-modules/application/application.exception';
 import { ApplicationLookupService } from 'src/engine/core-modules/application/application-lookup/application-lookup.service';
 import { type ApplicationEntity } from 'src/engine/core-modules/application/application.entity';
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
+import { ApplicationRegistrationLookupService } from 'src/engine/core-modules/application/application-registration/application-registration-lookup/application-registration-lookup.service';
 import { APPLICATION_LIFECYCLE_LOCK_OPTIONS } from 'src/engine/core-modules/application/application-install/constants/application-lifecycle-lock-options.constant';
 import { APPLICATION_UNINSTALL_STEPS } from 'src/engine/core-modules/application/application-install/constants/application-uninstall-steps.constant';
 import { buildApplicationLifecycleLockKey } from 'src/engine/core-modules/application/application-install/utils/build-application-lifecycle-lock-key.util';
+import { buildApplicationLifecycleLogEntry } from 'src/engine/core-modules/application/application-install/utils/build-application-lifecycle-log-entry.util';
 import { createApplicationLifecycleProgressReporter } from 'src/engine/core-modules/application/application-install/utils/create-application-lifecycle-progress-reporter.util';
+import { getApplicationErrorCode } from 'src/engine/core-modules/application/application-install/utils/get-application-error-code.util';
 import { CacheLockService } from 'src/engine/core-modules/cache-lock/cache-lock.service';
+import { EventLogEmitterService } from 'src/engine/core-modules/event-logs/emit/event-log-emitter.service';
 import { type MessageQueueJobProgressContext } from 'src/engine/core-modules/message-queue/interfaces/message-queue-job.interface';
 import { MetricsService } from 'src/engine/core-modules/metrics/metrics.service';
 import { MetricsKeys } from 'src/engine/core-modules/metrics/types/metrics-keys.type';
 
 @Injectable()
 export class ApplicationUninstallRunnerService {
+  private readonly logger = new Logger(ApplicationUninstallRunnerService.name);
+
   constructor(
     private readonly applicationLookupService: ApplicationLookupService,
+    private readonly applicationRegistrationLookupService: ApplicationRegistrationLookupService,
     private readonly applicationService: ApplicationService,
     private readonly applicationSyncService: ApplicationSyncService,
     private readonly metricsService: MetricsService,
     private readonly cacheLockService: CacheLockService,
+    private readonly eventLogEmitterService: EventLogEmitterService,
   ) {}
 
   async uninstallApplication({
@@ -66,15 +73,33 @@ export class ApplicationUninstallRunnerService {
         APPLICATION_LIFECYCLE_LOCK_OPTIONS,
       );
     } catch (error) {
-      this.metricsService.incrementCounterBy({
-        key: MetricsKeys.AppUninstallFailed,
-        amount: 1,
-        attributes: {
-          ...this.buildMetricsAttributes({ universalIdentifier, application }),
-          error_code:
-            error instanceof ApplicationException ? error.code : 'UNKNOWN',
-        },
-      });
+      const applicationRegistration =
+        await this.applicationRegistrationLookupService
+          .findOneByUniversalIdentifierGlobal(universalIdentifier)
+          .catch((lookupError: unknown) => {
+            this.logger.warn(
+              `Skipping uninstall failure metric: registration lookup failed for ${universalIdentifier} in workspace ${workspaceId}`,
+              lookupError,
+            );
+
+            return null;
+          });
+
+      if (applicationRegistration?.isListed) {
+        this.metricsService.incrementCounterBy({
+          key: MetricsKeys.AppUninstallFailed,
+          amount: 1,
+          attributes: {
+            ...this.buildMetricsAttributes({
+              universalIdentifier,
+              application,
+            }),
+            error_code: getApplicationErrorCode(error),
+          },
+        });
+      }
+
+      await this.recordUninstallLog({ application, workspaceId, error });
 
       throw error;
     }
@@ -87,6 +112,33 @@ export class ApplicationUninstallRunnerService {
         application,
       }),
     });
+
+    await this.recordUninstallLog({ application, workspaceId });
+  }
+
+  private async recordUninstallLog({
+    application,
+    workspaceId,
+    error,
+  }: {
+    application: ApplicationEntity | null;
+    workspaceId: string;
+    error?: unknown;
+  }) {
+    if (!isDefined(application)) {
+      return;
+    }
+
+    await this.eventLogEmitterService.recordApplicationPlatformEvents([
+      buildApplicationLifecycleLogEntry({
+        source: 'UNINSTALL',
+        workspaceId,
+        applicationId: application.id,
+        applicationRegistrationId: application.applicationRegistrationId ?? '',
+        version: application.version ?? '',
+        error,
+      }),
+    ]);
   }
 
   private buildMetricsAttributes({

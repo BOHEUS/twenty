@@ -5,6 +5,7 @@ import { type LimitKind } from 'src/engine/core-modules/usage-limit/types/limit-
 import { type UsageLimitOperationDefinition } from 'src/engine/core-modules/usage-limit/types/usage-limit-operation-definition.type';
 import { findAllowedUsageLimitUnits } from 'src/engine/core-modules/usage-limit/utils/find-allowed-usage-limit-units.util';
 import { findUsageLimitDefinition } from 'src/engine/core-modules/usage-limit/utils/find-usage-limit-definition.util';
+import { getUsageLimitDefaultOverrideOperationType } from 'src/engine/core-modules/usage-limit/utils/get-usage-limit-default-override-operation-type.util';
 import { UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
 import { UsageResourceType } from 'src/engine/core-modules/usage/enums/usage-resource-type.enum';
 
@@ -44,14 +45,29 @@ export const buildQuotaDefinitions = (): UsageQuotaDefinitionDTO[] =>
               definition,
             }),
             allowedSpenderTypes: definition.allowedSpenderTypes,
-            operatorOnlyScopes: definition.defaults
-              .filter(({ isOverridable }) => isOverridable)
-              .map(({ operationType, spenderType, unit, periodUnit }) => ({
-                operationType,
+            operatorOnlyScopes: definition.defaults.flatMap(
+              ({
+                operationTypes,
+                isOverridable,
                 spenderType,
                 unit,
                 periodUnit,
-              })),
+              }) => {
+                return isOverridable
+                  ? [
+                      {
+                        operationType:
+                          getUsageLimitDefaultOverrideOperationType(
+                            operationTypes,
+                          ),
+                        spenderType,
+                        unit,
+                        periodUnit,
+                      },
+                    ]
+                  : [];
+              },
+            ),
           },
         ]
       : [];

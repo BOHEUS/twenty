@@ -43,9 +43,14 @@ const StyledDescription = styled.div`
   font-size: var(--t-font-size-sm);
   font-weight: var(--t-font-weight-regular);
   line-height: var(--t-text-line-height-lg);
-  max-height: 2.8em;
-  overflow: hidden;
-  width: 50%;
+  width: min(100%, max(50%, 48ch));
+`;
+
+const StyledActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--t-spacing-2);
+  justify-content: center;
 `;
 
 export const EmptyState = {
@@ -53,4 +58,5 @@ export const EmptyState = {
   Content: StyledContent,
   Title: StyledTitle,
   Description: StyledDescription,
+  Actions: StyledActions,
 };

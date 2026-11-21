@@ -1,4 +1,4 @@
-import { RecordTableColumnAggregateFooterDropdownContext } from '@/object-record/record-table/record-table-footer/components/RecordTableColumnAggregateFooterDropdownContext';
+import { RecordTableColumnAggregateFooterCellContext } from '@/object-record/record-table/record-table-footer/components/RecordTableColumnAggregateFooterCellContext';
 import { viewFieldAggregateOperationState } from '@/object-record/record-table/record-table-footer/states/viewFieldAggregateOperationState';
 import { type ExtendedAggregateOperations } from '@/object-record/record-table/types/ExtendedAggregateOperations';
 import { convertExtendedAggregateOperationToAggregateOperation } from '@/object-record/utils/convertExtendedAggregateOperationToAggregateOperation';
@@ -13,10 +13,11 @@ import { usePerformViewFieldApiPersist } from '@/views/hooks/internal/usePerform
 import { useGetCurrentViewOnly } from '@/views/hooks/useGetCurrentViewOnly';
 import { useContext } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const useViewFieldAggregateOperation = () => {
-  const { fieldMetadataId } = useContext(
-    RecordTableColumnAggregateFooterDropdownContext,
+  const { viewFieldId } = useContext(
+    RecordTableColumnAggregateFooterCellContext,
   );
   const { currentView } = useGetCurrentViewOnly();
   const recordTableWidgetContext = useContext(RecordTableWidgetContext);
@@ -41,7 +42,7 @@ export const useViewFieldAggregateOperation = () => {
     : currentView;
 
   const currentViewField = currentViewForAggregateOperation?.viewFields?.find(
-    (viewField) => viewField.fieldMetadataId === fieldMetadataId,
+    (viewField) => viewField.id === viewFieldId,
   );
 
   const { performViewFieldApiUpdate } = usePerformViewFieldApiPersist();
@@ -50,7 +51,7 @@ export const useViewFieldAggregateOperation = () => {
     aggregateOperation: ExtendedAggregateOperations | null,
   ) => {
     if (!currentViewField) {
-      throw new Error('ViewField not found');
+      throw new Error(doNotTranslate('ViewField not found'));
     }
 
     const aggregateOperationForPersistence =

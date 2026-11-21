@@ -1,6 +1,7 @@
 import { t } from '@lingui/core/macro';
 import { format, type Locale } from 'date-fns';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 import { isListValue } from '~/utils/validation/isListValue';
 import { isNumericRange } from '~/utils/validation/isNumericRange';
@@ -42,8 +43,8 @@ export const getDayOfWeekDescription = (
   const dayOfWeekStartIndexZero = options.dayOfWeekStartIndexZero ?? true;
 
   // Last occurrence of a weekday in the month (e.g., "5L" = last Friday)
-  if (dayOfWeek.includes('L')) {
-    const day = dayOfWeek.replace('L', '');
+  if (dayOfWeek.includes(doNotTranslate('L'))) {
+    const day = dayOfWeek.replace(doNotTranslate('L'), '');
     const dayNum = parseInt(day, 10);
     if (!isNaN(dayNum)) {
       const dayName = getDayName(
@@ -129,25 +130,27 @@ export const getDayOfWeekDescription = (
         : day;
     });
 
-    if (dayNames.length === 1) {
-      const dayName = dayNames[0];
-      return t`only on ${dayName}`;
+    const lastDay = dayNames.at(-1) ?? '';
+    const remainingDays = dayNames.slice(0, -1).join(', ');
+
+    if (options.isCombinedWithDayOfMonth === true) {
+      return t`on ${remainingDays} and ${lastDay}`;
     }
-    if (dayNames.length === 2) {
-      const firstDay = dayNames[0];
-      const secondDay = dayNames[1];
-      return t`only on ${firstDay} and ${secondDay}`;
-    }
-    const lastDay = dayNames.pop();
-    const remainingDays = dayNames.join(', ');
-    return t`only on ${remainingDays} and ${lastDay ?? ''}`;
+
+    return t`only on ${remainingDays} and ${lastDay}`;
   }
 
   const dayNum = parseInt(dayOfWeek, 10);
-  if (!isNaN(dayNum)) {
-    const dayName = getDayName(dayNum, dayOfWeekStartIndexZero, localeCatalog);
-    return t`only on ${dayName}`;
+
+  if (isNaN(dayNum)) {
+    return dayOfWeek;
   }
 
-  return dayOfWeek;
+  const dayName = getDayName(dayNum, dayOfWeekStartIndexZero, localeCatalog);
+
+  if (options.isCombinedWithDayOfMonth === true) {
+    return t`on ${dayName}`;
+  }
+
+  return t`only on ${dayName}`;
 };

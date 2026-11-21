@@ -13,8 +13,6 @@ import { SignInUpPasswordField } from '@/auth/sign-in-up/components/internal/Sig
 import { StyledSsoButtonContainer } from '@/auth/sign-in-up/components/internal/SignInUpSsoButtonStyles';
 import { AuthenticatedMethod } from '@/auth/types/AuthenticatedMethod';
 import { SignInUpMode } from '@/auth/types/SignInUpMode';
-import { isRequestingCaptchaTokenState } from '@/captcha/states/isRequestingCaptchaTokenState';
-import { captchaState } from '@/client-config/states/captchaState';
 import { isDDLLockedState } from '@/client-config/states/isDDLLockedState';
 import { InputHint } from '@/ui/input/components/internal/InputHint/InputHint';
 import { useAtomState } from '@/ui/utilities/state/jotai/hooks/useAtomState';
@@ -25,7 +23,6 @@ import { useMemo, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import { isDefined } from 'twenty-shared/utils';
 import { MainButton } from 'twenty-ui/components/input';
-import { Loader } from 'twenty-ui/primitives/feedback';
 
 const StyledForm = styled.form`
   align-items: center;
@@ -45,11 +42,7 @@ export const SignInUpWithCredentials = ({
 
   const [signInUpStep, setSignInUpStep] = useAtomState(signInUpStepState);
   const [showErrors, setShowErrors] = useState(false);
-  const captcha = useAtomStateValue(captchaState);
   const isDDLLocked = useAtomStateValue(isDDLLockedState);
-  const isRequestingCaptchaToken = useAtomStateValue(
-    isRequestingCaptchaTokenState,
-  );
   const lastAuthenticatedMethod = useAtomStateValue(
     lastAuthenticatedMethodState,
   );
@@ -70,7 +63,9 @@ export const SignInUpWithCredentials = ({
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (isSubmitButtonDisabled) return;
+    if (isSubmitButtonDisabled) {
+      return;
+    }
 
     if (signInUpStep === SignInUpStep.Init) {
       continueWithEmail();
@@ -116,22 +111,15 @@ export const SignInUpWithCredentials = ({
     return t`Continue`;
   }, [signInUpMode, signInUpStep, t]);
 
-  const shouldWaitForCaptchaToken =
-    signInUpStep !== SignInUpStep.Init &&
-    isDefined(captcha?.provider) &&
-    isRequestingCaptchaToken;
-
   const isEmailStepSubmitButtonDisabledCondition =
     signInUpStep === SignInUpStep.Email &&
-    (isDefined(form.formState.errors['email']) || shouldWaitForCaptchaToken);
+    isDefined(form.formState.errors['email']);
 
   // TODO: isValid is actually a proxy function. If it is not rendered the first time, react might not trigger re-renders
   // We make the isValid check synchronous and update a reactState to make sure this does not happen
   const isPasswordStepSubmitButtonDisabledCondition =
     signInUpStep === SignInUpStep.Password &&
-    (!form.formState.isValid ||
-      form.formState.isSubmitting ||
-      shouldWaitForCaptchaToken);
+    (!form.formState.isValid || form.formState.isSubmitting);
 
   const isSignUpBlockedByDDLLock =
     isDDLLocked &&
@@ -164,7 +152,8 @@ export const SignInUpWithCredentials = ({
           <StyledSsoButtonContainer>
             <MainButton
               type="submit"
-              startIcon={form.formState.isSubmitting ? <Loader /> : null}
+              loading={form.formState.isSubmitting}
+              loadingPosition="start"
               disabled={isSubmitButtonDisabled}
               fullWidth
               variant={signInUpStep === SignInUpStep.Init ? 'outline' : 'solid'}

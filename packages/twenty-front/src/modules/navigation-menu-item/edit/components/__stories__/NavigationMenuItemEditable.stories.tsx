@@ -38,6 +38,7 @@ const ITEMS: NavigationMenuItem[] = ['Docs', 'Status'].map(
     name,
     link: 'https://example.com',
     position,
+    isActive: true,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   }),
@@ -52,7 +53,7 @@ const EditableNavigation = () => {
         .map((item, index) => (
           <Fragment key={item.id}>
             <NavigationItemDropTarget
-              folderId={null}
+              parentId={null}
               index={index}
               sectionId={NavigationSections.WORKSPACE}
               compact
@@ -63,7 +64,7 @@ const EditableNavigation = () => {
           </Fragment>
         ))}
       <NavigationItemDropTarget
-        folderId={null}
+        parentId={null}
         index={items.length}
         sectionId={NavigationSections.WORKSPACE}
         compact
@@ -226,7 +227,7 @@ export const EditFolderInPlace: Story = {
       await canvas.findByRole('button', { name: 'Choose icon and color' }),
     );
     await expect(
-      await body.findByRole('button', { name: 'Icon123' }),
+      await body.findByRole('option', { name: 'Icon123' }),
     ).toBeVisible();
     await userEvent.keyboard('{Escape}');
   },
@@ -404,7 +405,7 @@ export const ObjectColorDraftReturnsToPersistedValue: Story = {
     const changedColor = persistedColor === 'red' ? 'blue' : 'red';
     await userEvent.click(colorTrigger);
     await userEvent.click(
-      await body.findByRole('button', {
+      await body.findByRole('option', {
         name: DEFAULT_COLOR_LABELS[changedColor],
       }),
     );
@@ -418,7 +419,7 @@ export const ObjectColorDraftReturnsToPersistedValue: Story = {
     );
     await userEvent.click(colorTrigger);
     await userEvent.click(
-      await body.findByRole('button', {
+      await body.findByRole('option', {
         name: DEFAULT_COLOR_LABELS[persistedColor],
       }),
     );

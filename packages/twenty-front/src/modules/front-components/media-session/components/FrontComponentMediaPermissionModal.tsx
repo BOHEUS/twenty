@@ -5,7 +5,6 @@ import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFla
 import { DialogInstance } from '@/ui/layout/dialog/components/DialogInstance';
 import { useMutation } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
 import { PermissionFlagType } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
@@ -13,6 +12,7 @@ import { MainButton } from 'twenty-ui/components/input';
 import { Dialog } from 'twenty-ui/primitives/surfaces';
 import { themeCssVariables } from 'twenty-ui/theme';
 import { GrantApplicationCapabilitiesDocument } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type FrontComponentMediaPermissionModalProps = {
   applicationId: string;
@@ -40,6 +40,7 @@ export const FrontComponentMediaPermissionModal = ({
   modalInstanceId,
   request,
 }: FrontComponentMediaPermissionModalProps) => {
+  const { t } = useLingui();
   const canManageApps = useHasPermissionFlag(PermissionFlagType.APPLICATIONS);
   const [grantCapabilities, { loading }] = useMutation(
     GrantApplicationCapabilitiesDocument,
@@ -91,21 +92,29 @@ export const FrontComponentMediaPermissionModal = ({
     >
       {({ onKeyDown }) => (
         <Dialog.Popup onKeyDown={onKeyDown} size="sm">
-          <StyledContent>
+          <Dialog.Header>
             <Dialog.Title>{t`Allow media access for ${applicationName}?`}</Dialog.Title>
-            {buildApplicationCapabilitySummary(request.capabilities).map(
-              ({ Icon, label }) => (
-                <StyledPermission key={label}>
-                  <Icon size={16} />
-                  {label}
-                </StyledPermission>
-              ),
-            )}
-            <div>{t`This grants access to this app for everyone in your workspace.`}</div>
-            {!canManageApps && (
-              <div>{t`Only members who can manage apps can grant access. Ask your workspace administrator.`}</div>
-            )}
-            {isDefined(errorMessage) && <div role="alert">{errorMessage}</div>}
+          </Dialog.Header>
+          <Dialog.Body>
+            <StyledContent>
+              {buildApplicationCapabilitySummary(request.capabilities).map(
+                ({ Icon, label }) => (
+                  <StyledPermission key={label}>
+                    <Icon size={16} />
+                    {label}
+                  </StyledPermission>
+                ),
+              )}
+              <div>{t`This grants access to this app for everyone in your workspace.`}</div>
+              {!canManageApps && (
+                <div>{t`Only members who can manage apps can grant access. Ask your workspace administrator.`}</div>
+              )}
+              {isDefined(errorMessage) && (
+                <div role="alert">{errorMessage}</div>
+              )}
+            </StyledContent>
+          </Dialog.Body>
+          <Dialog.Footer>
             {canManageApps ? (
               <AuthorizeActionButtons
                 onAuthorize={() => void handleAuthorize()}
@@ -118,7 +127,7 @@ export const FrontComponentMediaPermissionModal = ({
                 fullWidth
               >{t`Close`}</MainButton>
             )}
-          </StyledContent>
+          </Dialog.Footer>
         </Dialog.Popup>
       )}
     </DialogInstance>

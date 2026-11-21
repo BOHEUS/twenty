@@ -7,8 +7,7 @@ import {
   signInUpStepState,
 } from '@/auth/states/signInUpStepState';
 import { getTwoFactorAuthenticationErrorToastOptions } from '@/auth/utils/getTwoFactorAuthenticationErrorToastOptions';
-import { useReadCaptchaToken } from '@/captcha/hooks/useReadCaptchaToken';
-import { useCaptcha } from '@/client-config/hooks/useCaptcha';
+import { useGetCaptchaToken } from '@/captcha/hooks/useGetCaptchaToken';
 import { ONBOARDING_CONTENT_BLOCK_WIDTH } from '@/onboarding/constants/OnboardingContentBlockWidth';
 import { SettingsTextInput } from '@/ui/input/components/SettingsTextInput';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
@@ -49,8 +48,7 @@ export const SignInUpTwoFactorAuthenticationRecovery = () => {
   const { getAuthTokensFromTwoFactorAuthenticationRecoveryCode } = useAuth();
   const { enqueueToast } = useToast();
   const navigate = useNavigateApp();
-  const { readCaptchaToken } = useReadCaptchaToken();
-  const { isCaptchaReady } = useCaptcha();
+  const { getCaptchaToken } = useGetCaptchaToken();
   const loginToken = useAtomStateValue(loginTokenState);
   const setSignInUpStep = useSetAtomState(signInUpStepState);
   const setQrCode = useSetAtomState(qrCodeState);
@@ -59,14 +57,6 @@ export const SignInUpTwoFactorAuthenticationRecovery = () => {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isCaptchaReady) {
-      enqueueToast({
-        variant: 'error',
-        children: t`Captcha (anti-bot check) is still loading, try again`,
-      });
-      return;
-    }
-
     if (!isNonEmptyString(loginToken)) {
       return navigate(AppPath.SignInUp);
     }
@@ -74,11 +64,11 @@ export const SignInUpTwoFactorAuthenticationRecovery = () => {
     setIsLoading(true);
 
     try {
-      const { provisioningUri } =
+      const { provisioningUri, isTwoFactorAuthenticationReset } =
         await getAuthTokensFromTwoFactorAuthenticationRecoveryCode(
           recoveryCode,
           loginToken,
-          readCaptchaToken(),
+          await getCaptchaToken(),
         );
 
       if (isDefined(provisioningUri)) {
@@ -87,15 +77,19 @@ export const SignInUpTwoFactorAuthenticationRecovery = () => {
         return;
       }
 
+      if (!isTwoFactorAuthenticationReset) {
+        return;
+      }
+
       enqueueToast({
-        variant: 'info',
+        status: 'info',
         children: t`Two-factor authentication was reset for this workspace. Set it up again from Settings, Profile.`,
       });
     } catch (error) {
       enqueueToast(
         getTwoFactorAuthenticationErrorToastOptions({
           error,
-          fallbackMessage: t`Invalid or expired recovery code.`,
+          fallbackMessage: t`Invalid or expired code.`,
         }),
       );
     } finally {
@@ -111,8 +105,9 @@ export const SignInUpTwoFactorAuthenticationRecovery = () => {
     <StyledForm onSubmit={handleSubmit}>
       <StyledTwoFactorInstructions>
         <Trans>
-          Enter the recovery code a workspace admin gave you. Your current
-          authenticator for this workspace will be removed.
+          Enter one of your backup codes, or the recovery code a workspace admin
+          gave you. A recovery code removes your current authenticator for this
+          workspace.
         </Trans>
       </StyledTwoFactorInstructions>
       <StyledInputContainer>

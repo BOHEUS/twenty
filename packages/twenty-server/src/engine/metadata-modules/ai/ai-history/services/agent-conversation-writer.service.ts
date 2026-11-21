@@ -7,19 +7,13 @@ import { type ActorMetadata } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { IsNull } from 'typeorm';
 
-import { findAwaitingPausingToolParts } from 'src/engine/metadata-modules/ai/ai-agent-execution/pausing-tools/utils/find-awaiting-pausing-tool-parts.util';
-import { mapAiStepsToUIMessageParts } from 'src/engine/metadata-modules/ai/ai-history/utils/map-ai-steps-to-ui-message-parts.util';
 import { mapUIMessagePartsToDBParts } from 'src/engine/metadata-modules/ai/ai-history/utils/map-ui-message-parts-to-db-parts.util';
 import { AgentMessageRole } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-message-role.enum';
 import { AgentTurnStatus } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-turn-status.enum';
-import { AgentHistoryRepository } from 'src/engine/metadata-modules/ai/ai-history/repositories/agent-history-repository';
-import { InjectAgentHistoryRepository } from 'src/engine/metadata-modules/ai/ai-history/repositories/inject-agent-history-repository.decorator';
 import { AgentHistoryTransactionService } from 'src/engine/metadata-modules/ai/ai-history/services/agent-history-transaction.service';
-import { AgentHistoryUpgradeFenceService } from 'src/engine/metadata-modules/ai/ai-history/services/agent-history-upgrade-fence.service';
-import { type AgentTurnWorkspaceEntity } from 'src/engine/metadata-modules/ai/ai-history/standard-objects/agent-turn.workspace-entity';
 import { type AgentHistoryTransactionScope } from 'src/engine/metadata-modules/ai/ai-history/types/agent-history-transaction-scope.type';
-import { type RecordableAgentExecution } from 'src/engine/metadata-modules/ai/ai-history/types/recordable-agent-execution.type';
 import { isAgentTurnStatusFinal } from 'src/engine/metadata-modules/ai/ai-history/utils/is-agent-turn-status-final.util';
+import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 import {
   AiException,
   AiExceptionCode,
@@ -28,17 +22,66 @@ import {
 @Injectable()
 export class AgentConversationWriterService {
   constructor(
-    @InjectAgentHistoryRepository('agentTurn')
-    private readonly turnRepository: AgentHistoryRepository<AgentTurnWorkspaceEntity>,
     private readonly transactionService: AgentHistoryTransactionService,
-    private readonly upgradeFenceService: AgentHistoryUpgradeFenceService,
+    private readonly workspaceCacheService: WorkspaceCacheService,
   ) {}
 
-  runInTransaction<TResult>(
-    workspaceId: string,
-    work: (scope: AgentHistoryTransactionScope) => Promise<TResult>,
-  ): Promise<TResult> {
-    return this.transactionService.run(workspaceId, work);
+  runInTransaction<TResult>({
+    workspaceId,
+    threadId,
+    work,
+  }: {
+    workspaceId: string;
+    threadId: string | null;
+    work: (scope: AgentHistoryTransactionScope) => Promise<TResult>;
+  }): Promise<TResult> {
+    return this.transactionService.run({ workspaceId, threadId, work });
+  }
+
+  // the message is replaced whole, so no reader or crash ever finds it without its parts
+  async upsertAssistantMessage({
+    workspaceId,
+    id,
+    threadId,
+    turnId,
+    agentId,
+    parts,
+  }: {
+    workspaceId: string;
+    id: string;
+    threadId: string;
+    turnId: string;
+    agentId: string | null;
+    parts: ExtendedUIMessagePart[];
+  }): Promise<void> {
+    const dbParts = mapUIMessagePartsToDBParts(parts, id);
+
+    await this.transactionService.run({
+      workspaceId,
+      threadId,
+      work: async (scope) => {
+        await scope.upsert({
+          name: 'agentMessage',
+          values: {
+            id,
+            threadId,
+            turnId,
+            agentId,
+            role: AgentMessageRole.ASSISTANT,
+            processedAt: new Date().toISOString(),
+          },
+          conflictPaths: ['id'],
+        });
+        await scope.delete({
+          name: 'agentMessagePart',
+          where: { messageId: id },
+        });
+
+        if (dbParts.length > 0) {
+          await scope.insert({ name: 'agentMessagePart', values: dbParts });
+        }
+      },
+    });
   }
 
   async insertTurn({
@@ -51,7 +94,7 @@ export class AgentConversationWriterService {
     scope,
   }: {
     workspaceId: string;
-    threadId: string;
+    threadId: string | null;
     agentId: string | null;
     status: AgentTurnStatus;
     createdBy?: ActorMetadata;
@@ -59,33 +102,29 @@ export class AgentConversationWriterService {
     scope?: AgentHistoryTransactionScope;
   }): Promise<string> {
     const now = new Date().toISOString();
-    const values = (await this.upgradeFenceService.hasUpgradedAgentHistory(
-      workspaceId,
-    ))
-      ? {
-          threadId,
-          agentId,
-          status,
-          startedAt: now,
-          endedAt: isAgentTurnStatusFinal(status) ? now : null,
-          ...(isDefined(createdBy) ? { createdBy } : {}),
-        }
-      : { threadId, agentId };
+    const values = {
+      threadId,
+      agentId,
+      status,
+      startedAt: now,
+      endedAt: isAgentTurnStatusFinal(status) ? now : null,
+      ...(isDefined(createdBy) ? { createdBy } : {}),
+    };
+
+    const turnId = id ?? randomUUID();
+    const write = (transactionScope: AgentHistoryTransactionScope) =>
+      transactionScope.insert({
+        name: 'agentTurn',
+        values: { id: turnId, ...values },
+      });
 
     if (isDefined(scope)) {
-      const turnId = id ?? randomUUID();
-
-      await scope.insert('agentTurn', { id: turnId, ...values });
-
-      return turnId;
+      await write(scope);
+    } else {
+      await this.transactionService.run({ workspaceId, threadId, work: write });
     }
 
-    const turnInsertResult = await this.turnRepository.insert(workspaceId, {
-      ...(isDefined(id) ? { id } : {}),
-      ...values,
-    });
-
-    return (id ?? turnInsertResult.identifiers[0].id) as string;
+    return turnId;
   }
 
   // A turn the agent opens has no user message: a system message gives the
@@ -96,14 +135,16 @@ export class AgentConversationWriterService {
     turnId,
     contextMessageId,
     context,
+    scope,
   }: {
     workspaceId: string;
     threadId: string;
     turnId?: string;
     contextMessageId?: string;
     context: string;
+    scope?: AgentHistoryTransactionScope;
   }): Promise<string> {
-    return this.transactionService.run(workspaceId, async (scope) => {
+    const write = async (scope: AgentHistoryTransactionScope) => {
       const insertedTurnId = await this.insertTurn({
         workspaceId,
         threadId,
@@ -126,7 +167,13 @@ export class AgentConversationWriterService {
       });
 
       return insertedTurnId;
-    });
+    };
+
+    if (isDefined(scope)) {
+      return write(scope);
+    }
+
+    return this.transactionService.run({ workspaceId, threadId, work: write });
   }
 
   // The message and its parts are written together, so a message that
@@ -161,34 +208,46 @@ export class AgentConversationWriterService {
     scope?: AgentHistoryTransactionScope;
   }): Promise<string> {
     const messageId = id ?? randomUUID();
+    const senderWorkspaceMemberId = await this.findSenderWorkspaceMemberId({
+      workspaceId,
+      senderUserWorkspaceId,
+    });
 
     const write = async (transactionScope: AgentHistoryTransactionScope) => {
-      await transactionScope.insert('agentMessage', {
-        id: messageId,
-        threadId,
-        turnId,
-        role,
-        agentId,
-        processedAt: (processedAt ?? new Date()).toISOString(),
-        ...(isDefined(senderUserWorkspaceId) ? { senderUserWorkspaceId } : {}),
-        ...(isDefined(senderApplicationId) ? { senderApplicationId } : {}),
+      await transactionScope.insert({
+        name: 'agentMessage',
+        values: {
+          id: messageId,
+          threadId,
+          turnId,
+          role,
+          agentId,
+          processedAt: (processedAt ?? new Date()).toISOString(),
+          ...(isDefined(senderWorkspaceMemberId)
+            ? { senderWorkspaceMemberId }
+            : {}),
+          ...(isDefined(senderApplicationId) ? { senderApplicationId } : {}),
+        },
       });
 
       const dbParts = mapUIMessagePartsToDBParts(parts, messageId);
 
       if (dbParts.length > 0) {
-        await transactionScope.insert('agentMessagePart', dbParts);
+        await transactionScope.insert({
+          name: 'agentMessagePart',
+          values: dbParts,
+        });
       }
 
       if (!isAwaitingAnswer) {
         return;
       }
 
-      const claimedThreadCount = await transactionScope.update(
-        'agentChatThread',
-        { id: threadId, pendingQuestionMessageId: IsNull() },
-        { pendingQuestionMessageId: messageId },
-      );
+      const claimedThreadCount = await transactionScope.update({
+        name: 'agentChatThread',
+        where: { id: threadId, pendingQuestionMessageId: IsNull() },
+        values: { pendingQuestionMessageId: messageId },
+      });
 
       if (claimedThreadCount === 0) {
         throw new AiException(
@@ -197,67 +256,42 @@ export class AgentConversationWriterService {
         );
       }
 
-      if (await this.upgradeFenceService.hasUpgradedAgentHistory(workspaceId)) {
-        await transactionScope.update(
-          'agentTurn',
-          { id: turnId },
-          { status: AgentTurnStatus.WAITING_FOR_INPUT, endedAt: null },
-        );
-      }
+      await transactionScope.update({
+        name: 'agentTurn',
+        where: { id: turnId },
+        values: { status: AgentTurnStatus.WAITING_FOR_INPUT, endedAt: null },
+      });
     };
 
     if (isDefined(scope)) {
       await write(scope);
     } else {
-      await this.transactionService.run(workspaceId, write);
+      await this.transactionService.run({ workspaceId, threadId, work: write });
     }
 
     return messageId;
   }
 
-  // One unanswerable call would keep the conversation waiting forever, so it is recorded as not waiting
-  async insertExecutionReply({
+  // Callers name the sender by their membership; a sender who has left since
+  // is recorded without one
+  private async findSenderWorkspaceMemberId({
     workspaceId,
-    threadId,
-    turnId,
-    agentId,
-    execution,
-    scope,
+    senderUserWorkspaceId,
   }: {
     workspaceId: string;
-    threadId: string;
-    turnId: string;
-    agentId: string | null;
-    execution: RecordableAgentExecution;
-    scope?: AgentHistoryTransactionScope;
-  }): Promise<{
-    isAwaitingAnswer: boolean;
-    replyParts: ExtendedUIMessagePart[];
-  }> {
-    const replyParts = mapAiStepsToUIMessageParts(execution.steps ?? []);
-
-    if (replyParts.length === 0) {
-      return { isAwaitingAnswer: false, replyParts };
+    senderUserWorkspaceId: string | null;
+  }): Promise<string | null> {
+    if (!isDefined(senderUserWorkspaceId)) {
+      return null;
     }
 
-    const awaitingParts = findAwaitingPausingToolParts(replyParts);
-    const isAwaitingAnswer =
-      execution.isPaused === true &&
-      awaitingParts.length > 0 &&
-      awaitingParts.every(({ isAnswerable }) => isAnswerable);
+    const { flatWorkspaceMemberMaps } =
+      await this.workspaceCacheService.getOrRecompute(workspaceId, [
+        'flatWorkspaceMemberMaps',
+      ]);
 
-    await this.insertMessage({
-      workspaceId,
-      threadId,
-      turnId,
-      role: AgentMessageRole.ASSISTANT,
-      agentId,
-      senderUserWorkspaceId: null,
-      isAwaitingAnswer,
-      parts: replyParts,
-      scope,
-    });
-
-    return { isAwaitingAnswer, replyParts };
+    return (
+      flatWorkspaceMemberMaps.idByUserWorkspaceId[senderUserWorkspaceId] ?? null
+    );
   }
 }

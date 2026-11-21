@@ -64,14 +64,18 @@ describe('validateLogicFunctionForwardedRequestHeaders', () => {
     );
   });
 
-  it('should return an error when a server route forwards a credential header', () => {
+  it('should return an error when a server route forwards cookie or proxy-authorization', () => {
     const errors = validateLogicFunctionForwardedRequestHeaders({
-      serverRouteTriggerSettings: buildServerRouteTriggerSettings(['cookie']),
+      serverRouteTriggerSettings: buildServerRouteTriggerSettings([
+        'authorization',
+        'cookie',
+        'proxy-authorization',
+      ]),
     });
 
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toBe(
-      'forwardedRequestHeaders cannot include credential headers: cookie',
+      'forwardedRequestHeaders cannot include credential headers: cookie, proxy-authorization',
     );
   });
 
@@ -127,5 +131,32 @@ describe('validateLogicFunctionForwardedRequestHeaders', () => {
     expect(errors[0].message).toBe(
       'forwardedRequestHeaders must be an array of strings',
     );
+  });
+
+  it('should return an error when a route forwards the identity assertion header', () => {
+    const errors = validateLogicFunctionForwardedRequestHeaders({
+      httpRouteTriggerSettings: buildHttpRouteTriggerSettings([
+        'cf-access-jwt-assertion',
+      ]),
+      serverRouteTriggerSettings: buildServerRouteTriggerSettings([
+        'CF-Access-Jwt-Assertion',
+      ]),
+      identityAssertionHeaderName: 'Cf-Access-Jwt-Assertion',
+    });
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toBe(
+      'forwardedRequestHeaders cannot include credential headers: cf-access-jwt-assertion, CF-Access-Jwt-Assertion',
+    );
+  });
+
+  it('should accept that header when no identity assertion header is configured', () => {
+    expect(
+      validateLogicFunctionForwardedRequestHeaders({
+        httpRouteTriggerSettings: buildHttpRouteTriggerSettings([
+          'cf-access-jwt-assertion',
+        ]),
+      }),
+    ).toEqual([]);
   });
 });
