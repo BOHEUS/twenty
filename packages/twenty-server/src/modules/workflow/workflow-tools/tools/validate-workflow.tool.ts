@@ -1,45 +1,36 @@
 import { z } from 'zod';
 
-import { type WorkflowCommonWorkspaceService } from 'src/modules/workflow/common/workspace-services/workflow-common.workspace-service';
 import { WorkflowVersionValidationException } from 'src/modules/workflow/workflow-builder/workflow-validation/exceptions/workflow-version-validation.exception';
-import { type WorkflowVersionValidationWorkspaceService } from 'src/modules/workflow/workflow-builder/workflow-validation/workflow-version-validation.workspace-service';
-import { type WorkflowToolContext } from 'src/modules/workflow/workflow-tools/types/workflow-tool-dependencies.type';
+import {
+  type WorkflowToolContext,
+  type WorkflowToolDependencies,
+} from 'src/modules/workflow/workflow-tools/types/workflow-tool-dependencies.type';
 
 const validateWorkflowSchema = z.object({
-  workflowVersionId: z
+  coreWorkflowVersionId: z
     .string()
     .uuid()
-    .describe('The UUID of the workflow version to validate'),
+    .describe('The core workflow version UUID to validate'),
 });
 
 type ValidateWorkflowInput = z.infer<typeof validateWorkflowSchema>;
 
 export const createValidateWorkflowTool = (
-  deps: {
-    workflowCommonService: WorkflowCommonWorkspaceService;
-    workflowVersionValidationWorkspaceService: WorkflowVersionValidationWorkspaceService;
-  },
+  deps: Pick<WorkflowToolDependencies, 'coreWorkflowLifecycleService'>,
   context: WorkflowToolContext,
 ) => ({
   name: 'validate_workflow' as const,
+  isReadOnly: true,
   description:
     'Check whether a workflow version can be activated, without activating it. Runs the exact check activation runs: graph topology (connections, reachability, branches, loops), per-step configuration, references to other objects, and variable references between steps. Succeeds when the version is ready; otherwise fails with the list of issues to fix. Does not modify the workflow.',
   inputSchema: validateWorkflowSchema,
   execute: async (parameters: ValidateWorkflowInput) => {
     try {
-      const workflowVersion =
-        await deps.workflowCommonService.getWorkflowVersionOrFail({
-          workspaceId: context.workspaceId,
-          workflowVersionId: parameters.workflowVersionId,
-        });
-
-      await deps.workflowVersionValidationWorkspaceService.assertWorkflowVersionIsActivableOrThrow(
-        {
-          workspaceId: context.workspaceId,
-          trigger: workflowVersion.trigger,
-          steps: workflowVersion.steps,
-        },
-      );
+      await deps.coreWorkflowLifecycleService.validateCoreWorkflowVersion({
+        workspaceId: context.workspaceId,
+        userWorkspaceId: context.userWorkspaceId,
+        coreWorkflowVersionId: parameters.coreWorkflowVersionId,
+      });
 
       return {
         success: true,

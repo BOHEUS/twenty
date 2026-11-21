@@ -34,15 +34,13 @@ export const fromObjectMetadataEntityToObjectMetadataDto = (
   isRemote: entity.isRemote,
   isActive: resolveEffectiveEntityIsActive(entity),
   isSystem: entity.isSystem,
+  isAuditLogged: entity.isAuditLogged,
   isUIEditable: entity.isUIEditable,
   isUICreatable: entity.isUICreatable,
   isUIReadOnly: !entity.isUIEditable,
   isSearchable: entity.isSearchable,
   openRecordIn: entity.openRecordIn,
-  readability: entity.readability,
-  readabilityParentFieldUniversalIdentifiers:
-    entity.readabilityParentFieldUniversalIdentifiers,
-  writability: entity.writability,
+  disabledObjectPermissionActions: entity.disabledObjectPermissionActions,
   isLabelSyncedWithName: entity.isLabelSyncedWithName,
   workspaceId: entity.workspaceId,
   labelIdentifierFieldMetadataId:

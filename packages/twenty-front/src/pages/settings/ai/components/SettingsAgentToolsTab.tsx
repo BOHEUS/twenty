@@ -1,21 +1,21 @@
+import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
+import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
-import { type ReactNode, useState } from 'react';
-
-import { Dropdown } from '@/ui/layout/dropdown/components/Dropdown';
-import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
-import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
+import { useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { SearchInput } from 'twenty-ui/components/input';
+import { Section } from 'twenty-ui/components/layout';
+import { Dropdown } from 'twenty-ui/components/navigation';
+import { SettingsRow } from 'twenty-ui/components/settings';
 import { IconLock, IconPuzzle, IconTool } from 'twenty-ui/icon';
-import { SearchInput } from 'twenty-ui/primitives/input';
-import { MenuItemSwitch } from 'twenty-ui/primitives/navigation';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { SettingsAgentToolsTable } from '~/pages/settings/ai/components/SettingsAgentToolsTable';
 import { useSettingsAgentToolsTable } from '~/pages/settings/ai/hooks/useSettingsAgentToolsTable';
 import { type SettingsAgentToolItem } from '~/pages/settings/ai/types/SettingsAgentToolItem';
-import { isOwnedByInstalledApplication } from '~/pages/settings/ai/utils/isOwnedByInstalledApplication';
-import { normalizeSearchText } from '~/utils/normalizeSearchText';
+import { isOwnedByInstalledApplication } from '@/applications/utils/isOwnedByInstalledApplication';
+import { normalizeSearchText } from 'twenty-ui/utilities';
+import { SettingsSearchFilterTrigger } from '@/settings/components/SettingsSearchFilterTrigger';
 
 const StyledSearchContainer = styled.div`
   padding-bottom: ${themeCssVariables.spacing[2]};
@@ -84,42 +84,39 @@ export const SettingsAgentToolsTab = () => {
         <SearchInput
           placeholder={t`Search a tool...`}
           value={searchTerm}
-          onChange={setSearchTerm}
-          filterDropdown={(filterButton: ReactNode) => (
-            <Dropdown
+          onValueChange={setSearchTerm}
+          actions={
+            <DropdownRoot
               dropdownId="settings-tools-filter-dropdown"
-              dropdownPlacement="bottom-end"
-              dropdownOffset={{ x: 0, y: 8 }}
-              clickableComponent={filterButton}
-              dropdownComponents={
-                <DropdownContent>
-                  <DropdownMenuItemsContainer>
-                    <MenuItemSwitch
-                      LeftIcon={IconTool}
-                      onCheckedChange={setShowCustomTools}
-                      checked={showCustomTools}
-                      text={t`Custom`}
-                      size="sm"
-                    />
-                    <MenuItemSwitch
-                      LeftIcon={IconLock}
-                      onCheckedChange={setShowManagedTools}
-                      checked={showManagedTools}
-                      text={t`Managed`}
-                      size="sm"
-                    />
-                    <MenuItemSwitch
-                      LeftIcon={IconPuzzle}
-                      onCheckedChange={setShowStandardTools}
-                      checked={showStandardTools}
-                      text={t`Standard`}
-                      size="sm"
-                    />
-                  </DropdownMenuItemsContainer>
-                </DropdownContent>
-              }
-            />
-          )}
+              type="panel"
+            >
+              <SettingsSearchFilterTrigger />
+              <DropdownContent
+                side="bottom"
+                align="end"
+                sideOffset={8}
+                alignOffset={0}
+              >
+                <Dropdown.Section>
+                  <SettingsRow
+                    startElement={<IconTool />}
+                    onCheckedChange={setShowCustomTools}
+                    checked={showCustomTools}
+                  >{t`Custom`}</SettingsRow>
+                  <SettingsRow
+                    startElement={<IconLock />}
+                    onCheckedChange={setShowManagedTools}
+                    checked={showManagedTools}
+                  >{t`Managed`}</SettingsRow>
+                  <SettingsRow
+                    startElement={<IconPuzzle />}
+                    onCheckedChange={setShowStandardTools}
+                    checked={showStandardTools}
+                  >{t`Standard`}</SettingsRow>
+                </Dropdown.Section>
+              </DropdownContent>
+            </DropdownRoot>
+          }
         />
       </StyledSearchContainer>
       <SettingsAgentToolsTable

@@ -21,9 +21,8 @@ import { UsageLimitService } from 'src/engine/core-modules/usage-limit/services/
 import { fromUsageLimitEntityToDto } from 'src/engine/core-modules/usage-limit/utils/from-usage-limit-entity-to-dto.util';
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { SettingsPermissionGuard } from 'src/engine/guards/settings-permission.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
 @MetadataResolver(() => UsageLimitDTO)
 @UseFilters(
@@ -33,8 +32,20 @@ import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filt
 )
 @UsePipes(ResolverValidationPipe)
 @UseGuards(
-  WorkspaceAuthGuard,
-  SettingsPermissionGuard(PermissionFlagType.WORKSPACE),
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: true,
+      oauthClient: true,
+      application: true,
+    },
+    requiredPermissionFlags: [PermissionFlagType.WORKSPACE],
+  }),
 )
 export class UsageLimitResolver {
   constructor(
@@ -87,6 +98,7 @@ export class UsageLimitResolver {
     const usageLimit = await this.usageLimitService.create({
       workspaceId: workspace.id,
       input,
+      isOperator: false,
     });
 
     return fromUsageLimitEntityToDto(usageLimit);
@@ -100,6 +112,7 @@ export class UsageLimitResolver {
     const usageLimit = await this.usageLimitService.update({
       workspaceId: workspace.id,
       input,
+      isOperator: false,
     });
 
     return fromUsageLimitEntityToDto(usageLimit);
@@ -113,6 +126,7 @@ export class UsageLimitResolver {
     return this.usageLimitService.delete({
       workspaceId: workspace.id,
       usageLimitId,
+      isOperator: false,
     });
   }
 }

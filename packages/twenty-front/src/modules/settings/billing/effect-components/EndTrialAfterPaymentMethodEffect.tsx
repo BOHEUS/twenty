@@ -1,5 +1,5 @@
-import { ASK_AI_THREAD_ID_QUERY_PARAM } from '@/ai/constants/AskAiThreadIdQueryParam';
-import { useOpenAskAiThread } from '@/ai/hooks/useOpenAskAiThread';
+import { ASK_AI_THREAD_ID_QUERY_PARAM } from '@/ai-chat/constants/AskAiThreadIdQueryParam';
+import { useOpenAskAiThread } from '@/ai-chat/threads/hooks/useOpenAskAiThread';
 import { START_SUBSCRIPTION_AFTER_PAYMENT_METHOD_QUERY_PARAM } from '@/settings/billing/constants/StartSubscriptionAfterPaymentMethodQueryParam';
 import { useEndSubscriptionTrialPeriod } from '@/settings/billing/hooks/useEndSubscriptionTrialPeriod';
 import { isEndingSubscriptionTrialPeriodState } from '@/settings/billing/states/isEndingSubscriptionTrialPeriodState';
@@ -10,7 +10,7 @@ import { isNonEmptyString } from '@sniptt/guards';
 import { useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
 import { SubscriptionStatus } from '~/generated-metadata/graphql';
 
 export const EndTrialAfterPaymentMethodEffect = () => {
@@ -60,7 +60,7 @@ export const EndTrialAfterPaymentMethodEffect = () => {
         }
       } else if (hasPaymentMethod === false) {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`No payment method found. Please update your billing details.`,
         });
       }

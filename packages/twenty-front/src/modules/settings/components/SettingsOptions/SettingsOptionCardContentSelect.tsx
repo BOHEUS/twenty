@@ -1,3 +1,4 @@
+import { SettingsCardSeparator } from '@/settings/components/SettingsCardSeparator';
 import {
   StyledSettingsCardContent,
   StyledSettingsCardDescription,
@@ -5,13 +6,12 @@ import {
   StyledSettingsCardTextContainer,
   StyledSettingsCardTitle,
 } from '@/settings/components/SettingsOptions/SettingsCardContentBase';
-import { Separator } from '@/settings/components/Separator';
 import { SettingsOptionIconCustomizer } from '@/settings/components/SettingsOptions/SettingsOptionIconCustomizer';
 import { styled } from '@linaria/react';
-import { type IconComponent } from 'twenty-ui/icon';
 import { isDefined } from 'twenty-shared/utils';
-import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/surfaces';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
+import { type IconComponent } from 'twenty-ui/icon';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 type SettingsOptionCardContentSelectProps = {
   Icon?: IconComponent;
@@ -19,7 +19,6 @@ type SettingsOptionCardContentSelectProps = {
   title: React.ReactNode;
   description?: string;
   divider?: boolean;
-  disabled?: boolean;
   children?: React.ReactNode;
 };
 
@@ -55,12 +54,11 @@ export const SettingsOptionCardContentSelect = ({
   title,
   description,
   divider,
-  disabled = false,
   children,
 }: SettingsOptionCardContentSelectProps) => {
   return (
     <>
-      <StyledSelectRow disabled={disabled}>
+      <StyledSelectRow>
         {(isDefined(LeftComponent) || isDefined(Icon)) && (
           <StyledSettingsCardIcon>
             {LeftComponent ??
@@ -77,7 +75,7 @@ export const SettingsOptionCardContentSelect = ({
         </StyledSelectText>
         <StyledSelectContainer>{children}</StyledSelectContainer>
       </StyledSelectRow>
-      {divider && <Separator />}
+      {divider && <SettingsCardSeparator />}
     </>
   );
 };

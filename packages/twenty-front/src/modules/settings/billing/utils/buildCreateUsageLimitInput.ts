@@ -1,21 +1,10 @@
-import { INTERNAL_CREDITS_PER_DISPLAY_CREDIT } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 
 import { type UsageLimitFormValues } from '@/settings/billing/types/UsageLimitFormValues';
 import { buildUsageQuotaScopeInput } from '@/settings/billing/utils/buildUsageQuotaScopeInput';
+import { getUsageLimitInputScale } from '@/settings/billing/utils/getUsageLimitInputScale';
+import { parseUsageLimitValue } from '@/settings/billing/utils/parseUsageLimitValue';
 import { type CreateUsageLimitInput } from '~/generated-metadata/graphql';
-
-const parsePositiveInteger = (value: string): number | null => {
-  const parsed = Number(value);
-
-  return Number.isInteger(parsed) && parsed >= 1 ? parsed : null;
-};
-
-const parsePositiveNumber = (value: string): number | null => {
-  const parsed = Number(value);
-
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-};
 
 export const buildCreateUsageLimitInput = (
   values: UsageLimitFormValues,
@@ -26,11 +15,11 @@ export const buildCreateUsageLimitInput = (
     return null;
   }
 
-  const isCreditsMeter = scope.meter === 'creditsUsedMicro';
-
-  const limitValue = isCreditsMeter
-    ? parsePositiveNumber(values.limitValue)
-    : parsePositiveInteger(values.limitValue);
+  const limitValue = parseUsageLimitValue({
+    value: values.limitValue,
+    min: 0,
+    scale: getUsageLimitInputScale(scope.unit),
+  });
 
   if (!isDefined(limitValue)) {
     return null;
@@ -40,9 +29,7 @@ export const buildCreateUsageLimitInput = (
     ...scope,
     limitKind: 'quota',
     periodCount: 1,
-    limitValue: isCreditsMeter
-      ? Math.round(limitValue * INTERNAL_CREDITS_PER_DISPLAY_CREDIT)
-      : limitValue,
+    limitValue,
     burstValue: null,
   };
 };

@@ -1,8 +1,8 @@
 import { type WidgetContentPadding } from '@/page-layout/widgets/utils/getWidgetContentPadding';
 import { isWidgetCardFlushInViewMode } from '@/page-layout/widgets/utils/isWidgetCardFlushInViewMode';
 import { styled } from '@linaria/react';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
-import { type WidgetCardVariant } from '~/modules/page-layout/widgets/types/WidgetCardVariant';
+import { themeCssVariables } from 'twenty-ui/theme';
+import { type WidgetCardVariant } from '@/page-layout/widgets/types/WidgetCardVariant';
 
 const VERTICAL_LIST_IFRAME_HEIGHT = '40rem';
 

@@ -15,11 +15,12 @@ import { InboundEmailMessageSourceResolverService } from 'src/modules/messaging/
 import { type InboundEmailImportOutcome } from 'src/modules/messaging/message-import-manager/drivers/inbound-email/types/inbound-email-import-outcome.type';
 import { type InboundEmailMessageReference } from 'src/modules/messaging/message-import-manager/drivers/inbound-email/types/inbound-email-message-reference.type';
 import { extractReferencedMessageIds } from 'src/modules/messaging/message-import-manager/drivers/inbound-email/utils/extract-referenced-message-ids.util';
-import { type MessageWithParticipants } from 'src/modules/messaging/message-import-manager/types/message';
+import { type MessageWithParticipants } from 'src/modules/messaging/message-import-manager/types/message.type';
 import { type MessageChannelMessageAssociationWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message-channel-message-association.workspace-entity';
 import { type MessageWorkspaceEntity } from 'src/modules/messaging/common/standard-objects/message.workspace-entity';
 import { MessagingSaveMessagesAndEnqueueContactCreationService } from 'src/modules/messaging/message-import-manager/services/messaging-save-messages-and-enqueue-contact-creation.service';
 import { isExcludedGroupEmailMessage } from 'src/modules/messaging/message-import-manager/utils/is-excluded-group-email-message.util';
+import { isUpstreamSpam } from 'src/modules/messaging/message-import-manager/utils/is-upstream-spam.util';
 
 type ImportInboundMessageParams = {
   messageReference: InboundEmailMessageReference;
@@ -112,8 +113,9 @@ export class InboundEmailImportService {
     }
 
     if (
-      messageChannel.excludeGroupEmails &&
-      isExcludedGroupEmailMessage(message, [connectedAccount.handle])
+      isUpstreamSpam(message.messageHeaders ?? []) ||
+      (messageChannel.excludeGroupEmails &&
+        isExcludedGroupEmailMessage(message, [connectedAccount.handle]))
     ) {
       await messageSource.cleanup(messageReference.reference);
 
@@ -134,10 +136,13 @@ export class InboundEmailImportService {
         }
 
         await this.messagingSaveMessagesAndEnqueueContactCreationService.saveMessagesAndEnqueueContactCreation(
-          [message],
-          messageChannel,
-          connectedAccount,
-          workspaceId,
+          {
+            messagesToSave: [message],
+            messageChannel,
+            connectedAccount,
+            workspaceId,
+            folderLinkUpdate: 'add',
+          },
         );
       },
       buildSystemAuthContext(workspaceId),
@@ -179,7 +184,7 @@ export class InboundEmailImportService {
     );
 
     const referencedMessages = await this.workspaceOrmManager
-      .getRepository<MessageWorkspaceEntity>('message')
+      .getRepositoryWithoutPermissionChecks<MessageWorkspaceEntity>('message')
       .find({
         where: {
           headerMessageId: In(
@@ -194,7 +199,7 @@ export class InboundEmailImportService {
     }
 
     const channelAssociations = await this.workspaceOrmManager
-      .getRepository<MessageChannelMessageAssociationWorkspaceEntity>(
+      .getRepositoryWithoutPermissionChecks<MessageChannelMessageAssociationWorkspaceEntity>(
         'messageChannelMessageAssociation',
       )
       .find({

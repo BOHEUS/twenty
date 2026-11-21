@@ -4,7 +4,7 @@ import { type EmailAttachment } from 'twenty-shared/types';
 import { MAX_ATTACHMENT_SIZE } from '@/advanced-text-editor/utils/maxAttachmentSize';
 import { useDirectFileUpload } from '@/file/hooks/useDirectFileUpload';
 import { formatFileSize } from '@/file/utils/formatFileSize';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
 import { FileFolder } from '~/generated-metadata/graphql';
 import { logError } from '~/utils/logError';
 
@@ -22,7 +22,7 @@ export const useUploadEmailAttachment = () => {
         const maxUploadSize = formatFileSize(MAX_ATTACHMENT_SIZE);
 
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`File "${fileName}" exceeds ${maxUploadSize}`,
         });
 
@@ -33,26 +33,14 @@ export const useUploadEmailAttachment = () => {
         fileFolder: FileFolder.EmailAttachment,
       });
 
-      const attachment: EmailAttachment = {
-        id: uploadedFile.id,
-        name: file.name,
-      };
-
-      const fileName = file.name;
-
-      enqueueToast({
-        variant: 'success',
-        children: t`File "${fileName}" uploaded successfully`,
-      });
-
-      return attachment;
+      return { id: uploadedFile.id, name: file.name };
     } catch (error) {
       logError(`Failed to upload email attachment "${file.name}": ${error}`);
 
       const fileNameForError = file.name;
 
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to upload "${fileNameForError}"`,
       });
 

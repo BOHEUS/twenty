@@ -22,14 +22,14 @@ export const SettingsEnterpriseFeatureGateCard = ({
   const navigateSettings = useNavigateSettings();
 
   const isBillingEnabled = billing?.isBillingEnabled ?? false;
-  const canAccessAdminPanel = currentUser?.canAccessFullAdminPanel === true;
+  const canAccessAdminPanel = currentUser?.canAccessFullAdminPanel ?? false;
   const canDisplayUpgradeButton = isBillingEnabled || canAccessAdminPanel;
   const upgradeSettingsPath = isBillingEnabled
     ? SettingsPath.BillingPlans
     : SettingsPath.AdminPanelOrganization;
 
   return (
-    <Card rounded>
+    <Card.Root>
       <SettingsOptionCardContentButton
         Icon={IconLock}
         title={title}
@@ -48,6 +48,6 @@ export const SettingsEnterpriseFeatureGateCard = ({
           ) : undefined
         }
       />
-    </Card>
+    </Card.Root>
   );
 };

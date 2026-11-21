@@ -1,12 +1,13 @@
-import { type ObjectsPermissions } from 'twenty-shared/types';
+import { isDefined, isMorphRelationHead } from 'twenty-shared/utils';
 
+import { isRelationTargetExcludedFromSelection } from 'src/engine/api/common/common-select-fields/utils/is-relation-target-excluded-from-selection.util';
 import { type CommonSelectedFields } from 'src/engine/api/common/types/common-selected-fields-result.type';
+import { MORPH_OR_RELATION_FIELD_TYPES } from 'src/engine/metadata-modules/field-metadata/types/morph-or-relation-field-metadata-type.type';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { type FlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/types/flat-field-metadata.type';
-import { isMorphOrRelationFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-morph-or-relation-flat-field-metadata.util';
+import { isFlatFieldMetadataOfTypes } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-flat-field-metadata-of-types.util';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
-import { isDefined } from 'twenty-shared/utils';
 
 export const buildUnselectableRelationWarningsByFieldName = ({
   objectName,
@@ -14,14 +15,35 @@ export const buildUnselectableRelationWarningsByFieldName = ({
   flatFieldMetadataMaps,
   flatObjectMetadataMaps,
   selectableRelationFields,
-  objectsPermissions,
+  unreadableFieldMetadataIds,
 }: {
   objectName: string;
-  flatObjectMetadata: FlatObjectMetadata;
-  flatFieldMetadataMaps: FlatEntityMaps<FlatFieldMetadata>;
-  flatObjectMetadataMaps: FlatEntityMaps<FlatObjectMetadata>;
-  selectableRelationFields: CommonSelectedFields;
-  objectsPermissions: ObjectsPermissions;
+  flatObjectMetadata: Pick<FlatObjectMetadata, 'id' | 'fieldIds'>;
+  flatFieldMetadataMaps: FlatEntityMaps<
+    Pick<
+      FlatFieldMetadata,
+      | 'id'
+      | 'universalIdentifier'
+      | 'applicationId'
+      | 'workspaceId'
+      | 'type'
+      | 'name'
+      | 'relationTargetObjectMetadataId'
+      | 'morphId'
+    >
+  >;
+  flatObjectMetadataMaps: FlatEntityMaps<
+    Pick<
+      FlatObjectMetadata,
+      | 'id'
+      | 'universalIdentifier'
+      | 'applicationId'
+      | 'workspaceId'
+      | 'nameSingular'
+    >
+  >;
+  selectableRelationFields: CommonSelectedFields['relations'];
+  unreadableFieldMetadataIds: ReadonlySet<string>;
 }): Map<string, string> => {
   const warningsByFieldName = new Map<string, string>();
 
@@ -36,17 +58,14 @@ export const buildUnselectableRelationWarningsByFieldName = ({
     }
 
     if (
-      !isMorphOrRelationFlatFieldMetadata(field) ||
+      !isFlatFieldMetadataOfTypes(field, [...MORPH_OR_RELATION_FIELD_TYPES]) ||
+      isMorphRelationHead(field) ||
       isDefined(selectableRelationFields[field.name])
     ) {
       continue;
     }
 
-    const isSourceFieldRestricted =
-      objectsPermissions[flatObjectMetadata.id]?.restrictedFields[field.id]
-        ?.canRead === false;
-
-    if (isSourceFieldRestricted) {
+    if (unreadableFieldMetadataIds.has(field.id)) {
       warningsByFieldName.set(
         field.name,
         `Field '${field.name}' on ${objectName} cannot be selected because your role restricts access to this field.`,
@@ -58,6 +77,17 @@ export const buildUnselectableRelationWarningsByFieldName = ({
       flatEntityId: field.relationTargetObjectMetadataId,
       flatEntityMaps: flatObjectMetadataMaps,
     });
+
+    if (
+      isDefined(targetObject) &&
+      isRelationTargetExcludedFromSelection(targetObject)
+    ) {
+      warningsByFieldName.set(
+        field.name,
+        `Field '${field.name}' on ${objectName} cannot be selected as a nested relation. Query ${targetObject.nameSingular} records directly instead.`,
+      );
+      continue;
+    }
 
     const warning = isDefined(targetObject)
       ? `Field '${field.name}' on ${objectName} cannot be selected because you do not have read access to ${targetObject.nameSingular}.`

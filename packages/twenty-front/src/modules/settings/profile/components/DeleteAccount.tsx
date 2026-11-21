@@ -10,10 +10,10 @@ import { useMutation } from '@apollo/client/react';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { Button } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   DeleteUserAccountDocument,
   DeleteUserWorkspaceDocument,
@@ -54,7 +54,7 @@ export const DeleteAccount = () => {
   const leaveWorkspace = async () => {
     if (!isDefined(currentWorkspaceMemberId)) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Current workspace member not found.`,
       });
       return;

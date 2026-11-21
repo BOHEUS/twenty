@@ -10,9 +10,9 @@ import { useLingui } from '@lingui/react/macro';
 import { useParams } from 'react-router-dom';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { Heading } from 'twenty-ui/primitives/typography';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { useQuery } from '@apollo/client/react';
 import {
   AdminPanelHealthServiceStatus,
@@ -25,10 +25,6 @@ const StyledTitleContainer = styled.div`
   display: flex;
   gap: ${themeCssVariables.spacing[4]};
   margin-top: ${themeCssVariables.spacing[2]};
-
-  h3 {
-    line-height: inherit;
-  }
 `;
 
 export const SettingsAdminIndicatorHealthStatus = () => {

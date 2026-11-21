@@ -15,13 +15,14 @@ import { canCreateRecordsForObjectMetadataItem } from '@/object-record/utils/can
 import { makeAndFilterVariables } from '@/object-record/utils/makeAndFilterVariables';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomFamilyStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomFamilyStateValue';
-import { t } from '@lingui/core/macro';
 import { useContext } from 'react';
 import { type ObjectRecord } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { IconPlus } from 'twenty-ui/icon';
+import { useLingui } from '@lingui/react/macro';
 
 export const RecordTableRecordGroupSectionAddNew = () => {
+  const { t } = useLingui();
   const { objectMetadataItem, recordTableId } = useRecordTableContextOrThrow();
 
   const recordTableWidgetContext = useContext(RecordTableWidgetContext);
@@ -62,9 +63,8 @@ export const RecordTableRecordGroupSectionAddNew = () => {
     return null;
   }
 
-  // Linking through a junction never creates a record of the table's object,
-  // so the target object's creatability does not apply. The picker only
-  // offers records of this group, so the linked row lands where it was added.
+  // Linking through a junction creates no record of the table's object, so its creatability check doesn't apply;
+  // the group filter keeps the linked row in the group it was added from.
   if (isDefined(junctionCreateThrough)) {
     return (
       <RecordTableWidgetJunctionAddNewRow

@@ -1,8 +1,8 @@
-import React, { useContext } from 'react';
-import Skeleton, { SkeletonTheme } from 'react-loading-skeleton';
-import { ThemeContext } from 'twenty-ui/theme-constants';
+import { SkeletonLine } from '@/ui/feedback/skeleton/components/SkeletonLine';
+import React from 'react';
+import { SKELETON_HEIGHT_SIZES } from 'twenty-ui/primitives/feedback';
+import { themeCssVariables } from 'twenty-ui/theme';
 
-import { SKELETON_LOADER_HEIGHT_SIZES } from '@/activities/components/SkeletonLoader';
 import { SPREADSHEET_IMPORT_MODAL_ID } from '@/spreadsheet-import/constants/SpreadsheetImportModalId';
 import { spreadsheetImportDialogState } from '@/spreadsheet-import/states/spreadsheetImportDialogState';
 import { matchColumnsState } from '@/spreadsheet-import/steps/components/MatchColumnsStep/components/states/initialComputedColumnsState';
@@ -17,15 +17,11 @@ const SpreadsheetImport = React.lazy(() =>
 );
 
 const LoadingSkeleton = () => {
-  const { theme } = useContext(ThemeContext);
   return (
-    <SkeletonTheme
-      baseColor={theme.background.tertiary}
-      highlightColor={theme.background.transparent.lighter}
-      borderRadius={theme.border.radius.sm}
-    >
-      <Skeleton height={SKELETON_LOADER_HEIGHT_SIZES.standard.s} />
-    </SkeletonTheme>
+    <SkeletonLine
+      borderRadius={themeCssVariables.border.radius.smRound}
+      height={SKELETON_HEIGHT_SIZES.s}
+    />
   );
 };
 

@@ -2,59 +2,31 @@ import { defineFrontComponent } from 'twenty-sdk/define';
 import {
   IconButton,
   LightButton,
-  MainButton,
-  TabButton,
-} from 'twenty-ui/components';
-import { IconPlus, IconSearch, IconStar, IconTrash } from 'twenty-ui/icon';
-import { CodeEditorHeader } from 'twenty-ui/components/code-editor';
-import {
-  AnimatedButton,
-  AnimatedLightIconButton,
-  Button,
-  ButtonGroup,
-  ColorPickerButton,
-  ColorSchemeCard,
-  ColorSchemePicker,
-  FloatingButton,
-  FloatingButtonGroup,
-  FloatingIconButton,
-  FloatingIconButtonGroup,
-  IconButtonGroup,
-  IconListViewGrip,
-  InsideButton,
   LightIconButton,
-  LightIconButtonGroup,
-  RoundedIconButton,
+  MainButton,
   SearchInput,
   SegmentedControl,
-  CardPicker,
+} from 'twenty-ui/components/input';
+import { TabButton } from 'twenty-ui/components/navigation';
+import { CodeEditorHeader } from 'twenty-ui/components/code-editor';
+import { IconPlus, IconSearch, IconStar, IconTrash } from 'twenty-ui/icon';
+import {
+  Button,
+  ButtonGroup,
   Checkbox,
   Radio,
   RadioGroup,
   Slider,
   Switch,
 } from 'twenty-ui/primitives/input';
-import { ThemeProvider } from 'twenty-ui/theme-constants';
-
+import { ThemeProvider } from 'twenty-ui/theme';
+import { Text } from 'twenty-ui/primitives/typography';
 import {
   ComponentGallery,
   type GalleryEntry,
 } from '../shared/front-components/component-gallery';
 
 const INPUT_ENTRIES: GalleryEntry[] = [
-  {
-    name: 'AnimatedButton',
-    node: (
-      <AnimatedButton
-        title="Animated"
-        animatedSvg={<svg width={16} height={16} />}
-      />
-    ),
-  },
-  {
-    name: 'AnimatedLightIconButton',
-    node: <AnimatedLightIconButton Icon={IconStar} />,
-  },
   {
     name: 'Button',
     node: <Button onClick={() => {}}>{'Button'}</Button>,
@@ -68,10 +40,12 @@ const INPUT_ENTRIES: GalleryEntry[] = [
     ),
   },
   {
-    name: 'CardPicker',
+    name: 'Radio (card)',
     node: (
       <RadioGroup defaultValue="card" aria-label="Card selection">
-        <CardPicker value="card">Card</CardPicker>
+        <Radio variant="card" value="card">
+          Card
+        </Radio>
       </RadioGroup>
     ),
   },
@@ -87,55 +61,24 @@ const INPUT_ENTRIES: GalleryEntry[] = [
   },
   {
     name: 'CodeEditorHeader',
-    node: <CodeEditorHeader title="Editor" />,
-  },
-  {
-    name: 'ColorPickerButton',
-    node: <ColorPickerButton colorName="blue" onClick={() => {}} />,
-  },
-  {
-    name: 'ColorSchemeCard',
-    node: <ColorSchemeCard variant="Light" />,
-  },
-  {
-    name: 'ColorSchemePicker',
     node: (
-      <ColorSchemePicker
-        value="Light"
-        onChange={() => {}}
-        lightLabel="Light"
-        darkLabel="Dark"
-        systemLabel="System"
+      <CodeEditorHeader
+        title={<Text>Editor</Text>}
+        endElement={<Button size="sm">Format</Button>}
+        render={<header />}
+        aria-label="Code editor"
       />
     ),
   },
   {
-    name: 'FloatingButton',
-    node: <FloatingButton title="Floating" />,
-  },
-  {
-    name: 'FloatingButtonGroup',
+    name: 'IconButton (elevated)',
     node: (
-      <FloatingButtonGroup>
-        {[
-          <FloatingButton key="a" title="A" />,
-          <FloatingButton key="b" title="B" />,
-        ]}
-      </FloatingButtonGroup>
+      <IconButton elevated size="sm" aria-label="Search">
+        <IconSearch />
+      </IconButton>
     ),
   },
-  {
-    name: 'FloatingIconButton',
-    node: <FloatingIconButton Icon={IconSearch} ariaLabel="Search" />,
-  },
-  {
-    name: 'FloatingIconButtonGroup',
-    node: (
-      <FloatingIconButtonGroup
-        iconButtons={[{ Icon: IconSearch, ariaLabel: 'Search' }]}
-      />
-    ),
-  },
+
   {
     name: 'IconButton',
     node: (
@@ -145,20 +88,14 @@ const INPUT_ENTRIES: GalleryEntry[] = [
     ),
   },
   {
-    name: 'IconButtonGroup',
+    name: 'ButtonGroup (framed)',
     node: (
-      <IconButtonGroup
-        iconButtons={[{ Icon: IconTrash, ariaLabel: 'Delete' }]}
-      />
+      <ButtonGroup framed attached={false} aria-label="Record actions">
+        <LightIconButton size="xs" aria-label="Delete" emphasis="subtle">
+          <IconTrash />
+        </LightIconButton>
+      </ButtonGroup>
     ),
-  },
-  {
-    name: 'IconListViewGrip',
-    node: <IconListViewGrip />,
-  },
-  {
-    name: 'InsideButton',
-    node: <InsideButton Icon={IconPlus} ariaLabel="Add" />,
   },
   {
     name: 'LightButton',
@@ -166,14 +103,10 @@ const INPUT_ENTRIES: GalleryEntry[] = [
   },
   {
     name: 'LightIconButton',
-    node: <LightIconButton Icon={IconStar} aria-label="Star" />,
-  },
-  {
-    name: 'LightIconButtonGroup',
     node: (
-      <LightIconButtonGroup
-        iconButtons={[{ Icon: IconStar, ariaLabel: 'Star', onClick: () => {} }]}
-      />
+      <LightIconButton aria-label="Star">
+        <IconStar />
+      </LightIconButton>
     ),
   },
   {
@@ -198,20 +131,15 @@ const INPUT_ENTRIES: GalleryEntry[] = [
     ),
   },
   {
-    name: 'RoundedIconButton',
-    node: <RoundedIconButton Icon={IconPlus} aria-label="Add" />,
-  },
-  {
     name: 'SearchInput',
-    node: <SearchInput value="" onChange={() => {}} placeholder="Search" />,
+    node: <SearchInput defaultValue="" placeholder="Search" />,
   },
   {
     name: 'SegmentedControl',
     node: (
       <SegmentedControl
-        ariaLabel="Choose"
-        value="left"
-        onChange={() => {}}
+        aria-label="Choose"
+        defaultValue="left"
         options={[
           { value: 'left', label: 'Left' },
           { value: 'right', label: 'Right' },

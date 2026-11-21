@@ -1,11 +1,11 @@
 import { gql } from 'graphql-tag';
 import { buildBaseManifest } from 'test/integration/metadata/suites/application/utils/build-base-manifest.util';
 import { cleanupApplicationAndAppRegistration } from 'test/integration/metadata/suites/application/utils/cleanup-application-and-app-registration.util';
-import { generateApplicationToken } from 'test/integration/metadata/suites/application/utils/generate-application-token.util';
+import { generateAppleAdminApplicationTokenPair } from 'test/integration/utils/generate-apple-admin-application-token-pair.util';
 import { setupApplicationForSync } from 'test/integration/metadata/suites/application/utils/setup-application-for-sync.util';
 import { syncApplication } from 'test/integration/metadata/suites/application/utils/sync-application.util';
 import { findConnectionProvidersByApplication } from 'test/integration/metadata/suites/connection-provider/utils/find-connection-providers-by-application.util';
-import { makeMetadataAPIRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
+import { makeMetadataApiRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
 import { type Manifest } from 'twenty-shared/application';
 import { ConnectedAccountProvider } from 'twenty-shared/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -92,27 +92,27 @@ describe('reportAppConnectionAuthFailure resolver (e2e)', () => {
     id,
     applicationId,
     connectionProviderId,
-    visibility,
+    scope,
     userWorkspaceId,
     provider = ConnectedAccountProvider.APP,
   }: {
     id: string;
     applicationId: string;
     connectionProviderId: string;
-    visibility: 'user' | 'workspace';
+    scope: 'USER' | 'WORKSPACE';
     userWorkspaceId: string;
     provider?: ConnectedAccountProvider;
   }): Promise<void> => {
     await globalThis.testDataSource.query(
       `INSERT INTO core."connectedAccount"
-         (id, handle, provider, visibility, "workspaceId", "userWorkspaceId",
+         (id, handle, provider, scope, "workspaceId", "userWorkspaceId",
           "applicationId", "connectionProviderId")
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         id,
         'slack-bot@apple.dev',
         provider,
-        visibility,
+        scope,
         SEED_APPLE_WORKSPACE_ID,
         userWorkspaceId,
         applicationId,
@@ -130,7 +130,7 @@ describe('reportAppConnectionAuthFailure resolver (e2e)', () => {
     reason?: string;
     token?: string;
   }) =>
-    makeMetadataAPIRequest(
+    makeMetadataApiRequest(
       {
         query: REPORT_AUTH_FAILURE_MUTATION,
         variables: { input: { id, reason } },
@@ -190,15 +190,12 @@ describe('reportAppConnectionAuthFailure resolver (e2e)', () => {
 
     adminUserWorkspaceId = userWorkspace.id;
 
-    // Minted with the admin token, so it carries that admin's userWorkspaceId
-    // alongside the owning applicationId.
-    const { data } = await generateApplicationToken({
+    // Carries the admin's userWorkspaceId alongside the owning applicationId.
+    const tokenPair = await generateAppleAdminApplicationTokenPair({
       applicationId: owningApplicationDbId,
-      expectToFail: false,
     });
 
-    owningApplicationToken =
-      data.generateApplicationToken.applicationAccessToken.token;
+    owningApplicationToken = tokenPair.applicationAccessToken.token;
   }, 180000);
 
   afterEach(async () => {
@@ -224,7 +221,7 @@ describe('reportAppConnectionAuthFailure resolver (e2e)', () => {
       id: connectedAccountId,
       applicationId: owningApplicationDbId,
       connectionProviderId: owningProviderDbId,
-      visibility: 'workspace',
+      scope: 'WORKSPACE',
       userWorkspaceId: adminUserWorkspaceId,
     });
 
@@ -245,6 +242,27 @@ describe('reportAppConnectionAuthFailure resolver (e2e)', () => {
     );
   });
 
+  it('keeps the first failure time and the latest reason when the failure is reported again', async () => {
+    const connectedAccountId = uuidv4();
+
+    await insertAppConnection({
+      id: connectedAccountId,
+      applicationId: owningApplicationDbId,
+      connectionProviderId: owningProviderDbId,
+      scope: 'WORKSPACE',
+      userWorkspaceId: adminUserWorkspaceId,
+    });
+
+    await reportAuthFailure({ id: connectedAccountId, reason: 'first' });
+    const firstReport = await findAuthFailure(connectedAccountId);
+
+    await reportAuthFailure({ id: connectedAccountId, reason: 'second' });
+    const secondReport = await findAuthFailure(connectedAccountId);
+
+    expect(secondReport.authFailedAt).toEqual(firstReport.authFailedAt);
+    expect(secondReport.authFailedReason).toBe('second');
+  });
+
   it('leaves the reason empty when the caller gives none', async () => {
     const connectedAccountId = uuidv4();
 
@@ -252,7 +270,7 @@ describe('reportAppConnectionAuthFailure resolver (e2e)', () => {
       id: connectedAccountId,
       applicationId: owningApplicationDbId,
       connectionProviderId: owningProviderDbId,
-      visibility: 'workspace',
+      scope: 'WORKSPACE',
       userWorkspaceId: adminUserWorkspaceId,
     });
 
@@ -274,7 +292,7 @@ describe('reportAppConnectionAuthFailure resolver (e2e)', () => {
       id: connectedAccountId,
       applicationId: otherApplicationDbId,
       connectionProviderId: otherProviderDbId,
-      visibility: 'workspace',
+      scope: 'WORKSPACE',
       userWorkspaceId: adminUserWorkspaceId,
     });
 
@@ -290,14 +308,14 @@ describe('reportAppConnectionAuthFailure resolver (e2e)', () => {
     });
   });
 
-  it("refuses another user's user-visibility connection", async () => {
+  it("refuses another user's USER-scoped connection", async () => {
     const connectedAccountId = uuidv4();
 
     await insertAppConnection({
       id: connectedAccountId,
       applicationId: owningApplicationDbId,
       connectionProviderId: owningProviderDbId,
-      visibility: 'user',
+      scope: 'USER',
       userWorkspaceId: uuidv4(),
     });
 
@@ -320,7 +338,7 @@ describe('reportAppConnectionAuthFailure resolver (e2e)', () => {
       id: connectedAccountId,
       applicationId: owningApplicationDbId,
       connectionProviderId: owningProviderDbId,
-      visibility: 'workspace',
+      scope: 'WORKSPACE',
       userWorkspaceId: adminUserWorkspaceId,
     });
 

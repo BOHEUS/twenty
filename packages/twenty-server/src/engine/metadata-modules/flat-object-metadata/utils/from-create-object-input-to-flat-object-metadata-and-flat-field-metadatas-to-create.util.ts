@@ -1,9 +1,5 @@
 import { getFieldUniversalIdentifier } from 'twenty-shared/application';
-import {
-  MetadataReadability,
-  MetadataWritability,
-  ObjectOpenRecordIn,
-} from 'twenty-shared/types';
+import { ObjectOpenRecordIn } from 'twenty-shared/types';
 import {
   capitalize,
   isDefined,
@@ -75,9 +71,7 @@ export const fromCreateObjectInputToFlatObjectMetadataAndFlatFieldMetadatasToCre
       isSearchable: true,
       isUIEditable: true,
       isUICreatable: true,
-      writability: MetadataWritability.OPEN,
-      readability: MetadataReadability.OPEN,
-      readabilityParentFieldUniversalIdentifiers: null,
+      disabledObjectPermissionActions: null,
       isSystem: false,
       labelPlural: capitalize(createObjectInput.labelPlural),
       labelSingular: capitalize(createObjectInput.labelSingular),
@@ -90,6 +84,7 @@ export const fromCreateObjectInputToFlatObjectMetadataAndFlatFieldMetadatasToCre
       fieldUniversalIdentifiers: [],
       objectPermissionUniversalIdentifiers: [],
       fieldPermissionUniversalIdentifiers: [],
+      rowLevelPermissionRuleUniversalIdentifiers: [],
       viewUniversalIdentifiers: [],
       indexMetadataUniversalIdentifiers: [],
       searchFieldMetadataUniversalIdentifiers: [],

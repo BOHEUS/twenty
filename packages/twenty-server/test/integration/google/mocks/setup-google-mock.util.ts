@@ -3,9 +3,11 @@ import { http, HttpResponse } from 'msw';
 
 import { gmailHistoryHandler } from 'test/integration/google/mocks/gmail-history-handler.util';
 import { gmailMailboxHandlers } from 'test/integration/google/mocks/gmail-mailbox-handlers.util';
+import { gmailMessage } from 'test/integration/google/mocks/gmail-message.util';
 import { gmailMessageListHandler } from 'test/integration/google/mocks/gmail-message-list-handler.util';
 import { googleCalendarEventsHandlers } from 'test/integration/google/mocks/google-calendar-events-handlers.util';
 import { GOOGLE_CALENDAR_EVENTS_URL } from 'test/integration/google/mocks/google-calendar-events-url.constant';
+import { googleCalendarRecurringEventInstancesHandlers } from 'test/integration/google/mocks/google-calendar-recurring-event-instances-handlers.util';
 import { googleIdentityHandlers } from 'test/integration/google/mocks/google-identity-handlers.util';
 import {
   GOOGLE_TOKEN_URLS,
@@ -34,10 +36,19 @@ export type GoogleMock = {
     events: calendar_v3.Schema$Event[],
     options?: { nextSyncToken?: string },
   ) => void;
+  serveRecurringEventInstances: (recurringEventInstances: {
+    recurringEventId: string;
+    instances: calendar_v3.Schema$Event[];
+  }) => void;
   rateLimitMessageList: (retryAfterIso: string) => void;
   rateLimitCalendarEventList: () => void;
   failMessageList: (failure: GoogleApiFailure) => void;
   failCalendarEventList: (failure: GoogleApiFailure) => void;
+  failRecurringEventInstances: (recurringEventInstancesFailure: {
+    recurringEventId: string;
+    failure: GoogleApiFailure;
+  }) => void;
+  failSentMessageHeaderRead: () => void;
   declineTokenRefresh: () => void;
 };
 
@@ -93,8 +104,18 @@ export const setupGoogleMock = ({
       });
 
       const id = `gmail-sent-${sentMessages.length}`;
+      const threadId = body.threadId ?? id;
 
-      return HttpResponse.json({ id, threadId: body.threadId ?? id });
+      inbox.push(
+        gmailMessage({
+          id,
+          threadId,
+          from: handle,
+          labelIds: ['SENT'],
+        }),
+      );
+
+      return HttpResponse.json({ id, threadId });
     }),
     http.post('*/gmail/v1/users/me/drafts', async ({ request }) => {
       const body = (await request.json()) as {
@@ -155,6 +176,12 @@ export const setupGoogleMock = ({
       events,
       { nextSyncToken = 'mock-calendar-sync-token' } = {},
     ) => httpMock.use(...googleCalendarEventsHandlers(events, nextSyncToken)),
+    serveRecurringEventInstances: (recurringEventInstances) =>
+      httpMock.use(
+        ...googleCalendarRecurringEventInstancesHandlers(
+          recurringEventInstances,
+        ),
+      ),
     rateLimitMessageList: (retryAfterIso) =>
       httpMock.use(
         http.get('*/gmail/v1/users/me/messages', () =>
@@ -212,6 +239,27 @@ export const setupGoogleMock = ({
         http.get(GOOGLE_CALENDAR_EVENTS_URL, () =>
           googleApiErrorResponse(failure),
         ),
+      ),
+    failRecurringEventInstances: ({ recurringEventId, failure }) =>
+      httpMock.use(
+        http.get(
+          `${GOOGLE_CALENDAR_EVENTS_URL}/${recurringEventId}/instances`,
+          () => googleApiErrorResponse(failure),
+        ),
+      ),
+    failSentMessageHeaderRead: () =>
+      httpMock.use(
+        http.get('*/gmail/v1/users/me/messages/:messageId', ({ request }) => {
+          if (new URL(request.url).searchParams.get('format') !== 'metadata') {
+            return;
+          }
+
+          return googleApiErrorResponse({
+            status: 500,
+            reason: 'backendError',
+            message: 'Backend Error',
+          });
+        }),
       ),
     declineTokenRefresh: () =>
       httpMock.use(

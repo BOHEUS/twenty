@@ -1,13 +1,11 @@
 import { styled } from '@linaria/react';
-import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
-import { Tag } from 'twenty-ui/primitives/data-display';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 import { CoreWorkflowVersionCard } from '@/object-core/workflows/versions/components/CoreWorkflowVersionCard';
 import { CoreWorkflowVersionRestoreButton } from '@/object-core/workflows/versions/components/CoreWorkflowVersionRestoreButton';
-import { CORE_WORKFLOW_VERSION_STATUS_TAG_PROPS } from '@/object-core/workflows/versions/constants/CoreWorkflowVersionStatusTagProps';
 import { useCoreWorkflowVersion } from '@/object-core/workflows/versions/hooks/useCoreWorkflowVersion';
+import { PAGE_LAYOUT_RECORD_IDENTIFIER_BAR_HEIGHT } from '@/page-layout/constants/PageLayoutRecordIdentifierBarHeight';
 import { useSidePanelWorkflowVersionIdOrThrow } from '@/side-panel/pages/workflow/step/view/hooks/useSidePanelWorkflowVersionIdOrThrow';
 
 const StyledContainer = styled.div`
@@ -18,10 +16,13 @@ const StyledContainer = styled.div`
 
 const StyledActions = styled.div`
   align-items: center;
-  border-bottom: 1px solid ${themeCssVariables.border.color.light};
+  box-shadow: inset 0 -1px 0 ${themeCssVariables.border.color.light};
+  box-sizing: border-box;
   display: flex;
+  flex-shrink: 0;
   gap: ${themeCssVariables.spacing[2]};
-  padding: ${themeCssVariables.spacing[2]} ${themeCssVariables.spacing[3]};
+  height: ${PAGE_LAYOUT_RECORD_IDENTIFIER_BAR_HEIGHT}px;
+  padding: 0 ${themeCssVariables.spacing[3]};
 `;
 
 const StyledSpacer = styled.div`
@@ -29,34 +30,25 @@ const StyledSpacer = styled.div`
 `;
 
 export const SidePanelCoreWorkflowVersionPage = () => {
-  const { t } = useLingui();
-  const workspaceWorkflowVersionId = useSidePanelWorkflowVersionIdOrThrow();
-  const { coreWorkflowVersion } = useCoreWorkflowVersion(
-    workspaceWorkflowVersionId,
-  );
+  const coreWorkflowVersionId = useSidePanelWorkflowVersionIdOrThrow();
+  const { coreWorkflowVersion } = useCoreWorkflowVersion(coreWorkflowVersionId);
 
   if (!isDefined(coreWorkflowVersion)) {
     return null;
   }
 
-  const tagProps =
-    CORE_WORKFLOW_VERSION_STATUS_TAG_PROPS[coreWorkflowVersion.status];
-
   return (
     <StyledContainer>
       <StyledActions>
-        <Tag color={tagProps.color}>{t(tagProps.label)}</Tag>
         <StyledSpacer />
-        {isDefined(coreWorkflowVersion.workspaceWorkflowId) && (
+        {isDefined(coreWorkflowVersion.coreWorkflowId) && (
           <CoreWorkflowVersionRestoreButton
-            workflowId={coreWorkflowVersion.workspaceWorkflowId}
-            workspaceWorkflowVersionId={workspaceWorkflowVersionId}
+            workflowId={coreWorkflowVersion.coreWorkflowId}
+            coreWorkflowVersionId={coreWorkflowVersionId}
           />
         )}
       </StyledActions>
-      <CoreWorkflowVersionCard
-        workspaceWorkflowVersionId={workspaceWorkflowVersionId}
-      />
+      <CoreWorkflowVersionCard coreWorkflowVersionId={coreWorkflowVersionId} />
     </StyledContainer>
   );
 };

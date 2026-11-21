@@ -1,18 +1,16 @@
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-
 import { useActivityFieldComponentInstanceId } from '@/activities/hooks/useActivityFieldComponentInstanceId';
 import { type Note } from '@/activities/types/Note';
-import { getActivityPreview } from '@/activities/utils/getActivityPreview';
 import { useObjectMorphJunctionConfigOrThrow } from '@/object-record/record-field/ui/hooks/useObjectMorphJunctionConfigOrThrow';
 import { useOpenRecordInSidePanel } from '@/side-panel/hooks/useOpenRecordInSidePanel';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
-import { RecordFieldsScopeContextProvider } from '@/object-record/record-field-list/contexts/RecordFieldsScopeContext';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
 import { FieldContextProvider } from '@/object-record/record-field/ui/components/FieldContextProvider';
 import { RecordFieldComponentInstanceContext } from '@/object-record/record-field/ui/states/contexts/RecordFieldComponentInstanceContext';
 import { RecordInlineCell } from '@/object-record/record-inline-cell/components/RecordInlineCell';
 import { getRecordFieldInputInstanceId } from '@/object-record/utils/getRecordFieldInputId';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { getRichTextFieldTextLines } from '@/object-record/record-field/ui/utils/getRichTextFieldTextLines';
+import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledCard = styled.div<{ isSingleNote: boolean }>`
   align-items: flex-start;
@@ -75,12 +73,13 @@ export const NoteTile = ({
   note: Note;
   isSingleNote: boolean;
 }) => {
+  const { t } = useLingui();
   const { openRecordInSidePanel } = useOpenRecordInSidePanel();
 
-  const body = getActivityPreview(note?.bodyV2?.blocknote ?? null);
+  const body = getRichTextFieldTextLines(note?.bodyV2).join('\n');
 
   const junctionFieldName = useObjectMorphJunctionConfigOrThrow({
-    objectNameSingular: CoreObjectNameSingular.Note,
+    objectNameSingular: StandardObjectNameSingular.Note,
   }).junctionField.name;
 
   const instanceIdPrefix =
@@ -97,7 +96,7 @@ export const NoteTile = ({
         onClick={() =>
           openRecordInSidePanel({
             recordId: note.id,
-            objectNameSingular: CoreObjectNameSingular.Note,
+            objectNameSingular: StandardObjectNameSingular.Note,
           })
         }
       >
@@ -106,23 +105,17 @@ export const NoteTile = ({
       </StyledCardDetailsContainer>
       <StyledFooter>
         <FieldContextProvider
-          objectNameSingular={CoreObjectNameSingular.Note}
+          objectNameSingular={StandardObjectNameSingular.Note}
           objectRecordId={note.id}
           fieldMetadataName={junctionFieldName}
           fieldPosition={0}
           isDisplayModeFixHeight
         >
-          <RecordFieldsScopeContextProvider
-            value={{
-              scopeInstanceId: note.id,
-            }}
+          <RecordFieldComponentInstanceContext.Provider
+            value={{ instanceId: componentInstanceId }}
           >
-            <RecordFieldComponentInstanceContext.Provider
-              value={{ instanceId: componentInstanceId }}
-            >
-              <RecordInlineCell instanceIdPrefix={instanceIdPrefix} />
-            </RecordFieldComponentInstanceContext.Provider>
-          </RecordFieldsScopeContextProvider>
+            <RecordInlineCell instanceIdPrefix={instanceIdPrefix} />
+          </RecordFieldComponentInstanceContext.Provider>
         </FieldContextProvider>
       </StyledFooter>
     </StyledCard>

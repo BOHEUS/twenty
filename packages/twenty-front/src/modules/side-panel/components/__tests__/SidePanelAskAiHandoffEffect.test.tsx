@@ -1,174 +1,77 @@
-import { act, render, screen } from '@testing-library/react';
-import { Provider as JotaiProvider } from 'jotai';
-import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
+import { render } from '@testing-library/react';
+import { createStore, Provider } from 'jotai';
+import { MemoryRouter } from 'react-router-dom';
 
-import { AiChatPageContinueInSidePanelEffect } from '@/ai/components/AiChatPageContinueInSidePanelEffect';
-import { shouldContinueAiChatInSidePanelState } from '@/ai/states/shouldContinueAiChatInSidePanelState';
-import { shouldOpenAiChatAfterOnboardingState } from '@/onboarding/states/shouldOpenAiChatAfterOnboardingState';
-import { WorkspaceSetupChatSidePanelEffect } from '@/onboarding/effect-components/WorkspaceSetupChatSidePanelEffect';
+import { aiChatContinueInSidePanelThreadIdState } from '@/ai-chat/states/aiChatContinueInSidePanelThreadIdState';
+import { shouldOpenAiChatAfterOnboardingState } from '@/ai-chat/states/shouldOpenAiChatAfterOnboardingState';
 import { SidePanelAskAiHandoffEffect } from '@/side-panel/components/SidePanelAskAiHandoffEffect';
-import {
-  jotaiStore,
-  resetJotaiStore,
-} from '@/ui/utilities/state/jotai/jotaiStore';
 
-let defaultHomePagePath = '/objects/companies';
-jest.mock('@/navigation/hooks/useDefaultHomePagePath', () => ({
-  useDefaultHomePagePath: () => ({ defaultHomePagePath }),
-}));
-
-const openAskAiPageMock = jest.fn();
+const openAskAiPage = jest.fn();
+const onContinueChatFromFullWidth = jest.fn();
 
 jest.mock('@/side-panel/hooks/useOpenAskAiPageInSidePanel', () => ({
-  useOpenAskAiPageInSidePanel: () => ({ openAskAiPage: openAskAiPageMock }),
+  useOpenAskAiPageInSidePanel: () => ({ openAskAiPage }),
 }));
 
-const onContinueChatFromFullWidthMock = jest.fn();
+const CONTINUED_THREAD_ID = '20202020-0000-4000-8000-000000000002';
 
-let navigateAwayFromChatPage: ((pathname?: string) => void) | undefined;
+const leaveChatPageFor = (pathname: string) => {
+  const store = createStore();
 
-const ChatPageRoute = () => {
-  const navigate = useNavigate();
+  store.set(aiChatContinueInSidePanelThreadIdState.atom, CONTINUED_THREAD_ID);
+  store.set(shouldOpenAiChatAfterOnboardingState.atom, true);
 
-  navigateAwayFromChatPage = (pathname = '/objects/companies') =>
-    navigate(pathname);
-
-  return (
-    <>
-      <AiChatPageContinueInSidePanelEffect />
-      <div>Setup conversation</div>
-    </>
-  );
-};
-
-const RouterUnderTest = ({ initialPath }: { initialPath: string }) => (
-  <JotaiProvider store={jotaiStore}>
-    <MemoryRouter initialEntries={[initialPath]}>
-      {/* The handoff lives in the persistent layout, outside the routes. */}
-      <WorkspaceSetupChatSidePanelEffect />
-      <SidePanelAskAiHandoffEffect
-        onContinueChatFromFullWidth={onContinueChatFromFullWidthMock}
-      />
-      <Routes>
-        <Route path="/chat/:threadId?" element={<ChatPageRoute />} />
-        <Route
-          path="/objects/companies"
-          element={<div>Companies homepage</div>}
+  render(
+    <Provider store={store}>
+      <MemoryRouter initialEntries={[pathname]}>
+        <SidePanelAskAiHandoffEffect
+          onContinueChatFromFullWidth={onContinueChatFromFullWidth}
         />
-        <Route path="/settings/*" element={<div />} />
-      </Routes>
-    </MemoryRouter>
-  </JotaiProvider>
-);
+      </MemoryRouter>
+    </Provider>,
+  );
+
+  return store;
+};
 
 describe('SidePanelAskAiHandoffEffect', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-    sessionStorage.clear();
-    resetJotaiStore();
-    navigateAwayFromChatPage = undefined;
-    defaultHomePagePath = '/objects/companies';
+    openAskAiPage.mockClear();
+    onContinueChatFromFullWidth.mockClear();
   });
 
-  it('opens setup on the homepage after returning to settings', () => {
-    jotaiStore.set(shouldOpenAiChatAfterOnboardingState.atom, true);
-    render(<RouterUnderTest initialPath="/settings/profile" />);
-    expect(screen.getByText('Companies homepage')).toBeInTheDocument();
-    expect(openAskAiPageMock).toHaveBeenCalledTimes(1);
-  });
+  it('continues the chat in the side panel when leaving it for a record', () => {
+    leaveChatPageFor('/objects/companies');
 
-  it('uses the chat page when no readable object homepage exists', () => {
-    defaultHomePagePath = '/settings/profile';
-    jotaiStore.set(shouldOpenAiChatAfterOnboardingState.atom, true);
-    render(<RouterUnderTest initialPath="/settings/profile" />);
-    expect(screen.getByText('Setup conversation')).toBeInTheDocument();
-    expect(openAskAiPageMock).not.toHaveBeenCalled();
-    expect(jotaiStore.get(shouldOpenAiChatAfterOnboardingState.atom)).toBe(
-      true,
-    );
-  });
-
-  it('preserves dismissal across remounts but opens again after an application reload', () => {
-    jotaiStore.set(shouldOpenAiChatAfterOnboardingState.atom, true);
-    const first = render(<RouterUnderTest initialPath="/objects/companies" />);
-    first.unmount();
-    const second = render(<RouterUnderTest initialPath="/objects/companies" />);
-    expect(openAskAiPageMock).toHaveBeenCalledTimes(1);
-    second.unmount();
-    resetJotaiStore();
-    jotaiStore.set(shouldOpenAiChatAfterOnboardingState.atom, true);
-    render(<RouterUnderTest initialPath="/objects/companies" />);
-    expect(openAskAiPageMock).toHaveBeenCalledTimes(2);
-  });
-
-  it('should continue the chat in the side panel on the navigation leaving the chat page', () => {
-    jotaiStore.set(shouldOpenAiChatAfterOnboardingState.atom, true);
-
-    render(<RouterUnderTest initialPath="/chat" />);
-
-    expect(jotaiStore.get(shouldContinueAiChatInSidePanelState.atom)).toBe(
-      true,
-    );
-    expect(openAskAiPageMock).not.toHaveBeenCalled();
-
-    act(() => {
-      navigateAwayFromChatPage?.();
-    });
-
-    expect(openAskAiPageMock).toHaveBeenCalledTimes(1);
-    expect(openAskAiPageMock).toHaveBeenCalledWith({
+    expect(openAskAiPage).toHaveBeenCalledWith({
+      threadId: CONTINUED_THREAD_ID,
       resetNavigationStack: true,
     });
-    expect(onContinueChatFromFullWidthMock).toHaveBeenCalled();
-    expect(jotaiStore.get(shouldContinueAiChatInSidePanelState.atom)).toBe(
-      false,
-    );
-    expect(jotaiStore.get(shouldOpenAiChatAfterOnboardingState.atom)).toBe(
-      false,
-    );
+    expect(onContinueChatFromFullWidth).toHaveBeenCalled();
   });
 
-  it('should stay silent when the continuation marker was cleared before leaving', () => {
-    render(<RouterUnderTest initialPath="/chat" />);
+  it('closes the chat when leaving it for settings', () => {
+    const store = leaveChatPageFor('/settings/profile');
 
-    act(() => {
-      jotaiStore.set(shouldContinueAiChatInSidePanelState.atom, false);
-      navigateAwayFromChatPage?.();
-    });
-
-    expect(openAskAiPageMock).not.toHaveBeenCalled();
-    expect(onContinueChatFromFullWidthMock).not.toHaveBeenCalled();
+    expect(openAskAiPage).not.toHaveBeenCalled();
+    expect(onContinueChatFromFullWidth).not.toHaveBeenCalled();
+    expect(store.get(aiChatContinueInSidePanelThreadIdState.atom)).toBeNull();
   });
 
-  it.each(['/chat', '/chat/existing-thread'])(
-    'does not move the chat from %s into the side panel when opening settings or leaving them',
-    (initialPath) => {
-      jotaiStore.set(shouldOpenAiChatAfterOnboardingState.atom, true);
+  it.each([
+    '/inbox',
+    '/inbox/new',
+    '/inbox/20202020-0000-4000-8000-000000000001',
+  ])(
+    'leaves the chat and the onboarding chat to the page it moves to on %s',
+    (pathname) => {
+      const store = leaveChatPageFor(pathname);
 
-      render(<RouterUnderTest initialPath={initialPath} />);
-
-      act(() => navigateAwayFromChatPage?.('/settings/profile'));
-
-      expect(openAskAiPageMock).not.toHaveBeenCalled();
-      expect(onContinueChatFromFullWidthMock).not.toHaveBeenCalled();
-      expect(jotaiStore.get(shouldContinueAiChatInSidePanelState.atom)).toBe(
-        false,
+      expect(openAskAiPage).not.toHaveBeenCalled();
+      expect(store.get(aiChatContinueInSidePanelThreadIdState.atom)).toBe(
+        CONTINUED_THREAD_ID,
       );
-      expect(jotaiStore.get(shouldOpenAiChatAfterOnboardingState.atom)).toBe(
-        false,
-      );
-
-      act(() => navigateAwayFromChatPage?.());
-
-      expect(openAskAiPageMock).not.toHaveBeenCalled();
-      expect(onContinueChatFromFullWidthMock).not.toHaveBeenCalled();
+      expect(store.get(shouldOpenAiChatAfterOnboardingState.atom)).toBe(true);
     },
   );
-
-  it('should do nothing away from the chat page when the marker is not set', () => {
-    render(<RouterUnderTest initialPath="/objects/companies" />);
-
-    expect(openAskAiPageMock).not.toHaveBeenCalled();
-    expect(onContinueChatFromFullWidthMock).not.toHaveBeenCalled();
-  });
 });

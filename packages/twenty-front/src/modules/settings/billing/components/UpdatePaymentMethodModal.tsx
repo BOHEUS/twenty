@@ -1,32 +1,25 @@
-import { DialogInstance } from '@/ui/layout/dialog/components/DialogInstance';
 import { AddPaymentMethodForm } from '@/settings/billing/components/AddPaymentMethodForm';
 import { useMarkBillingPaymentMethodAsAdded } from '@/settings/billing/hooks/useMarkBillingPaymentMethodAsAdded';
 import { useWaitForPaymentRecovery } from '@/settings/billing/hooks/useWaitForPaymentRecovery';
 import { isSubscriptionPaymentOverdue } from '@/settings/billing/utils/isSubscriptionPaymentOverdue';
+import { DialogInstance } from '@/ui/layout/dialog/components/DialogInstance';
 import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { useSubscriptionStatus } from '@/workspace/hooks/useSubscriptionStatus';
-import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
-import { Section } from 'twenty-ui/components';
-import { Dialog } from 'twenty-ui/primitives/surfaces';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
 import { Button } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { Dialog } from 'twenty-ui/primitives/surfaces';
 
 type UpdatePaymentMethodModalProps = {
   modalInstanceId: string;
+  title?: string;
+  description?: string;
 };
-
-const StyledSectionContainer = styled.div`
-  margin-bottom: ${themeCssVariables.spacing[6]};
-`;
-
-const StyledCancelButtonContainer = styled.div`
-  margin-top: ${themeCssVariables.spacing[4]};
-`;
 
 export const UpdatePaymentMethodModal = ({
   modalInstanceId,
+  title,
+  description,
 }: UpdatePaymentMethodModalProps) => {
   const { t } = useLingui();
   const { closeDialog } = useDialog();
@@ -41,13 +34,13 @@ export const UpdatePaymentMethodModal = ({
     markBillingPaymentMethodAsAdded();
 
     if (!isSubscriptionPaymentOverdue(subscriptionStatus)) {
-      enqueueToast({ variant: 'success', children: t`Payment method added.` });
+      enqueueToast({ status: 'success', children: t`Payment method added.` });
 
       return;
     }
 
     enqueueToast({
-      variant: 'info',
+      status: 'info',
       children: t`Payment method added. Retrying your payment...`,
     });
 
@@ -56,33 +49,34 @@ export const UpdatePaymentMethodModal = ({
 
   return (
     <DialogInstance dialogId={modalInstanceId} dismissible renderInDocumentBody>
-      {({ container, backdrop, viewportProps, onKeyDown }) => (
+      {({ onKeyDown }) => (
         <Dialog.Popup
-          {...{ container, backdrop, viewportProps, onKeyDown }}
+          onKeyDown={onKeyDown}
           size="md"
           data-globally-prevent-click-outside
-          style={{
-            padding: 'var(--t-spacing-6)',
-            borderRadius: 'var(--t-spacing-1)',
-          }}
         >
-          <Dialog.Title>{t`Update your payment method`}</Dialog.Title>
-          <StyledSectionContainer>
-            <Section.Root align="center" color="primary">
-              {t`Add a card below to update your billing details and retry your payment.`}
-            </Section.Root>
-          </StyledSectionContainer>
-          <AddPaymentMethodForm
-            onPaymentMethodAdded={handlePaymentMethodAdded}
-            shouldStartSubscriptionAfterPaymentMethod={false}
-          />
-          <StyledCancelButtonContainer>
+          <Dialog.Header>
+            <Dialog.Title>
+              {title ?? t`Update your payment method`}
+            </Dialog.Title>
+            <Dialog.Description>
+              {description ??
+                t`Add a card below to update your billing details and retry your payment.`}
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Body>
+            <AddPaymentMethodForm
+              onPaymentMethodAdded={handlePaymentMethodAdded}
+              shouldStartSubscriptionAfterPaymentMethod={false}
+            />
+          </Dialog.Body>
+          <Dialog.Footer>
             <Button
               onClick={() => closeDialog(modalInstanceId)}
               fullWidth
               variant="outline"
             >{t`Cancel`}</Button>
-          </StyledCancelButtonContainer>
+          </Dialog.Footer>
         </Dialog.Popup>
       )}
     </DialogInstance>

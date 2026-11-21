@@ -1,26 +1,26 @@
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
-import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { SaveAndCancelButtons } from '@/settings/components/SaveAndCancelButtons/SaveAndCancelButtons';
 import { SettingsPageContainer } from '@/settings/components/SettingsPageContainer';
 import { SettingsSectionSkeletonLoader } from '@/settings/components/SettingsSectionSkeletonLoader';
+import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { CheckPublicDomainValidRecordsEffect } from '@/settings/domains/components/CheckPublicDomainValidRecordsEffect';
 import { SettingsDomainRecords } from '@/settings/domains/components/SettingsDomainRecords';
 import { useCheckPublicDomainValidRecords } from '@/settings/domains/hooks/useCheckPublicDomainValidRecords';
 import { getDomainValidationSchema } from '@/settings/domains/utils/getDomainValidationSchema';
 import { TextInput } from '@/ui/input/components/TextInput';
 import { useMutation, useQuery } from '@apollo/client/react';
-import { isNonEmptyString } from '@sniptt/guards';
 import { styled } from '@linaria/react';
 import { Trans, useLingui } from '@lingui/react/macro';
+import { isNonEmptyString } from '@sniptt/guards';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { IconReload, IconTrash } from 'twenty-ui/icon';
-import { useToast } from 'twenty-ui/primitives/feedback';
 import { Button, ButtonGroup } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   CreatePublicDomainDocument,
   DeletePublicDomainDocument,
@@ -28,16 +28,6 @@ import {
   FindOneApplicationNameDocument,
 } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
-
-const StyledButtonGroupContainer = styled.div`
-  > * > :not(:first-of-type) > button {
-    border-left: none;
-  }
-`;
-
-const StyledButtonContainer = styled.div`
-  align-self: flex-start;
-`;
 
 const StyledDomainFormWrapper = styled.div`
   display: flex;
@@ -74,9 +64,7 @@ export const SettingPublicDomain = () => {
 
   const isEditingPublicDomain = isDefined(publicDomainId);
 
-  // Scoped to the application in the URL: the query is workspace-wide, so a
-  // domain id from another application would otherwise be editable and
-  // deletable from this page.
+  // The query is workspace-wide, so scope to the URL application or other apps' domains become editable here
   const selectedPublicDomain = isEditingPublicDomain
     ? publicDomainsData?.findManyPublicDomains?.find(
         (publicDomain) =>
@@ -113,8 +101,7 @@ export const SettingPublicDomain = () => {
   const { isLoading, publicDomainRecords, checkPublicDomainRecords } =
     useCheckPublicDomainValidRecords();
 
-  // Also used once the create and delete mutations resolve, so it cannot be
-  // replaced by a Link.
+  // Also navigates after the create and delete mutations resolve, so it cannot be a Link
   // oxlint-disable-next-line twenty/no-navigate-prefer-link
   const navigateToApplication = () =>
     navigate(SettingsPath.ApplicationDetail, { applicationId });
@@ -128,7 +115,7 @@ export const SettingPublicDomain = () => {
       variables: { domain: selectedPublicDomain.domain },
       onCompleted: async () => {
         enqueueToast({
-          variant: 'success',
+          status: 'success',
           children: t`Custom domain successfully deleted`,
         });
         await refetchPublicDomains();
@@ -161,7 +148,7 @@ export const SettingPublicDomain = () => {
       },
       onCompleted: async () => {
         enqueueToast({
-          variant: 'success',
+          status: 'success',
           children: t`Custom domain successfully created`,
         });
         await refetchPublicDomains();
@@ -212,29 +199,23 @@ export const SettingPublicDomain = () => {
             fullWidth
           />
           {isDefined(selectedPublicDomain) && (
-            <StyledButtonGroupContainer>
-              <ButtonGroup>
-                <StyledButtonContainer>
-                  <Button
-                    loading={isLoading}
-                    startIcon={<IconReload />}
-                    onClick={() =>
-                      checkPublicDomainRecords(selectedPublicDomain.domain)
-                    }
-                    type="button"
-                    variant="outline"
-                  >{t`Reload`}</Button>
-                </StyledButtonContainer>
-                <StyledButtonContainer>
-                  <Button
-                    startIcon={<IconTrash />}
-                    aria-label={t`Delete`}
-                    onClick={onDelete}
-                    variant="outline"
-                  />
-                </StyledButtonContainer>
-              </ButtonGroup>
-            </StyledButtonGroupContainer>
+            <ButtonGroup>
+              <Button
+                loading={isLoading}
+                startIcon={<IconReload />}
+                onClick={() =>
+                  checkPublicDomainRecords(selectedPublicDomain.domain)
+                }
+                type="button"
+                variant="outline"
+              >{t`Reload`}</Button>
+              <Button
+                startIcon={<IconTrash />}
+                aria-label={t`Delete`}
+                onClick={onDelete}
+                variant="outline"
+              />
+            </ButtonGroup>
           )}
         </StyledDomainFormWrapper>
         {isDefined(selectedPublicDomain) && publicDomainRecords?.domain && (

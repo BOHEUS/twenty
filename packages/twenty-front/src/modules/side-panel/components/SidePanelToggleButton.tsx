@@ -1,3 +1,4 @@
+import { formatShortcut } from 'twenty-ui/primitives/typography';
 import { SIDE_PANEL_TOP_BAR_HEIGHT_MOBILE } from '@/side-panel/constants/SidePanelTopBarHeightMobile';
 import { COMMAND_MENU_SIDE_PANEL_PAGES } from '@/side-panel/constants/CommandMenuSidePanelPages';
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
@@ -9,13 +10,13 @@ import { PAGE_HEADER_SIDE_PANEL_BUTTON_CLICK_OUTSIDE_ID } from '@/ui/layout/page
 import { TooltipDelay } from '@/ui/layout/tooltip/constants/TooltipDelay';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { SidePanelPages } from 'twenty-shared/types';
 import { IconDotsVertical } from 'twenty-ui/icon';
-import { IconButton } from 'twenty-ui/components';
+import { IconButton } from 'twenty-ui/components/input';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
-import { getOsControlSymbol, useIsMobile } from 'twenty-ui/utilities';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { useIsMobile } from 'twenty-ui/utilities';
+import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledButtonWrapper = styled.div<{ alignToTop: boolean }>`
   align-items: ${({ alignToTop }) => (alignToTop ? 'center' : 'initial')};
@@ -26,10 +27,12 @@ const StyledButtonWrapper = styled.div<{ alignToTop: boolean }>`
   right: ${({ alignToTop }) =>
     alignToTop ? themeCssVariables.spacing[3] : 'auto'};
   top: ${({ alignToTop }) => (alignToTop ? '0' : 'auto')};
-  z-index: ${RootStackingContextZIndices.SidePanelButton};
+  z-index: ${({ alignToTop }) =>
+    alignToTop ? RootStackingContextZIndices.SidePanelButton : 'auto'};
 `;
 
 export const SidePanelToggleButton = () => {
+  const { t } = useLingui();
   const { openSidePanelMenu } = useSidePanelMenu();
   const isSidePanelOpened = useAtomStateValue(isSidePanelOpenedState);
   const sidePanelNavigationStack = useAtomStateValue(
@@ -66,7 +69,7 @@ export const SidePanelToggleButton = () => {
   }
 
   const ariaLabel = t`Command Menu`;
-  const tooltipContent = t`Command menu | ${getOsControlSymbol()}K`;
+  const tooltipContent = t`Command menu | ${formatShortcut({ shortcut: ['Mod', 'K'] })}`;
 
   return (
     <StyledButtonWrapper alignToTop={alignWithSidePanelTopBar}>

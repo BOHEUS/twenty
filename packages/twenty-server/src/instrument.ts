@@ -1,4 +1,3 @@
-import os from 'os';
 import process from 'process';
 
 import { metrics as otelMetrics } from '@opentelemetry/api';
@@ -18,7 +17,10 @@ import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { NodeEnvironment } from 'src/engine/core-modules/twenty-config/interfaces/node-environment.interface';
 
 import { ExceptionHandlerDriver } from 'src/engine/core-modules/exception-handler/interfaces';
+import { removeAiContentFromSentryEvent } from 'src/engine/core-modules/exception-handler/utils/remove-ai-content-from-sentry-event.util';
+import { POD_NAME } from 'src/engine/core-modules/metrics/constants/pod-name.constant';
 import { MeterDriver } from 'src/engine/core-modules/metrics/types/meter-driver.type';
+import { MeterTemporality } from 'src/engine/core-modules/metrics/types/meter-temporality.type';
 import { parseArrayEnvVar } from 'src/utils/parse-array-env-var';
 
 const meterDrivers = parseArrayEnvVar(
@@ -44,6 +46,18 @@ const parseSampleRate = ({
     ? parsed
     : fallback;
 };
+
+const parsedExportInterval = Number(process.env.METER_EXPORT_INTERVAL_MS);
+
+const metricExportIntervalMillis =
+  Number.isInteger(parsedExportInterval) && parsedExportInterval > 0
+    ? parsedExportInterval
+    : 30_000;
+
+const metricTemporality =
+  process.env.METER_TEMPORALITY === MeterTemporality.Cumulative
+    ? AggregationTemporality.CUMULATIVE
+    : AggregationTemporality.DELTA;
 
 if (process.env.EXCEPTION_HANDLER_DRIVER === ExceptionHandlerDriver.SENTRY) {
   const tracesSampleRate = parseSampleRate({
@@ -79,23 +93,24 @@ if (process.env.EXCEPTION_HANDLER_DRIVER === ExceptionHandlerDriver.SENTRY) {
           uptime: false,
         },
       }),
-      Sentry.vercelAIIntegration({
-        recordInputs: true,
-        recordOutputs: true,
-      }),
+      Sentry.vercelAIIntegration(),
       nodeProfilingIntegration(),
     ],
     tracesSampleRate,
     tracesSampler: ({ name, inheritOrSampleWith }) =>
-      name.startsWith('ai.') ? 1 : inheritOrSampleWith(tracesSampleRate),
-    profilesSampleRate: parseSampleRate({
+      name.startsWith('invoke_agent')
+        ? 1
+        : inheritOrSampleWith(tracesSampleRate),
+    profileSessionSampleRate: parseSampleRate({
       value: process.env.SENTRY_PROFILES_SAMPLE_RATE,
       fallback: 0.01,
     }),
+    profileLifecycle: 'trace',
+    // Sentry 11 streams spans by default; keep sending transactions so beforeSendTransaction still runs
+    traceLifecycle: 'static',
     maxValueLength: 8192,
-    sendDefaultPii: true,
     debug: process.env.NODE_ENV === NodeEnvironment.DEVELOPMENT,
-    beforeSendSpan: (span) => {
+    beforeSendSpan: Sentry.withStaticSpan((span) => {
       const twentyContext = Sentry.getIsolationScope().getScopeData().contexts
         ?.twenty as
         | {
@@ -117,7 +132,12 @@ if (process.env.EXCEPTION_HANDLER_DRIVER === ExceptionHandlerDriver.SENTRY) {
       };
 
       return span;
-    },
+    }),
+    beforeSend: removeAiContentFromSentryEvent,
+    beforeSendTransaction: (event) =>
+      event.contexts?.trace?.op === 'gen_ai.invoke_agent'
+        ? { ...event, spans: event.spans?.filter(({ op }) => op !== 'db') }
+        : event,
   });
 }
 
@@ -128,14 +148,14 @@ const prometheusExporter = meterDrivers.includes(MeterDriver.Prometheus)
 const meterProvider = new MeterProvider({
   resource: resourceFromAttributes({
     'service.name': process.env.OTEL_SERVICE_NAME ?? 'twenty-server',
-    'k8s.pod.name': process.env.HOSTNAME ?? os.hostname(),
+    'k8s.pod.name': POD_NAME,
   }),
   readers: [
     ...(meterDrivers.includes(MeterDriver.Console)
       ? [
           new PeriodicExportingMetricReader({
             exporter: new ConsoleMetricExporter(),
-            exportIntervalMillis: 10000,
+            exportIntervalMillis: metricExportIntervalMillis,
           }),
         ]
       : []),
@@ -144,9 +164,9 @@ const meterProvider = new MeterProvider({
           new PeriodicExportingMetricReader({
             exporter: new OTLPMetricExporter({
               url: process.env.OTLP_COLLECTOR_METRICS_ENDPOINT_URL,
-              temporalityPreference: AggregationTemporality.DELTA,
+              temporalityPreference: metricTemporality,
             }),
-            exportIntervalMillis: 10000,
+            exportIntervalMillis: metricExportIntervalMillis,
           }),
         ]
       : []),

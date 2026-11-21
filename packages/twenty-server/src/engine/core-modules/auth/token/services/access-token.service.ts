@@ -13,9 +13,10 @@ import {
   AuthException,
   AuthExceptionCode,
 } from 'src/engine/core-modules/auth/auth.exception';
+import { ServerAdminIdentityAssertionService } from 'src/engine/core-modules/auth/identity-assertion/services/server-admin-identity-assertion.service';
 import { type AuthToken } from 'src/engine/core-modules/auth/dto/auth-token.dto';
 import { JwtAuthStrategy } from 'src/engine/core-modules/auth/strategies/jwt.auth.strategy';
-import { type AuthContext } from 'src/engine/core-modules/auth/types/auth-context.type';
+import { type RawAuthContext } from 'src/engine/core-modules/auth/types/raw-auth-context.type';
 import { type AccessTokenJwtPayload } from 'src/engine/core-modules/auth/types/access-token-jwt-payload.type';
 import { JwtTokenTypeEnum } from 'src/engine/core-modules/auth/types/jwt-token-type.enum';
 import { type PlaygroundTokenJwtPayload } from 'src/engine/core-modules/auth/types/playground-token-jwt-payload.type';
@@ -49,6 +50,7 @@ export class AccessTokenService {
     private readonly userWorkspaceRepository: Repository<UserWorkspaceEntity>,
     private readonly userSessionService: UserSessionService,
     private readonly userSessionCookieService: UserSessionCookieService,
+    private readonly serverAdminIdentityAssertionService: ServerAdminIdentityAssertionService,
   ) {}
 
   private async resolveTokenSubject(
@@ -83,9 +85,8 @@ export class AccessTokenService {
       workspaceMemberId =
         await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
           const workspaceMemberRepository =
-            this.workspaceOrmManager.getRepository<WorkspaceMemberWorkspaceEntity>(
+            this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<WorkspaceMemberWorkspaceEntity>(
               'workspaceMember',
-              { shouldBypassPermissionChecks: true },
             );
 
           const workspaceMember = await workspaceMemberRepository.findOne({
@@ -182,7 +183,7 @@ export class AccessTokenService {
     return { token, expiresAt };
   }
 
-  async validateToken(token: string): Promise<AuthContext> {
+  async validateToken(token: string): Promise<RawAuthContext> {
     await this.jwtWrapperService.verifyJwtToken(token);
 
     const decoded = this.jwtWrapperService.decode<AccessTokenJwtPayload>(token);
@@ -192,13 +193,24 @@ export class AccessTokenService {
     return context;
   }
 
-  async validateTokenByRequest(request: Request): Promise<AuthContext> {
+  async validateTokenByRequest(request: Request): Promise<RawAuthContext> {
+    const authContext = await this.resolveAuthContextFromRequest(request);
+
+    await this.serverAdminIdentityAssertionService.assertRequestAllowedInServerAdminWorkspaceOrThrow(
+      { request, authContext },
+    );
+
+    return authContext;
+  }
+
+  private async resolveAuthContextFromRequest(
+    request: Request,
+  ): Promise<RawAuthContext> {
     const token = this.jwtWrapperService.extractJwtFromRequest()(request);
 
     if (token) {
       if (isUserSessionToken(token)) {
-        // Session tokens are cookie-only by design: accepting them as Bearer would
-        // reopen the XSS-exfiltration surface cookie sessions close.
+        // Session tokens are cookie-only: accepting them as Bearer reopens XSS exfiltration
         throw new AuthException(
           'Session tokens are only accepted from the session cookie',
           AuthExceptionCode.UNAUTHENTICATED,
@@ -223,7 +235,7 @@ export class AccessTokenService {
 
   private async validateSessionToken(
     sessionToken: string,
-  ): Promise<AuthContext> {
+  ): Promise<RawAuthContext> {
     const { payload, authenticatedAt } =
       await this.userSessionService.resolveSession(sessionToken);
 

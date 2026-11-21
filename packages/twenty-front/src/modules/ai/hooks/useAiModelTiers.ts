@@ -8,15 +8,16 @@ import { getPercentDelta } from '@/ai/utils/getPercentDelta';
 import { hasCostPerTaskForEveryModel } from '@/ai/utils/hasCostPerTaskForEveryModel';
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { aiModelTiersState } from '@/client-config/states/aiModelTiersState';
-import { aiModelsState } from '@/client-config/states/aiModelsState';
-import { getAiModelBlendedCostPerMillionTokens } from '@/settings/ai/utils/getAiModelBlendedCostPerMillionTokens';
+import { workspaceAiModelsSelector } from '@/ai/states/selectors/workspaceAiModelsSelector';
+import { findAiModelTierForDataPolicy } from '@/ai/utils/findAiModelTierForDataPolicy';
+import { getWorkspaceAiDataPolicy } from '@/ai/utils/getWorkspaceAiDataPolicy';
+import { getAiModelBlendedCostPerMillionTokens } from '@/ai/utils/getAiModelBlendedCostPerMillionTokens';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { type ClientAiModelConfig } from '~/generated-metadata/graphql';
 
 const REFERENCE_TIER: AiModelTier = 'balanced';
 
-// Every tier's cost delta must use the same basis: the publisher's cost per
-// task when every tier has one, the catalog price otherwise.
+// One basis for every tier: cost per task when all have one, catalog price otherwise.
 const getCostDeltaPercent = ({
   model,
   referenceModel,
@@ -40,19 +41,19 @@ const getCostDeltaPercent = ({
   });
 };
 
-// Mirrors the server rule: a pin counts only while automatic selection is off
-// and the pinned model is still served by the instance.
 export const useAiModelTiers = (): ResolvedAiModelTier[] => {
-  const aiModels = useAtomStateValue(aiModelsState);
+  const workspaceAiModels = useAtomStateValue(workspaceAiModelsSelector);
   const aiModelTiers = useAtomStateValue(aiModelTiersState);
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
   const isAutoModelSelectionEnabled =
     currentWorkspace?.isAutoModelSelectionEnabled ?? true;
   const aiModelIdByTier = currentWorkspace?.aiModelIdByTier;
+  const { requiredDataResidencyRegion, isZeroDataRetentionRequired } =
+    getWorkspaceAiDataPolicy(currentWorkspace);
 
   return useMemo(() => {
     const findModel = (modelId: string | undefined) =>
-      aiModels.find((model) => model.modelId === modelId);
+      workspaceAiModels.find((model) => model.modelId === modelId);
 
     const resolvedModels = AI_MODEL_TIERS.map((tier) => {
       const pinnedModel = isAutoModelSelectionEnabled
@@ -66,8 +67,14 @@ export const useAiModelTiers = (): ResolvedAiModelTier[] => {
       return {
         tier,
         model: findModel(
-          aiModelTiers.find((instanceTier) => instanceTier.tier === tier)
-            ?.modelId,
+          findAiModelTierForDataPolicy({
+            aiModelTiers,
+            tier,
+            aiDataPolicy: {
+              requiredDataResidencyRegion,
+              isZeroDataRetentionRequired,
+            },
+          })?.modelId,
         ),
         isPinned: false,
       };
@@ -99,5 +106,12 @@ export const useAiModelTiers = (): ResolvedAiModelTier[] => {
         hasCostPerTaskForEveryTier,
       }),
     }));
-  }, [aiModels, aiModelTiers, isAutoModelSelectionEnabled, aiModelIdByTier]);
+  }, [
+    workspaceAiModels,
+    aiModelTiers,
+    isAutoModelSelectionEnabled,
+    aiModelIdByTier,
+    requiredDataResidencyRegion,
+    isZeroDataRetentionRequired,
+  ]);
 };

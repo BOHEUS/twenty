@@ -1,18 +1,29 @@
 import { randomUUID } from 'node:crypto';
 
-import { ConnectedAccountProvider } from 'twenty-shared/types';
+import {
+  ConnectedAccountProvider,
+  MessageFolderImportPolicy,
+} from 'twenty-shared/types';
 
 import { ConnectedAccountEntity } from 'src/engine/metadata-modules/connected-account/entities/connected-account.entity';
+import { getPropertyFromHeaders } from 'src/modules/messaging/message-import-manager/drivers/gmail/utils/get-property-from-headers.util';
 
+import { getGmailMessageSubject } from 'test/integration/google/mocks/gmail-message-subject.util';
 import { gmailMessage } from 'test/integration/google/mocks/gmail-message.util';
+import { GOOGLE_ALIAS_DISPLAY_NAME } from 'test/integration/google/mocks/google-alias-display-name.constant';
 import { setupGoogleMock } from 'test/integration/google/mocks/setup-google-mock.util';
 import { connectMessagingAccount } from 'test/integration/utils/connect-messaging-account.util';
 import { createCalendarEvent } from 'test/integration/utils/create-calendar-event.util';
-import { findImportedCalendarEventTitles } from 'test/integration/utils/find-imported-records.util';
+import {
+  findImportedCalendarEventTitles,
+  findImportedMessageSubjects,
+} from 'test/integration/utils/find-imported-records.util';
 import { findRecordNodesByFilter } from 'test/integration/utils/find-records-by-filter.util';
 import { getCoreRepository } from 'test/integration/utils/get-core-repository.util';
+import { updateMessageChannel } from 'test/integration/utils/query-messaging.util';
 import { runMessageChannelSync } from 'test/integration/utils/run-message-channel-sync.util';
 import { sendEmail } from 'test/integration/utils/send-email.util';
+import { serializeEmailBody } from 'test/integration/utils/serialize-email-body.util';
 
 const HANDLE = 'gmail-outbound@apple.dev';
 const ALIAS = 'gmail-outbound-alias@apple.dev';
@@ -51,11 +62,13 @@ const DRAFT_MESSAGE = gmailMessage({
   },
 });
 
+const INBOX = [PARENT_MESSAGE, DRAFT_MESSAGE];
+
 describe('Gmail outbound messaging and calendar creation (integration)', () => {
   const google = setupGoogleMock({
     handle: HANDLE,
     aliases: [ALIAS],
-    inbox: [PARENT_MESSAGE, DRAFT_MESSAGE],
+    inbox: INBOX,
   });
 
   let channel: Awaited<ReturnType<typeof connectMessagingAccount>>;
@@ -81,7 +94,10 @@ describe('Gmail outbound messaging and calendar creation (integration)', () => {
       cc: RECIPIENTS.cc,
       bcc: RECIPIENTS.bcc,
       subject,
-      body: '<p>Gmail reply body</p>',
+      body: serializeEmailBody({
+        type: 'html',
+        html: '<p>Gmail reply body</p>',
+      }),
       inReplyTo: '<gmail-parent@example.com>',
     });
 
@@ -188,7 +204,7 @@ describe('Gmail outbound messaging and calendar creation (integration)', () => {
       cc: RECIPIENTS.cc,
       bcc: RECIPIENTS.bcc,
       subject: DRAFT_SUBJECT,
-      body: 'Gmail draft body',
+      body: serializeEmailBody({ type: 'text', text: 'Gmail draft body' }),
       draftMessageId: draft.id,
     });
 
@@ -238,14 +254,23 @@ describe('Gmail outbound messaging and calendar creation (integration)', () => {
       fromHandle: ALIAS,
       to: RECIPIENTS.to,
       subject,
-      body: '<p>Gmail alias body</p>',
+      body: serializeEmailBody({
+        type: 'html',
+        html: '<p>Gmail alias body</p>',
+      }),
     });
 
     expect(result).toMatchObject({ success: true });
 
     const [{ raw }] = google.sentMessages.slice(-1);
 
-    expect(raw).toContain(`<${ALIAS}>`);
+    const encodedAliasDisplayName = Buffer.from(
+      GOOGLE_ALIAS_DISPLAY_NAME,
+    ).toString('base64');
+
+    expect(raw).toContain(
+      `From: "=?UTF-8?B?${encodedAliasDisplayName}?=" <${ALIAS}>`,
+    );
   }, 60000);
 
   it('refuses to send from an address the account has not verified', async () => {
@@ -256,16 +281,94 @@ describe('Gmail outbound messaging and calendar creation (integration)', () => {
       fromHandle: 'not-my-alias@apple.dev',
       to: RECIPIENTS.to,
       subject: `Gmail rejected sender ${randomUUID()}`,
-      body: '<p>Gmail rejected body</p>',
+      body: serializeEmailBody({
+        type: 'html',
+        html: '<p>Gmail rejected body</p>',
+      }),
     });
 
     expect(result).toMatchObject({
       success: false,
-      error: expect.stringContaining(
-        'is not the connected account handle nor one of its verified aliases',
-      ),
+      error: 'You cannot send from this address.',
     });
     expect(google.sentMessages).toHaveLength(sentMessageCount);
+  }, 60000);
+
+  it('stores the Message-ID Gmail assigns to a sent email rather than the composed one', async () => {
+    const subject = `Gmail assigned Message-ID ${randomUUID()}`;
+
+    const result = await sendEmail({
+      connectedAccountId: channel.connectedAccountId,
+      to: RECIPIENTS.to,
+      subject,
+      body: serializeEmailBody({ type: 'html', html: '<p>Gmail body</p>' }),
+    });
+
+    expect(result).toMatchObject({ success: true });
+
+    const [{ raw }] = google.sentMessages.slice(-1);
+    const gmailAssignedHeaderMessageId = getPropertyFromHeaders(
+      INBOX[INBOX.length - 1],
+      'Message-ID',
+    );
+
+    const [message] = await findRecordNodesByFilter<{
+      headerMessageId: string;
+    }>('message', 'messages', 'headerMessageId', {
+      subject: { eq: subject },
+    });
+
+    expect(message.headerMessageId).toBe(gmailAssignedHeaderMessageId);
+    expect(raw).not.toContain(`Message-ID: ${gmailAssignedHeaderMessageId}`);
+  }, 60000);
+
+  it('keeps a single sent email when a reply makes sync fetch it again under the Message-ID Gmail assigned', async () => {
+    await updateMessageChannel(channel.channelId, {
+      messageFolderImportPolicy: MessageFolderImportPolicy.SELECTED_FOLDERS,
+    });
+    google.failSentMessageHeaderRead();
+
+    const subject = `Gmail sent then replied ${randomUUID()}`;
+
+    const result = await sendEmail({
+      connectedAccountId: channel.connectedAccountId,
+      to: RECIPIENTS.to,
+      subject,
+      body: serializeEmailBody({ type: 'html', html: '<p>Gmail body</p>' }),
+    });
+
+    expect(result).toMatchObject({ success: true });
+
+    const sentCopy = INBOX[INBOX.length - 1];
+    const reply = gmailMessage({
+      threadId: sentCopy.threadId,
+      from: RECIPIENTS.to,
+      to: HANDLE,
+    });
+
+    INBOX.push(reply);
+    google.serveHistory([reply]);
+
+    await runMessageChannelSync(channel.channelId);
+
+    const [sentMessage] = await findRecordNodesByFilter<{ id: string }>(
+      'message',
+      'messages',
+      'id',
+      { subject: { eq: subject } },
+    );
+
+    expect(
+      await findRecordNodesByFilter<{ messageId: string }>(
+        'messageChannelMessageAssociation',
+        'messageChannelMessageAssociations',
+        'messageId',
+        { messageExternalId: { eq: sentCopy.id } },
+      ),
+    ).toEqual([{ messageId: sentMessage.id }]);
+    expect(
+      await findImportedMessageSubjects([getGmailMessageSubject(reply)]),
+    ).toEqual([getGmailMessageSubject(reply)]);
   }, 60000);
 
   it('creates and persists a calendar event with invitations and conferencing', async () => {

@@ -2,11 +2,13 @@ import { ThreadMessagePort } from '@quilted/threads';
 import { isDefined } from 'twenty-shared/utils';
 
 import { FRONT_COMPONENT_HOST_COMMUNICATION_API_NOOP } from '@/host/thread/constants/FrontComponentHostCommunicationApiNoop';
+import { type HostOutsidePressController } from '@/host/events/types/HostOutsidePressController';
 import { type GeometryTracker } from '@/host/geometry/types/GeometryTracker';
 import { type FrontComponentMediaSessionHost } from '@/host/media/types/FrontComponentMediaSessionHost';
 import { type FrontComponentHostThreadExports } from '@/types/FrontComponentHostThreadExports';
 import { type FrontComponentThread } from '@/types/FrontComponentThread';
 import { type HostFetchFunction } from '@/types/HostFetchFunction';
+import { type ImageLoadingHost } from '@/types/image/ImageLoadingHost';
 import { type MediaSessionHostFunctions } from '@/types/MediaSession';
 import { type WorkerExports } from '@/types/WorkerExports';
 import { createClonableErrorThreadSerialization } from '@/utils/clonable-error/createClonableErrorThreadSerialization';
@@ -14,7 +16,9 @@ import { createClonableErrorThreadSerialization } from '@/utils/clonable-error/c
 type CreateFrontComponentHostThreadInput = {
   hostMessagePort: MessagePort;
   hostFetch: HostFetchFunction;
+  imageLoadingHost: ImageLoadingHost;
   geometryTracker: GeometryTracker;
+  outsidePressController: HostOutsidePressController;
   mediaSessionHost?: FrontComponentMediaSessionHost;
 };
 
@@ -55,7 +59,9 @@ const buildMediaSessionThreadExports = (
 export const createFrontComponentHostThread = ({
   hostMessagePort,
   hostFetch,
+  imageLoadingHost,
   geometryTracker,
+  outsidePressController,
   mediaSessionHost,
 }: CreateFrontComponentHostThreadInput): FrontComponentThread => {
   const thread = new ThreadMessagePort<
@@ -66,11 +72,19 @@ export const createFrontComponentHostThread = ({
       ...FRONT_COMPONENT_HOST_COMMUNICATION_API_NOOP,
       ...buildMediaSessionThreadExports(mediaSessionHost),
       hostFetch,
+      loadImage: imageLoadingHost.loadImage,
+      cancelImage: imageLoadingHost.cancelImage,
       observeElementGeometry: async (remoteElementIds) => {
         geometryTracker.observe(remoteElementIds);
       },
       unobserveElementGeometry: async (remoteElementIds) => {
         geometryTracker.unobserve(remoteElementIds);
+      },
+      observeOutsidePresses: async () => {
+        outsidePressController.observeOutsidePresses();
+      },
+      unobserveOutsidePresses: async () => {
+        outsidePressController.unobserveOutsidePresses();
       },
     },
     serialization: createClonableErrorThreadSerialization(),

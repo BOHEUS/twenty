@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { globSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
@@ -7,6 +7,9 @@ import {
 } from '../../twenty-ui/docs/types';
 import { checkUiReferenceImports } from './ui/check-ui-reference-imports';
 import { renderComponentReference } from './ui/render-component-reference';
+import { type IconDocumentationGroup } from '../../twenty-ui/docs/IconDocumentationGroup';
+import { renderIconReference } from './ui/render-icon-reference';
+import { renderUiDocumentation } from './ui/render-ui-documentation';
 import { renderTokenReference } from './ui/render-ui-reference';
 import { syncUiReferenceFiles } from './ui/sync-ui-reference-files';
 
@@ -32,12 +35,16 @@ const components: ComponentDocumentation[] = JSON.parse(
 const tokens: TokenDocumentation[] = JSON.parse(
   readFileSync(resolve(dataRoot, 'tokens.docs.json'), 'utf8'),
 );
+const iconGroups: IconDocumentationGroup[] = JSON.parse(
+  readFileSync(resolve(dataRoot, 'icons.docs.json'), 'utf8'),
+);
 const outputs = [
   ...components.map((component) => ({
     name: `${component.slug}.mdx`,
     content: renderComponentReference(component),
   })),
   { name: 'tokens.mdx', content: renderTokenReference(tokens) },
+  { name: 'icon/catalog.mdx', content: renderIconReference(iconGroups) },
 ];
 
 const syncErrors = syncUiReferenceFiles({
@@ -48,6 +55,35 @@ const syncErrors = syncUiReferenceFiles({
   })),
   isCheckMode: process.argv.includes('--check'),
 });
+
+const { version } = JSON.parse(
+  readFileSync(resolve(__dirname, '../../twenty-ui/package.json'), 'utf8'),
+);
+
+syncErrors.push(
+  ...syncUiReferenceFiles({
+    directory: resolve(
+      __dirname,
+      '../../twenty-server/src/engine/metadata-modules/ai/ai-front-component/constants/generated',
+    ),
+    outputs: [
+      {
+        name: 'ui-documentation.json',
+        content: renderUiDocumentation({
+          version,
+          components,
+          guides: globSync('**/*.mdx', { cwd: pagesRoot })
+            .sort()
+            .map((name) => ({
+              name,
+              content: readFileSync(resolve(pagesRoot, name), 'utf8'),
+            })),
+        }),
+      },
+    ],
+    isCheckMode: process.argv.includes('--check'),
+  }),
+);
 
 if (syncErrors.length > 0) {
   process.stderr.write(

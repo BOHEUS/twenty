@@ -1,6 +1,6 @@
 # Layout
 
-Use this reference for Twenty app views, navigation, page layouts, page layout tabs, and front component registration. Use `standalone-pages.md` when a page layout is meant to host a full-page custom UI.
+Use this reference for Twenty app views, navigation, page layouts, page layout tabs, front component registration, and settings menu items. Use `standalone-pages.md` when a page layout is meant to host a full-page custom UI.
 
 ## Views And Navigation
 
@@ -42,6 +42,30 @@ When adding an app-defined front component to a record page layout, use the comp
 ```
 
 Use `frontComponentUniversalIdentifier` for app-defined front components. A `frontComponentId` is not the same value and will not link the widget to the app component correctly.
+
+## Settings Menu Items
+
+To add an entry to an app's settings menu, declare it with `defineSettingsMenuItem` and point it at the front component that renders it:
+
+```ts
+{
+  universalIdentifier: '<settings-menu-item-uuid>',
+  frontComponentUniversalIdentifier: '<front-component-uuid>',
+  title: '<Item title>',
+  icon: '<IconName>',
+  position: 1,
+  scope: 'WORKSPACE',
+  slug: '<kebab-case-tab-id>',
+}
+```
+
+The menu item points at the component, not the reverse, so one component can back several items. Declare as many as the app needs. Each renders as a tab on the app's page under Settings > Apps, after the built-in General tab, in `position` order.
+
+`scope` is `WORKSPACE` (configured once for the whole workspace, the default) or `USER` (configured by each member for themselves). A `USER` item renders as a tab on the app's page under the member's Settings > Apps preferences, but that page is not enabled in every workspace yet — where it is not, the item is persisted and synced but nothing displays it, so say so rather than relying on a `USER` item for a settings entry every workspace needs visible now. To store something per person, a `USER` item should use an application variable declared with `scope: 'USER'`, which `getApplicationVariable` returns with the viewing member's value unless it is secret; the component saves it with `updateMyUserApplicationVariable`, which writes the viewing member's value only (an empty value resets it to the variable's default), refuses a token with nobody behind it, and needs `SystemPermissionFlag.USER_APPS` (`CONNECTED_ACCOUNTS` in older `twenty-sdk` versions) in the app's default role, if it declares one (and in the member's role, since the component's token is the intersection of both), and since a `USER` item replaces the generated Variables form like a `WORKSPACE` item does, it should let the member set every user variable the app needs; a variable without that scope holds one value shared by the whole workspace.
+
+Items sort by ascending `position`, which is a decimal so an item can be slotted between two existing ones. Two items of one app cannot share a position in the same scope, and `General` is reserved for the built-in item.
+
+`slug` (optional) is the tab's id in the page URL hash (`#sync`); without it the tab is addressed by `universalIdentifier`, which keeps working as an alias once a slug is added. It must be lowercase kebab-case, at most 64 characters, not `general`, `variables` or UUID-shaped, and unique across the app's items in both scopes.
 
 ## Verification
 

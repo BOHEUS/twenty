@@ -3,11 +3,16 @@ import { I18nProvider } from '@lingui/react';
 import { act, renderHook } from '@testing-library/react';
 import { getDefaultStore } from 'jotai';
 import { type AppLocale } from 'twenty-shared/translations';
-import { AppPath, SidePanelPages } from 'twenty-shared/types';
+import { AppPath, OpenRecordIn, SidePanelPages } from 'twenty-shared/types';
 
+import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
 import { MAIN_CONTEXT_STORE_INSTANCE_ID } from '@/context-store/constants/MainContextStoreInstanceId';
 import { contextStoreRecordShowParentViewComponentState } from '@/context-store/states/contextStoreRecordShowParentViewComponentState';
 import { useFrontComponentExecutionContext } from '@/front-components/hooks/useFrontComponentExecutionContext';
+import { mockedWorkspaceMemberData } from '~/testing/mock-data/users';
+import { getMockObjectMetadataItemOrThrow } from '~/testing/utils/getMockObjectMetadataItemOrThrow';
+import { getTestEnrichedObjectMetadataItemsMock } from '~/testing/utils/getTestEnrichedObjectMetadataItemsMock';
+import { setTestObjectMetadataItemsInMetadataStore } from '~/testing/utils/setTestObjectMetadataItemsInMetadataStore';
 
 jest.mock('@/object-metadata/hooks/useObjectMetadataItems', () => ({
   useObjectMetadataItems: () => ({
@@ -30,7 +35,7 @@ jest.mock('@/object-metadata/utils/getFieldMetadataItemById', () => ({
 }));
 
 const mockNavigateApp = jest.fn();
-const mockRequestAccessTokenRefresh = jest.fn();
+const mockRequestApplicationAccessTokenRefresh = jest.fn();
 const mockOpenConfirmationModal = jest.fn();
 const mockNavigateSidePanel = jest.fn();
 const mockOpenRecordInSidePanel = jest.fn();
@@ -54,15 +59,32 @@ const mockStorageClear = jest.fn();
 let mockCurrentUser: { id: string } | null = { id: 'user-123' };
 let mockIsMobile = false;
 
+let mockLocationSearch = '';
+let mockLocationPathname = '/';
+let mockLocationHash = '';
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useLocation: () => ({
+    search: mockLocationSearch,
+    pathname: mockLocationPathname,
+    hash: mockLocationHash,
+  }),
+}));
+
 jest.mock('~/hooks/useNavigateApp', () => ({
   useNavigateApp: () => mockNavigateApp,
 }));
 
-jest.mock('@/front-components/hooks/useRequestApplicationTokenRefresh', () => ({
-  useRequestApplicationTokenRefresh: () => ({
-    requestAccessTokenRefresh: mockRequestAccessTokenRefresh,
+jest.mock(
+  '@/front-components/hooks/useFrontComponentApplicationTokenPair',
+  () => ({
+    useFrontComponentApplicationTokenPair: () => ({
+      requestApplicationAccessTokenRefresh:
+        mockRequestApplicationAccessTokenRefresh,
+    }),
   }),
-}));
+);
 
 jest.mock(
   '@/command-menu-item/confirmation-modal/hooks/useCommandMenuConfirmationModal',
@@ -118,8 +140,8 @@ jest.mock(
 
 const mockEnqueueToast = jest.fn();
 
-jest.mock('twenty-ui/primitives/feedback', () => ({
-  ...jest.requireActual('twenty-ui/primitives/feedback'),
+jest.mock('twenty-ui/components/feedback', () => ({
+  ...jest.requireActual('twenty-ui/components/feedback'),
   useToast: () => ({ enqueueToast: mockEnqueueToast }),
 }));
 
@@ -129,7 +151,7 @@ jest.mock('@/side-panel/hooks/useSidePanelMenu', () => ({
   }),
 }));
 
-jest.mock('twenty-ui/icon', () => ({
+jest.mock('twenty-ui/icon/provider', () => ({
   useIcons: () => ({
     getIcon: mockGetIcon,
   }),
@@ -163,19 +185,25 @@ jest.mock('@/file/hooks/useDirectFileUpload', () => ({
   }),
 }));
 
-jest.mock('twenty-front-component-renderer', () => ({
-  buildFrontComponentStorageNamespace: ({
-    applicationId,
-    userId,
-  }: {
-    applicationId: string;
-    userId: string;
-  }) => `frontComponentStorage:${applicationId}:${userId}:`,
-  setFrontComponentStorageItem: (...args: unknown[]) => mockStorageSet(...args),
-  deleteFrontComponentStorageItem: (...args: unknown[]) =>
-    mockStorageDelete(...args),
-  clearFrontComponentStorage: (...args: unknown[]) => mockStorageClear(...args),
-}));
+jest.mock(
+  'twenty-front-component-renderer',
+  () => ({
+    buildFrontComponentStorageNamespace: ({
+      applicationId,
+      userId,
+    }: {
+      applicationId: string;
+      userId: string;
+    }) => `frontComponentStorage:${applicationId}:${userId}:`,
+    setFrontComponentStorageItem: (...args: unknown[]) =>
+      mockStorageSet(...args),
+    deleteFrontComponentStorageItem: (...args: unknown[]) =>
+      mockStorageDelete(...args),
+    clearFrontComponentStorage: (...args: unknown[]) =>
+      mockStorageClear(...args),
+  }),
+  { virtual: true },
+);
 
 jest.mock('@/page-layout/utils/setRecordPageActiveTabId', () => ({
   setRecordPageActiveTabId: (params: unknown) =>
@@ -189,13 +217,14 @@ const renderUseFrontComponentExecutionContext = (
   > & { colorScheme?: 'light' | 'dark'; applicationId?: string },
 ) =>
   renderHook(
-    () =>
+    (parameters) =>
       useFrontComponentExecutionContext({
         colorScheme: 'light',
         applicationId: APPLICATION_ID,
-        ...params,
+        ...parameters,
       }),
     {
+      initialProps: params,
       wrapper: ({ children }) => I18nProvider({ i18n, children }),
     },
   );
@@ -210,6 +239,12 @@ const parentViewAtom =
     instanceId: MAIN_CONTEXT_STORE_INSTANCE_ID,
   });
 
+const setOpenRecordInPreference = (openRecordIn: OpenRecordIn) =>
+  getDefaultStore().set(currentWorkspaceMemberState.atom, {
+    ...mockedWorkspaceMemberData,
+    openRecordIn,
+  });
+
 const createParentView = (parentViewObjectNameSingular: string) => ({
   parentViewComponentId: 'parent-view-component-id',
   parentViewObjectNameSingular,
@@ -219,11 +254,22 @@ const createParentView = (parentViewObjectNameSingular: string) => ({
 });
 
 describe('useFrontComponentExecutionContext', () => {
+  beforeAll(() => {
+    setTestObjectMetadataItemsInMetadataStore(
+      getDefaultStore(),
+      getTestEnrichedObjectMetadataItemsMock(),
+    );
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockCurrentUser = { id: 'user-123' };
     mockIsMobile = false;
+    mockLocationSearch = '';
+    mockLocationPathname = '/';
+    mockLocationHash = '';
     getDefaultStore().set(parentViewAtom, undefined);
+    getDefaultStore().set(currentWorkspaceMemberState.atom, null);
   });
 
   describe('executionContext', () => {
@@ -238,10 +284,37 @@ describe('useFrontComponentExecutionContext', () => {
         userId: 'user-123',
         recordId: 'record-456',
         selectedRecordIds: ['record-456'],
+        selectedRecordsFilter: null,
+        selectedObjectMetadata: null,
         timelineActivityId: null,
         colorScheme: 'light',
         locale: i18n.locale as AppLocale,
+        location: {
+          pathname: '/',
+          search: '',
+          hash: '',
+          origin: window.location.origin,
+        },
       });
+    });
+
+    it('should pass the selected records filter through', () => {
+      const selectedRecordsFilter = {
+        and: [
+          { name: { ilike: '%acme%' } },
+          { not: { id: { in: ['record-3'] } } },
+        ],
+      };
+
+      const { result } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+        selectedRecordIds: [],
+        selectedRecordsFilter,
+      });
+
+      expect(result.current.executionContext.selectedRecordsFilter).toEqual(
+        selectedRecordsFilter,
+      );
     });
 
     it('should return null recordId when multiple selectedRecordIds provided', () => {
@@ -255,9 +328,67 @@ describe('useFrontComponentExecutionContext', () => {
         userId: 'user-123',
         recordId: null,
         selectedRecordIds: ['record-1', 'record-2', 'record-3'],
+        selectedRecordsFilter: null,
+        selectedObjectMetadata: null,
         timelineActivityId: null,
         colorScheme: 'light',
         locale: i18n.locale as AppLocale,
+        location: {
+          pathname: '/',
+          search: '',
+          hash: '',
+          origin: window.location.origin,
+        },
+      });
+    });
+
+    it('should expose the URL pathname, query string, hash and the app origin', () => {
+      mockLocationSearch = '?project=abc&tab=2';
+      mockLocationPathname = '/page/page-record-id';
+      mockLocationHash = '#details';
+
+      const { result } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+      });
+
+      expect(result.current.executionContext.location).toEqual({
+        pathname: '/page/page-record-id',
+        search: '?project=abc&tab=2',
+        hash: '#details',
+        origin: window.location.origin,
+      });
+    });
+
+    it('should update the location when the host route changes', () => {
+      const { result, rerender } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+      });
+
+      mockLocationPathname = '/page/page-record-id';
+      mockLocationSearch = '?project=abc';
+      rerender();
+
+      expect(result.current.executionContext.location).toEqual({
+        pathname: '/page/page-record-id',
+        search: '?project=abc',
+        hash: '',
+        origin: window.location.origin,
+      });
+    });
+
+    it('should update the location when only the hash changes', () => {
+      const { result, rerender } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+      });
+
+      mockLocationHash = '#details';
+      rerender();
+
+      expect(result.current.executionContext.location).toEqual({
+        pathname: '/',
+        search: '',
+        hash: '#details',
+        origin: window.location.origin,
       });
     });
 
@@ -297,6 +428,71 @@ describe('useFrontComponentExecutionContext', () => {
       });
 
       expect(result.current.executionContext.colorScheme).toBe('dark');
+    });
+
+    it.each([
+      { objectNameSingular: 'company', selectedRecordIds: ['record-1'] },
+      {
+        objectNameSingular: 'person',
+        selectedRecordIds: ['record-1', 'record-2'],
+      },
+      { objectNameSingular: 'person', selectedRecordIds: [] },
+    ])(
+      'should expose only object identity for $objectNameSingular with $selectedRecordIds',
+      ({ objectNameSingular, selectedRecordIds }) => {
+        const objectMetadataItem =
+          getMockObjectMetadataItemOrThrow(objectNameSingular);
+
+        const { result } = renderUseFrontComponentExecutionContext({
+          frontComponentId: FRONT_COMPONENT_ID,
+          objectNameSingular,
+          selectedRecordIds,
+        });
+
+        expect(result.current.executionContext.selectedObjectMetadata).toEqual({
+          id: objectMetadataItem.id,
+          nameSingular: objectMetadataItem.nameSingular,
+          namePlural: objectMetadataItem.namePlural,
+        });
+        expect(result.current.executionContext.selectedRecordIds).toEqual(
+          selectedRecordIds,
+        );
+      },
+    );
+
+    it('should update object metadata and clear it when context is absent or unresolved', () => {
+      const { result, rerender } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+        objectNameSingular: 'company',
+        selectedRecordIds: ['record-1'],
+      });
+
+      expect(result.current.executionContext.selectedObjectMetadata?.id).toBe(
+        getMockObjectMetadataItemOrThrow('company').id,
+      );
+
+      rerender({
+        frontComponentId: FRONT_COMPONENT_ID,
+        objectNameSingular: 'person',
+        selectedRecordIds: ['record-2'],
+      });
+
+      expect(result.current.executionContext.selectedObjectMetadata).toEqual({
+        id: getMockObjectMetadataItemOrThrow('person').id,
+        nameSingular: 'person',
+        namePlural: 'people',
+      });
+
+      rerender({
+        frontComponentId: FRONT_COMPONENT_ID,
+        objectNameSingular: 'unknown',
+      });
+
+      expect(result.current.executionContext.selectedObjectMetadata).toBeNull();
+
+      rerender({ frontComponentId: FRONT_COMPONENT_ID });
+
+      expect(result.current.executionContext.selectedObjectMetadata).toBeNull();
     });
   });
 
@@ -509,6 +705,24 @@ describe('useFrontComponentExecutionContext', () => {
       expect(mockNavigateSidePanel).not.toHaveBeenCalled();
     });
 
+    it('rejects page layout pages because they need the layout they edit', async () => {
+      const { result } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+      });
+
+      await expect(
+        result.current.frontComponentHostCommunicationApi.openSidePanelPage({
+          page: SidePanelPages.DashboardChartSettings,
+          pageTitle: 'Chart',
+          pageIcon: 'IconChartPie',
+        }),
+      ).rejects.toThrow(
+        'dashboard-chart-settings edits the page layout it was opened from and cannot be opened by a front component',
+      );
+
+      expect(mockNavigateSidePanel).not.toHaveBeenCalled();
+    });
+
     it('maps legacy Copilot calls to AskAI', async () => {
       const { result } = renderUseFrontComponentExecutionContext({
         frontComponentId: FRONT_COMPONENT_ID,
@@ -666,6 +880,95 @@ describe('useFrontComponentExecutionContext', () => {
       );
       expect(mockOpenRecordInSidePanel).not.toHaveBeenCalled();
     });
+    describe('with the user open record preference', () => {
+      const openLeadRecord = async () => {
+        const { result } = renderUseFrontComponentExecutionContext({
+          frontComponentId: FRONT_COMPONENT_ID,
+        });
+
+        await act(async () => {
+          await result.current.frontComponentHostCommunicationApi.openSidePanelPage(
+            {
+              page: SidePanelPages.ViewRecord,
+              recordId: 'lead-1',
+              objectNameSingular: 'lead',
+            },
+          );
+        });
+      };
+
+      it('should navigate to the record page when the user prefers the record page', async () => {
+        setOpenRecordInPreference(OpenRecordIn.RECORD_PAGE);
+
+        await openLeadRecord();
+
+        expect(mockNavigateApp).toHaveBeenCalledTimes(1);
+        expect(mockNavigateApp).toHaveBeenCalledWith(
+          AppPath.RecordShowPage,
+          { objectNameSingular: 'lead', objectRecordId: 'lead-1' },
+          undefined,
+          undefined,
+        );
+        expect(mockOpenRecordInSidePanel).not.toHaveBeenCalled();
+      });
+
+      it('should open the side panel when the user prefers the side panel', async () => {
+        setOpenRecordInPreference(OpenRecordIn.SIDE_PANEL);
+
+        await openLeadRecord();
+
+        expect(mockOpenRecordInSidePanel).toHaveBeenCalledTimes(1);
+        expect(mockOpenRecordInSidePanel).toHaveBeenCalledWith({
+          recordId: 'lead-1',
+          objectNameSingular: 'lead',
+          resetNavigationStack: undefined,
+        });
+        expect(mockNavigateApp).not.toHaveBeenCalled();
+      });
+
+      it('should navigate to the record page on mobile even when the user prefers the side panel', async () => {
+        setOpenRecordInPreference(OpenRecordIn.SIDE_PANEL);
+        mockIsMobile = true;
+
+        await openLeadRecord();
+
+        expect(mockNavigateApp).toHaveBeenCalledTimes(1);
+        expect(mockNavigateApp).toHaveBeenCalledWith(
+          AppPath.RecordShowPage,
+          { objectNameSingular: 'lead', objectRecordId: 'lead-1' },
+          undefined,
+          undefined,
+        );
+        expect(mockOpenRecordInSidePanel).not.toHaveBeenCalled();
+      });
+
+      it('should keep the object-level record page setting when the user prefers the side panel', async () => {
+        setOpenRecordInPreference(OpenRecordIn.SIDE_PANEL);
+
+        const { result } = renderUseFrontComponentExecutionContext({
+          frontComponentId: FRONT_COMPONENT_ID,
+        });
+
+        await act(async () => {
+          await result.current.frontComponentHostCommunicationApi.openSidePanelPage(
+            {
+              page: SidePanelPages.ViewRecord,
+              recordId: 'workflow-1',
+              objectNameSingular: 'workflow',
+            },
+          );
+        });
+
+        expect(mockNavigateApp).toHaveBeenCalledTimes(1);
+        expect(mockNavigateApp).toHaveBeenCalledWith(
+          AppPath.RecordShowPage,
+          { objectNameSingular: 'workflow', objectRecordId: 'workflow-1' },
+          undefined,
+          undefined,
+        );
+        expect(mockOpenRecordInSidePanel).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('openSidePanelPage with EditRichText', () => {
@@ -746,7 +1049,99 @@ describe('useFrontComponentExecutionContext', () => {
         pageTitle: 'My Component',
         pageIcon: 'icon-IconBolt',
         resetNavigationStack: undefined,
-        recordContext: { recordId: 'lead-1', objectNameSingular: 'lead' },
+        recordContext: {
+          selectedRecordIds: ['lead-1'],
+          objectNameSingular: 'lead',
+        },
+      });
+    });
+
+    it('should pass multiple selected record ids to a front component', async () => {
+      const { result } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+      });
+
+      await act(async () => {
+        await result.current.frontComponentHostCommunicationApi.openSidePanelPage(
+          {
+            page: SidePanelPages.ViewFrontComponent,
+            frontComponentId: 'fc-1',
+            pageTitle: 'My Component',
+            pageIcon: 'IconBolt',
+            selectedRecordIds: ['lead-1', 'lead-2'],
+            objectNameSingular: 'lead',
+          },
+        );
+      });
+
+      expect(mockOpenFrontComponentInSidePanel).toHaveBeenCalledTimes(1);
+      expect(mockOpenFrontComponentInSidePanel).toHaveBeenCalledWith({
+        frontComponentId: 'fc-1',
+        pageTitle: 'My Component',
+        pageIcon: 'icon-IconBolt',
+        resetNavigationStack: undefined,
+        recordContext: {
+          selectedRecordIds: ['lead-1', 'lead-2'],
+          objectNameSingular: 'lead',
+        },
+      });
+    });
+
+    it('should retain selected ids without an object name', async () => {
+      const { result } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+      });
+
+      await act(async () => {
+        await result.current.frontComponentHostCommunicationApi.openSidePanelPage(
+          {
+            page: SidePanelPages.ViewFrontComponent,
+            frontComponentId: 'fc-1',
+            pageTitle: 'My Component',
+            selectedRecordIds: ['lead-1', 'lead-2'],
+          },
+        );
+      });
+
+      expect(mockOpenFrontComponentInSidePanel).toHaveBeenCalledTimes(1);
+      expect(mockOpenFrontComponentInSidePanel).toHaveBeenCalledWith({
+        frontComponentId: 'fc-1',
+        pageTitle: 'My Component',
+        pageIcon: 'icon-undefined',
+        resetNavigationStack: undefined,
+        recordContext: {
+          objectNameSingular: undefined,
+          selectedRecordIds: ['lead-1', 'lead-2'],
+        },
+      });
+    });
+
+    it('should keep the object context when no record id is provided', async () => {
+      const { result } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+      });
+
+      await act(async () => {
+        await result.current.frontComponentHostCommunicationApi.openSidePanelPage(
+          {
+            page: SidePanelPages.ViewFrontComponent,
+            frontComponentId: 'fc-1',
+            pageTitle: 'My Component',
+            pageIcon: 'IconBolt',
+            objectNameSingular: 'lead',
+          },
+        );
+      });
+
+      expect(mockOpenFrontComponentInSidePanel).toHaveBeenCalledWith({
+        frontComponentId: 'fc-1',
+        pageTitle: 'My Component',
+        pageIcon: 'icon-IconBolt',
+        resetNavigationStack: undefined,
+        recordContext: {
+          objectNameSingular: 'lead',
+          selectedRecordIds: undefined,
+        },
       });
     });
   });
@@ -844,7 +1239,7 @@ describe('useFrontComponentExecutionContext', () => {
 
         expect(mockEnqueueToast).toHaveBeenCalledWith({
           children: `${variant} message`,
-          variant,
+          status: variant,
           duration: 3000,
           description: 'details',
           dedupeKey: 'key-1',
@@ -893,6 +1288,30 @@ describe('useFrontComponentExecutionContext', () => {
       });
 
       expect(mockCloseSidePanelMenu).toHaveBeenCalled();
+    });
+  });
+
+  describe('requestAccessTokenRefresh', () => {
+    it('should refresh the access token of the front component application', async () => {
+      mockRequestApplicationAccessTokenRefresh.mockResolvedValue(
+        'renewed-access-token',
+      );
+
+      const { result } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+      });
+
+      let accessToken: string | undefined;
+
+      await act(async () => {
+        accessToken =
+          await result.current.frontComponentHostCommunicationApi.requestAccessTokenRefresh();
+      });
+
+      expect(accessToken).toBe('renewed-access-token');
+      expect(mockRequestApplicationAccessTokenRefresh).toHaveBeenCalledWith(
+        APPLICATION_ID,
+      );
     });
   });
 
@@ -948,8 +1367,7 @@ describe('useFrontComponentExecutionContext', () => {
       new Blob(['recorded-bytes'], { type: 'audio/webm' });
 
     beforeEach(() => {
-      // clearAllMocks keeps implementations; drop resolved/rejected values
-      // so these tests stay order-independent.
+      // clearAllMocks keeps resolved values; reset so these tests stay order-independent.
       mockDirectUploadFile.mockReset();
     });
 
@@ -1023,21 +1441,12 @@ describe('useFrontComponentExecutionContext', () => {
           buildRecordedBlob(),
           { fieldMetadataId: '' },
         );
-      const nonBlobResult =
-        await result.current.frontComponentHostCommunicationApi.uploadFile(
-          'not-a-blob' as unknown as Blob,
-          { fieldMetadataId: 'files-field-id' },
-        );
 
       expect(emptyBlobResult).toEqual({
         status: 'failed',
         reason: 'invalid-params',
       });
       expect(missingFieldResult).toEqual({
-        status: 'failed',
-        reason: 'invalid-params',
-      });
-      expect(nonBlobResult).toEqual({
         status: 'failed',
         reason: 'invalid-params',
       });
@@ -1090,6 +1499,53 @@ describe('useFrontComponentExecutionContext', () => {
         status: 'failed',
         reason: 'upload-failed',
       });
+    });
+  });
+
+  describe('setToolCallArguments', () => {
+    const PENDING_TOOL_CALL = {
+      toolCallId: 'call-1',
+      toolName: 'app_tool_decide_cal_booking',
+      status: 'approval-requested' as const,
+      input: { bookingId: 'booking-1', decision: 'APPROVE' },
+    };
+
+    it('hands the new arguments to the approval card while the call awaits approval', async () => {
+      const onToolCallArgumentsChange = jest.fn();
+      const { result } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+        toolCall: PENDING_TOOL_CALL,
+        onToolCallArgumentsChange,
+      });
+
+      await act(async () => {
+        await result.current.frontComponentHostCommunicationApi.setToolCallArguments(
+          { bookingId: 'booking-1', decision: 'DECLINE' },
+        );
+      });
+
+      expect(onToolCallArgumentsChange).toHaveBeenCalledTimes(1);
+      expect(onToolCallArgumentsChange).toHaveBeenCalledWith({
+        bookingId: 'booking-1',
+        decision: 'DECLINE',
+      });
+    });
+
+    it('ignores new arguments once the call has been answered', async () => {
+      const onToolCallArgumentsChange = jest.fn();
+      const { result } = renderUseFrontComponentExecutionContext({
+        frontComponentId: FRONT_COMPONENT_ID,
+        toolCall: { ...PENDING_TOOL_CALL, status: 'approval-responded' },
+        onToolCallArgumentsChange,
+      });
+
+      await act(async () => {
+        await result.current.frontComponentHostCommunicationApi.setToolCallArguments(
+          { decision: 'DECLINE' },
+        );
+      });
+
+      expect(onToolCallArgumentsChange).not.toHaveBeenCalled();
     });
   });
 

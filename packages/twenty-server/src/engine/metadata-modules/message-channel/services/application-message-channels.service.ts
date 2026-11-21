@@ -24,17 +24,17 @@ import {
   MessageChannelExceptionCode,
 } from 'src/engine/metadata-modules/message-channel/message-channel.exception';
 import { type MessageChannelDeletedEvent } from 'src/engine/metadata-modules/message-channel/types/message-channel-deleted.type';
+import { findMessagingProviderOnConnectionProvider } from 'src/engine/metadata-modules/messaging-provider/utils/find-messaging-provider-on-connection-provider.util';
+import { WorkspaceCacheService } from 'src/engine/workspace-cache/services/workspace-cache.service';
 import { WorkspaceEventEmitter } from 'src/engine/workspace-event-emitter/workspace-event-emitter';
+import { PersonHandleFieldService } from 'src/modules/match-participant/person-handle-field/person-handle-field.service';
+import { canonicalizePersonHandle } from 'src/modules/match-participant/person-handle-field/utils/canonicalize-person-handle.util';
 
 type ApplicationScope = {
   applicationId: string;
   workspaceId: string;
-  // The user behind the call, when there is one. An APPLICATION_ACCESS token
-  // carries them whenever a person triggered the run, and owning the app is
-  // not the same as being allowed to administer another person's private
-  // connection — so the channel API has to honour the same boundary the
-  // connection API does. Null for cron, webhooks and install hooks, which act
-  // as the application itself.
+  // the person who triggered the run, since owning the app does not grant access to another member's private connection;
+  // null for cron, webhooks and install hooks
   requestUserWorkspaceId: string | null;
 };
 
@@ -43,6 +43,8 @@ type CreateArgs = ApplicationScope & {
   handle: string;
   displayName?: string;
   visibility: MessageChannelVisibility;
+  participantHandleFieldUniversalIdentifier?: string;
+  messagingProviderUniversalIdentifier?: string;
 };
 
 type UpdateArgs = ApplicationScope & {
@@ -50,12 +52,18 @@ type UpdateArgs = ApplicationScope & {
   displayName?: string | null;
   visibility?: MessageChannelVisibility;
   isSyncEnabled?: boolean;
+  messagingProviderUniversalIdentifier?: string | null;
 };
 
-// The scalar subset an app may change. Narrower than Partial<MessageChannelEntity>,
-// which carries the relations TypeORM's update() cannot take.
+// TypeORM's update() cannot take the relations Partial<MessageChannelEntity> carries
 type UpdatableChannelFields = Partial<
-  Pick<MessageChannelEntity, 'displayName' | 'visibility' | 'isSyncEnabled'>
+  Pick<
+    MessageChannelEntity,
+    | 'displayName'
+    | 'visibility'
+    | 'isSyncEnabled'
+    | 'messagingProviderUniversalIdentifier'
+  >
 >;
 
 export type OwnedMessageChannel = {
@@ -63,8 +71,7 @@ export type OwnedMessageChannel = {
   connectedAccount: ConnectedAccountEntity;
 };
 
-// A name that is only whitespace is no name: stored as null so the UI falls
-// back to the handle, rather than rendering a blank row.
+// null rather than blank so the UI falls back to the handle
 const normalizeDisplayName = (displayName?: string | null): string | null => {
   const trimmedDisplayName = displayName?.trim();
 
@@ -79,6 +86,8 @@ export class ApplicationMessageChannelsService {
     @InjectRepository(ConnectedAccountEntity)
     private readonly connectedAccountRepository: Repository<ConnectedAccountEntity>,
     private readonly workspaceEventEmitter: WorkspaceEventEmitter,
+    private readonly personHandleFieldService: PersonHandleFieldService,
+    private readonly workspaceCacheService: WorkspaceCacheService,
   ) {}
 
   async list({
@@ -122,16 +131,33 @@ export class ApplicationMessageChannelsService {
     workspaceId,
     requestUserWorkspaceId,
     connectedAccountId,
-    handle,
+    handle: requestedHandle,
     displayName,
     visibility,
+    participantHandleFieldUniversalIdentifier,
+    messagingProviderUniversalIdentifier,
   }: CreateArgs): Promise<MessageChannelDTO> {
-    await this.assertOwnsConnectedAccount({
+    const connectedAccount = await this.findOwnedConnectedAccountOrThrow({
       applicationId,
       workspaceId,
       requestUserWorkspaceId,
       connectedAccountId,
     });
+
+    const handle = await this.resolveChannelHandleOrThrow({
+      workspaceId,
+      handle: requestedHandle,
+      participantHandleFieldUniversalIdentifier,
+    });
+
+    if (isDefined(messagingProviderUniversalIdentifier)) {
+      await this.assertMessagingProviderFitsConnectionOrThrow({
+        applicationId,
+        workspaceId,
+        connectedAccount,
+        messagingProviderUniversalIdentifier,
+      });
+    }
 
     const existingChannel = await this.messageChannelRepository.findOne({
       where: { connectedAccountId, handle, workspaceId },
@@ -151,10 +177,12 @@ export class ApplicationMessageChannelsService {
       displayName: normalizeDisplayName(displayName),
       type: MessageChannelType.APP,
       visibility,
+      participantHandleFieldUniversalIdentifier:
+        participantHandleFieldUniversalIdentifier ?? null,
+      messagingProviderUniversalIdentifier:
+        messagingProviderUniversalIdentifier ?? null,
       isSyncEnabled: true,
-      // Inert for an app channel: it is excluded from the polling crons, which
-      // are the only writers of these fields. Mirrors EMAIL_GROUP, the other
-      // push-delivered channel, so the sync-status UI reads it as healthy.
+      // inert since app channels skip the polling crons; mirrors EMAIL_GROUP so the UI reads healthy
       syncStage: MessageChannelSyncStage.MESSAGE_LIST_FETCH_PENDING,
       syncStatus: MessageChannelSyncStatus.ACTIVE,
       isContactAutoCreationEnabled: false,
@@ -167,6 +195,47 @@ export class ApplicationMessageChannelsService {
     return this.messageChannelRepository.save(entity);
   }
 
+  // the channel's own handle shares its participants' namespace, so direction still compares like with like
+  private async resolveChannelHandleOrThrow({
+    workspaceId,
+    handle,
+    participantHandleFieldUniversalIdentifier,
+  }: Pick<
+    CreateArgs,
+    'workspaceId' | 'handle' | 'participantHandleFieldUniversalIdentifier'
+  >): Promise<string> {
+    if (!isDefined(participantHandleFieldUniversalIdentifier)) {
+      return handle;
+    }
+
+    const personHandleField =
+      await this.personHandleFieldService.findByUniversalIdentifier({
+        workspaceId,
+        fieldUniversalIdentifier: participantHandleFieldUniversalIdentifier,
+      });
+
+    if (!isDefined(personHandleField)) {
+      throw new MessageChannelException(
+        `Field ${participantHandleFieldUniversalIdentifier} is not an active person field of type EMAILS, PHONES, LINKS or TEXT`,
+        MessageChannelExceptionCode.INVALID_MESSAGE_CHANNEL_INPUT,
+      );
+    }
+
+    const canonicalHandle = canonicalizePersonHandle({
+      type: personHandleField.type,
+      value: handle,
+    });
+
+    if (!isDefined(canonicalHandle)) {
+      throw new MessageChannelException(
+        `Handle ${handle} is not a valid ${personHandleField.type} value`,
+        MessageChannelExceptionCode.INVALID_MESSAGE_CHANNEL_INPUT,
+      );
+    }
+
+    return canonicalHandle;
+  }
+
   async update({
     applicationId,
     workspaceId,
@@ -175,8 +244,9 @@ export class ApplicationMessageChannelsService {
     displayName,
     visibility,
     isSyncEnabled,
+    messagingProviderUniversalIdentifier,
   }: UpdateArgs): Promise<MessageChannelDTO> {
-    const { messageChannel } = await this.findOwnedOrThrow({
+    const { messageChannel, connectedAccount } = await this.findOwnedOrThrow({
       applicationId,
       workspaceId,
       requestUserWorkspaceId,
@@ -195,6 +265,20 @@ export class ApplicationMessageChannelsService {
 
     if (isDefined(isSyncEnabled)) {
       data.isSyncEnabled = isSyncEnabled;
+    }
+
+    if (isDefined(messagingProviderUniversalIdentifier)) {
+      await this.assertMessagingProviderFitsConnectionOrThrow({
+        applicationId,
+        workspaceId,
+        connectedAccount,
+        messagingProviderUniversalIdentifier,
+      });
+    }
+
+    if (messagingProviderUniversalIdentifier !== undefined) {
+      data.messagingProviderUniversalIdentifier =
+        messagingProviderUniversalIdentifier;
     }
 
     if (Object.keys(data).length === 0) {
@@ -232,10 +316,7 @@ export class ApplicationMessageChannelsService {
     return messageChannel;
   }
 
-  // Resolving the channel through the app's own connections is what stops one
-  // app from reading or mutating another app's channels: the connected account
-  // carries the applicationId, the channel does not. Public because ingestion
-  // gates on the same check, and there must be exactly one of it.
+  // only the connected account carries applicationId, so resolving through it is what isolates apps
   async findOwnedOrThrow({
     applicationId,
     workspaceId,
@@ -255,10 +336,7 @@ export class ApplicationMessageChannelsService {
         })
       : null;
 
-    // Missing and not-reachable answer identically, and neither names the
-    // connection. Letting the two differ would tell a caller holding a channel
-    // id that the channel exists and whose connection backs it — the same
-    // probe ownershipViolation() exists to prevent one step earlier.
+    // missing and unreachable answer identically so callers cannot probe for channels
     if (!isDefined(messageChannel) || !isDefined(connectedAccount)) {
       throw new MessageChannelException(
         `Message channel ${id} not found`,
@@ -266,29 +344,56 @@ export class ApplicationMessageChannelsService {
       );
     }
 
-    // The account comes back with the channel because the gate has already
-    // loaded it: ingestion needs the same row, and re-reading it would be a
-    // second round trip for a value we are holding.
     return { messageChannel, connectedAccount };
   }
 
-  // Two boundaries, not one: the connection must belong to this application,
-  // AND the caller must be allowed to see it. Checking only the first would
-  // let any user of an app administer another user's private connection —
-  // including flipping its channel to SHARE_EVERYTHING, which publishes that
-  // person's messages to the whole workspace.
-  private async assertOwnsConnectedAccount(
+  // ownership alone would let any app user flip another member's private channel to SHARE_EVERYTHING
+  private async findOwnedConnectedAccountOrThrow(
     args: ApplicationScope & { connectedAccountId: string },
-  ): Promise<void> {
-    if (!isDefined(await this.findReachableConnectedAccount(args))) {
+  ): Promise<ConnectedAccountEntity> {
+    const connectedAccount = await this.findReachableConnectedAccount(args);
+
+    if (!isDefined(connectedAccount)) {
       throw this.ownershipViolation(args.connectedAccountId);
+    }
+
+    return connectedAccount;
+  }
+
+  private async assertMessagingProviderFitsConnectionOrThrow({
+    applicationId,
+    workspaceId,
+    connectedAccount,
+    messagingProviderUniversalIdentifier,
+  }: Pick<ApplicationScope, 'applicationId' | 'workspaceId'> & {
+    connectedAccount: Pick<ConnectedAccountEntity, 'connectionProviderId'>;
+    messagingProviderUniversalIdentifier: string;
+  }): Promise<void> {
+    const { flatMessagingProviderMaps, flatConnectionProviderMaps } =
+      await this.workspaceCacheService.getOrRecompute(workspaceId, [
+        'flatMessagingProviderMaps',
+        'flatConnectionProviderMaps',
+      ]);
+
+    const messagingProvider = findMessagingProviderOnConnectionProvider({
+      flatMessagingProviderMaps,
+      flatConnectionProviderMaps,
+      messagingProviderUniversalIdentifier,
+      connectionProviderId: connectedAccount.connectionProviderId,
+    });
+
+    if (
+      !isDefined(messagingProvider) ||
+      messagingProvider.applicationId !== applicationId
+    ) {
+      throw new MessageChannelException(
+        `Messaging provider ${messagingProviderUniversalIdentifier} is not one of this application's providers on this connection's provider`,
+        MessageChannelExceptionCode.INVALID_MESSAGE_CHANNEL_INPUT,
+      );
     }
   }
 
-  // Public because the shared MessageChannelResolver resolves an app channel's
-  // connectedAccount field through it: the app-facing reachability rule —
-  // owned by this application, and not another member's private connection —
-  // must have exactly one implementation.
+  // public so MessageChannelResolver shares the single reachability rule
   async findReachableConnectedAccount({
     applicationId,
     workspaceId,
@@ -330,7 +435,7 @@ export class ApplicationMessageChannelsService {
         workspaceId,
         provider: ConnectedAccountProvider.APP,
       },
-      select: { id: true, visibility: true, userWorkspaceId: true },
+      select: { id: true, scope: true, userWorkspaceId: true },
     });
 
     return connectedAccounts
@@ -344,8 +449,7 @@ export class ApplicationMessageChannelsService {
       .map((connectedAccount) => connectedAccount.id);
   }
 
-  // Deliberately indistinguishable from "not found": whether a connection id
-  // exists is not something one app should be able to probe for another.
+  // indistinguishable from not found so one app cannot probe another's connection ids
   private ownershipViolation(connectedAccountId: string) {
     return new MessageChannelException(
       `Connection ${connectedAccountId} not found`,

@@ -13,8 +13,6 @@ import { type FlatWorkspace } from 'src/engine/core-modules/workspace/types/flat
 import { AuthApplication } from 'src/engine/decorators/auth/auth-application.decorator';
 import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
 import { UUIDScalarType } from 'src/engine/api/graphql/workspace-schema-builder/graphql-types/scalars';
 import { CreateAppMessageChannelInput } from 'src/engine/metadata-modules/message-channel/dtos/create-app-message-channel.input';
 import { ListAppMessageChannelsInput } from 'src/engine/metadata-modules/message-channel/dtos/list-app-message-channels.input';
@@ -23,8 +21,19 @@ import { UpdateAppMessageChannelInput } from 'src/engine/metadata-modules/messag
 import { MessageChannelGraphqlApiExceptionInterceptor } from 'src/engine/metadata-modules/message-channel/interceptors/message-channel-graphql-api-exception.interceptor';
 import { ApplicationMessageChannelsService } from 'src/engine/metadata-modules/message-channel/services/application-message-channels.service';
 import { AuthGraphqlApiExceptionFilter } from 'src/engine/core-modules/auth/filters/auth-graphql-api-exception.filter';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
-@UseGuards(WorkspaceAuthGuard, NoPermissionGuard)
+@UseGuards(
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: false,
+      apiKey: false,
+      oauthClient: false,
+      application: true,
+    },
+    requiredPermissionFlags: [],
+  }),
+)
 @UseInterceptors(MessageChannelGraphqlApiExceptionInterceptor)
 @UsePipes(ResolverValidationPipe)
 @MetadataResolver()
@@ -66,6 +75,10 @@ export class ApplicationMessageChannelsResolver {
       handle: input.handle,
       displayName: input.displayName,
       visibility: input.visibility,
+      participantHandleFieldUniversalIdentifier:
+        input.participantHandleFieldUniversalIdentifier,
+      messagingProviderUniversalIdentifier:
+        input.messagingProviderUniversalIdentifier,
     });
   }
 
@@ -85,6 +98,8 @@ export class ApplicationMessageChannelsResolver {
       displayName: input.displayName,
       visibility: input.visibility,
       isSyncEnabled: input.isSyncEnabled,
+      messagingProviderUniversalIdentifier:
+        input.messagingProviderUniversalIdentifier,
     });
   }
 

@@ -1,7 +1,9 @@
-import { getLinkNavigationMenuItemComputedLink } from '@/navigation-menu-item/display/link/utils/getLinkNavigationMenuItemComputedLink';
+import { getLinkNavigationMenuItemComputedLink } from '@/navigation-menu-item/common/utils/getLinkNavigationMenuItemComputedLink';
+import { getAutomationNavigationMenuItemComputedLink } from '@/navigation-menu-item/display/automation/utils/getAutomationNavigationMenuItemComputedLink';
 import { getObjectNavigationMenuItemComputedLink } from '@/navigation-menu-item/display/object/utils/getObjectNavigationMenuItemComputedLink';
 import { getPageLayoutNavigationMenuItemComputedLink } from '@/navigation-menu-item/display/page-layout/utils/getPageLayoutNavigationMenuItemComputedLink';
 import { getRecordNavigationMenuItemComputedLink } from '@/navigation-menu-item/display/record/utils/getRecordNavigationMenuItemComputedLink';
+import { getNativePageNavigationMenuItemConfig } from '@/navigation-menu-item/display/native-page/utils/getNativePageNavigationMenuItemConfig';
 import { getViewNavigationMenuItemComputedLink } from '@/navigation-menu-item/display/view/utils/getViewNavigationMenuItemComputedLink';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { type View } from '@/views/types/View';
@@ -14,13 +16,11 @@ export const getNavigationMenuItemComputedLink = ({
   objectMetadataItems,
   views,
   lastVisitedViewPerObjectMetadataItem,
-  isInitialObjectViewEnabled = false,
 }: {
   item: NavigationMenuItem;
   objectMetadataItems: EnrichedObjectMetadataItem[];
   views: Pick<View, 'id' | 'objectMetadataId' | 'key' | 'type' | 'position'>[];
   lastVisitedViewPerObjectMetadataItem?: Record<string, string> | null;
-  isInitialObjectViewEnabled?: boolean;
 }): string => {
   switch (item.type) {
     case NavigationMenuItemType.OBJECT: {
@@ -33,7 +33,6 @@ export const getNavigationMenuItemComputedLink = ({
         objectMetadataItems,
         views,
         lastVisitedViewId,
-        isInitialObjectViewEnabled,
       });
     }
     case NavigationMenuItemType.VIEW:
@@ -48,6 +47,11 @@ export const getNavigationMenuItemComputedLink = ({
       return getRecordNavigationMenuItemComputedLink(item, objectMetadataItems);
     case NavigationMenuItemType.PAGE_LAYOUT:
       return getPageLayoutNavigationMenuItemComputedLink(item);
+    case NavigationMenuItemType.WORKFLOW:
+    case NavigationMenuItemType.AGENT:
+      return getAutomationNavigationMenuItemComputedLink(item);
+    case NavigationMenuItemType.NATIVE_PAGE:
+      return getNativePageNavigationMenuItemConfig(item)?.path ?? '';
     default:
       return '';
   }

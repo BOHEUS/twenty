@@ -1,7 +1,7 @@
+import { FieldDescriptionTooltip } from '@/object-record/record-field/ui/components/FieldDescriptionTooltip';
 import { styled } from '@linaria/react';
 import { useContext } from 'react';
-import { FieldDescriptionTooltip } from '@/object-record/record-field/ui/components/FieldDescriptionTooltip';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 
 import { FieldContext } from '@/object-record/record-field/ui/contexts/FieldContext';
 import { useFieldFocus } from '@/object-record/record-field/ui/hooks/useFieldFocus';
@@ -10,10 +10,8 @@ import { RecordInlineCellValue } from '@/object-record/record-inline-cell/compon
 import { assertFieldMetadata } from '@/object-record/record-field/ui/types/guards/assertFieldMetadata';
 import { isFieldText } from '@/object-record/record-field/ui/types/guards/isFieldText';
 import { TooltipDelay } from '@/ui/layout/tooltip/constants/TooltipDelay';
-import {
-  Tooltip,
-  OverflowingTextWithTooltip,
-} from 'twenty-ui/primitives/surfaces';
+import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
+import { Tooltip } from 'twenty-ui/primitives/surfaces';
 import { FieldMetadataType } from '~/generated-metadata/graphql';
 import { useRecordInlineCellContext } from './RecordInlineCellContext';
 
@@ -22,14 +20,6 @@ const StyledIconContainer = styled.div`
   color: ${themeCssVariables.font.color.tertiary};
   display: flex;
   width: 16px;
-
-  svg {
-    align-items: center;
-    display: flex;
-    height: 16px;
-    justify-content: center;
-    width: 16px;
-  }
 `;
 
 const StyledLabelAndIconContainer = styled.div`
@@ -73,7 +63,7 @@ export const StyledSkeletonDiv = styled.div`
 export const RecordInlineCellContainer = () => {
   const { readonly, IconLabel, label, labelWidth, showLabel } =
     useRecordInlineCellContext();
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
 
   const { fieldDefinition, onMouseEnter, onMouseLeave, anchorId } =
     useContext(FieldContext);
@@ -115,7 +105,10 @@ export const RecordInlineCellContainer = () => {
           <StyledLabelAndIconContainer>
             {IconLabel && (
               <StyledIconContainer>
-                <IconLabel stroke={theme.icon.stroke.sm} />
+                <IconLabel
+                  size={theme.icon.size.md}
+                  stroke={theme.icon.stroke.sm}
+                />
               </StyledIconContainer>
             )}
             {showLabel && (
@@ -124,10 +117,7 @@ export const RecordInlineCellContainer = () => {
                   label={label}
                   description={fieldDefinition?.metadata?.description}
                   fallback={
-                    <OverflowingTextWithTooltip
-                      text={label}
-                      displayedMaxRows={1}
-                    />
+                    <OverflowingTextWithTooltip text={label} lineClamp={1} />
                   }
                 />
               </StyledLabelContainer>

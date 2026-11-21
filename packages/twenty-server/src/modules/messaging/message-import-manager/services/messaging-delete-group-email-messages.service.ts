@@ -40,12 +40,12 @@ export class MessagingDeleteGroupEmailMessagesService {
     return this.workspaceOrmManager.executeInWorkspaceContext(
       async () => {
         const messageChannelMessageAssociationRepository =
-          this.workspaceOrmManager.getRepository<MessageChannelMessageAssociationWorkspaceEntity>(
+          this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<MessageChannelMessageAssociationWorkspaceEntity>(
             'messageChannelMessageAssociation',
           );
 
         const messageParticipantRepository =
-          this.workspaceOrmManager.getRepository<MessageParticipantWorkspaceEntity>(
+          this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<MessageParticipantWorkspaceEntity>(
             'messageParticipant',
           );
 

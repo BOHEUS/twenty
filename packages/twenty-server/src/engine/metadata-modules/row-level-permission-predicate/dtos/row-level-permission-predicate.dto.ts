@@ -19,6 +19,9 @@ export class RowLevelPermissionPredicateDTO {
   @Field(() => String)
   fieldMetadataId: string;
 
+  @Field(() => String, { nullable: true })
+  relationFieldMetadataId?: string | null;
+
   @Field(() => String)
   objectMetadataId: string;
 
@@ -45,4 +48,7 @@ export class RowLevelPermissionPredicateDTO {
 
   @Field(() => GraphQLJSON, { nullable: true })
   value: RowLevelPermissionPredicateValue | null;
+
+  @Field(() => String, { nullable: true })
+  rowLevelPermissionRuleId?: string | null;
 }

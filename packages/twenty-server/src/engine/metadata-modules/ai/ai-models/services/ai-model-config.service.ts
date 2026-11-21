@@ -2,17 +2,19 @@ import { Injectable } from '@nestjs/common';
 
 import { type ProviderOptions } from '@ai-sdk/provider-utils';
 import { type ToolSet } from 'ai';
+import { isAiDataPolicyActive, type AiDataPolicy } from 'twenty-shared/ai';
 import { isDefined } from 'twenty-shared/utils';
 
 import {
   AI_SDK_ANTHROPIC,
   AI_SDK_OPENAI,
   AI_SDK_XAI,
-} from 'src/engine/metadata-modules/ai/ai-models/constants/ai-sdk-package.const';
+} from 'src/engine/metadata-modules/ai/ai-models/constants/ai-sdk-package.constant';
 import {
   AiModelRegistryService,
   RegisteredAiModel,
 } from 'src/engine/metadata-modules/ai/ai-models/services/ai-model-registry.service';
+import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { SdkProviderFactoryService } from 'src/engine/metadata-modules/ai/ai-models/services/sdk-provider-factory.service';
 import { type NativeModelToolOptions } from 'src/engine/metadata-modules/ai/ai-models/types/native-model-tool-options.type';
 import { buildReasoningProviderOptions } from 'src/engine/metadata-modules/ai/ai-models/utils/build-reasoning-provider-options.util';
@@ -23,22 +25,40 @@ export class AiModelConfigService {
   constructor(
     private readonly aiModelRegistryService: AiModelRegistryService,
     private readonly sdkProviderFactory: SdkProviderFactoryService,
+    private readonly twentyConfigService: TwentyConfigService,
   ) {}
 
-  getReasoningProviderOptions(model: RegisteredAiModel): ProviderOptions {
-    return buildReasoningProviderOptions(model);
+  getReasoningProviderOptions(
+    model: RegisteredAiModel,
+    options?: { shouldIncludeReasoningSummary?: boolean },
+  ): ProviderOptions {
+    return buildReasoningProviderOptions(model, {
+      shouldIncludeReasoningSummary: options?.shouldIncludeReasoningSummary,
+      isOpenAiReasoningSummaryEnabled: this.twentyConfigService.get(
+        'IS_OPENAI_REASONING_SUMMARY_ENABLED',
+      ),
+    });
   }
 
-  getNativeModelTools(
-    model: RegisteredAiModel,
-    options: NativeModelToolOptions = {},
-  ): ToolSet {
+  getNativeModelTools({
+    model,
+    aiDataPolicy,
+    options = {},
+  }: {
+    model: Pick<RegisteredAiModel, 'sdkPackage' | 'providerName'>;
+    aiDataPolicy: AiDataPolicy;
+    options?: NativeModelToolOptions;
+  }): ToolSet {
     const tools: Record<string, unknown> = {};
 
     const nativeTools = getNativeModelToolsForSdkPackage(model.sdkPackage);
     const providerName = model.providerName;
 
-    if (!isDefined(nativeTools) || !isDefined(providerName)) {
+    if (
+      isAiDataPolicyActive(aiDataPolicy) ||
+      !isDefined(nativeTools) ||
+      !isDefined(providerName)
+    ) {
       return tools as ToolSet;
     }
 

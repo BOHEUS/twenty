@@ -1,11 +1,9 @@
+import { CampaignDeliveryWorkspaceEntity } from 'src/modules/emailing/standard-objects/campaign-delivery.workspace-entity';
 import { CAMPAIGN_SEND_RETRY_LIMIT } from 'src/engine/core-modules/emailing-domain/constants/campaign-send-retry-limit.constant';
 import { CAMPAIGN_SEND_RETRY_BACKOFF } from 'src/engine/core-modules/emailing-domain/constants/campaign-send-retry-backoff.constant';
 import { Injectable } from '@nestjs/common';
 
-import { CampaignDeliveryEntity } from 'src/engine/core-modules/emailing-domain/campaign-delivery.entity';
 import { CAMPAIGN_DELIVERY_STATE } from 'src/engine/core-modules/emailing-domain/constants/campaign-delivery-state.constant';
-import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
-import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 
 import chunk from 'lodash.chunk';
 import { In, type ObjectLiteral } from 'typeorm';
@@ -23,7 +21,6 @@ import { MessageQueueService } from 'src/engine/core-modules/message-queue/servi
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
-import { SKIP_EVENT_EMISSION } from 'src/modules/emailing/constants/skip-event-emission.constant';
 import { MessageCampaignLifecycleService } from 'src/modules/emailing/services/message-campaign-lifecycle.service';
 import { MessageCampaignWorkspaceEntity } from 'src/modules/emailing/standard-objects/message-campaign.workspace-entity';
 import { type CampaignRecipient } from 'src/engine/core-modules/emailing-domain/types/campaign-recipient.type';
@@ -54,8 +51,6 @@ type CampaignMessageRow = {
 @Injectable()
 export class MessageCampaignMaterializationService {
   constructor(
-    @InjectWorkspaceScopedRepository(CampaignDeliveryEntity)
-    private readonly campaignDeliveryRepository: WorkspaceScopedRepository<CampaignDeliveryEntity>,
     private readonly workspaceOrmManager: WorkspaceOrmManager,
     private readonly messageCampaignLifecycleService: MessageCampaignLifecycleService,
     @InjectMessageQueue(MessageQueue.campaignQueue)
@@ -74,10 +69,10 @@ export class MessageCampaignMaterializationService {
     recipients,
   }: MaterializeCampaignJobData): Promise<void> {
     await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
-      const campaignRepository = this.workspaceOrmManager.getRepository(
-        MessageCampaignWorkspaceEntity,
-        { shouldBypassPermissionChecks: true },
-      );
+      const campaignRepository =
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+          MessageCampaignWorkspaceEntity,
+        );
 
       const campaign = await campaignRepository.findOne({
         where: { id: campaignId },
@@ -95,10 +90,14 @@ export class MessageCampaignMaterializationService {
         recipients,
       });
 
-      const existingDeliveries = await this.campaignDeliveryRepository.find(
-        workspaceId,
-        { where: { campaignId }, select: { id: true, state: true } },
-      );
+      const existingDeliveries = await this.workspaceOrmManager
+        .getRepositoryWithoutPermissionChecks(CampaignDeliveryWorkspaceEntity, {
+          shouldSkipEventEmission: true,
+        })
+        .find({
+          where: { campaignId },
+          select: { id: true, state: true },
+        });
       const existingMessageIds = new Set(
         existingDeliveries.map((delivery) => delivery.id),
       );
@@ -184,7 +183,11 @@ export class MessageCampaignMaterializationService {
 
     await this.messageQueueService.bulkAdd<MaterializeCampaignChunkJobData>(
       MATERIALIZE_CAMPAIGN_CHUNK_JOB,
-      chunks.map((chunk) => ({ data: chunk })),
+      chunks.map((chunk) => ({
+        data: chunk,
+        workspaceId,
+        isWorkspaceJob: true,
+      })),
       { retryLimit: 3, backoff: CAMPAIGN_SEND_RETRY_BACKOFF },
     );
 
@@ -202,10 +205,10 @@ export class MessageCampaignMaterializationService {
     recipients,
   }: MaterializeCampaignChunkJobData): Promise<void> {
     await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
-      const campaignRepository = this.workspaceOrmManager.getRepository(
-        MessageCampaignWorkspaceEntity,
-        { shouldBypassPermissionChecks: true },
-      );
+      const campaignRepository =
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+          MessageCampaignWorkspaceEntity,
+        );
 
       const campaign = await campaignRepository.findOne({
         where: { id: campaignId },
@@ -240,11 +243,11 @@ export class MessageCampaignMaterializationService {
       }
 
       // Driven by the whole chunk rather than by the recipients that still
-      // needed message rows: a retry after a failed upsert sees their messages
+      // needed message rows: a retry after a failed insert sees their messages
       // already materialized, and those recipients would otherwise never get a
-      // delivery row and never be sent.
-      await this.upsertQueuedDeliveries({
-        workspaceId,
+      // delivery row and never be sent. Existing rows are left untouched so a
+      // retry cannot re-queue a delivery its send job already claimed or sent.
+      await this.insertMissingQueuedDeliveries({
         campaignId,
         recipients,
       });
@@ -278,10 +281,10 @@ export class MessageCampaignMaterializationService {
       return [];
     }
 
-    const messageRepository = this.workspaceOrmManager.getRepository(
-      MessageWorkspaceEntity,
-      { shouldBypassPermissionChecks: true },
-    );
+    const messageRepository =
+      this.workspaceOrmManager.getRepositoryWithoutPermissionChecks(
+        MessageWorkspaceEntity,
+      );
 
     const alreadyMaterialized = await messageRepository.find({
       where: {
@@ -362,6 +365,8 @@ export class MessageCampaignMaterializationService {
             email: recipient.email,
           })),
         },
+        workspaceId,
+        isWorkspaceJob: true,
       })),
       {
         retryLimit: CAMPAIGN_SEND_RETRY_LIMIT,
@@ -403,12 +408,10 @@ export class MessageCampaignMaterializationService {
     });
   }
 
-  private async upsertQueuedDeliveries({
-    workspaceId,
+  private async insertMissingQueuedDeliveries({
     campaignId,
     recipients,
   }: {
-    workspaceId: string;
     campaignId: string;
     recipients: CampaignMessageRecipient[];
   }): Promise<void> {
@@ -416,17 +419,20 @@ export class MessageCampaignMaterializationService {
       return;
     }
 
-    await this.campaignDeliveryRepository.upsert(
-      workspaceId,
-      recipients.map((recipient) => ({
-        id: recipient.messageId,
-        campaignId,
-        personId: recipient.personId,
-        recipientEmail: recipient.email,
-        state: CAMPAIGN_DELIVERY_STATE.QUEUED,
-      })),
-      { conflictPaths: ['id'], skipUpdateIfNoValuesChanged: true },
-    );
+    await this.workspaceOrmManager
+      .getRepositoryWithoutPermissionChecks(CampaignDeliveryWorkspaceEntity, {
+        shouldSkipEventEmission: true,
+      })
+      .insert(
+        recipients.map((recipient) => ({
+          id: recipient.messageId,
+          campaignId,
+          personId: recipient.personId,
+          recipientEmail: recipient.email,
+          state: CAMPAIGN_DELIVERY_STATE.QUEUED,
+        })),
+        { onConflictDoNothing: true },
+      );
   }
 
   private async insertChunk({
@@ -449,11 +455,9 @@ export class MessageCampaignMaterializationService {
     await this.workspaceOrmManager.runInWorkspaceTransaction(
       async (transactionScope) => {
         const repositoryFor = <T extends ObjectLiteral>(objectName: string) =>
-          transactionScope.getRepository<T>(
-            objectName,
-            { shouldBypassPermissionChecks: true },
-            SKIP_EVENT_EMISSION,
-          );
+          transactionScope.getRepositoryWithoutPermissionChecks<T>(objectName, {
+            shouldSkipEventEmission: true,
+          });
 
         await repositoryFor<MessageThreadWorkspaceEntity>(
           'messageThread',

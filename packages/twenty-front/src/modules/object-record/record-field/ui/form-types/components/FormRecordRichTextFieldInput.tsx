@@ -1,24 +1,12 @@
-import { useCreateBlockNote } from '@blocknote/react';
 import { useLingui } from '@lingui/react/macro';
-import { useEffect, useId, useState } from 'react';
-import { isNonEmptyArray } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/primitives/feedback';
-import { Field } from 'twenty-ui/primitives/input';
+import { type Editor } from '@tiptap/core';
+import { isDefined } from 'twenty-shared/utils';
 
-import { BLOCK_SCHEMA } from '@/blocknote-editor/blocks/Schema';
-import { BlockEditor } from '@/blocknote-editor/components/BlockEditor';
-import { BLOCK_EDITOR_GLOBAL_HOTKEYS_CONFIG } from '@/blocknote-editor/constants/BlockEditorGlobalHotkeysConfig';
-import { countBlocksDeep } from '@/blocknote-editor/utils/countBlocksDeep';
-import { filterBlocksSupportedBySchema } from '@/blocknote-editor/utils/filterBlocksSupportedBySchema';
-import { parseInitialBlocknote } from '@/blocknote-editor/utils/parseInitialBlocknote';
+import { FormAdvancedTextFieldInput } from '@/advanced-text-editor/components/FormAdvancedTextFieldInput';
+import { useMentionSearch } from '@/mention/hooks/useMentionSearch';
+import { RECORD_FORM_RICH_TEXT_EDITOR_PROFILE } from '@/object-record/record-field/ui/form-types/constants/RecordFormRichTextEditorProfile';
 import { type FieldRichTextValue } from '@/object-record/record-field/ui/types/FieldMetadata';
-import { FormFieldInputContainer } from '@/ui/input/components/FormFieldInputContainer';
-import { usePushFocusItemToFocusStack } from '@/ui/utilities/focus/hooks/usePushFocusItemToFocusStack';
-import { useRemoveFocusItemFromFocusStackById } from '@/ui/utilities/focus/hooks/useRemoveFocusItemFromFocusStackById';
-import { FocusComponentType } from '@/ui/utilities/focus/types/FocusComponentType';
-
-import '@blocknote/mantine/style.css';
-import '@blocknote/react/style.css';
+import { getRichTextFieldSerializedContent } from '@/object-record/record-field/ui/utils/getRichTextFieldSerializedContent';
 
 type FormRecordRichTextFieldInputProps = {
   label?: string;
@@ -36,100 +24,30 @@ export const FormRecordRichTextFieldInput = ({
   readonly,
 }: FormRecordRichTextFieldInputProps) => {
   const { t } = useLingui();
+  const { searchMentionRecords } = useMentionSearch();
 
-  const focusId = useId();
-
-  const { pushFocusItemToFocusStack } = usePushFocusItemToFocusStack();
-  const { removeFocusItemFromFocusStackById } =
-    useRemoveFocusItemFromFocusStackById();
-
-  const { enqueueToast } = useToast();
-
-  const [{ initialBlocks, hasUnreadableStoredValue }] = useState(() => {
-    const parsedBlocks = parseInitialBlocknote(
-      defaultValue?.blocknote ?? defaultValue?.markdown,
-    );
-
-    const supportedBlocks = filterBlocksSupportedBySchema(
-      parsedBlocks,
-      BLOCK_SCHEMA.blockSchema,
-    );
-
-    return {
-      initialBlocks: isNonEmptyArray(supportedBlocks)
-        ? supportedBlocks
-        : undefined,
-      hasUnreadableStoredValue:
-        countBlocksDeep(supportedBlocks) < countBlocksDeep(parsedBlocks),
-    };
-  });
-
-  const handleUploadFile = async (): Promise<string> => {
-    enqueueToast({
-      variant: 'error',
-      children: t`Save the record before attaching a file`,
-    });
-
-    return '';
+  const handleChange = (tiptap: string) => {
+    onChange({ blocknote: null, markdown: null, tiptap });
   };
 
-  const editor = useCreateBlockNote({
-    uploadFile: handleUploadFile,
-    initialContent: initialBlocks,
-    domAttributes: { editor: { class: 'editor' } },
-    schema: BLOCK_SCHEMA,
-    placeholders: {
-      default: placeholder ?? t`Type '/' for commands`,
-    },
-  });
-
-  const handleChange = () => {
-    onChange({
-      blocknote: JSON.stringify(editor.document),
-      markdown: null,
-    });
-  };
-
-  const handleFocus = () => {
-    pushFocusItemToFocusStack({
-      component: {
-        instanceId: focusId,
-        type: FocusComponentType.ACTIVITY_RICH_TEXT_EDITOR,
-      },
-      focusId,
-      globalHotkeysConfig: BLOCK_EDITOR_GLOBAL_HOTKEYS_CONFIG,
-    });
-  };
-
-  const handleBlur = () => {
-    removeFocusItemFromFocusStackById({ focusId });
-  };
-
-  useEffect(() => {
-    return () => {
-      removeFocusItemFromFocusStackById({ focusId });
-    };
-  }, [focusId, removeFocusItemFromFocusStackById]);
-
-  useEffect(() => {
-    if (hasUnreadableStoredValue) {
-      enqueueToast({
-        variant: 'error',
-        children: t`This content was saved in an older format and cannot be edited here`,
-      });
+  const handleEditorReady = (editor: Editor | null) => {
+    if (!isDefined(editor)) {
+      return;
     }
-  }, [hasUnreadableStoredValue, enqueueToast, t]);
+
+    editor.extensionStorage['mention-suggestion'].searchMentionRecords =
+      searchMentionRecords;
+  };
 
   return (
-    <FormFieldInputContainer>
-      {label ? <Field.Label>{label}</Field.Label> : null}
-      <BlockEditor
-        editor={editor}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        readonly={readonly || hasUnreadableStoredValue}
-      />
-    </FormFieldInputContainer>
+    <FormAdvancedTextFieldInput
+      label={label}
+      defaultValue={getRichTextFieldSerializedContent(defaultValue)}
+      placeholder={placeholder ?? t`Type '/' for commands, '@' for mentions`}
+      onChange={handleChange}
+      onEditorReady={handleEditorReady}
+      readonly={readonly}
+      profile={RECORD_FORM_RICH_TEXT_EDITOR_PROFILE}
+    />
   );
 };

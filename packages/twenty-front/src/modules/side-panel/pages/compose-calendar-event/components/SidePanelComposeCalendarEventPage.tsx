@@ -1,6 +1,7 @@
 import { CalendarEventComposerFields } from '@/activities/calendar/components/CalendarEventComposerFields';
 import { useCalendarEventComposer } from '@/activities/calendar/hooks/useCalendarEventComposer';
 import { useTriggerApisOAuth } from '@/settings/accounts/hooks/useTriggerApiOAuth';
+import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
 import { SIDE_PANEL_FOCUS_ID } from '@/side-panel/constants/SidePanelFocusId';
 import { useSidePanelHistory } from '@/side-panel/hooks/useSidePanelHistory';
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
@@ -9,15 +10,15 @@ import { SidePanelFooter } from '@/ui/layout/side-panel/components/SidePanelFoot
 import { useHotkeysOnFocusedElement } from '@/ui/utilities/hotkey/hooks/useHotkeysOnFocusedElement';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { ConnectedAccountProvider, SettingsPath } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
+import { IconButton } from 'twenty-ui/components/input';
 import { IconCalendarEvent, IconTrash } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
-import { IconButton } from 'twenty-ui/components';
-import { getOsControlSymbol } from 'twenty-ui/utilities';
+import { PermissionFlagType } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledContainer = styled.div`
   display: flex;
@@ -26,6 +27,7 @@ const StyledContainer = styled.div`
 `;
 
 export const SidePanelComposeCalendarEventPage = () => {
+  const { t } = useLingui();
   const composeCalendarEventInitialValues = useAtomComponentStateValue(
     composeCalendarEventInitialValuesComponentState,
   );
@@ -33,6 +35,9 @@ export const SidePanelComposeCalendarEventPage = () => {
   const { closeSidePanelMenu } = useSidePanelMenu();
   const navigateSettings = useNavigateSettings();
   const { triggerApisOAuth } = useTriggerApisOAuth();
+  const hasConnectedAccountsPermission = useHasPermissionFlag(
+    PermissionFlagType.CONNECTED_ACCOUNTS,
+  );
   const { enqueueToast } = useToast();
 
   const composerState = useCalendarEventComposer({
@@ -49,9 +54,14 @@ export const SidePanelComposeCalendarEventPage = () => {
 
   const handleAddAccount = () => {
     closeSidePanelMenu();
-    navigateSettings(SettingsPath.NewAccount, undefined, undefined, {
-      surface: 'main',
-    });
+    navigateSettings(
+      SettingsPath.AppPreferencesNewAccount,
+      undefined,
+      undefined,
+      {
+        surface: 'main',
+      },
+    );
   };
 
   const handleReauthorize = async () => {
@@ -71,7 +81,7 @@ export const SidePanelComposeCalendarEventPage = () => {
       });
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to reconnect calendar account`,
       });
     }
@@ -89,8 +99,12 @@ export const SidePanelComposeCalendarEventPage = () => {
       <CalendarEventComposerFields
         composerState={composerState}
         contextRecord={composeCalendarEventInitialValues.contextRecord}
-        onAddAccount={handleAddAccount}
-        onReauthorize={handleReauthorize}
+        onAddAccount={
+          hasConnectedAccountsPermission ? handleAddAccount : undefined
+        }
+        onReauthorize={
+          hasConnectedAccountsPermission ? handleReauthorize : undefined
+        }
       />
       <SidePanelFooter
         actions={[
@@ -107,7 +121,7 @@ export const SidePanelComposeCalendarEventPage = () => {
             key="create"
             size="sm"
             startIcon={<IconCalendarEvent />}
-            hotkeys={[getOsControlSymbol(), '⏎']}
+            shortcut={['Mod', 'Enter']}
             onClick={composerState.handleCreate}
             disabled={!composerState.canCreate}
             variant="solid"

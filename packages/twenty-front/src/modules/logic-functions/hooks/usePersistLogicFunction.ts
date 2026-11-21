@@ -6,12 +6,12 @@ import { UPDATE_ONE_LOGIC_FUNCTION } from '@/logic-functions/graphql/mutations/u
 import { FIND_MANY_LOGIC_FUNCTIONS } from '@/logic-functions/graphql/queries/findManyLogicFunctions';
 import { GET_LOGIC_FUNCTION_SOURCE_CODE } from '@/logic-functions/graphql/queries/getLogicFunctionSourceCode';
 import { useMetadataErrorHandler } from '@/metadata-error-handler/hooks/useMetadataErrorHandler';
-import { type MetadataRequestResult } from '@/object-metadata/types/MetadataRequestResult.type';
+import { type MetadataRequestResult } from '@/object-metadata/types/MetadataRequestResult';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation } from '@apollo/client/react';
 import { t } from '@lingui/core/macro';
 import { CrudOperationType } from 'twenty-shared/types';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   type CreateOneLogicFunctionMutation,
   type CreateOneLogicFunctionMutationVariables,
@@ -67,7 +67,7 @@ export const usePersistLogicFunction = () => {
             operationType: CrudOperationType.CREATE,
           });
         } else {
-          enqueueToast({ variant: 'error', children: t`An error occurred.` });
+          enqueueToast({ status: 'error', children: t`An error occurred.` });
         }
 
         return {
@@ -103,7 +103,7 @@ export const usePersistLogicFunction = () => {
             operationType: CrudOperationType.UPDATE,
           });
         } else {
-          enqueueToast({ variant: 'error', children: t`An error occurred.` });
+          enqueueToast({ status: 'error', children: t`An error occurred.` });
         }
 
         return {
@@ -143,7 +143,7 @@ export const usePersistLogicFunction = () => {
             operationType: CrudOperationType.DELETE,
           });
         } else {
-          enqueueToast({ variant: 'error', children: t`An error occurred.` });
+          enqueueToast({ status: 'error', children: t`An error occurred.` });
         }
 
         return {

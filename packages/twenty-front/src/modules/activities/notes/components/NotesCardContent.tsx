@@ -2,18 +2,14 @@ import { CustomResolverFetchMoreLoader } from '@/activities/components/CustomRes
 import { SkeletonLoader } from '@/activities/components/SkeletonLoader';
 import { NoteList } from '@/activities/notes/components/NoteList';
 import { type Note } from '@/activities/types/Note';
+import { AnimatedPlaceholder } from '@/ui/feedback/empty-state/components/AnimatedPlaceholder/AnimatedPlaceholder';
+import { EmptyState } from '@/ui/feedback/empty-state/components/EmptyState';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { isDefined } from 'twenty-shared/utils';
-import {
-  AnimatedPlaceholder,
-  AnimatedPlaceholderEmptyContainer,
-  AnimatedPlaceholderEmptySubTitle,
-  AnimatedPlaceholderEmptyTextContainer,
-  AnimatedPlaceholderEmptyTitle,
-} from 'twenty-ui/primitives/feedback';
+
 import { IconPlus } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledNotesContainer = styled.div`
   display: flex;
@@ -36,6 +32,7 @@ export const NotesCardContent = ({
   onCreateNote,
   onLastRowVisible,
 }: NotesCardContentProps) => {
+  const { t } = useLingui();
   const isNotesEmpty = notes.length === 0;
 
   if (loading && isNotesEmpty) {
@@ -44,16 +41,14 @@ export const NotesCardContent = ({
 
   if (isNotesEmpty) {
     return (
-      <AnimatedPlaceholderEmptyContainer>
+      <EmptyState.Root>
         <AnimatedPlaceholder type="noNote" />
-        <AnimatedPlaceholderEmptyTextContainer>
-          <AnimatedPlaceholderEmptyTitle>
-            {t`No notes`}
-          </AnimatedPlaceholderEmptyTitle>
-          <AnimatedPlaceholderEmptySubTitle>
+        <EmptyState.Content>
+          <EmptyState.Title>{t`No notes`}</EmptyState.Title>
+          <EmptyState.Description>
             {t`There are no associated notes with this record.`}
-          </AnimatedPlaceholderEmptySubTitle>
-        </AnimatedPlaceholderEmptyTextContainer>
+          </EmptyState.Description>
+        </EmptyState.Content>
         {isDefined(onCreateNote) && (
           <Button
             startIcon={<IconPlus />}
@@ -61,7 +56,7 @@ export const NotesCardContent = ({
             variant="outline"
           >{t`New note`}</Button>
         )}
-      </AnimatedPlaceholderEmptyContainer>
+      </EmptyState.Root>
     );
   }
 

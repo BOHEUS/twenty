@@ -1,12 +1,9 @@
 import styled from '@emotion/styled';
 import { isNonEmptyString } from '@sniptt/guards';
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { t } from 'twenty-sdk/front-component';
-import { Button } from 'twenty-ui/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
-
-import { LabelledSettingsField } from 'src/front-components/components/LabelledSettingsField';
-import { StyledSettingsTextInput } from 'src/front-components/components/StyledSettingsTextInput';
+import { Button, Field, Input } from 'twenty-ui/primitives/input';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledKeyRow = styled.div`
   align-items: center;
@@ -25,7 +22,6 @@ export const GranolaApiKeyForm = ({
   isConnectDisabled,
   onConnect,
 }: GranolaApiKeyFormProps) => {
-  const inputId = useId();
   const [apiKeyDraft, setApiKeyDraft] = useState('');
 
   const trimmedApiKeyDraft = apiKeyDraft.trim();
@@ -42,30 +38,31 @@ export const GranolaApiKeyForm = ({
 
   return (
     <form onSubmit={handleSubmit}>
-      <LabelledSettingsField
-        label={t('API key')}
-        inputId={inputId}
-        errorMessage={errorMessage}
-      >
+      <Field.Root>
+        <Field.Label>{t('API key')}</Field.Label>
         <StyledKeyRow>
-          <StyledSettingsTextInput
-            id={inputId}
+          <Input
             type="password"
             autoComplete="off"
             placeholder="grn_…"
             value={apiKeyDraft}
-            onChange={(event) => setApiKeyDraft(event.target.value)}
+            onValueChange={setApiKeyDraft}
           />
           <Button
             type="submit"
-            title={t('Connect')}
-            accent="blue"
+            variant="solid"
+            color="accent"
             disabled={
               isConnectDisabled || !isNonEmptyString(trimmedApiKeyDraft)
             }
-          />
+          >
+            {t('Connect')}
+          </Button>
         </StyledKeyRow>
-      </LabelledSettingsField>
+        {isNonEmptyString(errorMessage) && (
+          <Field.Error match>{errorMessage}</Field.Error>
+        )}
+      </Field.Root>
     </form>
   );
 };

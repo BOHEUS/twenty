@@ -22,7 +22,7 @@ export class AuthorizeAppInput {
 
   @Field(() => String, { nullable: true })
   @IsString()
-  @MaxLength(1024)
+  @MaxLength(4096)
   @IsOptional()
   state?: string;
 
@@ -37,4 +37,10 @@ export class AuthorizeAppInput {
   @MaxLength(2048)
   @IsOptional()
   issuer?: string;
+
+  @Field(() => String, { nullable: true })
+  @IsString()
+  @MaxLength(2048)
+  @IsOptional()
+  resource?: string;
 }

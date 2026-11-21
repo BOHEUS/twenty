@@ -24,7 +24,7 @@ import { LayoutRenderingProvider } from '@/ui/layout/contexts/LayoutRenderingCon
 import { WorkspaceSurfaceContext } from '@/ui/layout/contexts/WorkspaceSurfaceContext';
 import { jotaiStore } from '@/ui/utilities/state/jotai/jotaiStore';
 import { type ViewWithRelations } from '@/views/types/ViewWithRelations';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
+import { StandardObjectNameSingular } from 'twenty-shared/types';
 import { ComponentDecorator } from 'twenty-ui/testing';
 import {
   PageLayoutTabLayoutMode,
@@ -44,7 +44,7 @@ import { setTestViewsInMetadataStore } from '~/testing/utils/setTestViewsInMetad
 import { setTestObjectMetadataItemsInMetadataStore } from '~/testing/utils/setTestObjectMetadataItemsInMetadataStore';
 
 const companyObjectMetadataItem = getMockObjectMetadataItemOrThrow(
-  CoreObjectNameSingular.Company,
+  StandardObjectNameSingular.Company,
 );
 
 const nameField = getMockFieldMetadataItemOrThrow({
@@ -480,13 +480,7 @@ export const Empty: Story = {
   },
 };
 
-// Hovering a field mounts an interactive copy of the cell through
-// RecordInlineCellAnchoredPortal, which finds its anchor with
-// document.getElementById after resolving the list instance id through
-// useAvailableComponentInstanceIdOrThrow -- and that resolution surface-scopes
-// the id. If the list rendered its anchors from an unscoped id, the lookup
-// misses, nothing interactive mounts, and the click lands on the inert display
-// underneath: the cell highlights but no editor ever opens.
+// The anchored portal looks up a surface-scoped id; an unscoped anchor id would leave the cell inert.
 const openEditModeOnEmployees = async ({
   canvasElement,
 }: {

@@ -1,3 +1,4 @@
+import { isDefined } from 'twenty-shared/utils';
 import {
   CommandMenuItemAvailabilityType,
   NavigationMenuItemType,
@@ -10,8 +11,12 @@ import { type FlatCommandMenuItem } from 'src/engine/metadata-modules/flat-comma
 import { createEmptyAllFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-all-flat-entity-maps.constant';
 import { type AllFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/all-flat-entity-maps.type';
 import { addFlatEntityToFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/add-flat-entity-to-flat-entity-maps-or-throw.util';
+import { type FlatAgent } from 'src/engine/metadata-modules/flat-agent/types/flat-agent.type';
+import { type FlatSkill } from 'src/engine/metadata-modules/flat-skill/types/flat-skill.type';
+import { type FlatObjectPermission } from 'src/engine/metadata-modules/flat-object-permission/types/flat-object-permission.type';
 import { type FlatNavigationMenuItem } from 'src/engine/metadata-modules/flat-navigation-menu-item/types/flat-navigation-menu-item.type';
 import { type FlatPageLayout } from 'src/engine/metadata-modules/flat-page-layout/types/flat-page-layout.type';
+import { type FlatRole } from 'src/engine/metadata-modules/flat-role/types/flat-role.type';
 import { type FlatRoleTarget } from 'src/engine/metadata-modules/flat-role-target/types/flat-role-target.type';
 import { type FlatWebhook } from 'src/engine/metadata-modules/flat-webhook/types/flat-webhook.type';
 
@@ -50,10 +55,15 @@ const ROLE_TARGET: FlatRoleTarget = {
   universalIdentifier: 'role-target-universal-identifier',
   roleId: 'role-id',
   roleUniversalIdentifier: 'role-universal-identifier',
+  isSystemSideEffect: false,
   userWorkspaceId: null,
   agentId: null,
   agentUniversalIdentifier: null,
   apiKeyId: null,
+  webhookId: null,
+  webhookUniversalIdentifier: null,
+  targetApplicationId: null,
+  targetApplicationUniversalIdentifier: null,
 };
 
 const WEBHOOK: FlatWebhook = {
@@ -89,6 +99,7 @@ const COMMAND_MENU_ITEM: FlatCommandMenuItem = {
   hotKeys: null,
   conditionalAvailabilityExpression: null,
   conditionalPinnedExpression: null,
+  availabilityCoreObjectName: null,
   availabilityObjectMetadataId: null,
   availabilityObjectMetadataUniversalIdentifier: null,
   navigationTargetObjectMetadataId: null,
@@ -111,13 +122,86 @@ const NAVIGATION_MENU_ITEM: FlatNavigationMenuItem = {
   type: NavigationMenuItemType.LINK,
   name: 'App link',
   link: 'https://example.com',
+  nativePageKey: null,
+  builtInSectionKey: null,
   icon: null,
   color: null,
-  folderId: null,
-  folderUniversalIdentifier: null,
+  parentId: null,
+  parentUniversalIdentifier: null,
   pageLayoutId: null,
   pageLayoutUniversalIdentifier: null,
+  agentChatChannelId: null,
+  agentChatChannelUniversalIdentifier: null,
+  workflowId: null,
+  workflowUniversalIdentifier: null,
+  agentId: null,
+  agentUniversalIdentifier: null,
   position: 0,
+  isActive: true,
+  overrides: null,
+};
+
+const WORKSPACE_CUSTOM_APPLICATION_UNIVERSAL_IDENTIFIER =
+  'workspace-custom-application-universal-identifier';
+
+const AGENT: FlatAgent = {
+  ...SYNCABLE,
+  id: 'agent-id',
+  universalIdentifier: 'agent-universal-identifier',
+  name: 'researcher',
+  label: 'Researcher',
+  icon: null,
+  avatarColor: null,
+  avatarShape: null,
+  description: null,
+  prompt: 'Research the company',
+  modelId: 'auto',
+  responseFormat: { type: 'text' },
+  modelConfiguration: null,
+  triggers: [],
+  isSystem: true,
+  isActive: true,
+  isPrivate: false,
+  createdByUserWorkspaceId: null,
+  overrides: null,
+  navigationMenuItemIds: [],
+  navigationMenuItemUniversalIdentifiers: [],
+  deletedAt: null,
+};
+
+const SKILL: FlatSkill = {
+  ...SYNCABLE,
+  id: 'skill-id',
+  universalIdentifier: 'skill-universal-identifier',
+  name: 'summarize',
+  label: 'Summarize',
+  icon: null,
+  description: null,
+  content: 'Summarize the record',
+  isSystem: false,
+  isActive: true,
+  overrides: null,
+};
+
+const buildAllFlatEntityMapsWithAgentAndSkill = ({
+  agent,
+  skill,
+}: {
+  agent: FlatAgent;
+  skill: FlatSkill;
+}) => {
+  const allFlatEntityMaps = createEmptyAllFlatEntityMaps();
+
+  allFlatEntityMaps.flatAgentMaps = addFlatEntityToFlatEntityMapsOrThrow({
+    flatEntity: agent,
+    flatEntityMaps: allFlatEntityMaps.flatAgentMaps,
+  });
+  allFlatEntityMaps.flatSkillMaps = addFlatEntityToFlatEntityMapsOrThrow({
+    flatEntity: skill,
+    flatEntityMaps: allFlatEntityMaps.flatSkillMaps,
+  });
+
+  return allFlatEntityMaps;
 };
 
 const BUILD_OPTIONS = {
@@ -160,6 +244,23 @@ const withRoleTarget =
     }),
   });
 
+const ROLE = {
+  ...SYNCABLE,
+  id: 'role-id',
+  universalIdentifier: 'role-universal-identifier',
+  label: 'App role',
+  isEditable: true,
+} as FlatRole;
+
+const withRole =
+  (flatRole: FlatRole) => (allFlatEntityMaps: AllFlatEntityMaps) => ({
+    ...allFlatEntityMaps,
+    flatRoleMaps: addFlatEntityToFlatEntityMapsOrThrow({
+      flatEntity: flatRole,
+      flatEntityMaps: allFlatEntityMaps.flatRoleMaps,
+    }),
+  });
+
 const withWebhook =
   (flatWebhook: FlatWebhook) => (allFlatEntityMaps: AllFlatEntityMaps) => ({
     ...allFlatEntityMaps,
@@ -194,6 +295,7 @@ describe('buildAllFlatEntityOperationRecordByMetadataNameFromFromTo', () => {
     const result = inferDeletionOf(
       withRoleTarget({
         ...ROLE_TARGET,
+        isSystemSideEffect: false,
         userWorkspaceId: 'a-member-user-workspace-id',
       }),
     );
@@ -219,6 +321,52 @@ describe('buildAllFlatEntityOperationRecordByMetadataNameFromFromTo', () => {
     ).toBeDefined();
   });
 
+  it('does not delete a non-editable role the manifest cannot express', () => {
+    const result = inferDeletionOf(withRole({ ...ROLE, isEditable: false }));
+
+    expect(result.role?.flatEntityToDelete).toBeUndefined();
+  });
+
+  it.each([
+    ['keeps', false],
+    ['deletes', true],
+  ])(
+    '%s the permissions of a role whose editability is %s',
+    (_, isEditable) => {
+      const objectPermission = {
+        ...SYNCABLE,
+        id: 'object-permission-id',
+        universalIdentifier: 'object-permission-universal-identifier',
+        roleUniversalIdentifier: ROLE.universalIdentifier,
+        objectMetadataUniversalIdentifier: 'object-universal-identifier',
+      } as FlatObjectPermission;
+
+      const result = inferDeletionOf((allFlatEntityMaps) => ({
+        ...withRole({ ...ROLE, isEditable })(allFlatEntityMaps),
+        flatObjectPermissionMaps: addFlatEntityToFlatEntityMapsOrThrow({
+          flatEntity: objectPermission,
+          flatEntityMaps: allFlatEntityMaps.flatObjectPermissionMaps,
+        }),
+      }));
+
+      expect(
+        isDefined(
+          result.objectPermission?.flatEntityToDelete?.[
+            objectPermission.universalIdentifier
+          ],
+        ),
+      ).toBe(isEditable);
+    },
+  );
+
+  it('still deletes an editable role', () => {
+    const result = inferDeletionOf(withRole(ROLE));
+
+    expect(
+      result.role?.flatEntityToDelete?.[ROLE.universalIdentifier],
+    ).toBeDefined();
+  });
+
   it('does not delete a webhook the manifest cannot express', () => {
     const result = inferDeletionOf(withWebhook(WEBHOOK));
 
@@ -231,6 +379,19 @@ describe('buildAllFlatEntityOperationRecordByMetadataNameFromFromTo', () => {
         ...COMMAND_MENU_ITEM,
         engineComponentKey: EngineComponentKey.TRIGGER_WORKFLOW_VERSION,
         workflowVersionId: 'a-workflow-version-id',
+      }),
+    );
+
+    expect(result.commandMenuItem?.flatEntityToDelete).toBeUndefined();
+  });
+
+  it('does not delete a workflow trigger command that only carries its core pointer', () => {
+    const result = inferDeletionOf(
+      withCommandMenuItem({
+        ...COMMAND_MENU_ITEM,
+        engineComponentKey: EngineComponentKey.TRIGGER_WORKFLOW_VERSION,
+        workflowVersionId: null,
+        coreWorkflowVersionId: 'a-core-workflow-version-id',
       }),
     );
 
@@ -283,6 +444,20 @@ describe('buildAllFlatEntityOperationRecordByMetadataNameFromFromTo', () => {
     expect(result.navigationMenuItem?.flatEntityToDelete).toBeUndefined();
   });
 
+  it.each([
+    ['workflow', { workflowId: 'a-workflow-id' }],
+    ['agent', { agentId: 'an-agent-id' }],
+  ])(
+    'does not delete a %s pinned navigation item the manifest cannot express',
+    (_, pinnedTarget) => {
+      const result = inferDeletionOf(
+        withNavigationMenuItem({ ...NAVIGATION_MENU_ITEM, ...pinnedTarget }),
+      );
+
+      expect(result.navigationMenuItem?.flatEntityToDelete).toBeUndefined();
+    },
+  );
+
   it('still deletes a workspace navigation item', () => {
     const result = inferDeletionOf(
       withNavigationMenuItem(NAVIGATION_MENU_ITEM),
@@ -331,6 +506,25 @@ describe('buildAllFlatEntityOperationRecordByMetadataNameFromFromTo', () => {
     });
   });
 
+  it('keeps a role assignable to applications when its manifest is synced back', () => {
+    const buildAllFlatEntityMapsWithRole = (flatRole: FlatRole) =>
+      withRole(flatRole)(createEmptyAllFlatEntityMaps());
+
+    const result = buildAllFlatEntityOperationRecordByMetadataNameFromFromTo({
+      fromAllFlatEntityMaps: buildAllFlatEntityMapsWithRole({
+        ...ROLE,
+        canBeAssignedToApplications: true,
+      }),
+      toAllUniversalFlatEntityMaps: buildAllFlatEntityMapsWithRole({
+        ...ROLE,
+        canBeAssignedToApplications: false,
+      }),
+      buildOptions: BUILD_OPTIONS,
+    });
+
+    expect(result).toEqual({});
+  });
+
   it('uses the app default when creating a layout', () => {
     const result = buildAllFlatEntityOperationRecordByMetadataNameFromFromTo({
       fromAllFlatEntityMaps: createEmptyAllFlatEntityMaps(),
@@ -342,5 +536,67 @@ describe('buildAllFlatEntityOperationRecordByMetadataNameFromFromTo', () => {
     expect(result.pageLayout?.flatEntityToCreate).toEqual({
       [PAGE_LAYOUT.universalIdentifier]: PAGE_LAYOUT,
     });
+  });
+
+  it('keeps workspace overrides and archives of agents and skills across a sync', () => {
+    const workspaceAgent: FlatAgent = {
+      ...AGENT,
+      overrides: {
+        [WORKSPACE_CUSTOM_APPLICATION_UNIVERSAL_IDENTIFIER]: {
+          prompt: 'Research the market',
+          isActive: false,
+        },
+      },
+    };
+    const workspaceSkill: FlatSkill = {
+      ...SKILL,
+      overrides: {
+        [WORKSPACE_CUSTOM_APPLICATION_UNIVERSAL_IDENTIFIER]: {
+          content: 'Summarize in one line',
+          isActive: false,
+        },
+      },
+    };
+
+    const result = buildAllFlatEntityOperationRecordByMetadataNameFromFromTo({
+      fromAllFlatEntityMaps: buildAllFlatEntityMapsWithAgentAndSkill({
+        agent: workspaceAgent,
+        skill: workspaceSkill,
+      }),
+      toAllUniversalFlatEntityMaps: buildAllFlatEntityMapsWithAgentAndSkill({
+        agent: { ...AGENT, label: 'Lead researcher' },
+        skill: { ...SKILL, label: 'Summarize record' },
+      }),
+      buildOptions: BUILD_OPTIONS,
+    });
+
+    expect(result.agent?.flatEntityToUpdate).toEqual({
+      [AGENT.universalIdentifier]: {
+        ...workspaceAgent,
+        label: 'Lead researcher',
+      },
+    });
+    expect(result.skill?.flatEntityToUpdate).toEqual({
+      [SKILL.universalIdentifier]: {
+        ...workspaceSkill,
+        label: 'Summarize record',
+      },
+    });
+  });
+
+  it('keeps a skill the workspace deactivated before overrides existed', () => {
+    const result = buildAllFlatEntityOperationRecordByMetadataNameFromFromTo({
+      fromAllFlatEntityMaps: buildAllFlatEntityMapsWithAgentAndSkill({
+        agent: AGENT,
+        skill: { ...SKILL, isActive: false },
+      }),
+      toAllUniversalFlatEntityMaps: buildAllFlatEntityMapsWithAgentAndSkill({
+        agent: AGENT,
+        skill: SKILL,
+      }),
+      buildOptions: BUILD_OPTIONS,
+    });
+
+    expect(result).toEqual({});
   });
 });

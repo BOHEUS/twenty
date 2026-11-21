@@ -1,3 +1,4 @@
+import { buildWorkflowVersionFromCore } from '@/object-core/workflows/utils/buildWorkflowVersionFromCore';
 import { useQuery } from '@apollo/client/react';
 import { isDefined } from 'twenty-shared/utils';
 
@@ -6,50 +7,35 @@ import { type WorkflowVersion } from '@/workflow/types/Workflow';
 import { GetCoreWorkflowVersionDocument } from '~/generated/graphql';
 
 export const useCoreWorkflowVersionContent = ({
-  workspaceWorkflowId,
-  workspaceWorkflowVersionId,
-  skip,
+  coreWorkflowId,
+  coreWorkflowVersionId,
 }: {
-  workspaceWorkflowId: string | undefined;
-  workspaceWorkflowVersionId: string | undefined;
-  skip: boolean;
+  coreWorkflowId: string | undefined;
+  coreWorkflowVersionId: string | undefined;
 }): WorkflowVersion | undefined => {
   const apolloCoreClient = useApolloCoreClient();
 
-  const { data } = useQuery(GetCoreWorkflowVersionDocument, {
+  const { data, previousData } = useQuery(GetCoreWorkflowVersionDocument, {
     client: apolloCoreClient,
     fetchPolicy: 'cache-and-network',
     variables: {
-      workspaceWorkflowVersionId: workspaceWorkflowVersionId ?? '',
+      coreWorkflowVersionId: coreWorkflowVersionId ?? '',
     },
-    skip:
-      skip ||
-      !isDefined(workspaceWorkflowVersionId) ||
-      !isDefined(workspaceWorkflowId),
+    skip: !isDefined(coreWorkflowVersionId) || !isDefined(coreWorkflowId),
   });
 
-  const coreWorkflowVersion = data?.coreWorkflowVersion;
+  // While the requested version loads, the previous one of the same workflow stays current, so the editor is never left without a version
+  const coreWorkflowVersion =
+    data?.coreWorkflowVersion ?? previousData?.coreWorkflowVersion;
 
   if (
     !isDefined(coreWorkflowVersion) ||
-    !isDefined(workspaceWorkflowId) ||
-    !isDefined(workspaceWorkflowVersionId) ||
-    coreWorkflowVersion.workspaceWorkflowVersionId !==
-      workspaceWorkflowVersionId ||
-    coreWorkflowVersion.workspaceWorkflowId !== workspaceWorkflowId
+    !isDefined(coreWorkflowId) ||
+    !isDefined(coreWorkflowVersionId) ||
+    coreWorkflowVersion.coreWorkflowId !== coreWorkflowId
   ) {
     return undefined;
   }
 
-  return {
-    __typename: 'WorkflowVersion',
-    id: workspaceWorkflowVersionId,
-    name: coreWorkflowVersion.label,
-    status: coreWorkflowVersion.status,
-    workflowId: workspaceWorkflowId,
-    createdAt: coreWorkflowVersion.createdAt,
-    updatedAt: coreWorkflowVersion.updatedAt,
-    trigger: coreWorkflowVersion.trigger,
-    steps: coreWorkflowVersion.steps,
-  };
+  return buildWorkflowVersionFromCore(coreWorkflowVersion);
 };

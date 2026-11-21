@@ -39,8 +39,8 @@ jest.mock(
     }),
   }),
 );
-jest.mock('twenty-ui/primitives/feedback', () => ({
-  ...jest.requireActual('twenty-ui/primitives/feedback'),
+jest.mock('twenty-ui/components/feedback', () => ({
+  ...jest.requireActual('twenty-ui/components/feedback'),
   useToast: () => ({ enqueueToast: jest.fn() }),
 }));
 

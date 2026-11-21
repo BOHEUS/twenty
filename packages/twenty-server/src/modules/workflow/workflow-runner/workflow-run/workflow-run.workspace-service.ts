@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { type ActorMetadata } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
@@ -9,6 +9,8 @@ import { WithLock } from 'src/engine/core-modules/cache-lock/with-lock.decorator
 import { MetricsService } from 'src/engine/core-modules/metrics/metrics.service';
 import { MetricsKeys } from 'src/engine/core-modules/metrics/types/metrics-keys.type';
 import { RecordPositionService } from 'src/engine/core-modules/record-position/services/record-position.service';
+import { AgentRunSuspensionService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-run-suspension.service';
+import { PermissionsException } from 'src/engine/permissions/permissions.exception';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
 import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
 import {
@@ -16,9 +18,12 @@ import {
   type WorkflowRunState,
   type WorkflowRunWorkspaceEntity,
 } from 'src/modules/workflow/common/standard-objects/workflow-run.workspace-entity';
-import { type WorkflowVersionWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow-version.workspace-entity';
+import { setAllIteratorsStepInfosAsStopped } from 'src/modules/workflow/common/utils/set-all-iterators-step-infos-as-stopped.util';
+import { type WorkflowVersionEntity } from 'src/engine/core-modules/workflow/entities/workflow-version.entity';
+import { getStepRetryAttempt } from 'src/modules/workflow/workflow-executor/utils/get-step-retry-attempt.util';
 import { type WorkflowAction } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
 import { type WorkflowTrigger } from 'src/modules/workflow/workflow-trigger/types/workflow-trigger.type';
+import { WorkflowStepWaitWorkspaceService } from 'src/modules/workflow/workflow-wait/services/workflow-step-wait.workspace-service';
 import {
   WorkflowRunException,
   WorkflowRunExceptionCode,
@@ -26,17 +31,19 @@ import {
 
 @Injectable()
 export class WorkflowRunWorkspaceService {
+  private readonly logger = new Logger(WorkflowRunWorkspaceService.name);
+
   constructor(
     private readonly workspaceOrmManager: WorkspaceOrmManager,
     private readonly recordPositionService: RecordPositionService,
     private readonly metricsService: MetricsService,
+    private readonly workflowStepWaitWorkspaceService: WorkflowStepWaitWorkspaceService,
+    private readonly agentRunSuspensionService: AgentRunSuspensionService,
   ) {}
 
   async createCoreWorkflowRun({
     coreWorkflowId,
     coreWorkflowVersionId,
-    workspaceWorkflowId,
-    workspaceWorkflowVersionId,
     workflowName,
     trigger,
     steps,
@@ -46,31 +53,28 @@ export class WorkflowRunWorkspaceService {
     triggerPayload,
     error,
     workspaceId,
+    shouldSkipEventEmission = false,
   }: {
     coreWorkflowId: string;
     coreWorkflowVersionId: string;
-    workspaceWorkflowId: string | null;
-    workspaceWorkflowVersionId: string | null;
     workflowName: string | null;
     trigger: WorkflowTrigger;
     steps: WorkflowAction[];
     createdBy: ActorMetadata;
-    status:
-      | WorkflowRunStatus.NOT_STARTED
-      | WorkflowRunStatus.ENQUEUED
-      | WorkflowRunStatus.FAILED;
+    status: WorkflowRunStatus.ENQUEUED | WorkflowRunStatus.FAILED;
     triggerPayload: object;
     workflowRunId?: string;
     error?: string;
     workspaceId: string;
+    shouldSkipEventEmission?: boolean;
   }) {
     const authContext = buildSystemAuthContext(workspaceId);
 
     return this.workspaceOrmManager.executeInWorkspaceContext(async () => {
       const workflowRunRepository =
-        this.workspaceOrmManager.getRepository<WorkflowRunWorkspaceEntity>(
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<WorkflowRunWorkspaceEntity>(
           'workflowRun',
-          { shouldBypassPermissionChecks: true },
+          { shouldSkipEventEmission },
         );
       const position = await this.recordPositionService.buildRecordPosition({
         value: 'first',
@@ -90,8 +94,6 @@ export class WorkflowRunWorkspaceService {
       await workflowRunRepository.insert({
         id,
         name: `#${workflowRunCount + 1} - ${workflowName ?? 'Workflow'}`,
-        workflowVersionId: workspaceWorkflowVersionId,
-        workflowId: workspaceWorkflowId,
         coreWorkflowId,
         coreWorkflowVersionId,
         createdBy,
@@ -118,12 +120,9 @@ export class WorkflowRunWorkspaceService {
       workspaceId,
     });
 
-    if (
-      workflowRunToUpdate.status !== WorkflowRunStatus.ENQUEUED &&
-      workflowRunToUpdate.status !== WorkflowRunStatus.NOT_STARTED
-    ) {
+    if (workflowRunToUpdate.status !== WorkflowRunStatus.ENQUEUED) {
       throw new WorkflowRunException(
-        'Workflow run is not enqueued or not started',
+        'Workflow run is not enqueued',
         WorkflowRunExceptionCode.INVALID_OPERATION,
       );
     }
@@ -184,6 +183,28 @@ export class WorkflowRunWorkspaceService {
 
     await this.updateWorkflowRun({ workflowRunId, workspaceId, partialUpdate });
 
+    // the run is already over and its waits find nothing to resume, so a failure must not stop the cleanup below
+    await this.workflowStepWaitWorkspaceService
+      .cancelRunWaits({ workspaceId, workflowRunId })
+      .catch((error: unknown) => {
+        this.logger.error(
+          `Failed to cancel the waits of workflow run ${workflowRunId} in workspace ${workspaceId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+
+    // An ended run cannot consume answers or agent outcomes, so drop the runs its steps wait on and
+    // close the calls they wait on. Best effort: a failure only leaves a call that looks waiting.
+    await this.agentRunSuspensionService
+      .releaseForCaller({
+        workspaceId,
+        caller: { type: 'WORKFLOW_STEP', ref: { workflowRunId } },
+      })
+      .catch((error: unknown) => {
+        this.logger.error(
+          `Failed to close the conversations of workflow run ${workflowRunId} in workspace ${workspaceId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+
     const metricKey =
       status === WorkflowRunStatus.COMPLETED
         ? MetricsKeys.WorkflowRunCompleted
@@ -232,12 +253,60 @@ export class WorkflowRunWorkspaceService {
             result: stepInfo?.result,
             error: stepInfo?.error,
             status: stepInfo.status,
+            wait: stepInfo?.wait,
           },
         },
       },
     };
 
     await this.updateWorkflowRun({ workflowRunId, workspaceId, partialUpdate });
+  }
+
+  @WithLock('workflowRunId')
+  async moveStepToRetry({
+    stepId,
+    error,
+    workflowRunId,
+    workspaceId,
+  }: {
+    stepId: string;
+    error: string;
+    workflowRunId: string;
+    workspaceId: string;
+  }) {
+    const workflowRunToUpdate = await this.getWorkflowRunOrFail({
+      workflowRunId,
+      workspaceId,
+    });
+
+    const currentStepInfo = workflowRunToUpdate.state?.stepInfos?.[stepId];
+
+    await this.updateWorkflowRun({
+      workflowRunId,
+      workspaceId,
+      partialUpdate: {
+        state: {
+          ...workflowRunToUpdate.state,
+          stepInfos: {
+            ...workflowRunToUpdate.state?.stepInfos,
+            [stepId]: {
+              ...currentStepInfo,
+              status: StepStatus.PENDING,
+              error,
+              history: [
+                ...(currentStepInfo?.history ?? []),
+                {
+                  status: StepStatus.FAILED,
+                  error,
+                  retryAttempt:
+                    getStepRetryAttempt({ stepInfo: currentStepInfo }) + 1,
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
   }
 
   @WithLock('workflowRunId')
@@ -278,6 +347,97 @@ export class WorkflowRunWorkspaceService {
       workspaceId,
       partialUpdate,
     });
+  }
+
+  // Written from the locked state, or a concurrent step-info write (e.g. a form submission) would be reverted
+  @WithLock('workflowRunId')
+  async markWorkflowRunAsStopping({
+    workflowRunId,
+    workspaceId,
+  }: {
+    workflowRunId: string;
+    workspaceId: string;
+  }): Promise<boolean> {
+    const workflowRunToUpdate = await this.getWorkflowRunOrFail({
+      workflowRunId,
+      workspaceId,
+    });
+
+    if (
+      workflowRunToUpdate.status !== WorkflowRunStatus.RUNNING ||
+      !isDefined(workflowRunToUpdate.state)
+    ) {
+      return false;
+    }
+
+    const { stepInfos, flow } = workflowRunToUpdate.state;
+
+    await this.updateWorkflowRun({
+      workflowRunId,
+      workspaceId,
+      partialUpdate: {
+        status: WorkflowRunStatus.STOPPING,
+        state: {
+          ...workflowRunToUpdate.state,
+          stepInfos: {
+            ...stepInfos,
+            ...setAllIteratorsStepInfosAsStopped({
+              stepInfos,
+              steps: flow.steps,
+            }),
+          },
+        },
+      },
+    });
+
+    return true;
+  }
+
+  // Shares the step-info write lock so of two concurrent callers the second finds the step no longer PENDING.
+  // A stop is refused: endWorkflowRun fails a pending step, or leaves it PENDING with nothing to resume.
+  @WithLock('workflowRunId')
+  async updateStepInfoIfPending({
+    stepId,
+    stepInfo,
+    workflowRunId,
+    workspaceId,
+  }: {
+    stepId: string;
+    stepInfo: Partial<WorkflowRunStepInfo>;
+    workflowRunId: string;
+    workspaceId: string;
+  }): Promise<boolean> {
+    const workflowRunToUpdate = await this.getWorkflowRunOrFail({
+      workflowRunId,
+      workspaceId,
+    });
+
+    const currentStepInfo = workflowRunToUpdate.state?.stepInfos?.[stepId];
+
+    if (
+      workflowRunToUpdate.status !== WorkflowRunStatus.RUNNING ||
+      currentStepInfo?.status !== StepStatus.PENDING ||
+      isDefined(currentStepInfo.error)
+    ) {
+      return false;
+    }
+
+    await this.updateWorkflowRun({
+      workflowRunId,
+      workspaceId,
+      partialUpdate: {
+        state: {
+          ...workflowRunToUpdate.state,
+          stepInfos: {
+            ...workflowRunToUpdate.state?.stepInfos,
+            // the step leaves PENDING, so it no longer waits
+            [stepId]: { ...currentStepInfo, wait: undefined, ...stepInfo },
+          },
+        },
+      },
+    });
+
+    return true;
   }
 
   @WithLock('workflowRunId')
@@ -333,15 +493,62 @@ export class WorkflowRunWorkspaceService {
 
     return this.workspaceOrmManager.executeInWorkspaceContext(async () => {
       const workflowRunRepository =
-        this.workspaceOrmManager.getRepository<WorkflowRunWorkspaceEntity>(
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<WorkflowRunWorkspaceEntity>(
           'workflowRun',
-          { shouldBypassPermissionChecks: true },
         );
 
       return await workflowRunRepository.findOne({
         where: { id: workflowRunId },
       });
     }, authContext);
+  }
+
+  async getWorkflowRunCoreWorkflowId({
+    workflowRunId,
+    workspaceId,
+  }: {
+    workflowRunId: string;
+    workspaceId: string;
+  }): Promise<string | null> {
+    const authContext = buildSystemAuthContext(workspaceId);
+
+    const workflowRun =
+      await this.workspaceOrmManager.executeInWorkspaceContext(
+        async () =>
+          this.workspaceOrmManager
+            .getRepositoryWithoutPermissionChecks<WorkflowRunWorkspaceEntity>(
+              'workflowRun',
+            )
+            .findOne({
+              where: { id: workflowRunId },
+              select: ['id', 'coreWorkflowId'],
+            }),
+        authContext,
+      );
+
+    return workflowRun?.coreWorkflowId ?? null;
+  }
+
+  // read with the requester's own permissions, which follow the visibility of the run's workflow
+  async isWorkflowRunReadableByRequester(
+    workflowRunId: string,
+  ): Promise<boolean> {
+    try {
+      const workflowRun =
+        await this.workspaceOrmManager.executeInWorkspaceContext(() =>
+          this.workspaceOrmManager
+            .getRepository<WorkflowRunWorkspaceEntity>('workflowRun')
+            .findOne({ where: { id: workflowRunId }, select: { id: true } }),
+        );
+
+      return isDefined(workflowRun);
+    } catch (error) {
+      if (error instanceof PermissionsException) {
+        return false;
+      }
+
+      throw error;
+    }
   }
 
   async getWorkflowRunOrFail({
@@ -379,9 +586,8 @@ export class WorkflowRunWorkspaceService {
 
     await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
       const workflowRunRepository =
-        this.workspaceOrmManager.getRepository<WorkflowRunWorkspaceEntity>(
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<WorkflowRunWorkspaceEntity>(
           'workflowRun',
-          { shouldBypassPermissionChecks: true },
         );
 
       const workflowRunToUpdate = await workflowRunRepository.findOneBy({
@@ -400,7 +606,9 @@ export class WorkflowRunWorkspaceService {
   }
 
   private getInitState(
-    workflowVersion: Pick<WorkflowVersionWorkspaceEntity, 'trigger' | 'steps'>,
+    workflowVersion: Pick<WorkflowVersionEntity, 'steps'> & {
+      trigger: WorkflowTrigger | null;
+    },
     triggerPayload: object,
     error?: string,
   ): WorkflowRunState | undefined {

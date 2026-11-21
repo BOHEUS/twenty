@@ -39,7 +39,7 @@ export class RelationNestedQueries {
 
   constructor(repository: WorkspaceRepository) {
     this.repository = repository;
-    this.internalContext = repository.getInternalContext();
+    this.internalContext = repository.internalContext;
   }
 
   prepareNestedRelationQueries<Entity extends ObjectLiteral>(
@@ -319,7 +319,9 @@ export class RelationNestedQueries {
     entities: QueryDeepPartialEntityWithNestedRelationFields<Entity>[];
     relationConnectQueryConfigs: RelationConnectQueryConfig[];
   }): Promise<QueryDeepPartialEntity<Entity>[]> {
-    if (relationConnectQueryConfigs.length === 0) return entities;
+    if (relationConnectQueryConfigs.length === 0) {
+      return entities;
+    }
 
     const recordsToConnectWithConfig = await this.executeConnectQueries(
       relationConnectQueryConfigs,
@@ -459,7 +461,9 @@ export class RelationNestedQueries {
       const nestedRelationDisconnectFields =
         relationDisconnectQueryFieldsByEntityIndex[index];
 
-      if (!isDefined(nestedRelationDisconnectFields)) return entity;
+      if (!isDefined(nestedRelationDisconnectFields)) {
+        return entity;
+      }
 
       for (const [disconnectFieldName, disconnectObject] of Object.entries(
         nestedRelationDisconnectFields ?? {},

@@ -9,8 +9,8 @@ import { Trans, useLingui } from '@lingui/react/macro';
 import { Controller, useForm } from 'react-hook-form';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
-import { useToast } from 'twenty-ui/primitives/feedback';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import { z } from 'zod';
 import { CreateApprovedAccessDomainDocument } from '~/generated-metadata/graphql';
 import { useNavigateSettings } from '~/hooks/useNavigateSettings';
@@ -63,7 +63,7 @@ export const SettingsSecurityApprovedAccessDomain = () => {
         },
         onCompleted: () => {
           enqueueToast({
-            variant: 'success',
+            status: 'success',
             children: t`Please check your email for a verification link.`,
           });
           navigate(SettingsPath.WorkspaceMembersPage);

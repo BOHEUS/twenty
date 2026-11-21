@@ -1,7 +1,8 @@
 import { plural } from '@lingui/core/macro';
 import { isDefined } from 'twenty-shared/utils';
 
-import { type FormatNumberOptions } from '~/utils/format/formatNumber';
+import { type FormatNumberOptions } from '@/localization/utils/formatNumber';
+import { getCurrencyPrefix } from '@/localization/utils/getCurrencyPrefix';
 import { BillingProductKey } from '~/generated-metadata/graphql';
 
 const EM_DASH = '—';
@@ -22,26 +23,6 @@ type FormatSubscriptionItemValueArgs = {
   ) => string;
 };
 
-// Only the symbol comes from Intl. The digits go through formatNumber like
-// every other number on the page, so an amount does not ignore the workspace
-// member's number format while the counts beside it honour it.
-const getCurrencySymbol = (currency: string): string => {
-  const normalizedCurrency = currency.toUpperCase();
-
-  try {
-    return (
-      new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: normalizedCurrency,
-      })
-        .formatToParts(0)
-        .find((part) => part.type === 'currency')?.value ?? normalizedCurrency
-    );
-  } catch {
-    return normalizedCurrency;
-  }
-};
-
 export const formatSubscriptionItemValue = ({
   item,
   currency,
@@ -50,9 +31,7 @@ export const formatSubscriptionItemValue = ({
   const parts: string[] = [];
 
   if (isDefined(item.quantity)) {
-    // Only a licensed base-product item sells seats. A metered item carries a
-    // Stripe bookkeeping quantity that bills nothing, so naming it seats states
-    // something untrue about what the workspace is paying for.
+    // Metered items carry a Stripe bookkeeping quantity that bills nothing, so only licensed base items are seats.
     parts.push(
       item.productKey === BillingProductKey.BASE_PRODUCT
         ? `${formatNumber(item.quantity)} ${plural(item.quantity, {
@@ -77,7 +56,7 @@ export const formatSubscriptionItemValue = ({
 
   if (isDefined(item.unitAmount)) {
     parts.push(
-      `${getCurrencySymbol(currency)}${formatNumber(item.unitAmount / 100, {
+      `${getCurrencyPrefix(currency)}${formatNumber(item.unitAmount / 100, {
         decimals: 2,
       })}`,
     );

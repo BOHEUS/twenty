@@ -1,10 +1,13 @@
+import { type WorkspaceAuthContext } from 'src/engine/core-modules/auth/types/workspace-auth-context.type';
 import { WorkflowRunStatus } from 'src/modules/workflow/common/standard-objects/workflow-run.workspace-entity';
-import { type WorkflowToolDependencies } from 'src/modules/workflow/workflow-tools/types/workflow-tool-dependencies.type';
 
 import { createListWorkflowRunsTool } from '../list-workflow-runs.tool';
 
 const WORKSPACE_ID = '20202020-aaaa-4d02-bf25-6aeccf7ea419';
-const ROLE_ID = '20202020-cccc-4d02-bf25-6aeccf7ea419';
+const AUTH_CONTEXT = {
+  type: 'user',
+  workspace: { id: WORKSPACE_ID },
+} as WorkspaceAuthContext;
 
 const buildDeps = (findResult: unknown[]) => ({
   workspaceOrmManager: {
@@ -17,25 +20,24 @@ const buildDeps = (findResult: unknown[]) => ({
 
 const buildContext = () => ({
   workspaceId: WORKSPACE_ID,
-  rolePermissionConfig: { intersectionOf: [ROLE_ID] },
+  authContext: AUTH_CONTEXT,
 });
 
 describe('list_workflow_runs tool', () => {
-  it('should pass rolePermissionConfig to getRepository', async () => {
+  it('should read as the caller rather than bypassing permissions', async () => {
     const deps = buildDeps([]);
     const context = buildContext();
 
-    const tool = createListWorkflowRunsTool(
-      deps as unknown as Pick<WorkflowToolDependencies, 'workspaceOrmManager'>,
-      context,
-    );
+    const tool = createListWorkflowRunsTool(deps, context);
 
     await tool.execute({});
 
     expect(deps.workspaceOrmManager.getRepository).toHaveBeenCalledWith(
       'workflowRun',
-      context.rolePermissionConfig,
     );
+    expect(
+      deps.workspaceOrmManager.executeInWorkspaceContext,
+    ).toHaveBeenCalledWith(expect.any(Function), AUTH_CONTEXT);
   });
 
   it('should return workflow runs on success', async () => {
@@ -47,8 +49,8 @@ describe('list_workflow_runs tool', () => {
         state: {},
         startedAt: '2025-01-01T00:00:00Z',
         endedAt: '2025-01-01T00:01:00Z',
-        workflowId: 'wf-1',
-        workflowVersionId: 'wfv-1',
+        coreWorkflowId: 'core-wf-1',
+        coreWorkflowVersionId: 'core-wfv-1',
       },
       {
         id: 'run-2',
@@ -57,18 +59,15 @@ describe('list_workflow_runs tool', () => {
         state: { workflowRunError: 'Timeout' },
         startedAt: '2025-01-02T00:00:00Z',
         endedAt: '2025-01-02T00:01:00Z',
-        workflowId: 'wf-1',
-        workflowVersionId: 'wfv-1',
+        coreWorkflowId: 'core-wf-1',
+        coreWorkflowVersionId: 'core-wfv-1',
       },
     ];
 
     const deps = buildDeps(workflowRuns);
     const context = buildContext();
 
-    const tool = createListWorkflowRunsTool(
-      deps as unknown as Pick<WorkflowToolDependencies, 'workspaceOrmManager'>,
-      context,
-    );
+    const tool = createListWorkflowRunsTool(deps, context);
 
     const result = await tool.execute({});
 
@@ -80,6 +79,8 @@ describe('list_workflow_runs tool', () => {
 
     expect(result.workflowRuns).toHaveLength(2);
     expect(result.workflowRuns[0].id).toBe('run-1');
+    expect(result.workflowRuns[0].coreWorkflowId).toBe('core-wf-1');
+    expect(result.workflowRuns[0].coreWorkflowVersionId).toBe('core-wfv-1');
     expect(result.workflowRuns[1].error).toBe('Timeout');
   });
 
@@ -95,19 +96,16 @@ describe('list_workflow_runs tool', () => {
     };
     const context = buildContext();
 
-    const tool = createListWorkflowRunsTool(
-      deps as unknown as Pick<WorkflowToolDependencies, 'workspaceOrmManager'>,
-      context,
-    );
+    const tool = createListWorkflowRunsTool(deps, context);
 
     await tool.execute({
-      workflowId: 'wf-1',
+      coreWorkflowId: 'core-wf-1',
       status: WorkflowRunStatus.FAILED,
       limit: 5,
     });
 
     expect(findMock).toHaveBeenCalledWith({
-      where: { workflowId: 'wf-1', status: WorkflowRunStatus.FAILED },
+      where: { coreWorkflowId: 'core-wf-1', status: WorkflowRunStatus.FAILED },
       order: { createdAt: 'DESC' },
       take: 5,
     });
