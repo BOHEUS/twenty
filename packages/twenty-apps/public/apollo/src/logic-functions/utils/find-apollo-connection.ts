@@ -1,3 +1,4 @@
+import { isNull } from '@sniptt/guards';
 import {
   findConnectionForRequest,
   listConnections,
@@ -7,10 +8,19 @@ import {
 
 import { APOLLO_CONNECTION_PROVIDER_NAME } from 'src/constants/universal-identifiers';
 
+type ApolloConnection = AppConnection & { accessToken: string };
+
 export const findApolloConnection = async (
   context: Pick<LogicFunctionExecutionContext, 'userWorkspaceId'>,
-): Promise<AppConnection | null> =>
-  findConnectionForRequest(
+): Promise<ApolloConnection | null> => {
+  const connection = findConnectionForRequest(
     await listConnections({ providerName: APOLLO_CONNECTION_PROVIDER_NAME }),
     context,
   );
+
+  if (isNull(connection) || isNull(connection.accessToken)) {
+    return null;
+  }
+
+  return { ...connection, accessToken: connection.accessToken };
+};
