@@ -4,12 +4,16 @@ import * as path from 'path';
 import { defineConfig } from 'vite';
 import svgr from 'vite-plugin-svgr';
 
+import { wrapInTwentyUiCascadeLayer } from './build-tools/wrapInTwentyUiCascadeLayer';
 import packageJson from './package.json';
+
+// bundled so consumers only parse the icons twenty-ui uses, not the 6,000-module barrel
+const BUNDLED_DEPS = ['@tabler/icons-react'];
 
 const depNames = Object.keys({
   ...(packageJson.dependencies || {}),
   ...(packageJson.peerDependencies || {}),
-});
+}).filter((dep) => !BUNDLED_DEPS.includes(dep));
 
 const isExternal = (id: string): boolean =>
   depNames.some((dep) => id === dep || id.startsWith(dep + '/'));
@@ -33,6 +37,13 @@ export default defineConfig(() => {
     css: {
       modules: {
         localsConvention: 'camelCaseOnly',
+      },
+      postcss: {
+        plugins: [
+          wrapInTwentyUiCascadeLayer({
+            sourceDirectory: path.resolve(__dirname, 'src'),
+          }),
+        ],
       },
       lightningcss: {
         exclude: Features.DirSelector,

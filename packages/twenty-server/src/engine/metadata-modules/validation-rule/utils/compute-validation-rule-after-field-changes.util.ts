@@ -1,8 +1,11 @@
+/* @license Enterprise */
+
 import { type ValidationRuleBindings } from 'twenty-shared/types';
 import {
   isDefined,
   isValidationRuleReservedName,
-  tokenizeValidationRuleExpression,
+  renameValidationRuleExpressionFields,
+  renameValidationRulePath,
 } from 'twenty-shared/utils';
 
 import { type ValidationRuleFieldChange } from 'src/engine/metadata-modules/validation-rule/types/validation-rule-field-change.type';
@@ -12,40 +15,6 @@ type ValidationRuleFieldChangeTarget = {
   bindings: ValidationRuleBindings;
   isActive: boolean;
   errorFieldMetadataUniversalIdentifier: string | null;
-};
-
-const renamePath = ({
-  path,
-  bindings,
-  newFieldNameByUniversalIdentifier,
-}: {
-  path: string;
-  bindings: ValidationRuleBindings;
-  newFieldNameByUniversalIdentifier: Map<string, string>;
-}): string => {
-  const [rootSegment, memberSegment, ...remainingSegments] = path.split('.');
-
-  if (!isDefined(rootSegment)) {
-    return path;
-  }
-
-  const rootUniversalIdentifier = bindings[rootSegment];
-  const memberUniversalIdentifier = isDefined(memberSegment)
-    ? bindings[`${rootSegment}.${memberSegment}`]
-    : undefined;
-
-  return [
-    (isDefined(rootUniversalIdentifier)
-      ? newFieldNameByUniversalIdentifier.get(rootUniversalIdentifier)
-      : undefined) ?? rootSegment,
-    isDefined(memberUniversalIdentifier)
-      ? (newFieldNameByUniversalIdentifier.get(memberUniversalIdentifier) ??
-        memberSegment)
-      : memberSegment,
-    ...remainingSegments,
-  ]
-    .filter(isDefined)
-    .join('.');
 };
 
 const renameFieldsInValidationRule = <
@@ -75,10 +44,10 @@ const renameFieldsInValidationRule = <
       return null;
     }
 
-    const renamedPath = renamePath({
+    const renamedPath = renameValidationRulePath({
       path,
       bindings,
-      newFieldNameByUniversalIdentifier,
+      fieldNameByUniversalIdentifier: newFieldNameByUniversalIdentifier,
     });
 
     if (
@@ -93,17 +62,11 @@ const renameFieldsInValidationRule = <
 
   return {
     ...validationRule,
-    expression: tokenizeValidationRuleExpression(validationRule.expression)
-      .map((token) =>
-        token.type === 'path'
-          ? renamePath({
-              path: token.text,
-              bindings,
-              newFieldNameByUniversalIdentifier,
-            })
-          : token.text,
-      )
-      .join(''),
+    expression: renameValidationRuleExpressionFields({
+      expression: validationRule.expression,
+      bindings,
+      fieldNameByUniversalIdentifier: newFieldNameByUniversalIdentifier,
+    }),
     bindings: renamedBindings,
   };
 };

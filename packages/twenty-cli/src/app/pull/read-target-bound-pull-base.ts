@@ -26,6 +26,9 @@ export const readTargetBoundPullBase = async ({
   manifest: ExportedManifest | null;
   unreconciledUniversalIdentifiers?: string[];
   sourceFingerprints?: Record<string, string>;
+  dependencyFingerprints?: Record<string, string>;
+  publicAssetFingerprints?: Record<string, string>;
+  remoteSourceFingerprints?: Record<string, string>;
 }> => {
   await assertPullPaths({ appPath, relativePaths: [PULL_BASE_FILE_PATH] });
 
@@ -57,7 +60,13 @@ export const readTargetBoundPullBase = async ({
               isString(identifier) && isValidUniversalIdentifier(identifier),
           ))) ||
       (isDefined(base.sourceFingerprints) &&
-        !isSourceFingerprints(base.sourceFingerprints))
+        !isSourceFingerprints(base.sourceFingerprints)) ||
+      (isDefined(base.publicAssetFingerprints) &&
+        !isSourceFingerprints(base.publicAssetFingerprints)) ||
+      (isDefined(base.remoteSourceFingerprints) &&
+        !isSourceFingerprints(base.remoteSourceFingerprints)) ||
+      (isDefined(base.dependencyFingerprints) &&
+        !isSourceFingerprints(base.dependencyFingerprints))
     ) {
       return { status: 'unreadable', manifest: null };
     }
@@ -82,6 +91,19 @@ export const readTargetBoundPullBase = async ({
       unreconciledUniversalIdentifiers: base.unreconciledUniversalIdentifiers
         ?.filter(isString)
         .map((identifier) => identifier.toLowerCase()),
+      dependencyFingerprints: isSourceFingerprints(base.dependencyFingerprints)
+        ? base.dependencyFingerprints
+        : undefined,
+      publicAssetFingerprints: isSourceFingerprints(
+        base.publicAssetFingerprints,
+      )
+        ? base.publicAssetFingerprints
+        : undefined,
+      remoteSourceFingerprints: isSourceFingerprints(
+        base.remoteSourceFingerprints,
+      )
+        ? base.remoteSourceFingerprints
+        : undefined,
       sourceFingerprints: isSourceFingerprints(base.sourceFingerprints)
         ? base.sourceFingerprints
         : undefined,

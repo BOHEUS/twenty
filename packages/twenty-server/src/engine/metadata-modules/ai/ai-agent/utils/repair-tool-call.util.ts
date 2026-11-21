@@ -5,16 +5,14 @@ import {
   type LanguageModelUsage,
   NoSuchToolError,
   Output,
-  type StepResult,
-  type ToolSet,
   generateText,
 } from 'ai';
 import { isDefined } from 'twenty-shared/utils';
 import { type z } from 'zod';
 
 import { UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
+import { type UsageSpenders } from 'src/engine/core-modules/usage/types/usage-spenders.type';
 import { AiBillingService } from 'src/engine/metadata-modules/ai/ai-billing/services/ai-billing.service';
-import { extractCacheCreationTokensFromSteps } from 'src/engine/metadata-modules/ai/ai-billing/utils/extract-cache-creation-tokens.util';
 import { buildAiTelemetry } from 'src/engine/metadata-modules/ai/ai-models/utils/build-ai-telemetry.util';
 
 const logger = new Logger('repairToolCall');
@@ -28,10 +26,10 @@ type ToolCall = {
 
 type RepairToolCallBillingContext = {
   aiBillingService: AiBillingService;
+  isContentRecordingAllowed: boolean;
   modelId: string;
   workspaceId: string;
-  userWorkspaceId: string | null;
-  agentId: string | null;
+  spenders: UsageSpenders;
   operationType: UsageOperationType;
 };
 
@@ -67,7 +65,6 @@ export const repairToolCall = async ({
   }
 
   let usage: LanguageModelUsage | undefined;
-  let steps: StepResult<ToolSet>[] | undefined;
 
   try {
     const result = await generateText({
@@ -90,13 +87,13 @@ export const repairToolCall = async ({
       ].join('\n'),
       ...buildAiTelemetry({
         functionId: 'repair-tool-call',
+        isContentRecordingAllowed: billingContext.isContentRecordingAllowed,
         workspaceId: billingContext.workspaceId,
-        userWorkspaceId: billingContext.userWorkspaceId,
+        userWorkspaceId: billingContext.spenders.userWorkspaceId,
       }),
     });
 
     usage = result.usage;
-    steps = result.steps;
 
     const repairedInput = result.output;
 
@@ -114,19 +111,14 @@ export const repairToolCall = async ({
     return null;
   } finally {
     if (isDefined(usage)) {
-      const cacheCreationTokens = steps
-        ? extractCacheCreationTokensFromSteps(steps)
-        : 0;
-
       void billingContext.aiBillingService
-        .calculateAndBillUsage(
-          billingContext.modelId,
-          { usage, cacheCreationTokens },
-          billingContext.workspaceId,
-          billingContext.operationType,
-          billingContext.agentId,
-          billingContext.userWorkspaceId,
-        )
+        .calculateAndBillUsage({
+          modelId: billingContext.modelId,
+          billingInput: { usage },
+          workspaceId: billingContext.workspaceId,
+          operationType: billingContext.operationType,
+          spenders: billingContext.spenders,
+        })
         .catch((error: unknown) =>
           logger.error(
             `Could not bill the repair of tool call ${toolCall.toolCallId} in workspace ${billingContext.workspaceId}`,

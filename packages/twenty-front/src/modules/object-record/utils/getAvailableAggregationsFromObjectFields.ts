@@ -24,7 +24,10 @@ export const getAvailableAggregationsFromObjectFields = (
         return acc;
       }
 
-      if (field.type === FieldMetadataType.RELATION) {
+      if (
+        field.type === FieldMetadataType.RELATION ||
+        field.type === FieldMetadataType.MORPH_RELATION
+      ) {
         acc[field.name] = {
           [AggregateOperations.COUNT]: 'totalCount',
         };
@@ -77,7 +80,7 @@ export const getAvailableAggregationsFromObjectFields = (
         };
       }
 
-      if (isFieldMetadataDateKind(field.type) === true) {
+      if (isFieldMetadataDateKind(field.type)) {
         acc[field.name] = {
           ...acc[field.name],
           [DateAggregateOperations.EARLIEST]: `min${capitalize(field.name)}`,

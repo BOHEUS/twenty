@@ -1,14 +1,16 @@
 import { StrictMode } from 'react';
 import { Outlet } from 'react-router-dom';
 
-import { AgentChatProvider } from '@/ai/components/AgentChatProvider';
+import { AiChatProvider } from '@/ai-chat/instance/components/AiChatProvider';
 import { TrackPageViewEffect } from '@/analytics/components/TrackPageViewEffect';
 import { SharedAppProviders } from '@/app/components/SharedAppProviders';
+import { InboxEffects } from '@/inbox/components/InboxEffects';
 import { WorkspaceAppPageTitle } from '@/app/components/WorkspaceAppPageTitle';
 import { GotoHotkeysEffectsProvider } from '@/app/effect-components/GotoHotkeysEffectsProvider';
 import { InitializeQueryParamStateEffect } from '@/app/effect-components/InitializeQueryParamStateEffect';
 import { PageChangeEffect } from '@/app/effect-components/PageChangeEffect';
 import { ApplicationsLoadEffect } from '@/applications/components/ApplicationsLoadEffect';
+import { MyConnectedAccountsLoadEffect } from '@/accounts/components/MyConnectedAccountsLoadEffect';
 import { AuthProvider } from '@/auth/components/AuthProvider';
 import { SignOutOnOtherTabSignOutEffect } from '@/auth/effect-components/SignOutOnOtherTabSignOutEffect';
 import { CaptchaProvider } from '@/captcha/components/CaptchaProvider';
@@ -22,9 +24,11 @@ import { PromiseRejectionEffect } from '@/error-handler/components/PromiseReject
 import { IsMinimalMetadataReadyEffect } from '@/metadata-store/effect-components/IsMinimalMetadataReadyEffect';
 import { MinimalMetadataLoadEffect } from '@/metadata-store/effect-components/MinimalMetadataLoadEffect';
 import { UserMetadataProviderInitialEffect } from '@/metadata-store/effect-components/UserMetadataProviderInitialEffect';
+import { WORKFLOW_RUN_CORE_RECORD_REFERENCE_FIELDS } from '@/object-core/workflows/constants/WorkflowRunCoreRecordReferenceFields';
 import { ApolloCoreProvider } from '@/object-metadata/components/ApolloCoreProvider';
+import { CoreRecordReferenceFieldsContext } from '@/object-record/record-field/ui/contexts/CoreRecordReferenceFieldsContext';
 import { RecordCreationFormProvider } from '@/object-record/record-form/components/RecordCreationFormProvider';
-import { WelcomeOverlay } from '@/onboarding/components/WelcomeOverlay/WelcomeOverlay';
+import { RecordUpdateFormProvider } from '@/object-record/record-form/components/RecordUpdateFormProvider';
 import { CompanyEnrichmentOnboardingEffect } from '@/onboarding/effect-components/CompanyEnrichmentOnboardingEffect';
 import { ApolloAdminProvider } from '@/settings/admin-panel/apollo/components/ApolloAdminProvider';
 import { EndTrialAfterPaymentMethodGater } from '@/settings/billing/components/EndTrialAfterPaymentMethodGater';
@@ -54,6 +58,7 @@ export const WorkspaceAppProviders = () => {
               <ApolloAdminProvider>
                 <SSEProvider>
                   <ApplicationsLoadEffect />
+                  <MyConnectedAccountsLoadEffect />
                   <UserThemeProviderEffect />
                   <UserUiScaleProviderEffect />
                   <ContextStoreComponentInstanceContext.Provider
@@ -61,7 +66,8 @@ export const WorkspaceAppProviders = () => {
                   >
                     <AppToaster />
                     <ErrorMessageEffect />
-                    <AgentChatProvider>
+                    <AiChatProvider>
+                      <InboxEffects />
                       <DialogComponentInstanceContext.Provider
                         value={{ instanceId: 'dialog-manager' }}
                       >
@@ -72,23 +78,28 @@ export const WorkspaceAppProviders = () => {
                             <GotoHotkeysEffectsProvider />
                             <WorkspaceAppPageTitle />
                             <PageFavicon />
-                            <RecordCreationFormProvider>
-                              <Outlet />
-                              <GlobalFilePreviewModal />
-                              <CommandMenuConfirmationModalManager />
-                              <CommandRunner />
-                            </RecordCreationFormProvider>
+                            <CoreRecordReferenceFieldsContext.Provider
+                              value={WORKFLOW_RUN_CORE_RECORD_REFERENCE_FIELDS}
+                            >
+                              <RecordCreationFormProvider>
+                                <RecordUpdateFormProvider>
+                                  <Outlet />
+                                  <GlobalFilePreviewModal />
+                                  <CommandMenuConfirmationModalManager />
+                                  <CommandRunner />
+                                </RecordUpdateFormProvider>
+                              </RecordCreationFormProvider>
+                            </CoreRecordReferenceFieldsContext.Provider>
                           </StrictMode>
                         </DialogManager>
                       </DialogComponentInstanceContext.Provider>
-                    </AgentChatProvider>
+                    </AiChatProvider>
                   </ContextStoreComponentInstanceContext.Provider>
                   <SupportChatEffect />
                   <InitializeQueryParamStateEffect />
                   <TrackPageViewEffect />
                   <RequestFreshCaptchaTokenEffect />
                   <PageChangeEffect />
-                  <WelcomeOverlay />
                   <CompanyEnrichmentOnboardingEffect />
                   <SignOutOnOtherTabSignOutEffect />
                 </SSEProvider>

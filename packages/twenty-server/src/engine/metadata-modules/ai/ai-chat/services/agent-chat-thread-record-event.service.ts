@@ -6,7 +6,7 @@ import {
 } from 'twenty-shared/database-events';
 import { isDefined } from 'twenty-shared/utils';
 
-import { DatabaseEventAction } from 'src/engine/api/graphql/graphql-query-runner/enums/database-event-action';
+import { DatabaseEventAction } from 'src/engine/workspace-event-emitter/enums/database-event-action';
 import { buildAgentChatThreadUpdateEvent } from 'src/engine/metadata-modules/ai/ai-chat/utils/build-agent-chat-thread-update-event.util';
 import { findAgentChatFlatObjectMetadata } from 'src/engine/metadata-modules/ai/ai-chat/utils/find-agent-chat-flat-object-metadata.util';
 import { formatErrorWithCause } from 'src/engine/metadata-modules/ai/ai-chat/utils/format-error-with-cause.util';
@@ -96,6 +96,51 @@ export class AgentChatThreadRecordEventService {
           ? Object.assign(new ObjectRecordRestoreEvent(), event)
           : event,
       ],
+      objectMetadata,
+      workspaceId,
+    });
+  }
+
+  async emitThreadsUpdated({
+    workspaceId,
+    threads,
+  }: {
+    workspaceId: string;
+    threads: {
+      before: AgentChatThreadWorkspaceEntity;
+      after: AgentChatThreadWorkspaceEntity;
+    }[];
+  }): Promise<void> {
+    if (threads.length === 0) {
+      return;
+    }
+
+    const { objectMetadata, flatFieldMetadataMaps } =
+      await this.findThreadMetadata(workspaceId);
+
+    if (!isDefined(objectMetadata)) {
+      return;
+    }
+
+    const events = threads
+      .map(({ before, after }) =>
+        buildAgentChatThreadUpdateEvent({
+          threadBefore: before,
+          threadAfter: after,
+          objectMetadata,
+          flatFieldMetadataMaps,
+        }),
+      )
+      .filter(isDefined);
+
+    if (events.length === 0) {
+      return;
+    }
+
+    this.workspaceEventEmitter.emitDatabaseBatchEvent({
+      objectMetadataNameSingular: objectMetadata.nameSingular,
+      action: DatabaseEventAction.UPDATED,
+      events,
       objectMetadata,
       workspaceId,
     });

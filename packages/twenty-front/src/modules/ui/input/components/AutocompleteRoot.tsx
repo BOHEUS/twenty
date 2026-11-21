@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { isNonEmptyArray } from 'twenty-shared/utils';
+import { preventDismissingClickActivation } from 'twenty-ui/utilities';
 import {
   type AutocompleteRootProps as AutocompletePrimitiveRootProps,
   Autocomplete,
@@ -22,6 +23,7 @@ type AutocompleteRootProps<TItem> = {
   itemToStringValue?: (item: TItem) => string;
   enabled?: boolean;
   openOnValueChange?: boolean;
+  openOnInputClick?: boolean;
   closeOnItemPress?: boolean;
   onClose?: () => void;
   onItemHighlightedByUser?: (item: TItem | undefined) => void;
@@ -37,6 +39,7 @@ export const AutocompleteRoot = <TItem,>({
   itemToStringValue,
   enabled = true,
   openOnValueChange = true,
+  openOnInputClick = false,
   closeOnItemPress = true,
   onClose,
   onItemHighlightedByUser,
@@ -76,16 +79,23 @@ export const AutocompleteRoot = <TItem,>({
         return;
       }
 
-      if (!open) {
-        closeDropdown(dropdownId);
-        onClose?.();
+      if (open) {
+        openDropdown({
+          dropdownComponentInstanceIdFromProps: dropdownId,
+          globalHotkeysConfig,
+        });
         return;
       }
 
-      openDropdown({
-        dropdownComponentInstanceIdFromProps: dropdownId,
-        globalHotkeysConfig,
-      });
+      closeDropdown(dropdownId);
+      onClose?.();
+
+      const shouldPreventOutsideClickActivation =
+        details.reason === 'outside-press' && !details.isCanceled;
+
+      if (shouldPreventOutsideClickActivation) {
+        preventDismissingClickActivation(details.event);
+      }
     };
 
   const handleItemHighlighted: AutocompletePrimitiveRootProps<TItem>['onItemHighlighted'] =
@@ -103,6 +113,7 @@ export const AutocompleteRoot = <TItem,>({
         autoHighlight="always"
         value={value}
         open={enabled && isDropdownOpen}
+        openOnInputClick={openOnInputClick}
         itemToStringValue={itemToStringValue}
         onValueChange={handleValueChange}
         onOpenChange={handleOpenChange}

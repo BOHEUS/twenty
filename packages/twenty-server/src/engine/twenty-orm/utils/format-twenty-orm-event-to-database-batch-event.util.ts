@@ -15,7 +15,7 @@ import {
 
 import type { ObjectLiteral } from 'typeorm';
 
-import { DatabaseEventAction } from 'src/engine/api/graphql/graphql-query-runner/enums/database-event-action';
+import { DatabaseEventAction } from 'src/engine/workspace-event-emitter/enums/database-event-action';
 import { type RawAuthContext } from 'src/engine/core-modules/auth/types/raw-auth-context.type';
 import {
   computeUpdatedFieldsFromDiff,
@@ -28,7 +28,6 @@ import {
   TwentyOrmException,
   TwentyOrmExceptionCode,
 } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
-import { type InheritedReadabilityChildRecords } from 'src/engine/core-modules/record-share/types/inherited-readability-child-records.type';
 import { type DatabaseBatchEventInput } from 'src/engine/workspace-event-emitter/workspace-event-emitter';
 
 export const formatTwentyOrmEventToDatabaseBatchEvent = <
@@ -41,7 +40,6 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
   authContext,
   recordsAfter,
   recordsBefore,
-  inheritedReadabilityChildRecordsByRecordId,
 }: {
   action: DatabaseEventAction;
   objectMetadataItem: FlatObjectMetadata;
@@ -50,21 +48,8 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
   authContext?: RawAuthContext;
   recordsAfter?: T[];
   recordsBefore?: T[];
-  inheritedReadabilityChildRecordsByRecordId?: Map<
-    string,
-    InheritedReadabilityChildRecords
-  >;
 }): DatabaseBatchEventInput<T, DatabaseEventAction> | undefined => {
   const objectMetadataNameSingular = objectMetadataItem.nameSingular;
-
-  const buildInheritedReadabilityChildRecordsProperty = (recordId: string) => {
-    const inheritedReadabilityChildRecords =
-      inheritedReadabilityChildRecordsByRecordId?.get(recordId);
-
-    return isDefined(inheritedReadabilityChildRecords)
-      ? { inheritedReadabilityChildRecords }
-      : {};
-  };
 
   let events: (
     | ObjectRecordDeleteEvent<T>
@@ -166,14 +151,11 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
               after: recordAfter,
               updatedFields,
               diff,
-              ...(action === DatabaseEventAction.DELETED
-                ? buildInheritedReadabilityChildRecordsProperty(recordAfter.id)
-                : {}),
             },
           } satisfies
-            | ObjectRecordUpdateEvent<T>
-            | ObjectRecordDeleteEvent<T>
-            | ObjectRecordRestoreEvent<T>;
+            | Omit<ObjectRecordUpdateEvent<T>, 'eventId'>
+            | Omit<ObjectRecordDeleteEvent<T>, 'eventId'>
+            | Omit<ObjectRecordRestoreEvent<T>, 'eventId'>;
 
           switch (action) {
             case DatabaseEventAction.DELETED:
@@ -216,7 +198,6 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
         event.recordId = recordBefore.id;
         event.properties = {
           before: recordBefore,
-          ...buildInheritedReadabilityChildRecordsProperty(recordBefore.id),
         };
 
         return event;
@@ -244,17 +225,14 @@ export const formatTwentyOrmEventToDatabaseBatchEvent = <
           (recordBeforeToFind) => recordBeforeToFind.id === recordAfter.id,
         );
 
-        let updatedFields;
-        let diff;
-
-        diff = objectRecordChangedValues(
+        const diff = objectRecordChangedValues(
           correspondingRecordBefore ?? {},
           recordAfter,
           objectMetadataItem,
           flatFieldMetadataMaps,
         ) as Partial<ObjectRecordDiff<T>>;
 
-        updatedFields = computeUpdatedFieldsFromDiff(
+        const updatedFields = computeUpdatedFieldsFromDiff(
           diff,
           objectMetadataItem,
           flatFieldMetadataMaps,

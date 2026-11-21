@@ -1,15 +1,16 @@
 import { NavigationMenuItemEditable } from '@/navigation-menu-item/edit/components/NavigationMenuItemEditable';
 import { ColoredIcon } from '@/ui/icon/components/ColoredIcon';
 import { NavigationMenuItemFolderChevron } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderChevron';
+import { getFolderNavigationMenuItemLabel } from '@/navigation-menu-item/display/folder/utils/getFolderNavigationMenuItemLabel';
 import { Suspense, lazy } from 'react';
-import { useIcons } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { useIsMobile } from 'twenty-ui/utilities';
 import { type NavigationMenuItem } from '~/generated-metadata/graphql';
 
 import { FOLDER_ICON_DEFAULT } from '@/navigation-menu-item/common/constants/FolderIconDefault';
 import { DEFAULT_NAVIGATION_MENU_ITEM_COLOR_FOLDER } from '@/navigation-menu-item/common/constants/NavigationMenuItemDefaultColorFolder';
 import { NavigationMenuItemFolderLayout } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderLayout';
-import { NavigationMenuItemFolderSubItem } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderSubItem';
+import { NavigationMenuItemFolderSubItemDispatcher } from '@/navigation-menu-item/display/folder/components/NavigationMenuItemFolderSubItemDispatcher';
 import { useNavigationMenuItemFolderOpenState } from '@/navigation-menu-item/display/folder/hooks/useNavigationMenuItemFolderOpenState';
 import type { NavigationMenuItemSectionContentProps } from '@/navigation-menu-item/display/sections/types/NavigationMenuItemSectionContentProps';
 import { NavigationDrawerItem } from '@/ui/navigation/navigation-drawer/components/NavigationDrawerItem';
@@ -45,7 +46,7 @@ export const NavigationMenuItemFolder = ({
   orphanIndex,
 }: NavigationMenuItemFolderProps) => {
   const folderId = item.id;
-  const folderName = item.name ?? 'Folder';
+  const folderName = getFolderNavigationMenuItemLabel(item);
   const folderIconKey = item.icon;
   const folderColor = 'color' in item ? (item.color as string | null) : null;
   const folderChildrenNavigationMenuItems =
@@ -153,7 +154,7 @@ const NavigationMenuItemFolderReadOnlyContent = ({
       isGroup={isGroup}
     >
       {navigationMenuItems.map((navigationMenuItem, index) => (
-        <NavigationMenuItemFolderSubItem
+        <NavigationMenuItemFolderSubItemDispatcher
           key={navigationMenuItem.id}
           navigationMenuItem={navigationMenuItem}
           index={index}

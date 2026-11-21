@@ -1,10 +1,12 @@
-import { agentChatUISessionStartTimeState } from '@/ai/states/agentChatUISessionStartTimeState';
+import { aiChatUISessionStartTimeState } from '@/ai-chat/states/aiChatUISessionStartTimeState';
+import { askAiSidePanelThreadIdComponentState } from '@/side-panel/states/askAiSidePanelThreadIdComponentState';
 import { useIsWorkspaceActivationStatusEqualsTo } from '@/workspace/hooks/useIsWorkspaceActivationStatusEqualsTo';
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
 import { isSidePanelOpenedState } from '@/side-panel/states/isSidePanelOpenedState';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { t } from '@lingui/core/macro';
+import { useStore } from 'jotai';
 import { useCallback } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { SidePanelPages } from 'twenty-shared/types';
@@ -14,10 +16,11 @@ import { v4 } from 'uuid';
 import { isCurrentPathAiChatPage } from '~/utils/isCurrentPathAiChatPage';
 
 export const useOpenAskAiPageInSidePanel = () => {
+  const store = useStore();
   const { navigateSidePanelMenu } = useSidePanelMenu();
   const isSidePanelOpened = useAtomStateValue(isSidePanelOpenedState);
-  const setAgentChatUISessionStartTime = useSetAtomState(
-    agentChatUISessionStartTimeState,
+  const setAiChatUISessionStartTime = useSetAtomState(
+    aiChatUISessionStartTimeState,
   );
   const isWorkspaceSuspended = useIsWorkspaceActivationStatusEqualsTo(
     WorkspaceActivationStatus.SUSPENDED,
@@ -25,8 +28,10 @@ export const useOpenAskAiPageInSidePanel = () => {
 
   const openAskAiPage = useCallback(
     ({
+      threadId,
       resetNavigationStack,
     }: {
+      threadId?: string;
       resetNavigationStack?: boolean;
     } = {}) => {
       if (isWorkspaceSuspended || isCurrentPathAiChatPage()) {
@@ -38,24 +43,32 @@ export const useOpenAskAiPageInSidePanel = () => {
           ? resetNavigationStack
           : isSidePanelOpened;
 
-      setAgentChatUISessionStartTime(
-        (agentChatUISessionStartTime) =>
-          agentChatUISessionStartTime ?? Temporal.Now.instant(),
+      setAiChatUISessionStartTime(
+        (aiChatUISessionStartTime) =>
+          aiChatUISessionStartTime ?? Temporal.Now.instant(),
+      );
+
+      const pageId = v4();
+
+      store.set(
+        askAiSidePanelThreadIdComponentState.atomFamily({ instanceId: pageId }),
+        threadId ?? null,
       );
 
       navigateSidePanelMenu({
         page: SidePanelPages.AskAI,
         pageTitle: t`Ask AI`,
         pageIcon: IconSparkles,
-        pageId: v4(),
+        pageId,
         resetNavigationStack: shouldReset,
       });
     },
     [
       navigateSidePanelMenu,
       isSidePanelOpened,
-      setAgentChatUISessionStartTime,
+      setAiChatUISessionStartTime,
       isWorkspaceSuspended,
+      store,
     ],
   );
 

@@ -49,6 +49,14 @@ const validCodeExecutionQuotaLimit: CreateUsageLimitInput = {
   operationType: UsageOperationType.CODE_EXECUTION,
 };
 
+const validAllUsageQuotaLimit: CreateUsageLimitInput = {
+  ...validQuotaLimit,
+  resourceType: UsageResourceType.ALL,
+  operationType: UsageOperationType.ALL,
+  spenderType: 'application',
+  spenderId: '20202020-1c25-4d02-bf25-6aeccf7ea419',
+};
+
 const rejects = (input: CreateUsageLimitInput, message?: string) =>
   expect(() => validateUsageLimitAgainstDefinition(input)).toThrow(
     expect.objectContaining({
@@ -79,6 +87,14 @@ describe('validateUsageLimitAgainstDefinition', () => {
       spenderType: 'application',
       spenderId: '20202020-1c25-4d02-bf25-6aeccf7ea419',
     });
+  });
+
+  it('accepts a credit quota on every resource for an application', () => {
+    accepts(validAllUsageQuotaLimit);
+  });
+
+  it('accepts a credit quota on every resource for every application', () => {
+    accepts({ ...validAllUsageQuotaLimit, spenderId: null });
   });
 
   it.each([UsageUnit.CREDIT, UsageUnit.INVOCATION])(
@@ -123,6 +139,28 @@ describe('validateUsageLimitAgainstDefinition', () => {
     });
   });
 
+  it('rejects a quota on every resource for the workspace, which the credit allowance already caps', () => {
+    rejects(
+      { ...validAllUsageQuotaLimit, spenderType: 'workspace', spenderId: null },
+      'ALL quota limits cannot be scoped to workspace',
+    );
+  });
+
+  it('rejects a quota on every resource for a member', () => {
+    rejects({ ...validAllUsageQuotaLimit, spenderType: 'userWorkspace' });
+  });
+
+  it('rejects a quota on every resource narrowed to one operation', () => {
+    rejects({
+      ...validAllUsageQuotaLimit,
+      operationType: UsageOperationType.AI_CHAT_TOKEN,
+    });
+  });
+
+  it('rejects a quota on every resource counted in anything but credits', () => {
+    rejects({ ...validAllUsageQuotaLimit, unit: UsageUnit.INVOCATION });
+  });
+
   it('rejects a quota on a spender type the resource does not allow', () => {
     rejects({ ...validQuotaLimit, spenderType: 'workflow' });
   });
@@ -164,5 +202,24 @@ describe('validateUsageLimitAgainstDefinition', () => {
 
   it('rejects a storage stock counted in credits', () => {
     rejects({ ...validStockLimit, unit: UsageUnit.CREDIT });
+  });
+
+  it('accepts a user credit row that overrides the per-member AI credit default', () => {
+    accepts({
+      ...validQuotaLimit,
+      operationType: UsageOperationType.ALL,
+      spenderType: 'userWorkspace',
+      periodUnit: 'week',
+      unit: UsageUnit.USER_CREDIT,
+    });
+  });
+
+  it('rejects user credits on a single AI operation, which no default covers', () => {
+    rejects({
+      ...validQuotaLimit,
+      spenderType: 'userWorkspace',
+      periodUnit: 'week',
+      unit: UsageUnit.USER_CREDIT,
+    });
   });
 });

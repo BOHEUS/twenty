@@ -1,4 +1,3 @@
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
 
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
@@ -12,6 +11,7 @@ import { FileFolder } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { useToast } from 'twenty-ui/components/feedback';
 import { REACT_APP_SERVER_BASE_URL } from '~/config';
+import { useLingui } from '@lingui/react/macro';
 
 type WorkspaceMemberPictureUploaderProps = {
   workspaceMemberId: string;
@@ -26,6 +26,7 @@ export const WorkspaceMemberPictureUploader = ({
   onAvatarUpdated,
   disabled = false,
 }: WorkspaceMemberPictureUploaderProps) => {
+  const { t } = useLingui();
   const { enqueueToast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -93,7 +94,7 @@ export const WorkspaceMemberPictureUploader = ({
       const message =
         error instanceof Error ? error.message : t`Failed to upload picture`;
       setErrorMessage(t`An error occurred while uploading the picture.`);
-      enqueueToast({ variant: 'error', children: message });
+      enqueueToast({ status: 'error', children: message });
     } finally {
       setIsUploading(false);
     }
@@ -122,7 +123,7 @@ export const WorkspaceMemberPictureUploader = ({
       const message =
         error instanceof Error ? error.message : t`Failed to remove picture`;
       setErrorMessage(t`An error occurred while removing the picture.`);
-      enqueueToast({ variant: 'error', children: message });
+      enqueueToast({ status: 'error', children: message });
     } finally {
       setIsRemoving(false);
     }

@@ -7,12 +7,14 @@ import { type ValidationRuleFieldDescriptor } from 'twenty-shared/types';
 import {
   compileValidationRuleExpression,
   evaluateValidationRuleExpression,
+  getValidationRulePreviousValueFieldPath,
   isDefined,
   parseValidationRuleExpression,
 } from 'twenty-shared/utils';
 import { InlineBanner } from 'twenty-ui/components/feedback';
 import { LightIconButton } from 'twenty-ui/components/input';
-import { IconChevronDown, IconChevronUp, useIcons } from 'twenty-ui/icon';
+import { IconChevronDown, IconChevronUp } from 'twenty-ui/icon';
+import { useIcons } from 'twenty-ui/icon/provider';
 import { Status } from 'twenty-ui/primitives/data-display';
 import { Card, Tooltip } from 'twenty-ui/primitives/surfaces';
 import { themeCssVariables, useTheme } from 'twenty-ui/theme';
@@ -28,6 +30,7 @@ import { type ValidationRuleEditorField } from '@/validation-rules/types/Validat
 import { buildValidationRulePreviewRelationGqlFields } from '@/validation-rules/utils/buildValidationRulePreviewRelationGqlFields';
 import { formatValidationRulePreviewValue } from '@/validation-rules/utils/formatValidationRulePreviewValue';
 import { getValidationRuleEditorFieldChipLabel } from '@/validation-rules/utils/getValidationRuleEditorFieldChipLabel';
+import { getValidationRuleErrorMessage } from '@/validation-rules/utils/getValidationRuleErrorMessage';
 import { getValidationRulePreviewValue } from '@/validation-rules/utils/getValidationRulePreviewValue';
 
 const PREVIEW_RECORD_COUNT = 3;
@@ -89,10 +92,6 @@ const StyledFieldLabel = styled.div`
   gap: ${themeCssVariables.spacing[1]};
   min-width: 0;
   overflow-wrap: anywhere;
-
-  > svg {
-    flex-shrink: 0;
-  }
 `;
 
 const StyledValue = styled.span<{ isEmpty: boolean }>`
@@ -204,6 +203,7 @@ export const SettingsValidationRulePreview = ({
     ? evaluateValidationRuleExpression({
         expression,
         record,
+        previousRecord: record,
         fields,
         now: new Date().toISOString(),
       })
@@ -235,7 +235,7 @@ export const SettingsValidationRulePreview = ({
         return (
           <Tooltip
             delay={TooltipDelay.mediumDelay}
-            content={evaluationResult.errorMessage}
+            content={getValidationRuleErrorMessage(evaluationResult)}
             side="top"
           >
             <StyledStatus tabIndex={0}>
@@ -302,7 +302,10 @@ export const SettingsValidationRulePreview = ({
                   ? getIcon(editorField.iconName)
                   : undefined;
                 const formattedValue = formatValidationRulePreviewValue(
-                  getValidationRulePreviewValue(record, path),
+                  getValidationRulePreviewValue(
+                    record,
+                    getValidationRulePreviousValueFieldPath(path) ?? path,
+                  ),
                 );
 
                 return (

@@ -1,9 +1,5 @@
 import { DeleteCoreWorkflowsCommand } from '@/object-core/workflows/components/DeleteCoreWorkflowsCommand';
-import { useIsWorkflowCoreEnabled } from '@/workflow/hooks/useIsWorkflowCoreEnabled';
-import {
-  CoreObjectNameSingular,
-  type RecordGqlOperationFilter,
-} from 'twenty-shared/types';
+import { type RecordGqlOperationFilter } from 'twenty-shared/types';
 import { HeadlessEngineCommandWrapperEffect } from '@/command-menu-item/engine-command/components/HeadlessEngineCommandWrapperEffect';
 import { useHeadlessCommandContextApi } from '@/command-menu-item/engine-command/hooks/useHeadlessCommandContextApi';
 import { useRemoveNavigationMenuItemByTargetRecordId } from '@/navigation-menu-item/common/hooks/useRemoveNavigationMenuItemByTargetRecordId';
@@ -15,13 +11,18 @@ import { PLACEHOLDER_RECORD_INDEX_ID } from '@/object-record/record-index/consta
 import { useResetRecordSelection } from '@/object-record/record-selection/hooks/useResetRecordSelection';
 import { useSidePanelMenu } from '@/side-panel/hooks/useSidePanelMenu';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
+import { useLingui } from '@lingui/react/macro';
 
 const DeleteWorkspaceRecordsCommand = () => {
+  const { t } = useLingui();
   const { recordIndexId, objectMetadataItem, selectedRecords, graphqlFilter } =
     useHeadlessCommandContextApi();
 
   if (!isDefined(objectMetadataItem)) {
-    throw new Error('Object metadata is required to delete records');
+    throw new Error(
+      doNotTranslate('Object metadata is required to delete records'),
+    );
   }
 
   const recordId = selectedRecords[0]?.id;
@@ -71,7 +72,7 @@ const DeleteWorkspaceRecordsCommand = () => {
     }
 
     if (!isDefined(graphqlFilter)) {
-      throw new Error('Cannot delete records without a valid filter');
+      throw new Error(t`Cannot delete records without a valid filter`);
     }
 
     await incrementalDeleteManyRecords();
@@ -81,10 +82,8 @@ const DeleteWorkspaceRecordsCommand = () => {
 };
 
 export const DeleteRecordsCommand = () => {
-  const isCore = useIsWorkflowCoreEnabled();
-  const { objectMetadataItem } = useHeadlessCommandContextApi();
-  return isCore &&
-    objectMetadataItem?.nameSingular === CoreObjectNameSingular.Workflow ? (
+  const { coreObjectName } = useHeadlessCommandContextApi();
+  return coreObjectName === 'workflow' ? (
     <DeleteCoreWorkflowsCommand />
   ) : (
     <DeleteWorkspaceRecordsCommand />

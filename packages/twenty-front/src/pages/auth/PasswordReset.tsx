@@ -9,8 +9,7 @@ import { useIsLogged } from '@/auth/hooks/useIsLogged';
 import { currentUserState } from '@/auth/states/currentUserState';
 import { workspacePublicDataState } from '@/auth/states/workspacePublicDataState';
 import { PASSWORD_REGEX } from '@/auth/utils/passwordRegex';
-import { useReadCaptchaToken } from '@/captcha/hooks/useReadCaptchaToken';
-import { useCaptcha } from '@/client-config/hooks/useCaptcha';
+import { useGetCaptchaToken } from '@/captcha/hooks/useGetCaptchaToken';
 import { useIsCurrentLocationOnAWorkspace } from '@/domain-manager/hooks/useIsCurrentLocationOnAWorkspace';
 import { useRedirect } from '@/domain-manager/hooks/useRedirect';
 import { getToastOptionsFromError } from '@/error-handler/utils/getToastOptionsFromError';
@@ -143,8 +142,7 @@ export const PasswordReset = () => {
 
   const { signInWithCredentialsInWorkspace, signInWithCredentials } = useAuth();
   const { isOnAWorkspace } = useIsCurrentLocationOnAWorkspace();
-  const { readCaptchaToken } = useReadCaptchaToken();
-  const { isCaptchaReady } = useCaptcha();
+  const { getCaptchaToken } = useGetCaptchaToken();
 
   const onSubmit = async (formData: Form) => {
     try {
@@ -157,7 +155,7 @@ export const PasswordReset = () => {
 
       if (!data?.updatePasswordViaResetToken.success) {
         enqueueToast({
-          variant: 'error',
+          status: 'error',
           children: t`There was an error while updating password.`,
         });
         return;
@@ -173,20 +171,12 @@ export const PasswordReset = () => {
       );
 
       if (isLogged) {
-        enqueueToast({ variant: 'success', children: successMessage });
+        enqueueToast({ status: 'success', children: successMessage });
         navigate(AppPath.Index);
         return;
       }
 
-      if (!isCaptchaReady) {
-        enqueueToast({
-          variant: 'error',
-          children: t`Captcha (anti-bot check) is still loading, try again`,
-        });
-        return;
-      }
-
-      const token = readCaptchaToken();
+      const token = await getCaptchaToken();
 
       if (isOnAWorkspace) {
         await signInWithCredentialsInWorkspace(
@@ -222,12 +212,9 @@ export const PasswordReset = () => {
           <StyledOnboardingContentContainer>
             {!email ? (
               <SkeletonLine
-                borderRadius="0.25rem"
                 height={SKELETON_HEIGHT_SIZES.m}
                 count={2}
-                style={{
-                  marginBottom: themeCssVariables.spacing[2],
-                }}
+                gap={themeCssVariables.spacing[2]}
                 baseColor={themeCssVariables.background.quaternary}
                 highlightColor={themeCssVariables.background.secondary}
               />

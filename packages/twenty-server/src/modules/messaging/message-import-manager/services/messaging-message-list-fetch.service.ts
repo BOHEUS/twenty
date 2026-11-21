@@ -121,9 +121,11 @@ export class MessagingMessageListFetchService {
               messageFoldersToSync,
             );
 
-          await this.cacheStorage.del(
+          await this.cacheStorage.mdel([
             `messages-to-import:${workspaceId}:${freshMessageChannel.id}`,
-          );
+            `messages-to-import-total:${workspaceId}:${freshMessageChannel.id}`,
+            `messages-imported:${workspaceId}:${freshMessageChannel.id}`,
+          ]);
 
           const messageExternalIds = [
             ...messageLists.flatMap(
@@ -149,10 +151,13 @@ export class MessagingMessageListFetchService {
           );
 
           const messageChannelMessageAssociationRepository =
-            this.workspaceOrmManager.getRepository<MessageChannelMessageAssociationWorkspaceEntity>(
+            this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<MessageChannelMessageAssociationWorkspaceEntity>(
               'messageChannelMessageAssociation',
-              { shouldBypassPermissionChecks: true },
             );
+
+          const messageExternalIdsRemovedFromAFolder = new Set(
+            messageExternalIdsToDelete,
+          );
 
           const messageExternalIdsChunks = chunk(messageExternalIds, 200);
 
@@ -178,7 +183,8 @@ export class MessagingMessageListFetchService {
               (messageExternalId) =>
                 !existingMessageChannelMessageAssociationsExternalIds.includes(
                   messageExternalId,
-                ),
+                ) ||
+                messageExternalIdsRemovedFromAFolder.has(messageExternalId),
             );
 
             if (messageExternalIdsToImport.length) {
@@ -260,6 +266,19 @@ export class MessagingMessageListFetchService {
 
             return;
           }
+
+          await this.cacheStorage.set(
+            `messages-to-import-total:${workspaceId}:${freshMessageChannel.id}`,
+            await this.cacheStorage.getSetLength(
+              `messages-to-import:${workspaceId}:${freshMessageChannel.id}`,
+            ),
+            ONE_WEEK_IN_MILLISECONDS,
+          );
+          await this.cacheStorage.set(
+            `messages-imported:${workspaceId}:${freshMessageChannel.id}`,
+            0,
+            ONE_WEEK_IN_MILLISECONDS,
+          );
 
           this.logger.debug(
             `messageChannelId: ${freshMessageChannel.id} Scheduling direct messages import`,
@@ -348,9 +367,8 @@ export class MessagingMessageListFetchService {
     messageExternalIds: string[],
   ) {
     const messageChannelMessageAssociationRepository =
-      this.workspaceOrmManager.getRepository<MessageChannelMessageAssociationWorkspaceEntity>(
+      this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<MessageChannelMessageAssociationWorkspaceEntity>(
         'messageChannelMessageAssociation',
-        { shouldBypassPermissionChecks: true },
       );
 
     const fullSyncMessageChannelMessageAssociationsToDelete = [];

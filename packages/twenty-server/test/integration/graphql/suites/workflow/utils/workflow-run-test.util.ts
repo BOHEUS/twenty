@@ -4,7 +4,6 @@ import { WORKFLOW_RUN_GQL_FIELDS } from 'test/integration/constants/workflow-gql
 const client = request(`http://localhost:${APP_PORT}`);
 
 export type WorkflowRunStatusType =
-  | 'NOT_STARTED'
   | 'RUNNING'
   | 'COMPLETED'
   | 'FAILED'
@@ -39,7 +38,7 @@ export type WorkflowRunResponse = {
   id: string;
   status: WorkflowRunStatusType;
   state: WorkflowRunState;
-  workflowVersionId: string;
+  coreWorkflowVersionId: string | null;
 };
 
 export const getWorkflowRun = async (
@@ -66,43 +65,6 @@ export const getWorkflowRun = async (
   return response.body.data.workflowRun;
 };
 
-export const runWorkflowVersion = async ({
-  workflowVersionId,
-  payload,
-  token = APPLE_JANE_ADMIN_ACCESS_TOKEN,
-}: {
-  workflowVersionId: string;
-  payload?: object;
-  token?: string;
-}): Promise<string> => {
-  const response = await client
-    .post('/graphql')
-    .set('Authorization', `Bearer ${token}`)
-    .send({
-      query: `
-        mutation RunWorkflowVersion($input: RunWorkflowVersionInput!) {
-          runWorkflowVersion(input: $input) {
-            workflowRunId
-          }
-        }
-      `,
-      variables: {
-        input: {
-          workflowVersionId,
-          payload,
-        },
-      },
-    });
-
-  if (response.body.errors || !response.body.data?.runWorkflowVersion) {
-    throw new Error(
-      `Failed to run workflow version: ${JSON.stringify(response.body.errors)}`,
-    );
-  }
-
-  return response.body.data.runWorkflowVersion.workflowRunId;
-};
-
 export const destroyWorkflowRun = async (
   workflowRunId: string,
 ): Promise<void> => {
@@ -122,7 +84,6 @@ export const destroyWorkflowRun = async (
 };
 
 const PENDING_WORKFLOW_RUN_STATUSES: WorkflowRunStatusType[] = [
-  'NOT_STARTED',
   'ENQUEUED',
   'RUNNING',
   'STOPPING',
@@ -130,7 +91,7 @@ const PENDING_WORKFLOW_RUN_STATUSES: WorkflowRunStatusType[] = [
 
 export const waitForWorkflowCompletion = async (
   workflowRunId: string,
-  maxAttempts = 30,
+  maxAttempts = 120,
   intervalMs = 500,
 ): Promise<WorkflowRunResponse | null> => {
   let workflowRun = await getWorkflowRun(workflowRunId);
@@ -153,7 +114,7 @@ export const waitForWorkflowRunStepStatus = async (
   workflowRunId: string,
   stepId: string,
   expectedStatus: string,
-  maxAttempts = 30,
+  maxAttempts = 120,
   intervalMs = 500,
 ): Promise<WorkflowRunResponse | null> => {
   let workflowRun = await getWorkflowRun(workflowRunId);
@@ -176,7 +137,7 @@ export const waitForWorkflowRunStepStatus = async (
 export const waitForWorkflowRunStatus = async (
   workflowRunId: string,
   expectedStatus: WorkflowRunStatusType,
-  maxAttempts = 30,
+  maxAttempts = 120,
   intervalMs = 500,
 ): Promise<WorkflowRunResponse | null> => {
   let workflowRun = await getWorkflowRun(workflowRunId);

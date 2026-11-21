@@ -1,6 +1,6 @@
 import { buildTestAppWorker } from '@/app/__tests__/utils/build-test-app-worker';
 import { writeTestSourceSdk } from '@/app/__tests__/utils/write-test-source-sdk';
-import { createHash } from 'node:crypto';
+import { hashContent } from '@/utils/hash-content';
 import { existsSync } from 'node:fs';
 import {
   mkdir,
@@ -61,7 +61,11 @@ const APPLICATION = {
   name: 'apply-app',
   displayName: 'Apply App',
 };
-const MANIFEST = { application: APPLICATION };
+const MANIFEST = {
+  application: APPLICATION,
+  frontComponents: [],
+  logicFunctions: [],
+};
 const WORKSPACE_ID = '48eb6ca1-dbd6-492e-8b53-5785a266c454';
 const EXPORTED_MANIFEST = {
   application: { ...APPLICATION, displayName: 'Server-normalized app' },
@@ -414,8 +418,10 @@ describe('app apply', () => {
     application = APPLICATION,
     generateClientBody,
     editDuringBuild,
+    hasSourceCollections = true,
   }: {
     corruptPath?: string;
+    hasSourceCollections?: boolean;
     application?: typeof APPLICATION;
     generateClientBody?: string;
     editDuringBuild?: { relativePath: string; content: string };
@@ -457,7 +463,7 @@ describe('app apply', () => {
             contentHash: 'a'.repeat(64),
             application: ${JSON.stringify(application)},
             manifestFormat: 'twenty-application',
-            manifest: ${JSON.stringify({ application })},
+            manifest: ${JSON.stringify({ application, ...(hasSourceCollections ? { frontComponents: [], logicFunctions: [] } : {}) })},
             files,
           },
           diagnostics: [],
@@ -539,17 +545,22 @@ describe('app apply', () => {
 
   afterAll(() => server.close());
 
-  it.each([true, false])(
-    'previews, installs, uploads without credentials, then syncs with deletion inference %s',
-    async (inferDeletion) => {
-      const { envelope, exitCode } = await runJson(
-        ...(inferDeletion ? [] : ['--no-delete']),
-      );
+  it.each([
+    { flags: [], inferDeletion: undefined },
+    { flags: ['--prune'], inferDeletion: true },
+    { flags: ['--no-prune'], inferDeletion: false },
+  ])(
+    'previews, installs, uploads without credentials, then syncs with $flags',
+    async ({ flags, inferDeletion }) => {
+      const { envelope, exitCode } = await runJson(...flags);
+      const deletionArgument = isDefined(inferDeletion)
+        ? { inferDeletionFromMissingEntities: inferDeletion }
+        : {};
 
       expect(exitCode).toBe(0);
       expect(envelope.data).toMatchObject({
         application: APPLICATION,
-        inferDeletionFromMissingEntities: inferDeletion,
+        inferDeletionFromMissingEntities: inferDeletion ?? null,
         registrationCreated: false,
         completedPhases: [
           'build',
@@ -584,16 +595,17 @@ describe('app apply', () => {
         (request) => getOperation(request) === 'sync',
       );
 
-      expect(readGraphqlRequest(preview).arguments).toMatchObject({
+      expect(readGraphqlRequest(preview).arguments).toEqual({
         manifest: MANIFEST,
-        inferDeletionFromMissingEntities: inferDeletion,
+        dryRun: true,
+        ...deletionArgument,
       });
       expect(isDefined(sync) && readGraphqlRequest(sync)).toMatchObject({
         query: expect.not.stringContaining('dryRun'),
-        arguments: {
-          manifest: MANIFEST,
-          inferDeletionFromMissingEntities: inferDeletion,
-        },
+      });
+      expect(isDefined(sync) && readGraphqlRequest(sync).arguments).toEqual({
+        manifest: MANIFEST,
+        ...deletionArgument,
       });
       expect(readGraphqlRequest(uploadTargets).arguments).toMatchObject({
         applicationUniversalIdentifier: APPLICATION.universalIdentifier,
@@ -622,6 +634,23 @@ describe('app apply', () => {
       expect(existsSync(state.snapshotPath)).toBe(false);
     },
   );
+
+  it('treats the deprecated --no-delete as --no-prune and warns about it', async () => {
+    const { exitCode, stderr } = await run('--no-delete');
+
+    expect(exitCode).toBe(0);
+    expect(stderr).toContain('--no-delete is deprecated, use --no-prune');
+    expect(
+      server.requests
+        .filter((request) =>
+          ['preview', 'sync'].includes(getOperation(request)),
+        )
+        .map((request) => readGraphqlRequest(request).arguments),
+    ).toEqual([
+      expect.objectContaining({ inferDeletionFromMissingEntities: false }),
+      expect.objectContaining({ inferDeletionFromMissingEntities: false }),
+    ]);
+  });
 
   it('accepts the lowercase identifier the server returns for an uppercase manifest identifier', async () => {
     await writeTooling({
@@ -659,9 +688,13 @@ describe('app apply', () => {
       applicationUniversalIdentifier: APPLICATION.universalIdentifier,
       manifest: EXPORTED_MANIFEST,
       sourceFingerprints: {
-        'application.ts': createHash('sha256')
-          .update('unrelated local edits')
-          .digest('hex'),
+        'test-tooling.cjs': hashContent(
+          await readFile(join(appPath, 'test-tooling.cjs')),
+        ),
+        'package.json': hashContent(
+          await readFile(join(appPath, 'package.json')),
+        ),
+        'application.ts': hashContent('unrelated local edits'),
       },
     });
     expect(await readFile(legacyBasePath, 'utf8')).toBe('legacy baseline');
@@ -681,9 +714,31 @@ describe('app apply', () => {
     ]);
   });
 
+  it('keeps the previous pull base when the applied snapshot omits source collections', async () => {
+    await writeTooling({ hasSourceCollections: false });
+    const basePath = join(appPath, '.twenty/cli/pull-base.json');
+    await mkdir(join(appPath, '.twenty/cli'), { recursive: true });
+    await writeFile(basePath, 'previous baseline');
+
+    const { envelope, exitCode } = await runJson();
+
+    expect(exitCode).toBe(0);
+    expect(envelope.data.pullBase).toBe('failed');
+    expect(envelope.warnings).toContainEqual(
+      expect.objectContaining({
+        code: 'PULL_BASE_NOT_RECORDED',
+        message: expect.stringContaining(
+          'missing its frontend component or logic function collection',
+        ),
+      }),
+    );
+    expect(await readFile(basePath, 'utf8')).toBe('previous baseline');
+  });
+
   it('fingerprints the source files as they were built, not as edited during the build', async () => {
     await mkdir(join(appPath, 'src'), { recursive: true });
     await writeFile(join(appPath, 'src/role.ts'), 'applied role');
+    await writeFile(join(appPath, 'src/style.css'), '.card { color: red; }');
     await mkdir(join(appPath, 'locales'), { recursive: true });
     await writeFile(join(appPath, 'locales/fr-FR.json'), '{"Pet":"Animal"}');
     await writeTooling({
@@ -702,10 +757,15 @@ describe('app apply', () => {
         await readFile(join(appPath, '.twenty/cli/pull-base.json'), 'utf8'),
       ).sourceFingerprints,
     ).toEqual({
-      'locales/fr-FR.json': createHash('sha256')
-        .update('{"Pet":"Animal"}')
-        .digest('hex'),
-      'src/role.ts': createHash('sha256').update('applied role').digest('hex'),
+      'test-tooling.cjs': hashContent(
+        await readFile(join(appPath, 'test-tooling.cjs')),
+      ),
+      'package.json': hashContent(
+        await readFile(join(appPath, 'package.json')),
+      ),
+      'locales/fr-FR.json': hashContent('{"Pet":"Animal"}'),
+      'src/role.ts': hashContent('applied role'),
+      'src/style.css': hashContent('.card { color: red; }'),
     });
     expect(await readFile(join(appPath, 'src/role.ts'), 'utf8')).toBe(
       'edited during the build',
@@ -933,7 +993,7 @@ describe('app apply', () => {
       { ...EXPORTED_MANIFEST, futureCollection: [{ name: 'preserved' }] },
     ],
   ])(
-    'records %s exactly as the server sent them',
+    'preserves %s and records the applied source definitions',
     async (_description, manifest) => {
       state.exportResponse = {
         data: { exportApplication: { ...APPLICATION_EXPORT, manifest } },
@@ -947,7 +1007,7 @@ describe('app apply', () => {
         JSON.parse(
           await readFile(join(appPath, '.twenty/cli/pull-base.json'), 'utf8'),
         ).manifest,
-      ).toEqual(manifest);
+      ).toEqual({ ...manifest, frontComponents: [], logicFunctions: [] });
     },
   );
 

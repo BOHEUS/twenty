@@ -13,6 +13,7 @@ import type Stripe from 'stripe';
 import { getDeletedStripeSubscriptionItemIdsFromStripeSubscriptionEvent } from 'src/engine/core-modules/billing-webhook/utils/get-deleted-stripe-subscription-item-ids-from-stripe-subscription-event.util';
 import { transformStripeSubscriptionEventToDatabaseCustomer } from 'src/engine/core-modules/billing-webhook/utils/transform-stripe-subscription-event-to-database-customer.util';
 import { transformStripeSubscriptionEventToDatabaseSubscriptionItem } from 'src/engine/core-modules/billing-webhook/utils/transform-stripe-subscription-event-to-database-subscription-item.util';
+import { shouldSetPendingInvoiceItemInterval } from 'src/engine/core-modules/billing-webhook/utils/should-set-pending-invoice-item-interval.util';
 import { transformStripeSubscriptionEventToDatabaseSubscription } from 'src/engine/core-modules/billing-webhook/utils/transform-stripe-subscription-event-to-database-subscription.util';
 import {
   BillingException,
@@ -25,12 +26,12 @@ import { BillingSubscriptionItemEntity } from 'src/engine/core-modules/billing/e
 import { BillingSubscriptionEntity } from 'src/engine/core-modules/billing/entities/billing-subscription.entity';
 import { SubscriptionStatus } from 'src/engine/core-modules/billing/enums/billing-subscription-status.enum';
 import { BillingWebhookEvent } from 'src/engine/core-modules/billing/enums/billing-webhook-events.enum';
-import { UsageLimitQuotaService } from 'src/engine/core-modules/usage-limit/services/usage-limit-quota.service';
 import { StripeCustomerService } from 'src/engine/core-modules/billing/stripe/services/stripe-customer.service';
 import { StripeSubscriptionScheduleService } from 'src/engine/core-modules/billing/stripe/services/stripe-subscription-schedule.service';
+import { StripeSubscriptionService } from 'src/engine/core-modules/billing/stripe/services/stripe-subscription.service';
 import { type SubscriptionWithSchedule } from 'src/engine/core-modules/billing/types/billing-subscription-with-schedule.type';
 import { buildBillingSubscriptionStateLockKey } from 'src/engine/core-modules/billing/utils/build-billing-subscription-state-lock-key.util';
-import { resolveBillingPeriodBoundaryUpdate } from 'src/engine/core-modules/billing/utils/resolve-billing-period-boundary-update.util';
+import { computeBillingPeriodUpdate } from 'src/engine/core-modules/billing/utils/compute-billing-period-update.util';
 import { CacheLockService } from 'src/engine/core-modules/cache-lock/cache-lock.service';
 import { InjectMessageQueue } from 'src/engine/core-modules/message-queue/decorators/message-queue.decorator';
 import { MessageQueue } from 'src/engine/core-modules/message-queue/message-queue.constants';
@@ -67,7 +68,7 @@ export class BillingWebhookSubscriptionService {
     private readonly billingCustomerRepository: WorkspaceScopedRepository<BillingCustomerEntity>,
     private readonly workspaceService: WorkspaceService,
     private readonly stripeSubscriptionScheduleService: StripeSubscriptionScheduleService,
-    private readonly usageLimitQuotaService: UsageLimitQuotaService,
+    private readonly stripeSubscriptionService: StripeSubscriptionService,
     private readonly workspaceCacheService: WorkspaceCacheService,
     private readonly cacheLockService: CacheLockService,
   ) {}
@@ -166,14 +167,19 @@ export class BillingWebhookSubscriptionService {
           id: true,
           currentPeriodStart: true,
           currentPeriodEnd: true,
+          currentPeriodMaxSeats: true,
         },
+        relations: [
+          'billingSubscriptionItems',
+          'billingSubscriptionItems.billingProduct',
+        ],
       },
     );
 
     await this.billingSubscriptionRepository.upsert(
       {
         ...incomingSubscription,
-        ...resolveBillingPeriodBoundaryUpdate({
+        ...computeBillingPeriodUpdate({
           incomingPeriodStart: incomingSubscription.currentPeriodStart,
           storedSubscription,
         }),
@@ -199,14 +205,13 @@ export class BillingWebhookSubscriptionService {
     await this.updateBillingSubscriptionItems(
       updatedBillingSubscription.id,
       event,
+      subscriptionWithSchedule,
       workspaceId,
     );
 
     await this.workspaceCacheService.invalidateAndRecompute(workspace.id, [
       'currentBillingSubscription',
     ]);
-
-    await this.usageLimitQuotaService.dropAllowanceCounter(workspace.id);
 
     const shouldSuspendWorkspace = allLiveSubscriptions.every(
       (customerSubscription) =>
@@ -258,6 +263,10 @@ export class BillingWebhookSubscriptionService {
         await this.messageQueueService.add<CleanWorkspaceDeletionWarningUserVarsJobData>(
           CleanWorkspaceDeletionWarningUserVarsJob.name,
           { workspaceId },
+          {
+            workspaceId,
+            isWorkspaceJob: true,
+          },
         );
       }
     }
@@ -266,6 +275,13 @@ export class BillingWebhookSubscriptionService {
       String(data.object.customer),
       workspaceId,
     );
+
+    if (shouldSetPendingInvoiceItemInterval(subscriptionWithSchedule)) {
+      await this.stripeSubscriptionService.updateSubscription(
+        subscriptionWithSchedule.id,
+        { pending_invoice_item_interval: { interval: 'month' } },
+      );
+    }
 
     return {
       stripeSubscriptionId: data.object.id,
@@ -313,6 +329,7 @@ export class BillingWebhookSubscriptionService {
       | Stripe.CustomerSubscriptionUpdatedEvent
       | Stripe.CustomerSubscriptionCreatedEvent
       | Stripe.CustomerSubscriptionDeletedEvent,
+    liveSubscription: SubscriptionWithSchedule,
     workspaceId: string,
   ) {
     const deletedSubscriptionItemIds =
@@ -328,7 +345,7 @@ export class BillingWebhookSubscriptionService {
     await this.billingSubscriptionItemRepository.upsert(
       transformStripeSubscriptionEventToDatabaseSubscriptionItem(
         subscriptionId,
-        event.data,
+        { object: liveSubscription },
         workspaceId,
       ),
       {

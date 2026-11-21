@@ -6,11 +6,10 @@ import { isDefined } from 'twenty-shared/utils';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 
-import { useUpdateAgentChatThreadInboxState } from '@/ai/hooks/useUpdateAgentChatThreadInboxState';
-import { useFormatAgentChatThreadDate } from '@/ai/hooks/useFormatAgentChatThreadDate';
+import { useFormatAiChatThreadDate } from '@/ai-chat/threads/hooks/useFormatAiChatThreadDate';
+import { useSnoozeAiChatThreads } from '@/side-panel/pages/snooze-ai-chat/hooks/useSnoozeAiChatThreads';
 import { DateTimePicker } from '@/ui/input/components/internal/date/components/DateTimePicker';
 import { useUserTimezone } from '@/ui/input/components/internal/date/hooks/useUserTimezone';
-import { AgentChatInboxAction } from '~/generated-metadata/graphql';
 
 const StyledContainer = styled.div`
   display: flex;
@@ -30,9 +29,8 @@ export const SnoozeAiChatUntilDatePicker = ({
   onSnoozed,
 }: SnoozeAiChatUntilDatePickerProps) => {
   const { t } = useLingui();
-  const { updateAgentChatThreadInboxState } =
-    useUpdateAgentChatThreadInboxState();
-  const { formatAgentChatThreadDateTime } = useFormatAgentChatThreadDate();
+  const { snoozeAiChatThreads } = useSnoozeAiChatThreads();
+  const { formatAiChatThreadDateTime } = useFormatAiChatThreadDate();
   const { userTimezone } = useUserTimezone();
   const dateTimePickerInstanceId = useId();
   // Starts on tomorrow morning, like the Tomorrow option
@@ -51,7 +49,7 @@ export const SnoozeAiChatUntilDatePicker = ({
 
   const snoozedUntilDate = new Date(snoozedUntil.epochMilliseconds);
   const isInFuture = snoozedUntil.epochMilliseconds > checkedAt;
-  const snoozedUntilLabel = formatAgentChatThreadDateTime(snoozedUntilDate);
+  const snoozedUntilLabel = formatAiChatThreadDateTime(snoozedUntilDate);
 
   const handleChange = (date: Temporal.ZonedDateTime | null) => {
     if (isDefined(date)) {
@@ -69,11 +67,7 @@ export const SnoozeAiChatUntilDatePicker = ({
     }
 
     onSnoozed();
-    void updateAgentChatThreadInboxState({
-      threadIds,
-      action: AgentChatInboxAction.SNOOZE,
-      snoozedUntil: snoozedUntilDate,
-    });
+    void snoozeAiChatThreads({ threadIds, snoozedUntil: snoozedUntilDate });
   };
 
   return (

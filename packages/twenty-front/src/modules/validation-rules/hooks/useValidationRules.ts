@@ -6,10 +6,8 @@ import { useListenToMetadataOperationBrowserEvent } from '@/browser-event/hooks/
 import { type MetadataOperationBrowserEventDetail } from '@/browser-event/types/MetadataOperationBrowserEventDetail';
 import { type ValidationRule } from '@/validation-rules/types/ValidationRule';
 import { shouldRefetchValidationRulesOnOperation } from '@/validation-rules/utils/shouldRefetchValidationRulesOnOperation';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import {
   AllMetadataName,
-  FeatureFlagKey,
   FindManyValidationRulesDocument,
 } from '~/generated-metadata/graphql';
 
@@ -18,11 +16,7 @@ export const useValidationRules = ({
 }: {
   objectMetadataId: string;
 }) => {
-  const isValidationRulesEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_VALIDATION_RULES_ENABLED,
-  );
-
-  const skip = !isValidationRulesEnabled || !isNonEmptyString(objectMetadataId);
+  const skip = !isNonEmptyString(objectMetadataId);
 
   const { data, loading, refetch } = useQuery(FindManyValidationRulesDocument, {
     variables: { objectMetadataId },

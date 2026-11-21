@@ -2,7 +2,7 @@ import { type MessageDescriptor } from '@lingui/core';
 import { msg } from '@lingui/core/macro';
 import { assertUnreachable } from 'twenty-shared/utils';
 
-import { STANDARD_ERROR_MESSAGE } from 'src/engine/api/common/common-query-runners/errors/standard-error-message.constant';
+import { STANDARD_ERROR_MESSAGE } from 'src/engine/constants/standard-error-message.constant';
 import {
   appendCommonExceptionCode,
   CustomException,
@@ -18,8 +18,10 @@ export const AuthExceptionCode = appendCommonExceptionCode({
   APPLICATION_NOT_FOUND: 'APPLICATION_NOT_FOUND',
   INVALID_INPUT: 'INVALID_INPUT',
   FORBIDDEN_EXCEPTION: 'FORBIDDEN_EXCEPTION',
+  IDENTITY_ASSERTION_REQUIRED: 'IDENTITY_ASSERTION_REQUIRED',
   INSUFFICIENT_SCOPES: 'INSUFFICIENT_SCOPES',
   UNAUTHENTICATED: 'UNAUTHENTICATED',
+  SESSION_SUPERSEDED: 'SESSION_SUPERSEDED',
   APPLICATION_REFRESH_TOKEN_INVALID_OR_EXPIRED:
     'APPLICATION_REFRESH_TOKEN_INVALID_OR_EXPIRED',
   INVALID_DATA: 'INVALID_DATA',
@@ -58,10 +60,12 @@ const getAuthExceptionUserFriendlyMessage = (
     case AuthExceptionCode.INVALID_INPUT:
       return msg`Invalid input provided.`;
     case AuthExceptionCode.FORBIDDEN_EXCEPTION:
+    case AuthExceptionCode.IDENTITY_ASSERTION_REQUIRED:
       return msg`You do not have permission to perform this action.`;
     case AuthExceptionCode.INSUFFICIENT_SCOPES:
       return msg`Insufficient permissions.`;
     case AuthExceptionCode.UNAUTHENTICATED:
+    case AuthExceptionCode.SESSION_SUPERSEDED:
     case AuthExceptionCode.APPLICATION_REFRESH_TOKEN_INVALID_OR_EXPIRED:
       return msg`You must be authenticated to perform this action.`;
     case AuthExceptionCode.OAUTH_ACCESS_DENIED:
@@ -105,6 +109,7 @@ const getAuthExceptionStatusCode = (
     case AuthExceptionCode.INVALID_INPUT:
       return 400;
     case AuthExceptionCode.FORBIDDEN_EXCEPTION:
+    case AuthExceptionCode.IDENTITY_ASSERTION_REQUIRED:
     case AuthExceptionCode.WORKSPACE_SUSPENDED:
     case AuthExceptionCode.INSUFFICIENT_SCOPES:
     case AuthExceptionCode.OAUTH_ACCESS_DENIED:
@@ -123,6 +128,7 @@ const getAuthExceptionStatusCode = (
     case AuthExceptionCode.TWO_FACTOR_AUTHENTICATION_VERIFICATION_REQUIRED:
     case AuthExceptionCode.INVALID_DATA:
     case AuthExceptionCode.UNAUTHENTICATED:
+    case AuthExceptionCode.SESSION_SUPERSEDED:
     case AuthExceptionCode.APPLICATION_REFRESH_TOKEN_INVALID_OR_EXPIRED:
     case AuthExceptionCode.USER_NOT_FOUND:
     case AuthExceptionCode.WORKSPACE_NOT_FOUND:

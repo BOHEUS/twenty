@@ -1,7 +1,7 @@
 import { MockedProvider } from '@apollo/client/testing/react';
 import { i18n } from '@lingui/core';
 import { I18nProvider } from '@lingui/react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { createStore, Provider as JotaiProvider } from 'jotai';
 import { MemoryRouter } from 'react-router-dom';
 import { SOURCE_LOCALE } from 'twenty-shared/translations';
@@ -26,11 +26,6 @@ jest.mock('@/ui/input/components/Select', () => ({
 }));
 
 jest.mock(
-  '@/settings/roles/role-permissions/object-level-permissions/components/SettingsRolePermissionsObjectLevelSection',
-  () => ({ SettingsRolePermissionsObjectLevelSection: () => null }),
-);
-
-jest.mock(
   '@/settings/roles/role-permissions/permission-flags/components/SettingsRolePermissionsSettingsSection',
   () => ({ SettingsRolePermissionsSettingsSection: () => null }),
 );
@@ -52,6 +47,7 @@ const PERSISTED_ROLE: RoleWithPartialMembers = {
   icon: 'IconUser',
   canUpdateAllSettings: false,
   canAccessAllTools: false,
+  canAccessAllAgentChatChannels: false,
   canReadAllObjectRecords: true,
   canUpdateAllObjectRecords: true,
   canSoftDeleteAllObjectRecords: true,
@@ -59,6 +55,7 @@ const PERSISTED_ROLE: RoleWithPartialMembers = {
   canBeAssignedToUsers: true,
   canBeAssignedToAgents: false,
   canBeAssignedToApiKeys: false,
+  applicationId: 'application-id',
   isEditable: true,
   workspaceMembers: [],
   agents: [],
@@ -72,16 +69,6 @@ const PERSISTED_ROLE: RoleWithPartialMembers = {
 
 const MEMBER = {
   id: '20202020-0000-4000-8000-000000000002',
-};
-
-const getPermissionCheckbox = (label: string) => {
-  const row = screen.getByText(label).closest<HTMLElement>('[data-table-row]');
-
-  if (row === null) {
-    throw new Error(`No permission row for "${label}"`);
-  }
-
-  return within(row).getByRole('checkbox');
 };
 
 describe('MemberPermissionsTab', () => {
@@ -111,15 +98,8 @@ describe('MemberPermissionsTab', () => {
       </JotaiProvider>,
     );
 
-    await screen.findByText('See Records on All Objects');
+    await screen.findByText('All objects');
 
-    expect(getPermissionCheckbox('See Records on All Objects')).toBeChecked();
-    expect(getPermissionCheckbox('Edit Records on All Objects')).toBeChecked();
-    expect(
-      getPermissionCheckbox('Delete Records on All Objects'),
-    ).toBeChecked();
-    expect(
-      getPermissionCheckbox('Destroy Records on All Objects'),
-    ).not.toBeChecked();
+    expect(screen.getByText('See, edit, delete')).toBeInTheDocument();
   });
 });

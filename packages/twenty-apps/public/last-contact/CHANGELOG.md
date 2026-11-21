@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.12.0
+
+- Add an "Add columns" button to the app settings. It opens Ask AI with a prefilled prompt to show the last-contact columns on the All People, All Companies and All Opportunities views, skipping any of those views that do not exist. Companies and Opportunities get Last contact and Last contact item; People get Last contact, Last outbound, Last inbound, Last contact by, Last email and Last meeting.
+- Warn on the app settings page when one of those views, as owned by the workspace, hides a last-contact column, with a button to the settings tab. The warning about missing synced emails and meetings still takes priority.
+- Add a "Hide suggestion" button next to "Add columns" that stops this warning for the whole workspace. The settings tab shows "Add columns" while some columns are missing, and "Hide suggestion" until the warning is hidden.
+- Give the settings tab the `settings` slug so links can open it directly.
+- Require Twenty 2.60.0 or later, and use twenty-sdk and twenty-client-sdk 2.60.0.
+
+## 1.11.0
+
+- Ignore draft emails. A draft linked to a person was counted as a contact, both when its participant was linked and in the backfill, so writing an email without sending it moved the person's last contact.
+- Run the backfill once on an upgrade to 1.11.0, so last contacts already set by a draft are recomputed from real emails and meetings.
+
+## 1.10.0
+
+- Log logic function executions and backfill progress, including batch counts, resume cursors, pauses, and completion.
+- Use the new Last contact logo from the Twenty app icon family: clock hands inside a message bubble on a violet tile.
+
 ## 1.9.1
 
 - Stop the backfill from restoring people trashed while it reads their emails and meetings. Writing a person's last contact restores the record if it is in the trash, and recreates it without a name if it was deleted. The people phase now reads its batch again right before writing, after the paced reads of their emails and meetings, and leaves out people that are gone. A person trashed during the write itself, or while it is retried after a rate limit, can still come back: closing that needs a server update that never restores a record.

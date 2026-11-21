@@ -4,6 +4,7 @@ import { errorHandler } from '@/__stories__/shared/test-utils/createFrontCompone
 import { INTERACTION_TIMEOUT } from '@/__stories__/shared/test-utils/timeouts';
 import { type TwentyUiGalleryPlayFunction } from '@/__stories__/twenty-ui-gallery/types/TwentyUiGalleryPlayFunction';
 import { galleryRenderTest } from '@/__stories__/twenty-ui-gallery/utils/galleryRenderTests';
+import { hoverUntilTooltipOpens } from '@/__stories__/twenty-ui-gallery/utils/hoverUntilTooltipOpens';
 
 const OVERFLOW_LABEL = 'A long account name that truncates inside a chip';
 const TOOLTIP_CONTENT = 'Caller supplied details\nFull account name';
@@ -35,6 +36,8 @@ export const chipControlsTest: TwentyUiGalleryPlayFunction = async (
 
   const button = canvas.getByRole('button', { name: 'Open chip' });
   expect(button.tagName).toBe('BUTTON');
+  expect(getComputedStyle(button).paddingInlineStart).toBe('0px');
+  expect(getComputedStyle(button).paddingInlineEnd).toBe('4px');
   expect(button).toHaveAttribute('type', 'button');
   expect(button).toHaveAttribute('data-ref-target', 'chip-button');
   await user.click(button);
@@ -65,6 +68,11 @@ export const chipControlsTest: TwentyUiGalleryPlayFunction = async (
   expect(link).toHaveAttribute('data-composed', 'chip-link');
   expect(link).toHaveAttribute('data-ref-target', 'chip-link');
   expect(link.querySelector('a')).toBeNull();
+  expect(link.getBoundingClientRect().width).toBe(140);
+  expect(link.getBoundingClientRect().height).toBe(20);
+  expect(getComputedStyle(link).paddingInlineStart).toBe('8px');
+  expect(getComputedStyle(link).paddingInlineEnd).toBe('8px');
+  expect(getComputedStyle(link).borderTopWidth).toBe('1px');
   link.focus();
   expect(link).toHaveFocus();
   await waitFor(() =>
@@ -79,6 +87,9 @@ export const chipControlsTest: TwentyUiGalleryPlayFunction = async (
   ).not.toBe('ellipsis');
 
   const overflowingLabel = canvas.getByText(OVERFLOW_LABEL);
+  expect(overflowingLabel.parentElement?.getBoundingClientRect().width).toBe(
+    140,
+  );
   await waitFor(
     () => {
       expect(getComputedStyle(overflowingLabel).textOverflow).toBe('ellipsis');
@@ -97,16 +108,20 @@ export const chipControlsTest: TwentyUiGalleryPlayFunction = async (
     { timeout: INTERACTION_TIMEOUT },
   );
   await user.unhover(overflowingLabel);
-  await user.hover(overflowingLabel);
-  await waitFor(
-    () => {
-      const tooltip = page.getByRole('tooltip');
-      expect(tooltip.textContent).toBe(TOOLTIP_CONTENT);
-      expect(tooltip).toBeVisible();
-      expect(getComputedStyle(tooltip).whiteSpace).toBe('pre-wrap');
-    },
-    { timeout: INTERACTION_TIMEOUT },
-  );
+  await hoverUntilTooltipOpens({
+    user,
+    hoverTarget: overflowingLabel,
+    expectTooltipOpen: () =>
+      waitFor(
+        () => {
+          const tooltip = page.getByRole('tooltip');
+          expect(tooltip.textContent).toBe(TOOLTIP_CONTENT);
+          expect(tooltip).toBeVisible();
+          expect(getComputedStyle(tooltip).whiteSpace).toBe('pre-wrap');
+        },
+        { timeout: INTERACTION_TIMEOUT },
+      ),
+  });
   button.focus();
   await user.keyboard('{Escape}');
   await waitFor(() =>

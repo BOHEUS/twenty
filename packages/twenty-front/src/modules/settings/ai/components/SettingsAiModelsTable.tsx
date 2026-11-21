@@ -1,9 +1,8 @@
-import { t } from '@lingui/core/macro';
 import { useRef, useState } from 'react';
 
 import { css } from '@linaria/core';
 import { styled } from '@linaria/react';
-import { Trans } from '@lingui/react/macro';
+import { Trans, useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
 import { IconTrash } from 'twenty-ui/icon';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
@@ -53,10 +52,10 @@ const StyledKindBadge = styled.span`
 `;
 
 const hoverCardTooltipClass = css`
-  border-radius: ${themeCssVariables.border.radius.rounded} !important;
+  border-radius: ${themeCssVariables.border.radius.rounded};
   corner-shape: round;
 
-  padding: 0 !important;
+  padding: 0;
 `;
 
 const sanitizeIdForSelector = (id: string): string =>
@@ -86,6 +85,7 @@ export const SettingsAiModelsTable = <TModel extends AiModelSummary>({
   showProviderColumn = true,
   anchorPrefix,
 }: SettingsAiModelsTableProps<TModel>) => {
+  const { t } = useLingui();
   const hoveredRowRef = useRef<HTMLDivElement>(null);
   const [hoveredModelId, setHoveredModelId] = useState<string | null>(null);
   const theme = useTheme();
@@ -241,9 +241,8 @@ export const SettingsAiModelsTable = <TModel extends AiModelSummary>({
               side="top"
               align="end"
               sideOffset={8}
-              style={{ maxWidth: '320px' }}
             >
-              <Tooltip.Popup className={hoverCardTooltipClass}>
+              <Tooltip.Popup maxWidth={320} className={hoverCardTooltipClass}>
                 <SettingsAiModelHoverCard model={hoveredModel} />
               </Tooltip.Popup>
             </Tooltip.Positioner>
