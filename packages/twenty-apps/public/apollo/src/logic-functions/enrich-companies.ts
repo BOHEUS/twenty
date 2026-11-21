@@ -15,10 +15,8 @@ import {
 } from 'src/constants/universal-identifiers';
 import { companyBulkEnrichmentAdapter } from 'src/logic-functions/handlers/company-bulk-enrichment-adapter';
 import { runBulkEnrichment } from 'src/logic-functions/utils/run-bulk-enrichment';
-import {
-  toBulkEnrichmentInput,
-} from 'src/logic-functions/utils/to-bulk-enrichment-input';
-import { BulkEnrichmentFunctionInput } from "src/logic-functions/types/bulk-enrichment-input.type";
+import { type BulkEnrichmentFunctionInput } from 'src/logic-functions/types/bulk-enrichment-input.type';
+import { toBulkEnrichmentInput } from 'src/logic-functions/utils/to-bulk-enrichment-input';
 
 const inputSchema: InputJsonSchema = {
   type: 'object',
