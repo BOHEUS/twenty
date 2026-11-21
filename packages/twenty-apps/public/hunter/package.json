@@ -4,7 +4,7 @@
   "description": "Hunter enrichment app for Twenty",
   "license": "MIT",
   "engines": {
-    "node": "^24.5.0",
+    "node": "^26.5.1",
     "npm": "please-use-yarn",
     "yarn": ">=4.0.2",
     "twenty": ">=2.36.0"
@@ -12,7 +12,7 @@
   "keywords": [
     "twenty-app"
   ],
-  "packageManager": "yarn@4.13.0",
+  "packageManager": "yarn@4.18.1",
   "scripts": {
     "twenty": "twenty",
     "lint": "oxlint -c .oxlintrc.json .",
