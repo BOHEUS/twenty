@@ -1,8 +1,8 @@
 import { findManyOperationFactory } from 'test/integration/graphql/utils/find-many-operation-factory.util';
 import { generateApiKeyToken } from 'test/integration/graphql/utils/generate-api-key-token.util';
-import { makeGraphqlAPIRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
-import { makeMetadataAPIRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
-import { makeRestAPIRequest } from 'test/integration/rest/utils/make-rest-api-request.util';
+import { makeGraphqlApiRequest } from 'test/integration/graphql/utils/make-graphql-api-request.util';
+import { makeMetadataApiRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
+import { makeRestApiRequest } from 'test/integration/rest/utils/make-rest-api-request.util';
 import { getCoreRepository } from 'test/integration/utils/get-core-repository.util';
 import { jestExpectToBeDefined } from 'test/utils/jest-expect-to-be-defined.util.test';
 
@@ -14,6 +14,7 @@ import { ApiKeyEntity } from 'src/engine/core-modules/api-key/api-key.entity';
 import { UsageLimitEntity } from 'src/engine/core-modules/usage-limit/usage-limit.entity';
 import { UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-operation-type.enum';
 import { UsageResourceType } from 'src/engine/core-modules/usage/enums/usage-resource-type.enum';
+import { UsageUnit } from 'src/engine/core-modules/usage/enums/usage-unit.enum';
 import { SEED_APPLE_WORKSPACE_ID } from 'src/engine/workspace-manager/dev-seeder/core/constants/seeder-workspaces.constant';
 
 const WINDOW_SECONDS = 1;
@@ -28,7 +29,7 @@ describe('API rate limiting', () => {
   let apiKeyToken: string;
 
   const findCompaniesOverGraphql = () =>
-    makeGraphqlAPIRequest(
+    makeGraphqlApiRequest(
       findManyOperationFactory({
         objectMetadataSingularName: 'company',
         objectMetadataPluralName: 'companies',
@@ -39,7 +40,7 @@ describe('API rate limiting', () => {
     );
 
   const findCompaniesOverRest = () =>
-    makeRestAPIRequest({
+    makeRestApiRequest({
       method: 'get',
       path: '/companies?limit=1',
       bearer: apiKeyToken,
@@ -67,7 +68,7 @@ describe('API rate limiting', () => {
   // cannot undo that: the workspace cache memoizes resolved entries in process
   // for MEMOIZER_TTL_MS, so the next spec file would still be rate limited.
   const createDedicatedApiKey = async () => {
-    const rolesResponse = await makeMetadataAPIRequest({
+    const rolesResponse = await makeMetadataApiRequest({
       query: gql`
         query GetRoles {
           getRoles {
@@ -84,7 +85,7 @@ describe('API rate limiting', () => {
 
     jestExpectToBeDefined(adminRoleId);
 
-    const createResponse = await makeMetadataAPIRequest({
+    const createResponse = await makeMetadataApiRequest({
       query: gql`
         mutation CreateApiKey($input: CreateApiKeyInput!) {
           createApiKey(input: $input) {
@@ -131,7 +132,7 @@ describe('API rate limiting', () => {
         limitKind: 'speed',
         periodCount: WINDOW_SECONDS,
         periodUnit: 'second',
-        meter: 'quantity',
+        unit: UsageUnit.REQUEST,
         limitValue: LIMIT_VALUE,
         burstValue: LIMIT_VALUE,
       },

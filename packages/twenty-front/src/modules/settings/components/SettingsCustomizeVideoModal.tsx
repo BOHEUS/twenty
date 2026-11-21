@@ -3,15 +3,15 @@ import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/use
 import { type SettingsCustomizeVideoModalTab } from '@/settings/types/SettingsCustomizeVideoModalTab';
 import { TabListRoot } from '@/ui/layout/tab-list/components/TabListRoot';
 import { Tabs } from 'twenty-ui/primitives/navigation';
-import { t } from '@lingui/core/macro';
 import { DialogInstance } from '@/ui/layout/dialog/components/DialogInstance';
 import { Dialog } from 'twenty-ui/primitives/surfaces';
 import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { TabList } from '@/ui/layout/tab-list/components/TabList';
 import { styled } from '@linaria/react';
 import { IconX } from 'twenty-ui/icon';
-import { IconButton } from 'twenty-ui/components';
-import { themeCssVariables, useTheme } from 'twenty-ui/theme-constants';
+import { IconButton } from 'twenty-ui/components/input';
+import { themeCssVariables, useTheme } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsCustomizeVideoModalProps = {
   modalInstanceId: string;
@@ -19,8 +19,7 @@ type SettingsCustomizeVideoModalProps = {
   tabs: SettingsCustomizeVideoModalTab[];
 };
 
-// the tab list draws its own separator, so the header only needs one when the
-// single tab is replaced by a plain title
+// The tab list draws its own separator, so the header needs one only when it shows a plain title
 const StyledHeader = styled.div<{ $hasBottomBorder: boolean }>`
   align-items: center;
   border-bottom: ${({ $hasBottomBorder }) =>
@@ -49,10 +48,6 @@ const StyledTitle = styled.div`
   gap: ${themeCssVariables.spacing[1]};
   min-width: 0;
   padding-left: ${themeCssVariables.spacing[5]};
-
-  & > svg {
-    flex-shrink: 0;
-  }
 `;
 
 const StyledTitleText = styled.span`
@@ -83,6 +78,7 @@ export const SettingsCustomizeVideoModal = ({
   tabsInstanceId,
   tabs,
 }: SettingsCustomizeVideoModalProps) => {
+  const { t } = useLingui();
   const theme = useTheme();
   const { closeDialog } = useDialog();
   const activeTabId = useAtomComponentStateValue(
@@ -124,12 +120,11 @@ export const SettingsCustomizeVideoModal = ({
       onClose={handleClose}
       renderInDocumentBody
     >
-      {({ container, backdrop, viewportProps, onKeyDown }) => (
+      {({ onKeyDown }) => (
         <Dialog.Popup
           aria-label={activeTab.title}
-          {...{ container, backdrop, viewportProps, onKeyDown }}
+          onKeyDown={onKeyDown}
           size="lg"
-          style={{ padding: 0 }}
         >
           <TabListRoot
             componentInstanceId={tabsInstanceId}

@@ -1,6 +1,7 @@
+import { ListItemButton } from 'twenty-ui/components/navigation';
 import { useObjectOptionsDropdown } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsDropdown';
 import { useHasPermissionFlag } from '@/settings/roles/hooks/useHasPermissionFlag';
-import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
+import { LegacyDropdownContent } from '@/ui/layout/dropdown/components/LegacyDropdownContent';
 import { DropdownMenuHeader } from '@/ui/layout/dropdown/components/DropdownMenuHeader/DropdownMenuHeader';
 import { DropdownMenuHeaderLeftComponent } from '@/ui/layout/dropdown/components/DropdownMenuHeader/internal/DropdownMenuHeaderLeftComponent';
 import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
@@ -23,7 +24,6 @@ import {
   IconCopy,
 } from 'twenty-ui/icon';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
-import { MenuItem, MenuItemSelect } from 'twenty-ui/primitives/navigation';
 import {
   ViewVisibility,
   PermissionFlagType,
@@ -51,7 +51,9 @@ export const ObjectOptionsDropdownVisibilityContent = () => {
   ];
 
   const handleVisibilityChange = (visibility: ViewVisibility) => {
-    if (!canPersistChanges || !currentView) return;
+    if (!canPersistChanges || !currentView) {
+      return;
+    }
     updateCurrentView({
       visibility,
     });
@@ -69,7 +71,7 @@ export const ObjectOptionsDropdownVisibilityContent = () => {
   const currentVisibility = currentView?.visibility ?? ViewVisibility.WORKSPACE;
 
   return (
-    <DropdownContent widthInPixels={GenericDropdownContentWidth.Large}>
+    <LegacyDropdownContent widthInPixels={GenericDropdownContentWidth.Large}>
       <DropdownMenuHeader
         StartComponent={
           <DropdownMenuHeaderLeftComponent
@@ -101,17 +103,19 @@ export const ObjectOptionsDropdownVisibilityContent = () => {
               disabled={!!hasViewsPermission}
             >
               <div id="workspace-visibility-option">
-                <MenuItemSelect
-                  LeftIcon={IconCircle}
-                  text={t`Workspace`}
-                  contextualText={t`Everyone`}
-                  selected={currentVisibility === ViewVisibility.WORKSPACE}
+                <ListItemButton
                   focused={selectedItemId === ViewVisibility.WORKSPACE}
                   onClick={() =>
                     handleVisibilityChange(ViewVisibility.WORKSPACE)
                   }
                   disabled={!hasViewsPermission || !canPersistChanges}
-                />
+                  role="option"
+                  aria-selected={currentVisibility === ViewVisibility.WORKSPACE}
+                  selected={currentVisibility === ViewVisibility.WORKSPACE}
+                  indicator="check"
+                  description={t`Everyone`}
+                  startIcon={<IconCircle />}
+                >{t`Workspace`}</ListItemButton>
               </div>
             </Tooltip>
           </SelectableListItem>
@@ -122,15 +126,17 @@ export const ObjectOptionsDropdownVisibilityContent = () => {
               handleVisibilityChange(ViewVisibility.UNLISTED)
             }
           >
-            <MenuItemSelect
-              LeftIcon={IconCircleDashed}
-              text={t`Unlisted`}
-              contextualText={t`Visible to you`}
-              selected={currentVisibility === ViewVisibility.UNLISTED}
+            <ListItemButton
               focused={selectedItemId === ViewVisibility.UNLISTED}
               onClick={() => handleVisibilityChange(ViewVisibility.UNLISTED)}
               disabled={!canPersistChanges}
-            />
+              role="option"
+              aria-selected={currentVisibility === ViewVisibility.UNLISTED}
+              selected={currentVisibility === ViewVisibility.UNLISTED}
+              indicator="check"
+              description={t`Visible to you`}
+              startIcon={<IconCircleDashed />}
+            >{t`Unlisted`}</ListItemButton>
           </SelectableListItem>
           {currentVisibility === ViewVisibility.WORKSPACE && (
             <>
@@ -139,17 +145,16 @@ export const ObjectOptionsDropdownVisibilityContent = () => {
                 itemId="Copy view link"
                 onEnter={handleCopyLink}
               >
-                <MenuItem
+                <ListItemButton
                   focused={selectedItemId === 'Copy view link'}
                   onClick={handleCopyLink}
-                  LeftIcon={IconCopy}
-                  text={t`Copy view link`}
-                />
+                  startIcon={<IconCopy />}
+                >{t`Copy view link`}</ListItemButton>
               </SelectableListItem>
             </>
           )}
         </SelectableList>
       </DropdownMenuItemsContainer>
-    </DropdownContent>
+    </LegacyDropdownContent>
   );
 };

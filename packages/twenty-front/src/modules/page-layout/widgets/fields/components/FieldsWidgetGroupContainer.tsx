@@ -1,9 +1,9 @@
 import { styled } from '@linaria/react';
-import { useContext, useState } from 'react';
-import { Section } from 'twenty-ui/components';
+import { useState } from 'react';
+import { Section } from 'twenty-ui/components/layout';
 import { IconChevronDown } from 'twenty-ui/icon';
-import { AnimatedExpandableContainer } from 'twenty-ui/primitives/layout';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { Collapsible } from 'twenty-ui/primitives/layout';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 
 const StyledHeader = styled.header`
   align-items: center;
@@ -38,7 +38,7 @@ export const FieldsWidgetGroupContainer = ({
   title,
   defaultExpanded = true,
 }: FieldsWidgetGroupContainerProps) => {
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const handleToggleGroup = () =>
@@ -55,13 +55,9 @@ export const FieldsWidgetGroupContainer = ({
           />
         </StyledChevronWrapper>
       </StyledHeader>
-      <AnimatedExpandableContainer
-        isExpanded={isExpanded}
-        initial={false}
-        mode="fit-content"
-      >
-        {children}
-      </AnimatedExpandableContainer>
+      <Collapsible.Root open={isExpanded}>
+        <Collapsible.Panel>{children}</Collapsible.Panel>
+      </Collapsible.Root>
     </Section.Root>
   );
 };

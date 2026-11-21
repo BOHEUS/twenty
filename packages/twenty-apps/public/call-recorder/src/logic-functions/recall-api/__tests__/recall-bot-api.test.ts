@@ -317,7 +317,6 @@ describe('recall bot api', () => {
     const result = await listScheduledRecallBots({
       joinAtAfter: '2026-01-01T08:00:00.000Z',
       joinAtBefore: '2026-01-02T12:00:00.000Z',
-      statuses: ['ready', 'joining_call'],
     });
 
     expect(result).toEqual({
@@ -335,7 +334,7 @@ describe('recall bot api', () => {
     });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      'https://ap-northeast-1.recall.ai/api/v1/bot/?join_at_after=2026-01-01T08%3A00%3A00.000Z&join_at_before=2026-01-02T12%3A00%3A00.000Z&status=ready&status=joining_call',
+      'https://ap-northeast-1.recall.ai/api/v1/bot/?join_at_after=2026-01-01T08%3A00%3A00.000Z&join_at_before=2026-01-02T12%3A00%3A00.000Z',
       expect.objectContaining({ method: 'GET' }),
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
@@ -691,24 +690,20 @@ describe('recall bot api', () => {
     });
   });
 
-  it('does not retry async transcript creation failures', async () => {
+  it('sends the transcript creation with an idempotency key for the recording', async () => {
     fetchMock.mockResolvedValue({
-      ok: false,
-      status: 503,
-      json: async () => ({ detail: 'service unavailable' }),
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 'recall-transcript-id' }),
     });
 
-    const result = await createAsyncRecallTranscript({
+    await createAsyncRecallTranscript({
       externalRecordingId: 'recall-recording-id',
     });
 
-    expect(result).toEqual({
-      ok: false,
-      status: 503,
-      errorMessage:
-        'Recall API responded with HTTP 503: {"detail":"service unavailable"}',
-    });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][1].headers['Idempotency-Key']).toBe(
+      'create-transcript:recall-recording-id',
+    );
   });
 
   it('fails when the transcript creation response has no id', async () => {
@@ -876,6 +871,30 @@ describe('recall bot api', () => {
       );
     });
 
+    it('retries a lost transcript creation with the same idempotency key', async () => {
+      fetchMock.mockRejectedValueOnce(new Error('socket hang up'));
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        json: async () => ({ id: 'recall-transcript-id' }),
+      });
+
+      const resultPromise = createAsyncRecallTranscript({
+        externalRecordingId: 'recall-recording-id',
+      });
+
+      await vi.runAllTimersAsync();
+
+      expect(await resultPromise).toEqual({
+        ok: true,
+        transcriptId: 'recall-transcript-id',
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock.mock.calls[0][1].headers['Idempotency-Key']).toBe(
+        fetchMock.mock.calls[1][1].headers['Idempotency-Key'],
+      );
+    });
+
     it('retries a 503 response and succeeds on the next attempt', async () => {
       fetchMock.mockResolvedValueOnce({
         ok: false,
@@ -975,7 +994,7 @@ describe('recall bot api', () => {
 
       fetchMock.mockImplementation(async (_url: string, init: RequestInit) => ({
         ok: false,
-        status: init.method === 'DELETE' ? 409 : 500,
+        status: init.method === 'DELETE' ? 405 : 500,
         json: async () => ({
           detail:
             init.method === 'DELETE'
@@ -998,6 +1017,27 @@ describe('recall bot api', () => {
         expect.stringContaining('HTTP 500: {"detail":"leave call failed"}'),
       );
       warnSpy.mockRestore();
+    });
+
+    it('does not eject a bot whose delete fails for another reason than having joined', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      fetchMock.mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: async () => ({ detail: 'conflict' }),
+      });
+
+      const resultPromise = cancelOrEjectRecallBot('recall-bot-id');
+
+      await vi.runAllTimersAsync();
+
+      expect(await resultPromise).toBe(false);
+      expect(fetchMock.mock.calls.map(([, init]) => init.method)).toEqual([
+        'DELETE',
+        'DELETE',
+        'DELETE',
+      ]);
     });
 
     it('defers 507 adhoc pool exhaustion instead of sleeping in-process', async () => {

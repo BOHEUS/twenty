@@ -12,18 +12,18 @@ type FlatObjectWithActivityAndIdentifier = OverridableFlatEntity & {
 };
 
 export const getDatabaseCrudToolFlatObjects = <
-  T extends FlatObjectWithActivityAndIdentifier,
+  TFlatObject extends FlatObjectWithActivityAndIdentifier,
 >(
-  byUniversalIdentifier: Partial<Record<string, T>>,
-): T[] => {
+  byUniversalIdentifier: Partial<Record<string, TFlatObject>>,
+): TFlatObject[] => {
   return Object.values(byUniversalIdentifier)
     .filter(isDefined)
     .filter(
-      (obj) =>
+      (objectMetadata) =>
         resolveEffectiveFlatEntityProperty({
           metadataName: 'objectMetadata',
-          flatEntity: obj,
+          flatEntity: objectMetadata,
           property: 'isActive',
-        }) && !isWorkflowRelatedObject(obj),
+        }) && !isWorkflowRelatedObject(objectMetadata),
     );
 };

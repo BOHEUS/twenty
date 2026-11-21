@@ -8,10 +8,9 @@ import { useUsageValueFormatter } from '@/settings/usage/hooks/useUsageValueForm
 import { getUsageOperationTypeLabel } from '@/settings/usage/utils/getUsageOperationTypeLabel';
 import { Select } from '@/ui/input/components/Select';
 import { useLingui } from '@lingui/react/macro';
-import { useContext } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
-import { ThemeContext } from 'twenty-ui/theme-constants';
+import { Section } from 'twenty-ui/components/layout';
+import { useTheme } from 'twenty-ui/theme';
 import { type UsageOperationType } from '~/generated-metadata/graphql';
 
 type UsageBreakdownField = 'operationType' | 'application' | 'model';
@@ -35,7 +34,7 @@ export const UsageBreakdownPieSection = ({
   breakdownField,
   sectionId,
 }: UsageBreakdownPieSectionProps) => {
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const { t } = useLingui();
   const { formatUsageValue } = useUsageValueFormatter();
   const colorRegistry = createGraphColorRegistry(theme.color);
@@ -66,10 +65,12 @@ export const UsageBreakdownPieSection = ({
     return null;
   }
 
-  const total = breakdownData.reduce((sum, item) => sum + item.creditsUsed, 0);
+  const total = breakdownData.reduce(
+    (sum, item) => sum + item.workspaceCreditsUsed,
+    0,
+  );
 
-  // Operation types are a fixed platform vocabulary translated here; the other
-  // breakdowns name workspace data, which only the server can resolve.
+  // Operation types are a fixed vocabulary translated here; other breakdowns name workspace data only the server resolves
   const formatLabel = ({
     key,
     label,
@@ -88,7 +89,7 @@ export const UsageBreakdownPieSection = ({
 
   const pieData = breakdownData.map((item, index) => ({
     id: formatLabel(item),
-    value: item.creditsUsed,
+    value: item.workspaceCreditsUsed,
     color: getColorSchemeByIndex(colorRegistry, index).solid,
   }));
 
@@ -99,7 +100,7 @@ export const UsageBreakdownPieSection = ({
       <Section.Header
         title={title}
         description={resolvedDescription}
-        adornment={
+        actions={
           <Select
             dropdownId={`${sectionId}-period`}
             value={period}

@@ -1,28 +1,17 @@
 import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
-import { useSidePanelWorkflowNavigation } from '@/side-panel/pages/workflow/hooks/useSidePanelWorkflowNavigation';
-import { sidePanelNavigationStackState } from '@/side-panel/states/sidePanelNavigationStackState';
-import { WORKFLOW_LOGIC_FUNCTION_TAB_LIST_COMPONENT_ID } from '@/workflow/workflow-steps/workflow-actions/code-action/constants/WorkflowLogicFunctionTabListComponentId';
-import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
-import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
-import { workflowVisualizerWorkflowIdComponentState } from '@/workflow/states/workflowVisualizerWorkflowIdComponentState';
-import { workflowDiagramComponentState } from '@/workflow/workflow-diagram/states/workflowDiagramComponentState';
-import { workflowSelectedNodeComponentState } from '@/workflow/workflow-diagram/states/workflowSelectedNodeComponentState';
-import { type LinkOutputSchema } from '@/workflow/workflow-variables/types/LinkOutputSchema';
 import { type FieldOutputSchemaV2 } from '@/workflow/workflow-variables/types/RecordOutputSchemaV2';
 import { type StepOutputSchemaV2 } from '@/workflow/workflow-variables/types/StepOutputSchemaV2';
 import { type WorkflowVariableSearchResult } from '@/workflow/workflow-variables/types/WorkflowVariableSearchResult';
 import { type WorkflowVariableSelection } from '@/workflow/workflow-variables/types/WorkflowVariableSelection';
 import { getVariableTemplateFromPath } from '@/workflow/workflow-variables/utils/getVariableTemplateFromPath';
-import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
 import { useState } from 'react';
-import { isDefined } from 'twenty-shared/utils';
+import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
+import { isNonEmptyString } from '@sniptt/guards';
 import {
   type BaseOutputSchemaV2,
   type InputSchemaPropertyType,
 } from 'twenty-shared/workflow';
-import { useIcons } from 'twenty-ui/icon';
 import { isBaseOutputSchemaV2 } from '@/workflow/workflow-variables/types/guards/isBaseOutputSchemaV2';
-import { isLinkOutputSchema } from '@/workflow/workflow-variables/types/guards/isLinkOutputSchema';
 import { isRecordOutputSchemaV2 } from '@/workflow/workflow-variables/types/guards/isRecordOutputSchemaV2';
 import { getCurrentSubStepFromPath } from '@/workflow/workflow-variables/utils/getCurrentSubStepFromPath';
 import { getWorkflowVariableSelectionFromSearchResult } from '@/workflow/workflow-variables/utils/getWorkflowVariableSelectionFromSearchResult';
@@ -67,36 +56,19 @@ export const useVariableDropdown = ({
   shouldDisplayRecordObjects,
   objectNameSingularsToSelect,
 }: UseVariableDropdownProps): UseVariableDropdownReturn => {
-  const { getIcon } = useIcons();
   const { objectMetadataItems } = useObjectMetadataItems();
 
   const [currentPath, setCurrentPath] = useState<string[]>(initialPath);
   const [searchInputValue, setSearchInputValue] = useState('');
 
-  const { openWorkflowEditStepInSidePanel } = useSidePanelWorkflowNavigation();
-
-  const workflowVisualizerWorkflowId = useAtomComponentStateValue(
-    workflowVisualizerWorkflowIdComponentState,
-  );
-
-  const setWorkflowSelectedNode = useSetAtomComponentState(
-    workflowSelectedNodeComponentState,
-  );
-  const setWorkflowDiagram = useSetAtomComponentState(
-    workflowDiagramComponentState,
-  );
-  const setSidePanelNavigationStack = useSetAtomState(
-    sidePanelNavigationStackState,
-  );
-
   const getDisplayedSubStepFields = () => {
     const currentSubStep = getCurrentSubStepFromPath(step, currentPath);
 
-    if (isLinkOutputSchema(currentSubStep)) {
-      return { link: currentSubStep.link };
-    } else if (isRecordOutputSchemaV2(currentSubStep)) {
+    if (isRecordOutputSchemaV2(currentSubStep)) {
       return currentSubStep.fields;
-    } else if (isBaseOutputSchemaV2(currentSubStep)) {
+    }
+
+    if (isBaseOutputSchemaV2(currentSubStep)) {
       return currentSubStep;
     }
   };
@@ -112,79 +84,44 @@ export const useVariableDropdown = ({
       if (!baseOutputSchema[key]?.isLeaf) {
         setCurrentPath([...currentPath, key]);
         setSearchInputValue('');
-      } else {
-        onSelect({
-          rawVariableName: getVariableTemplateFromPath({
-            stepId: step.id,
-            path: [...currentPath, key],
-          }),
+        return;
+      }
+
+      onSelect({
+        rawVariableName: getVariableTemplateFromPath({
           stepId: step.id,
-          isFullRecord: false,
-        });
-      }
-    };
-
-    const handleSelectLinkOutputSchema = (
-      linkOutputSchema: LinkOutputSchema,
-    ) => {
-      if (!isDefined(workflowVisualizerWorkflowId)) {
-        throw new Error('Workflow ID must be configured');
-      }
-
-      setWorkflowSelectedNode(step.id);
-
-      setWorkflowDiagram((diagram) => {
-        if (!isDefined(diagram)) {
-          throw new Error('Workflow diagram must be defined');
-        }
-
-        return {
-          ...diagram,
-          nodes: diagram.nodes.map((node) => ({
-            ...node,
-            selected: node.id === step.id,
-          })),
-        };
-      });
-
-      setSidePanelNavigationStack([]);
-
-      openWorkflowEditStepInSidePanel({
-        workflowId: workflowVisualizerWorkflowId,
-        title: step.name,
-        icon: getIcon(step.icon),
+          path: [...currentPath, key],
+        }),
         stepId: step.id,
-        initialStepTab: isDefined(linkOutputSchema.link.tab)
-          ? {
-              tabListComponentId: WORKFLOW_LOGIC_FUNCTION_TAB_LIST_COMPONENT_ID,
-              tabId: linkOutputSchema.link.tab,
-            }
-          : undefined,
+        isFullRecord: false,
       });
     };
 
-    if (isLinkOutputSchema(currentSubStep)) {
-      handleSelectLinkOutputSchema(currentSubStep);
-    } else if (isRecordOutputSchemaV2(currentSubStep)) {
+    if (isRecordOutputSchemaV2(currentSubStep)) {
       handleSelectBaseOutputSchema(currentSubStep.fields);
-    } else if (isBaseOutputSchemaV2(currentSubStep)) {
+    }
+
+    if (isBaseOutputSchemaV2(currentSubStep)) {
       handleSelectBaseOutputSchema(currentSubStep);
     }
   };
 
   const goBack = () => {
     setSearchInputValue('');
-    if (currentPath.length === 0) {
+    if (!isNonEmptyArray(currentPath)) {
       onBack();
-    } else {
-      setCurrentPath(currentPath.slice(0, -1));
+      return;
     }
+
+    setCurrentPath(currentPath.slice(0, -1));
   };
 
   const displayedFields = getDisplayedSubStepFields();
-  const options = displayedFields ? Object.entries(displayedFields) : [];
+  const options = isDefined(displayedFields)
+    ? Object.entries(displayedFields)
+    : [];
 
-  const isSearching = searchInputValue.trim().length > 0;
+  const isSearching = isNonEmptyString(searchInputValue.trim());
   const searchResults = searchWorkflowVariables({
     steps: [step],
     currentPath,
@@ -198,11 +135,6 @@ export const useVariableDropdown = ({
   const handleSelectSearchResult = (result: WorkflowVariableSearchResult) => {
     if (result.isLeaf) {
       onSelect(getWorkflowVariableSelectionFromSearchResult(result));
-      return;
-    }
-
-    if (isLinkOutputSchema(getCurrentSubStepFromPath(step, currentPath))) {
-      handleSelectField('link');
       return;
     }
 

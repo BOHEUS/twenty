@@ -15,11 +15,24 @@ import { OnboardingService } from 'src/engine/core-modules/onboarding/onboarding
 import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
-import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
-import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
-@UseGuards(WorkspaceAuthGuard, UserAuthGuard)
+@UseGuards(
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: false,
+      oauthClient: false,
+      application: false,
+    },
+    requiredPermissionFlags: [],
+  }),
+)
 @UsePipes(ResolverValidationPipe)
 @UseFilters(
   PreventNestToAutoLogGraphqlErrorsFilter,
@@ -34,7 +47,6 @@ export class CompanyEnrichmentResolver {
   ) {}
 
   @Mutation(() => WorkspaceCompanyEnrichmentResultDTO)
-  @UseGuards(NoPermissionGuard)
   async enrichWorkspaceCompany(
     @AuthUser() user: AuthContextUser,
     @AuthWorkspace() workspace: WorkspaceEntity,
@@ -53,8 +65,6 @@ export class CompanyEnrichmentResolver {
     ]);
 
     if (enrichmentResult.outcome === 'matched') {
-      // Two independent bars on the same enrichment: a company worth a demo and
-      // a company worth credits are not necessarily the same company.
       await this.onboardingService.setOnboardingBookCallPendingIfQualified({
         userId: user.id,
         workspaceId: workspace.id,

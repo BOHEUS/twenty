@@ -3,6 +3,7 @@ import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/Enriche
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { type WorkflowTrigger } from '@/workflow/types/Workflow';
 import {
+  type CommandMenuCoreObjectName,
   type Nullable,
   type RecordGqlOperationFilter,
 } from 'twenty-shared/types';
@@ -16,6 +17,7 @@ export type HeadlessEngineCommandContextApi = {
   engineComponentKey: EngineComponentKey;
   contextStoreInstanceId: string;
   objectMetadataItem: Nullable<EnrichedObjectMetadataItem>;
+  coreObjectName: CommandMenuCoreObjectName | null;
   currentViewId: Nullable<string>;
   recordIndexId: Nullable<string>;
   hasAnySoftDeleteFilterOnView?: boolean;
@@ -37,6 +39,8 @@ export type HeadlessTriggerWorkflowVersionCommandContextApi =
   HeadlessEngineCommandContextApi & {
     workflowId: string;
     workflowVersionId: string;
+    coreWorkflowId?: string;
+    coreWorkflowVersionId?: string;
     trigger: WorkflowTrigger | null;
     availabilityType: CommandMenuItemAvailabilityType;
     availabilityObjectMetadataId?: string | null;

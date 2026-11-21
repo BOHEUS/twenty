@@ -5,6 +5,7 @@ import { isDefined } from 'twenty-shared/utils';
 
 import { WorkflowVersionEntity } from 'src/engine/core-modules/workflow/entities/workflow-version.entity';
 import { WorkflowEntity } from 'src/engine/core-modules/workflow/entities/workflow.entity';
+import { CoreWorkflowAccessService } from 'src/engine/core-modules/workflow/services/core-workflow-access.service';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 import {
@@ -19,24 +20,24 @@ export class CoreWorkflowIdResolutionService {
     private readonly coreWorkflowRepository: WorkspaceScopedRepository<WorkflowEntity>,
     @InjectWorkspaceScopedRepository(WorkflowVersionEntity)
     private readonly coreWorkflowVersionRepository: WorkspaceScopedRepository<WorkflowVersionEntity>,
+    private readonly coreWorkflowAccessService: CoreWorkflowAccessService,
   ) {}
 
-  async resolveWorkspaceVersionIdOrThrow({
+  async resolveCoreWorkflowVersionOrThrow({
     workspaceId,
+    userWorkspaceId,
     coreWorkflowVersionId,
   }: {
     workspaceId: string;
+    userWorkspaceId: string | undefined;
     coreWorkflowVersionId: string;
-  }): Promise<{
-    coreWorkflowVersion: WorkflowVersionEntity;
-    workspaceWorkflowVersionId: string;
-  }> {
-    const resolved = await this.resolveWorkspaceVersionIdIfCoreVersionExists({
-      workspaceId,
-      coreWorkflowVersionId,
-    });
+  }): Promise<WorkflowVersionEntity> {
+    const coreWorkflowVersion =
+      await this.coreWorkflowVersionRepository.findOne(workspaceId, {
+        where: { id: coreWorkflowVersionId },
+      });
 
-    if (!isDefined(resolved)) {
+    if (!isDefined(coreWorkflowVersion)) {
       throw new WorkflowQueryValidationException(
         `Core workflow version '${coreWorkflowVersionId}' not found`,
         WorkflowQueryValidationExceptionCode.FORBIDDEN,
@@ -46,57 +47,36 @@ export class CoreWorkflowIdResolutionService {
       );
     }
 
-    return resolved;
-  }
+    await this.coreWorkflowAccessService.assertCoreWorkflowVersionsAreAccessibleOrThrow(
+      {
+        workspaceId,
+        userWorkspaceId,
+        coreWorkflowVersionIds: [coreWorkflowVersion.id],
+      },
+    );
 
-  async resolveWorkspaceVersionIdIfCoreVersionExists({
-    workspaceId,
-    coreWorkflowVersionId,
-  }: {
-    workspaceId: string;
-    coreWorkflowVersionId: string;
-  }): Promise<{
-    coreWorkflowVersion: WorkflowVersionEntity;
-    workspaceWorkflowVersionId: string;
-  } | null> {
-    const coreWorkflowVersion =
-      await this.coreWorkflowVersionRepository.findOne(workspaceId, {
-        where: { id: coreWorkflowVersionId },
-      });
-
-    if (!isDefined(coreWorkflowVersion)) {
-      return null;
-    }
-
-    const workspaceWorkflowVersionId =
-      coreWorkflowVersion.workspaceWorkflowVersionId;
-
-    if (!isDefined(workspaceWorkflowVersionId)) {
-      throw new WorkflowQueryValidationException(
-        `Core workflow version '${coreWorkflowVersionId}' has no workspace mirror alias`,
-        WorkflowQueryValidationExceptionCode.FORBIDDEN,
+    if (isDefined(coreWorkflowVersion.coreWorkflowId)) {
+      await this.coreWorkflowAccessService.assertCoreWorkflowsAreEditableOrThrow(
         {
-          userFriendlyMessage: msg`Workflow version is not correctly linked to its mirror`,
+          workspaceId,
+          userWorkspaceId,
+          coreWorkflowIds: [coreWorkflowVersion.coreWorkflowId],
         },
       );
     }
 
-    return {
-      coreWorkflowVersion,
-      workspaceWorkflowVersionId,
-    };
+    return coreWorkflowVersion;
   }
 
-  async resolveWorkspaceWorkflowIdOrThrow({
+  async resolveCoreWorkflowOrThrow({
     workspaceId,
+    userWorkspaceId,
     coreWorkflowId,
   }: {
     workspaceId: string;
+    userWorkspaceId: string | undefined;
     coreWorkflowId: string;
-  }): Promise<{
-    coreWorkflow: WorkflowEntity;
-    workspaceWorkflowId: string;
-  }> {
+  }): Promise<WorkflowEntity> {
     const coreWorkflow = await this.coreWorkflowRepository.findOne(
       workspaceId,
       { where: { id: coreWorkflowId } },
@@ -112,18 +92,12 @@ export class CoreWorkflowIdResolutionService {
       );
     }
 
-    const workspaceWorkflowId = coreWorkflow.workspaceWorkflowId;
+    await this.coreWorkflowAccessService.assertCoreWorkflowsAreEditableOrThrow({
+      workspaceId,
+      userWorkspaceId,
+      coreWorkflowIds: [coreWorkflow.id],
+    });
 
-    if (!isDefined(workspaceWorkflowId)) {
-      throw new WorkflowQueryValidationException(
-        `Core workflow '${coreWorkflowId}' has no workspace mirror row`,
-        WorkflowQueryValidationExceptionCode.FORBIDDEN,
-        {
-          userFriendlyMessage: msg`Workflow is not correctly linked to its mirror`,
-        },
-      );
-    }
-
-    return { coreWorkflow, workspaceWorkflowId };
+    return coreWorkflow;
   }
 }

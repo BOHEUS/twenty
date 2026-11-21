@@ -1,17 +1,18 @@
 import { formatCallRecordingTranscriptTimestamp } from '@/page-layout/widgets/call-recording-transcript/utils/formatCallRecordingTranscriptTimestamp';
 import { styled } from '@linaria/react';
-import { plural, t } from '@lingui/core/macro';
+import { plural } from '@lingui/core/macro';
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { isDefined } from 'twenty-shared/utils';
-import { CircularProgressBar } from 'twenty-ui/primitives/feedback';
+import { Loader } from 'twenty-ui/primitives/feedback';
 import {
   IconHeadphones,
   IconPlayerPause,
   IconPlayerPlay,
 } from 'twenty-ui/icon';
 import { Button, Slider } from 'twenty-ui/primitives/input';
-import { IconButton } from 'twenty-ui/components';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { IconButton } from 'twenty-ui/components/input';
+import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledAudioBar = styled.div`
   align-items: center;
@@ -52,6 +53,7 @@ export const CallRecordingAudioPlayer = ({
   src,
   onRetry,
 }: CallRecordingAudioPlayerProps) => {
+  const { t } = useLingui();
   const audioElementRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTimeSeconds, setCurrentTimeSeconds] = useState(0);
@@ -187,15 +189,12 @@ export const CallRecordingAudioPlayer = ({
         <>
           <IconButton
             aria-label={isPlaying ? t`Pause` : t`Play`}
+            aria-busy={isStalled}
             size="sm"
             variant="ghost"
             onClick={handleTogglePlayback}
           >
-            {isStalled ? (
-              <CircularProgressBar barWidth={2} size={24} />
-            ) : (
-              <PlaybackIcon />
-            )}
+            {isStalled ? <Loader /> : <PlaybackIcon />}
           </IconButton>
           <StyledTrack>
             {isDurationKnown ? (

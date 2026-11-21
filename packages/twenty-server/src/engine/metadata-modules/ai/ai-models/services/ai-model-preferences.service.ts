@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { type AiModelTier } from 'twenty-shared/ai';
 
 import { TwentyConfigService } from 'src/engine/core-modules/twenty-config/twenty-config.service';
-import { AI_MODELS_DEFAULT_CONFIG_KEY_BY_TIER } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-models-default-config-key-by-tier.const';
+import { AI_MODELS_DEFAULT_CONFIG_KEY_BY_TIER } from 'src/engine/metadata-modules/ai/ai-models/constants/ai-models-default-config-key-by-tier.constant';
 
 @Injectable()
 export class AiModelPreferencesService {
@@ -40,8 +40,7 @@ export class AiModelPreferencesService {
     );
   }
 
-  // The chosen model moves to the front of the chain; the rest of the chain is
-  // kept so an instance losing that provider's key still resolves the tier.
+  // the chosen model moves to the front; the rest of the chain stays so losing that provider's key still resolves the tier
   async setDefaultModel(tier: AiModelTier, modelId: string): Promise<void> {
     const current = this.getDefaultModelIdsForTier(tier);
 

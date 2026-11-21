@@ -1,7 +1,6 @@
 import {
   type CompositeProperty,
   FieldMetadataType,
-  type ObjectsPermissions,
   type OrderByDirection,
   compositeTypeDefinitions,
 } from 'twenty-shared/types';
@@ -9,14 +8,14 @@ import { isDefined, isNonEmptyArray, isPlainObject } from 'twenty-shared/utils';
 
 import { type ObjectRecordOrderBy } from 'src/engine/api/graphql/workspace-query-builder/interfaces/object-record.interface';
 
-import { STANDARD_ERROR_MESSAGE } from 'src/engine/api/common/common-query-runners/errors/standard-error-message.constant';
+import { STANDARD_ERROR_MESSAGE } from 'src/engine/constants/standard-error-message.constant';
 import {
-  GraphqlQueryRunnerException,
-  GraphqlQueryRunnerExceptionCode,
-} from 'src/engine/api/graphql/graphql-query-runner/errors/graphql-query-runner.exception';
-import { assertFieldIsReadableOrThrow } from 'src/engine/api/graphql/graphql-query-runner/graphql-query-parsers/utils/assert-field-is-readable-or-throw.util';
-import { isOrderByDirection } from 'src/engine/api/graphql/graphql-query-runner/graphql-query-parsers/graphql-query-order/utils/is-order-by-direction.util';
-import { resolveFilterKeyFieldMetadata } from 'src/engine/api/graphql/graphql-query-runner/graphql-query-parsers/utils/resolve-filter-key-field-metadata.util';
+  CommonQueryRunnerException,
+  CommonQueryRunnerExceptionCode,
+} from 'src/engine/api/common/common-query-runners/errors/common-query-runner.exception';
+import { assertFieldIsReadableOrThrow } from 'src/engine/api/common/common-query-parsers/utils/assert-field-is-readable-or-throw.util';
+import { isOrderByDirection } from 'src/engine/api/common/common-query-parsers/common-query-order/utils/is-order-by-direction.util';
+import { resolveFilterKeyFieldMetadata } from 'src/engine/record-filter/utils/resolve-filter-key-field-metadata.util';
 import { isCompositeFieldMetadataType } from 'src/engine/metadata-modules/field-metadata/utils/is-composite-field-metadata-type.util';
 import { type FlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/types/flat-entity-maps.type';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
@@ -24,12 +23,10 @@ import { type OrmFlatFieldMetadata } from 'src/engine/metadata-modules/flat-fiel
 import { buildFieldMapsFromFlatObjectMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/build-field-maps-from-flat-object-metadata.util';
 import { isMorphOrRelationFlatFieldMetadata } from 'src/engine/metadata-modules/flat-field-metadata/utils/is-morph-or-relation-flat-field-metadata.util';
 import { type FlatObjectMetadata } from 'src/engine/metadata-modules/flat-object-metadata/types/flat-object-metadata.type';
+import { type RecordReadRestrictions } from 'src/engine/permissions/types/record-read-restrictions.type';
 
 export type OrderByLeaf = {
-  // Path of the ordered value from the record root, e.g. ['closeDate'],
-  // ['name', 'firstName'], ['company', 'name'] or ['company', 'name',
-  // 'firstName']. It is at once the cursor value path and the filter nesting
-  // of the keyset conditions.
+  // Both the cursor value path and the keyset filter nesting, e.g. ['company', 'name', 'firstName']
   path: string[];
   direction: OrderByDirection;
   fieldMetadata: OrmFlatFieldMetadata;
@@ -39,8 +36,7 @@ export type OrderByLeaf = {
   | { kind: 'composite'; compositeProperty: CompositeProperty }
   | {
       kind: 'relation';
-      // Resolved against the target object when flatObjectMetadataMaps is
-      // provided; the keyset condition builder relies on it for NULL semantics
+      // Only resolved when flatObjectMetadataMaps is provided; the keyset condition builder needs it for NULL semantics
       targetFieldMetadata?: OrmFlatFieldMetadata;
       targetCompositeProperty?: CompositeProperty;
     }
@@ -59,16 +55,13 @@ export const checkIfLeafCanCarryCursorValue = (leaf: OrderByLeaf): boolean => {
 };
 
 const throwInvalidOrderByInput = (message: string): never => {
-  throw new GraphqlQueryRunnerException(
+  throw new CommonQueryRunnerException(
     message,
-    GraphqlQueryRunnerExceptionCode.INVALID_QUERY_INPUT,
+    CommonQueryRunnerExceptionCode.INVALID_QUERY_INPUT,
     { userFriendlyMessage: STANDARD_ERROR_MESSAGE },
   );
 };
 
-// Flattens the nested value of a relation orderBy entry into its leaf paths,
-// e.g. { name: 'AscNullsLast' } -> [['name']] and, for a composite target
-// field, { name: { firstName: 'AscNullsLast' } } -> [['name', 'firstName']].
 const flattenNestedOrderByValue = (
   value: Record<string, unknown>,
 ): Array<{ path: string[]; direction: OrderByDirection }> =>
@@ -84,10 +77,7 @@ const flattenNestedOrderByValue = (
       : [];
   });
 
-// Resolves one flattened relation orderBy path (e.g. ['company', 'name'] or
-// ['pointOfContact', 'name', 'firstName']) against the relation's target
-// object. Without the object metadata maps the leaf stays unresolved, which is
-// enough for consumers that ignore relation leaves (e.g. column selection).
+// Without flatObjectMetadataMaps the leaf stays unresolved, enough for consumers ignoring relation leaves
 const resolveRelationLeaf = ({
   fieldMetadata,
   path,
@@ -95,7 +85,7 @@ const resolveRelationLeaf = ({
   flatObjectMetadataMaps,
   flatFieldMetadataMaps,
   strictValidation,
-  objectsPermissions,
+  recordReadRestrictions,
 }: {
   fieldMetadata: OrmFlatFieldMetadata;
   path: string[];
@@ -103,7 +93,7 @@ const resolveRelationLeaf = ({
   flatObjectMetadataMaps?: FlatEntityMaps<FlatObjectMetadata>;
   flatFieldMetadataMaps: FlatEntityMaps<OrmFlatFieldMetadata>;
   strictValidation: boolean;
-  objectsPermissions?: ObjectsPermissions;
+  recordReadRestrictions?: RecordReadRestrictions;
 }): OrderByLeaf | null => {
   const targetObjectMetadata =
     isDefined(flatObjectMetadataMaps) &&
@@ -132,9 +122,9 @@ const resolveRelationLeaf = ({
 
   if (!isDefined(targetFieldMetadata)) {
     if (strictValidation) {
-      throw new GraphqlQueryRunnerException(
+      throw new CommonQueryRunnerException(
         `Nested field "${targetFieldName}" not found in target object "${targetObjectMetadata.nameSingular}"`,
-        GraphqlQueryRunnerExceptionCode.FIELD_NOT_FOUND,
+        CommonQueryRunnerExceptionCode.FIELD_NOT_FOUND,
         { userFriendlyMessage: STANDARD_ERROR_MESSAGE },
       );
     }
@@ -143,9 +133,9 @@ const resolveRelationLeaf = ({
   }
 
   assertFieldIsReadableOrThrow({
-    objectsPermissions,
-    objectMetadataId: targetObjectMetadata.id,
-    fieldMetadataId: targetFieldMetadata.id,
+    recordReadRestrictions,
+    flatObjectMetadata: targetObjectMetadata,
+    flatFieldMetadata: targetFieldMetadata,
   });
 
   if (isCompositeFieldMetadataType(targetFieldMetadata.type)) {
@@ -192,34 +182,24 @@ const resolveRelationLeaf = ({
   };
 };
 
-// Single source of truth for walking an orderBy: every entry is flattened into
-// ordered leaves that carry their own direction, and the SQL order parser
-// compiles its clauses from these leaves, so the SQL ordering, column
-// selection, cursor encoding, cursor validation and keyset conditions all
-// consume the same list and cannot drift apart. Duplicated leaves keep their
-// first occurrence, which lets callers append the id tie-breaker untouched: a
-// caller-provided id ordering wins over the appended default.
-// Strict validation rejects unknown or malformed entries; the lenient mode
-// skips them instead, for callers that re-walk an already-validated orderBy
-// against another object (e.g. nested connections).
+// Single walk shared by SQL ordering, column selection, cursors and keyset conditions, so they cannot drift apart
+// Duplicates keep their first occurrence, so a caller-provided id ordering wins over the appended tie-breaker
+// Lenient mode skips invalid entries, for re-walks of an already-validated orderBy (e.g. nested connections)
 export const resolveOrderByLeaves = ({
   orderBy,
   flatObjectMetadata,
   flatObjectMetadataMaps,
   flatFieldMetadataMaps,
   strictValidation = false,
-  objectsPermissions,
+  recordReadRestrictions,
 }: {
   orderBy: ObjectRecordOrderBy | undefined;
   flatObjectMetadata: FlatObjectMetadata;
-  // Needed to resolve relation leaves against their target object; without it
-  // they stay unresolved, which lenient callers tolerate
   flatObjectMetadataMaps?: FlatEntityMaps<FlatObjectMetadata>;
   flatFieldMetadataMaps: FlatEntityMaps<OrmFlatFieldMetadata>;
   strictValidation?: boolean;
-  // Sort values embed into cursors, so ordering by a field the role cannot
-  // read is rejected like filtering by one is
-  objectsPermissions?: ObjectsPermissions;
+  // Sort values embed into cursors, so ordering by an unreadable field is rejected
+  recordReadRestrictions?: RecordReadRestrictions;
 }): OrderByLeaf[] => {
   if (!isDefined(orderBy) || !isNonEmptyArray(orderBy)) {
     return [];
@@ -256,9 +236,9 @@ export const resolveOrderByLeaves = ({
 
       if (!isDefined(fieldMetadata)) {
         if (strictValidation) {
-          throw new GraphqlQueryRunnerException(
+          throw new CommonQueryRunnerException(
             `Field "${fieldName}" does not exist or is not sortable`,
-            GraphqlQueryRunnerExceptionCode.FIELD_NOT_FOUND,
+            CommonQueryRunnerExceptionCode.FIELD_NOT_FOUND,
             { userFriendlyMessage: STANDARD_ERROR_MESSAGE },
           );
         }
@@ -266,9 +246,9 @@ export const resolveOrderByLeaves = ({
       }
 
       assertFieldIsReadableOrThrow({
-        objectsPermissions,
-        objectMetadataId: flatObjectMetadata.id,
-        fieldMetadataId: fieldMetadata.id,
+        recordReadRestrictions,
+        flatObjectMetadata,
+        flatFieldMetadata: fieldMetadata,
       });
 
       if (
@@ -286,8 +266,6 @@ export const resolveOrderByLeaves = ({
 
         const flattenedRelationPaths = flattenNestedOrderByValue(orderByValue);
 
-        // An entry whose nested values are no directions at all would
-        // otherwise order by nothing without telling the caller
         if (flattenedRelationPaths.length === 0 && strictValidation) {
           throwInvalidOrderByInput(
             `Relation field "${fieldName}" requires nested field ordering (e.g., { ${fieldName}: { fieldName: 'AscNullsFirst' } })`,
@@ -302,7 +280,7 @@ export const resolveOrderByLeaves = ({
             flatObjectMetadataMaps,
             flatFieldMetadataMaps,
             strictValidation,
-            objectsPermissions,
+            recordReadRestrictions,
           });
 
           if (isDefined(relationLeaf)) {
@@ -382,9 +360,6 @@ export const resolveOrderByLeaves = ({
   return leaves;
 };
 
-// Rebuilds the canonical orderBy the SQL order parser consumes, one entry per
-// leaf, so the scan order and the keyset conditions derive from the same
-// deduplicated list.
 export const buildOrderByFromLeaves = (
   leaves: OrderByLeaf[],
 ): ObjectRecordOrderBy =>
@@ -396,8 +371,7 @@ export const buildOrderByFromLeaves = (
       ) as ObjectRecordOrderBy[number],
   );
 
-// Reads the leaf's value out of a decoded cursor. Composite values of legacy
-// cursors were carried under dotted keys (e.g. "name.firstName").
+// Legacy cursors carried composite values under dotted keys (e.g. "name.firstName")
 export const getCursorValueForLeaf = (
   cursor: Record<string, unknown>,
   leaf: OrderByLeaf,

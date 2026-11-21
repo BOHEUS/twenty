@@ -1,12 +1,12 @@
-import { Dialog } from 'twenty-ui/primitives/surfaces';
 import { DialogInstance } from '@/ui/layout/dialog/components/DialogInstance';
 import { useHotkeysOnFocusedElement } from '@/ui/utilities/hotkey/hooks/useHotkeysOnFocusedElement';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { Key } from 'ts-key-enum';
+import { IconButton } from 'twenty-ui/components/input';
 import { IconChevronLeft, IconChevronRight, IconX } from 'twenty-ui/icon';
-import { FloatingIconButton } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { Dialog } from 'twenty-ui/primitives/surfaces';
+import { themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsApplicationScreenshotLightboxProps = {
   modalInstanceId: string;
@@ -73,8 +73,10 @@ export const SettingsApplicationScreenshotLightbox = ({
   onSelectedIndexChange,
   onClose,
 }: SettingsApplicationScreenshotLightboxProps) => {
+  const { t } = useLingui();
   const screenshotCount = screenshots.length;
   const hasSeveralScreenshots = screenshotCount > 1;
+  const screenshotNumber = selectedIndex + 1;
 
   const showPrevious = () =>
     onSelectedIndexChange(
@@ -105,45 +107,53 @@ export const SettingsApplicationScreenshotLightbox = ({
       onClose={onClose}
       renderInDocumentBody
     >
-      {({ container, backdrop, viewportProps, onKeyDown }) => (
+      {({ onKeyDown }) => (
         <Dialog.Popup
           aria-label={displayName}
-          {...{ container, backdrop, viewportProps, onKeyDown }}
+          onKeyDown={onKeyDown}
           size="fullscreen"
-          style={{ padding: 0, background: 'transparent', boxShadow: 'none' }}
         >
           <StyledContainer>
             <StyledCloseButton>
-              <FloatingIconButton
-                Icon={IconX}
-                ariaLabel={t`Close`}
+              <IconButton
+                elevated
+                size="sm"
+                aria-label={t`Close`}
                 onClick={onClose}
-              />
+              >
+                <IconX />
+              </IconButton>
             </StyledCloseButton>
             {hasSeveralScreenshots && (
               <StyledPreviousButton>
-                <FloatingIconButton
-                  Icon={IconChevronLeft}
-                  ariaLabel={t`Previous screenshot`}
+                <IconButton
+                  elevated
+                  size="sm"
+                  aria-label={t`Previous screenshot`}
                   onClick={showPrevious}
-                />
+                >
+                  <IconChevronLeft />
+                </IconButton>
               </StyledPreviousButton>
             )}
             <StyledImage
               src={screenshots[selectedIndex]}
-              alt={`${displayName} screenshot ${selectedIndex + 1}`}
+              alt={t`${displayName} screenshot ${screenshotNumber}`}
             />
             {hasSeveralScreenshots && (
               <>
                 <StyledNextButton>
-                  <FloatingIconButton
-                    Icon={IconChevronRight}
-                    ariaLabel={t`Next screenshot`}
+                  <IconButton
+                    elevated
+                    size="sm"
+                    aria-label={t`Next screenshot`}
                     onClick={showNext}
-                  />
+                  >
+                    <IconChevronRight />
+                  </IconButton>
                 </StyledNextButton>
-                <StyledCounter>
-                  {selectedIndex + 1} / {screenshotCount}
+                <StyledCounter aria-live="polite">
+                  {screenshotNumber} / {screenshotCount}
                 </StyledCounter>
               </>
             )}

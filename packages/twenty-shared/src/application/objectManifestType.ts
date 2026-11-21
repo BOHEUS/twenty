@@ -1,7 +1,6 @@
+import { type DisableableObjectPermissionAction } from '@/application/objectPermissionActionType';
 import { type ObjectFieldManifest } from '@/application/objectFieldManifest.type';
 import { type SyncableEntityOptions } from '@/application/syncableEntityOptionsType';
-import { type MetadataReadability } from '@/types/MetadataReadability';
-import { type MetadataWritability } from '@/types/MetadataWritability';
 import { type ObjectOpenRecordIn } from '@/types/ObjectOpenRecordIn';
 
 export type ObjectManifest = SyncableEntityOptions & {
@@ -14,13 +13,9 @@ export type ObjectManifest = SyncableEntityOptions & {
   color?: string | null;
   isLabelSyncedWithName?: boolean;
   isSearchable?: boolean;
-  // When false, the generic UI shows no affordance to create records of this object
   isUICreatable?: boolean;
-  // When false, records of this object are not editable through the generic UI
   isUIEditable?: boolean;
-  writability?: MetadataWritability;
-  readability?: MetadataReadability;
-  readabilityParentFieldUniversalIdentifiers?: string[] | null;
+  disabledObjectPermissionActions?: DisableableObjectPermissionAction[];
   openRecordIn?: ObjectOpenRecordIn;
   fields: ObjectFieldManifest[];
   labelIdentifierFieldMetadataUniversalIdentifier: string;

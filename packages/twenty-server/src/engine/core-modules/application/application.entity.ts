@@ -1,6 +1,11 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
-import { type ApplicationBilling } from 'twenty-shared/application';
+import {
+  type ApplicationBilling,
+  type ApplicationBillingPrice,
+  type ApplicationCapability,
+} from 'twenty-shared/application';
+import { type IframeMediaPermission } from 'twenty-shared/types';
 import {
   Column,
   CreateDateColumn,
@@ -22,14 +27,19 @@ import { ApplicationState } from 'src/engine/core-modules/application/enums/appl
 import { FileEntity } from 'src/engine/core-modules/file/entities/file.entity';
 import { ApplicationVariableEntity } from 'src/engine/core-modules/application/application-variable/application-variable.entity';
 import { PublicDomainEntity } from 'src/engine/core-modules/public-domain/public-domain.entity';
+import { ADD_ACCEPTED_BILLING_PRICES_TO_APPLICATION_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-61/add-accepted-billing-prices-to-application-upgrade-command-name.constant';
+import { ADD_HEALTH_CHECK_TO_APPLICATION_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-42/add-health-check-to-application-upgrade-command-name.constant';
+import { ENABLE_USER_HEALTH_CHECK_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-55/enable-user-health-check-upgrade-command-name.constant';
+import { ADD_REQUESTED_ROLE_ID_TO_APPLICATION_UPGRADE_COMMAND_NAME } from 'src/database/commands/upgrade-version-command/2-60/add-requested-role-id-to-application-upgrade-command-name.constant';
 import { WasIntroducedInUpgrade } from 'src/engine/core-modules/upgrade/decorators/was-introduced-in-upgrade.decorator';
 import { AgentEntity } from 'src/engine/metadata-modules/ai/ai-agent/entities/agent.entity';
 import { CommandMenuItemEntity } from 'src/engine/metadata-modules/command-menu-item/entities/command-menu-item.entity';
+import { SettingsMenuItemEntity } from 'src/engine/metadata-modules/settings-menu-item/entities/settings-menu-item.entity';
 import { FrontComponentEntity } from 'src/engine/metadata-modules/front-component/entities/front-component.entity';
 import { LogicFunctionEntity } from 'src/engine/metadata-modules/logic-function/logic-function.entity';
 import { ObjectMetadataEntity } from 'src/engine/metadata-modules/object-metadata/object-metadata.entity';
 import { RoleDTO } from 'src/engine/metadata-modules/role/dtos/role.dto';
-import { WorkspaceRelatedEntity } from 'src/engine/workspace-manager/types/workspace-related-entity';
+import { WorkspaceRelatedEntity } from 'src/engine/workspace-manager/types/workspace-related-entity.type';
 
 @Entity({ name: 'application', schema: 'core' })
 @ObjectType('Application')
@@ -117,9 +127,6 @@ export class ApplicationEntity extends WorkspaceRelatedEntity {
   @Column({ type: 'jsonb', nullable: false, default: {} })
   availablePackages: Record<string, string>;
 
-  // What the app declares it bills for: recurring charges the platform raises
-  // each period, and the operations it charges against, each with the billing
-  // category metered and the app-authored label shown for that spend.
   @Column({ type: 'jsonb', nullable: false, default: {} })
   @WasIntroducedInUpgrade({
     upgradeCommandName:
@@ -127,11 +134,39 @@ export class ApplicationEntity extends WorkspaceRelatedEntity {
   })
   billing: ApplicationBilling;
 
+  @Column({ type: 'jsonb', nullable: true })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      ADD_ACCEPTED_BILLING_PRICES_TO_APPLICATION_UPGRADE_COMMAND_NAME,
+  })
+  acceptedBillingPrices: ApplicationBillingPrice[] | null;
+
+  @Column({ type: 'varchar', array: true, nullable: false, default: '{}' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.42.0_AddApplicationGrantedCapabilitiesFastInstanceCommand_1790088525621',
+  })
+  grantedCapabilities: ApplicationCapability[];
+
+  @Column({ type: 'jsonb', nullable: false, default: [] })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      '2.56.0_AddApplicationGrantedIframeMediaPermissionsFastInstanceCommand_1793700975254',
+  })
+  grantedIframeMediaPermissions: IframeMediaPermission[];
+
   @Column({ nullable: true, type: 'uuid' })
   logicFunctionLayerId: string | null;
 
   @Column({ nullable: true, type: 'uuid' })
   defaultRoleId: string | null;
+
+  @WasIntroducedInUpgrade({
+    upgradeCommandName:
+      ADD_REQUESTED_ROLE_ID_TO_APPLICATION_UPGRADE_COMMAND_NAME,
+  })
+  @Column({ nullable: true, type: 'uuid' })
+  requestedRoleId: string | null;
 
   @Field(() => RoleDTO, { nullable: true })
   defaultRole: RoleDTO | null;
@@ -152,6 +187,18 @@ export class ApplicationEntity extends WorkspaceRelatedEntity {
       '2.33.0_AddUninstallHookCompletedForRequestedAtToApplicationFastInstanceCommand_1787151824000',
   })
   uninstallHookCompletedForRequestedAt: Date | null;
+
+  @Column({ nullable: true, type: 'uuid' })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ADD_HEALTH_CHECK_TO_APPLICATION_UPGRADE_COMMAND_NAME,
+  })
+  healthCheckLogicFunctionId: string | null;
+
+  @Column({ nullable: false, type: 'boolean', default: false })
+  @WasIntroducedInUpgrade({
+    upgradeCommandName: ENABLE_USER_HEALTH_CHECK_UPGRADE_COMMAND_NAME,
+  })
+  isUserHealthCheckEnabled: boolean;
 
   @Column({ nullable: false, type: 'boolean', default: true })
   canBeUninstalled: boolean;
@@ -256,6 +303,15 @@ export class ApplicationEntity extends WorkspaceRelatedEntity {
     },
   )
   commandMenuItems: Relation<CommandMenuItemEntity[]>;
+
+  @OneToMany(
+    () => SettingsMenuItemEntity,
+    (settingsMenuItem) => settingsMenuItem.application,
+    {
+      onDelete: 'CASCADE',
+    },
+  )
+  settingsMenuItems: Relation<SettingsMenuItemEntity[]>;
 
   @OneToMany(
     () => ApplicationVariableEntity,

@@ -1,3 +1,4 @@
+import { Field, Input } from '@ui/primitives/input';
 import { Text } from '@ui/primitives/typography/Text/Text';
 import { type Meta, type StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, waitFor, within } from 'storybook/test';
@@ -14,13 +15,26 @@ const meta: Meta<typeof DialogExample> = {
   argTypes: {
     size: {
       control: 'select',
-      options: ['sm', 'md', 'lg', 'xl', 'fullscreen'],
+      options: ['sm', 'compact', 'md', 'lg', 'xl', 'fullscreen'],
     },
   },
 };
 
 export default meta;
 type Story = StoryObj<typeof DialogExample>;
+
+export const Display: Story = {
+  decorators: [ComponentDecorator],
+  args: {
+    defaultOpen: false,
+    content: (
+      <Field.Root name="company">
+        <Field.Label>Company name</Field.Label>
+        <Input defaultValue="Acme" />
+      </Field.Root>
+    ),
+  },
+};
 
 export const Default: Story = {
   decorators: [ComponentDecorator],
@@ -46,9 +60,8 @@ export const Default: Story = {
   },
 };
 
-export const Documentation: Story = {
-  ...Default,
-  args: { defaultOpen: false },
+export const DocumentationInteractions: Story = {
+  ...Display,
   play: async ({ canvasElement }) => {
     const trigger = within(canvasElement).getByRole('button', {
       name: 'Edit account',
@@ -72,6 +85,10 @@ export const Small: Story = {
   ...Default,
   args: { defaultOpen: true, size: 'sm' },
 };
+export const Compact: Story = {
+  ...Default,
+  args: { defaultOpen: true, size: 'compact' },
+};
 export const Large: Story = {
   ...Default,
   args: { defaultOpen: true, size: 'lg' },
@@ -85,7 +102,7 @@ export const Fullscreen: Story = {
   args: { defaultOpen: true, size: 'fullscreen' },
 };
 
-export const Catalog: Story = {
+export const WithRecordContext: Story = {
   ...Default,
   args: {
     defaultOpen: true,
@@ -93,8 +110,8 @@ export const Catalog: Story = {
   },
 };
 
-export const CatalogDark: Story = {
-  ...Catalog,
+export const WithRecordContextDark: Story = {
+  ...WithRecordContext,
   tags: ['!autodocs'],
   globals: { colorScheme: 'dark' },
 };

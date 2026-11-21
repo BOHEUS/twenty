@@ -8,8 +8,6 @@ type ObjectPermissionFields = {
   canDestroyObjectRecords?: boolean | null;
 };
 
-// Narrows to the permission booleans the model needs, dropping restrictedFields
-// and the nested row-level predicate arrays that would bloat the tool output.
 export const toObjectPermissionSummary = (
   objectPermission: ObjectPermissionFields,
 ) => ({

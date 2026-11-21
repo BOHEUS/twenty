@@ -1,4 +1,3 @@
-import { useToast } from 'twenty-ui/primitives/feedback';
 import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
 import { ResourceCreditPackagePickerModal } from '@/settings/billing/components/internal/ResourceCreditPackagePickerModal';
 import { BILLING_MODAL_IDS } from '@/settings/billing/constants/BillingModalIds';
@@ -11,9 +10,9 @@ import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { useMutation } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { useMemo, useState } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { useToast } from 'twenty-ui/components/feedback';
 import {
   IconAdjustments,
   IconArrowUp,
@@ -21,12 +20,13 @@ import {
   IconCreditCard,
 } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   SetResourceCreditSubscriptionPriceDocument,
   SubscriptionInterval,
   type BillingPriceLicensed,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 const PREDEFINED_RESOURCE_CREDIT_PACKAGE_MULTIPLIERS = [2, 4];
 
@@ -63,6 +63,7 @@ export const ResourceCreditPriceSelector = ({
   canCancelCreditPackSwitch?: boolean;
   onCancelCreditPackSwitch?: () => void;
 }) => {
+  const { t } = useLingui();
   const {
     currentResourceCreditBillingPrice,
     currentResourceCreditSubscriptionItem,
@@ -79,8 +80,7 @@ export const ResourceCreditPriceSelector = ({
 
   const currentResourceCreditPrice = currentResourceCreditBillingPrice;
 
-  // The catalog price is gone once the workspace's package is archived, so
-  // identity and the amount it pays both come from the subscription first.
+  // An archived package's catalog price is gone, so read from the subscription first.
   const currentResourceCreditStripePriceId =
     currentResourceCreditSubscriptionItem?.stripePriceId ??
     currentResourceCreditPrice?.stripePriceId;
@@ -181,9 +181,7 @@ export const ResourceCreditPriceSelector = ({
     (price) => price.stripePriceId !== currentResourceCreditStripePriceId,
   );
 
-  // Compared against the subscription's own package: the catalog price is gone
-  // once it is archived, which would otherwise confirm every change as a
-  // downgrade.
+  // Against the subscription's package: an archived catalog price would read every change as a downgrade.
   const isUpgrade = () => {
     if (!isChanged || !isDefined(selectedPrice)) {
       return false;
@@ -310,13 +308,13 @@ export const ResourceCreditPriceSelector = ({
         },
       );
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: t`Resource credits updated.`,
       });
       setSelectedPriceId(undefined);
     } catch (error) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to update resource credits.`,
       });
 

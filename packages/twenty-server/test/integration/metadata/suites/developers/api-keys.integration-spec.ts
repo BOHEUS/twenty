@@ -1,13 +1,13 @@
 import { gql } from 'graphql-tag';
-import { makeMetadataAPIRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
-import { makeRestAPIRequest } from 'test/integration/rest/utils/make-rest-api-request.util';
+import { makeMetadataApiRequest } from 'test/integration/metadata/suites/utils/make-metadata-api-request.util';
+import { makeRestApiRequest } from 'test/integration/rest/utils/make-rest-api-request.util';
 
 describe('apiKeysResolver (e2e)', () => {
   let createdApiKeyId: string | undefined;
   let adminRoleId: string;
 
   const createRevokedApiKey = async (name: string): Promise<string> => {
-    const createResponse = await makeMetadataAPIRequest({
+    const createResponse = await makeMetadataApiRequest({
       query: gql`
         mutation CreateApiKey($input: CreateApiKeyInput!) {
           createApiKey(input: $input) {
@@ -28,7 +28,7 @@ describe('apiKeysResolver (e2e)', () => {
 
     createdApiKeyId = apiKeyId;
 
-    await makeMetadataAPIRequest({
+    await makeMetadataApiRequest({
       query: gql`
         mutation RevokeApiKey($input: RevokeApiKeyInput!) {
           revokeApiKey(input: $input) {
@@ -47,7 +47,7 @@ describe('apiKeysResolver (e2e)', () => {
   const findApiKeyRevokedAt = async (
     apiKeyId: string,
   ): Promise<string | null> => {
-    const apiKeyResponse = await makeMetadataAPIRequest({
+    const apiKeyResponse = await makeMetadataApiRequest({
       query: gql`
         query GetApiKey($input: GetApiKeyInput!) {
           apiKey(input: $input) {
@@ -64,7 +64,7 @@ describe('apiKeysResolver (e2e)', () => {
   };
 
   beforeAll(async () => {
-    const rolesResponse = await makeMetadataAPIRequest({
+    const rolesResponse = await makeMetadataApiRequest({
       query: gql`
         query GetRoles {
           getRoles {
@@ -97,7 +97,7 @@ describe('apiKeysResolver (e2e)', () => {
 
   describe('apiKeys query', () => {
     it('should find many API keys', async () => {
-      const response = await makeMetadataAPIRequest({
+      const response = await makeMetadataApiRequest({
         query: gql`
           query GetApiKeys {
             apiKeys {
@@ -123,6 +123,107 @@ describe('apiKeysResolver (e2e)', () => {
     });
   });
 
+  describe('getApiKeyRoles query', () => {
+    it('should return the roles assignable to API keys sorted by label', async () => {
+      const response = await makeMetadataApiRequest({
+        query: gql`
+          query GetApiKeyRoles {
+            getApiKeyRoles {
+              id
+              label
+              canBeAssignedToApiKeys
+            }
+          }
+        `,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.errors).toBeUndefined();
+
+      const roles: {
+        id: string;
+        label: string;
+        canBeAssignedToApiKeys: boolean;
+      }[] = response.body.data.getApiKeyRoles;
+      const labels = roles.map((role) => role.label);
+
+      expect(roles.map((role) => role.id)).toContain(adminRoleId);
+      expect(roles.every((role) => role.canBeAssignedToApiKeys)).toBe(true);
+      expect(labels).toEqual(
+        [...labels].sort((labelA, labelB) => labelA.localeCompare(labelB)),
+      );
+    });
+  });
+
+  describe('role apiKeys field', () => {
+    const findApiKeyIdsOfRole = async (roleId: string): Promise<string[]> => {
+      const response = await makeMetadataApiRequest({
+        query: gql`
+          query GetRole($id: UUID!) {
+            getRole(id: $id) {
+              apiKeys {
+                id
+              }
+            }
+          }
+        `,
+        variables: { id: roleId },
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data).toBeDefined();
+      expect(response.body.errors).toBeUndefined();
+
+      return response.body.data.getRole.apiKeys.map(
+        (apiKey: { id: string }) => apiKey.id,
+      );
+    };
+
+    it('should list active API keys of the role and drop revoked ones', async () => {
+      const createResponse = await makeMetadataApiRequest({
+        query: gql`
+          mutation CreateApiKey($input: CreateApiKeyInput!) {
+            createApiKey(input: $input) {
+              id
+            }
+          }
+        `,
+        variables: {
+          input: {
+            name: 'Test API Key for Role',
+            expiresAt: '2099-12-31T23:59:59Z',
+            roleId: adminRoleId,
+          },
+        },
+      });
+
+      expect(createResponse.status).toBe(200);
+      expect(createResponse.body.data).toBeDefined();
+
+      const apiKeyId: string = createResponse.body.data.createApiKey.id;
+
+      createdApiKeyId = apiKeyId;
+
+      expect(await findApiKeyIdsOfRole(adminRoleId)).toContain(apiKeyId);
+
+      await makeMetadataApiRequest({
+        query: gql`
+          mutation RevokeApiKey($input: RevokeApiKeyInput!) {
+            revokeApiKey(input: $input) {
+              id
+            }
+          }
+        `,
+        variables: {
+          input: { id: apiKeyId },
+        },
+      });
+
+      expect(await findApiKeyIdsOfRole(adminRoleId)).not.toContain(apiKeyId);
+    });
+  });
+
   describe('createApiKey mutation', () => {
     it('should create an API key successfully', async () => {
       const apiKeyInput = {
@@ -131,7 +232,7 @@ describe('apiKeysResolver (e2e)', () => {
         roleId: adminRoleId,
       };
 
-      const response = await makeMetadataAPIRequest({
+      const response = await makeMetadataApiRequest({
         query: gql`
           mutation CreateApiKey($input: CreateApiKeyInput!) {
             createApiKey(input: $input) {
@@ -176,7 +277,7 @@ describe('apiKeysResolver (e2e)', () => {
         roleId: adminRoleId,
       };
 
-      const response = await makeMetadataAPIRequest({
+      const response = await makeMetadataApiRequest({
         query: gql`
           mutation CreateApiKey($input: CreateApiKeyInput!) {
             createApiKey(input: $input) {
@@ -201,7 +302,7 @@ describe('apiKeysResolver (e2e)', () => {
 
   describe('updateApiKey mutation', () => {
     it('should update an API key successfully', async () => {
-      const createResponse = await makeMetadataAPIRequest({
+      const createResponse = await makeMetadataApiRequest({
         query: gql`
           mutation CreateApiKey($input: CreateApiKeyInput!) {
             createApiKey(input: $input) {
@@ -235,7 +336,7 @@ describe('apiKeysResolver (e2e)', () => {
         expiresAt: '2026-01-01T00:00:00Z',
       };
 
-      const updateResponse = await makeMetadataAPIRequest({
+      const updateResponse = await makeMetadataApiRequest({
         query: gql`
           mutation UpdateApiKey($input: UpdateApiKeyInput!) {
             updateApiKey(input: $input) {
@@ -273,7 +374,7 @@ describe('apiKeysResolver (e2e)', () => {
     it('should not reactivate a revoked API key', async () => {
       const apiKeyId = await createRevokedApiKey('Test API Key to Reactivate');
 
-      const updateResponse = await makeMetadataAPIRequest({
+      const updateResponse = await makeMetadataApiRequest({
         query: gql`
           mutation UpdateApiKey($input: UpdateApiKeyInput!) {
             updateApiKey(input: $input) {
@@ -300,7 +401,7 @@ describe('apiKeysResolver (e2e)', () => {
     it('should rename a revoked API key without reactivating it', async () => {
       const apiKeyId = await createRevokedApiKey('Test API Key to Rename');
 
-      const updateResponse = await makeMetadataAPIRequest({
+      const updateResponse = await makeMetadataApiRequest({
         query: gql`
           mutation UpdateApiKey($input: UpdateApiKeyInput!) {
             updateApiKey(input: $input) {
@@ -330,7 +431,7 @@ describe('apiKeysResolver (e2e)', () => {
         'Test API Key to Reactivate via REST',
       );
 
-      const response = await makeRestAPIRequest({
+      const response = await makeRestApiRequest({
         method: 'patch',
         path: `/metadata/apiKeys/${apiKeyId}`,
         bearer: APPLE_JANE_ADMIN_ACCESS_TOKEN,
@@ -345,7 +446,7 @@ describe('apiKeysResolver (e2e)', () => {
 
   describe('apiKey query', () => {
     it('should find a specific API key', async () => {
-      const createResponse = await makeMetadataAPIRequest({
+      const createResponse = await makeMetadataApiRequest({
         query: gql`
           mutation CreateApiKey($input: CreateApiKeyInput!) {
             createApiKey(input: $input) {
@@ -373,7 +474,7 @@ describe('apiKeysResolver (e2e)', () => {
 
       createdApiKeyId = createdApiKey.id;
 
-      const apiKeyResponse = await makeMetadataAPIRequest({
+      const apiKeyResponse = await makeMetadataApiRequest({
         query: gql`
           query GetApiKey($input: GetApiKeyInput!) {
             apiKey(input: $input) {
@@ -409,7 +510,7 @@ describe('apiKeysResolver (e2e)', () => {
 
   describe('revokeApiKey mutation', () => {
     it('should revoke an API key successfully', async () => {
-      const createResponse = await makeMetadataAPIRequest({
+      const createResponse = await makeMetadataApiRequest({
         query: gql`
           mutation CreateApiKey($input: CreateApiKeyInput!) {
             createApiKey(input: $input) {
@@ -437,7 +538,7 @@ describe('apiKeysResolver (e2e)', () => {
 
       createdApiKeyId = createdApiKey.id;
 
-      const revokeResponse = await makeMetadataAPIRequest({
+      const revokeResponse = await makeMetadataApiRequest({
         query: gql`
           mutation RevokeApiKey($input: RevokeApiKeyInput!) {
             revokeApiKey(input: $input) {

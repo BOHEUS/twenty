@@ -1,7 +1,7 @@
 import { styled } from '@linaria/react';
 
 import { RECORD_TABLE_COLUMN_CHECKBOX_WIDTH } from '@/object-record/record-table/constants/RecordTableColumnCheckboxWidth';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 import { RECORD_TABLE_COLUMN_CHECKBOX_WIDTH_CLASS_NAME } from '@/object-record/record-table/constants/RecordTableColumnCheckboxWidthClassName';
 import { RECORD_TABLE_ROW_HEIGHT } from '@/object-record/record-table/constants/RecordTableRowHeight';
 import { useRecordTableBodyContextOrThrow } from '@/object-record/record-table/contexts/RecordTableBodyContext';
@@ -20,16 +20,16 @@ const StyledContainer = styled.div`
 `;
 
 export const RecordTableCellCheckboxPlaceholder = () => {
-  const { hasUserSelectedAllRows } = useRecordTableBodyContextOrThrow();
+  const { hasUserSelectedAllRecords } = useRecordTableBodyContextOrThrow();
 
   return (
     <RecordTableCellStyleWrapper
-      isSelected={hasUserSelectedAllRows}
+      isSelected={hasUserSelectedAllRecords}
       hasRightBorder={false}
       widthClassName={RECORD_TABLE_COLUMN_CHECKBOX_WIDTH_CLASS_NAME}
     >
       <StyledContainer data-select-disable>
-        <Checkbox hoverable checked={hasUserSelectedAllRows === true} />
+        <Checkbox hoverable checked={hasUserSelectedAllRecords === true} />
       </StyledContainer>
     </RecordTableCellStyleWrapper>
   );

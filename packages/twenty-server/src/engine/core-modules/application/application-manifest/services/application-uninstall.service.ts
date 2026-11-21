@@ -16,6 +16,8 @@ import {
 } from 'src/engine/core-modules/application/application-manifest/utils/build-workspace-uninstall-hook-payload.util';
 import { isApplicationUninstallHookPending } from 'src/engine/core-modules/application/utils/is-application-uninstall-hook-pending.util';
 import { LogicFunctionExecutorService } from 'src/engine/core-modules/logic-function/logic-function-executor/logic-function-executor.service';
+import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
+import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 
 type ApplicationForUninstallHook = Pick<
   ApplicationEntity,
@@ -31,8 +33,13 @@ export class ApplicationUninstallService {
   private readonly logger = new Logger(ApplicationUninstallService.name);
 
   constructor(
+    @InjectWorkspaceScopedRepository(ApplicationEntity)
+    private readonly applicationRepository: WorkspaceScopedRepository<ApplicationEntity>,
+    // Sweeps every workspace with a pending uninstall request in one query,
+    // so it filters on In(workspaceIds) rather than one request workspace.
+    // eslint-disable-next-line twenty/prefer-workspace-scoped-repository
     @InjectRepository(ApplicationEntity)
-    private readonly applicationRepository: Repository<ApplicationEntity>,
+    private readonly unscopedApplicationRepository: Repository<ApplicationEntity>,
     private readonly applicationService: ApplicationService,
     private readonly logicFunctionExecutorService: LogicFunctionExecutorService,
   ) {}
@@ -53,14 +60,25 @@ export class ApplicationUninstallService {
 
     for (const application of pendingApplications) {
       try {
-        await this.runUninstallHookForWorkspaceDeletion({
-          application,
+        const hookErrorMessage =
+          await this.runUninstallHookForWorkspaceDeletion({
+            application,
+            workspaceId,
+            workspaceDeletedAt,
+          });
+
+        if (isDefined(hookErrorMessage)) {
+          this.logger.warn(
+            `workspace-deletion uninstall hook failed: ${application.universalIdentifier}: ${hookErrorMessage}`,
+          );
+          continue;
+        }
+
+        await this.applicationRepository.update(
           workspaceId,
-          workspaceDeletedAt,
-        });
-        await this.applicationRepository.update(application.id, {
-          uninstallHookCompletedForRequestedAt: workspaceDeletedAt,
-        });
+          { id: application.id },
+          { uninstallHookCompletedForRequestedAt: workspaceDeletedAt },
+        );
       } catch (error) {
         const applicationUninstallHookFailure = `${application.universalIdentifier}: ${error instanceof Error ? error.message : String(error)}`;
 
@@ -108,7 +126,7 @@ export class ApplicationUninstallService {
       return new Set();
     }
 
-    const applications = await this.applicationRepository.find({
+    const applications = await this.unscopedApplicationRepository.find({
       select: [
         'workspaceId',
         'uninstallLogicFunctionId',
@@ -152,11 +170,17 @@ export class ApplicationUninstallService {
     workspaceId: string;
   }): Promise<void> {
     try {
-      await this.runUninstallHook({
+      const hookErrorMessage = await this.runUninstallHook({
         application,
         workspaceId,
         payload: { version: application.version ?? undefined },
       });
+
+      if (isDefined(hookErrorMessage)) {
+        this.logger.warn(
+          `Uninstall hook failed for application ${application.universalIdentifier}: ${hookErrorMessage}`,
+        );
+      }
     } catch (error) {
       this.logger.warn(
         `Uninstall hook failed for application ${application.universalIdentifier}: ${error instanceof Error ? error.message : String(error)}`,
@@ -172,8 +196,8 @@ export class ApplicationUninstallService {
     application: ApplicationForUninstallHook;
     workspaceId: string;
     workspaceDeletedAt: Date;
-  }): Promise<void> {
-    await this.runUninstallHook({
+  }): Promise<string | undefined> {
+    return this.runUninstallHook({
       application,
       workspaceId,
       workspaceDeletionRequestTimestamp: workspaceDeletedAt.toISOString(),
@@ -196,9 +220,9 @@ export class ApplicationUninstallService {
     workspaceId: string;
     payload: UninstallHookPayload;
     workspaceDeletionRequestTimestamp?: string;
-  }): Promise<void> {
+  }): Promise<string | undefined> {
     if (!isDefined(application.uninstallLogicFunctionId)) {
-      return;
+      return undefined;
     }
 
     this.logger.log(
@@ -210,16 +234,13 @@ export class ApplicationUninstallService {
         logicFunctionId: application.uninstallLogicFunctionId,
         workspaceId,
         payload,
+        shouldEnforceUsageLimits: false,
+        shouldRefuseSuspendedWorkspace: false,
         ...(isDefined(workspaceDeletionRequestTimestamp)
           ? { workspaceDeletionRequestTimestamp }
           : {}),
       });
 
-    if (isDefined(logicFunctionExecutionResult.error)) {
-      throw new ApplicationException(
-        logicFunctionExecutionResult.error.errorMessage,
-        ApplicationExceptionCode.UNINSTALL_ERROR,
-      );
-    }
+    return logicFunctionExecutionResult.error?.errorMessage;
   }
 }

@@ -4,15 +4,14 @@ import { SettingsAdminWorkerMetricsTooltip } from '@/settings/admin-panel/health
 import { SettingsTableCard } from '@/settings/components/SettingsTableCard';
 import { useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { ResponsiveLine } from '@nivo/line';
-import { useContext } from 'react';
-import { isDefined } from 'twenty-shared/utils';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { capitalize, isDefined } from 'twenty-shared/utils';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 import {
   GetQueueMetricsDocument,
   QueueMetricsTimeRange,
 } from '~/generated-admin/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledGraphContainer = styled.div`
   background-color: ${themeCssVariables.background.secondary};
@@ -32,11 +31,9 @@ const StyledNoDataMessage = styled.div`
   justify-content: center;
 `;
 
-const StyledSettingsTableCardContainer = styled.div`
-  > * {
-    padding-left: ${themeCssVariables.spacing[2]};
-    padding-right: ${themeCssVariables.spacing[2]};
-  }
+const StyledSettingsTableCard = styled(SettingsTableCard)`
+  padding-left: ${themeCssVariables.spacing[2]};
+  padding-right: ${themeCssVariables.spacing[2]};
 `;
 
 type SettingsAdminWorkerMetricsGraphProps = {
@@ -49,8 +46,9 @@ export const SettingsAdminWorkerMetricsGraph = ({
   queueName,
   timeRange,
 }: SettingsAdminWorkerMetricsGraphProps) => {
+  const { t } = useLingui();
   const apolloAdminClient = useApolloAdminClient();
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
 
   const { loading, data, error } = useQuery(GetQueueMetricsDocument, {
     client: apolloAdminClient,
@@ -72,7 +70,9 @@ export const SettingsAdminWorkerMetricsGraph = ({
   };
 
   const getMaxYValue = () => {
-    if (!hasData) return 2;
+    if (!hasData) {
+      return 2;
+    }
 
     let maxValue = 0;
     metricsData.forEach((series) => {
@@ -202,25 +202,22 @@ export const SettingsAdminWorkerMetricsGraph = ({
         )}
       </StyledGraphContainer>
       {isDefined(metricsDetails) && (
-        <StyledSettingsTableCardContainer>
-          <SettingsTableCard
-            rounded
-            items={Object.entries(metricsDetails)
-              .filter(([key]) => key !== '__typename')
-              .map(([key, value]) => ({
-                label: key.charAt(0).toUpperCase() + key.slice(1),
-                value:
-                  typeof value === 'number'
-                    ? value
-                    : Array.isArray(value)
-                      ? value.length
-                      : String(value),
-              }))}
-            gridAutoColumns="1fr 1fr"
-            labelAlign="left"
-            valueAlign="right"
-          />
-        </StyledSettingsTableCardContainer>
+        <StyledSettingsTableCard
+          items={Object.entries(metricsDetails)
+            .filter(([key]) => key !== '__typename')
+            .map(([key, value]) => ({
+              label: capitalize(key),
+              value:
+                typeof value === 'number'
+                  ? value
+                  : Array.isArray(value)
+                    ? value.length
+                    : String(value),
+            }))}
+          gridAutoColumns="1fr 1fr"
+          labelAlign="left"
+          valueAlign="right"
+        />
       )}
     </>
   );

@@ -1,7 +1,6 @@
 import { styled } from '@linaria/react';
-import { useContext } from 'react';
 import { Avatar } from 'twenty-ui/primitives/data-display';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { USAGE_LIMIT_SPENDER_TYPE_ICONS } from '@/settings/billing/constants/UsageLimitSpenderTypeIcons';
@@ -9,6 +8,7 @@ import { type UsageLimitRow } from '@/settings/billing/types/UsageLimitRow';
 import { isKeyOfRecord } from '@/settings/billing/utils/isKeyOfRecord';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
+import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 
 const StyledContainer = styled.div`
@@ -37,7 +37,7 @@ type SettingsBillingLimitSpenderCellProps = {
 export const SettingsBillingLimitSpenderCell = ({
   row,
 }: SettingsBillingLimitSpenderCellProps) => {
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const currentWorkspace = useAtomStateValue(currentWorkspaceState);
 
   const isWorkspaceWide = row.spenderType === 'workspace';
@@ -54,7 +54,8 @@ export const SettingsBillingLimitSpenderCell = ({
     if (isWorkspaceWide) {
       return (
         <Avatar
-          name={name}
+          name={currentWorkspace?.displayName ?? ''}
+          colorSeed={getWorkspaceAvatarColorSeed(currentWorkspace?.displayName)}
           src={getAbsoluteImageUrl(
             currentWorkspace?.logo ?? DEFAULT_WORKSPACE_LOGO,
           )}

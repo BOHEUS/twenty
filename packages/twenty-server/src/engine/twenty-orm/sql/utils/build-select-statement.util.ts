@@ -6,16 +6,41 @@ import { RelationType } from 'src/engine/metadata-modules/field-metadata/interfa
 import { escapeIdentifier } from 'src/engine/workspace-manager/workspace-migration/utils/remove-sql-injection.util';
 import { buildColumnResultAlias } from 'src/engine/twenty-orm/sql/utils/build-column-result-alias.util';
 import {
+  buildUnreadableColumnReplacements,
+  type UnreadableColumnReplacements,
+} from 'src/engine/twenty-orm/sql/utils/build-unreadable-column-replacements.util';
+import { findUnreadableColumnConditions } from 'src/engine/twenty-orm/sql/utils/find-unreadable-column-conditions.util';
+import { renderReadableCondition } from 'src/engine/twenty-orm/sql/utils/render-readable-condition.util';
+import { renderUnreadableAwareCondition } from 'src/engine/twenty-orm/sql/utils/render-unreadable-aware-condition.util';
+import { escapeRegularExpression } from 'src/engine/twenty-orm/sql/utils/escape-regular-expression.util';
+import { replaceUnreadableColumnReferences } from 'src/engine/twenty-orm/sql/utils/replace-unreadable-column-references.util';
+import { renderUnreadableColumn } from 'src/engine/twenty-orm/sql/utils/render-unreadable-column.util';
+import {
   TwentyOrmException,
   TwentyOrmExceptionCode,
 } from 'src/engine/twenty-orm/exceptions/twenty-orm.exception';
 import { type FindOptionsLike } from 'src/engine/twenty-orm/query-builder/types/query-builder.type';
 import { type WorkspaceTableShape } from 'src/engine/twenty-orm/table-shape/types/workspace-table-shape.type';
 
-export type WhereClause = {
+export type WhereConditionClause = {
   operator: 'and' | 'or';
   sql: string;
+  shouldReadUnreadableColumnsAsNull?: boolean;
 };
+
+export type WhereGroupClause = {
+  operator: 'and' | 'or';
+  isNegated: boolean;
+  clauses: WhereClause[];
+  shouldReadUnreadableColumnsAsNull?: boolean;
+};
+
+type RenderWhereCondition = (args: {
+  condition: string;
+  shouldReadUnreadableColumnsAsNull: boolean;
+}) => string;
+
+export type WhereClause = WhereConditionClause | WhereGroupClause;
 
 export type JoinClause = {
   alias: string;
@@ -45,7 +70,7 @@ export type ExistsFilterClause = {
   relationFieldName: string;
   targetTableShape: WorkspaceTableShape;
   correlationCondition: string;
-  conditionSql: string;
+  conditionClauses: WhereClause[];
   additionalOnConditions: string[];
 };
 
@@ -65,6 +90,11 @@ export type OrderByClause = {
   nulls?: 'NULLS FIRST' | 'NULLS LAST';
 };
 
+export type UnreadableColumnConditions = Record<
+  string,
+  Record<string, string[]>
+>;
+
 export type SelectStatementState = {
   alias: string;
   tableShape: WorkspaceTableShape;
@@ -72,8 +102,10 @@ export type SelectStatementState = {
   explicitSelection?: string[];
   extraSelectClauses: SelectClause[];
   columnSelections: ColumnSelection[];
+  unreadableColumnConditions: UnreadableColumnConditions;
   joinClauses: JoinClause[];
   whereClauses: WhereClause[];
+  rowAccessConditions: string[];
   existsFilterClauses: ExistsFilterClause[];
   groupByExpressions: string[];
   orderByClauses: OrderByClause[];
@@ -82,10 +114,40 @@ export type SelectStatementState = {
   allowPlainToManyJoins: boolean;
   limitValue?: number;
   offsetValue?: number;
+  isLockedForUpdate?: boolean;
 };
 
 export const quoteColumn = (alias: string, columnName: string): string =>
   `${escapeIdentifier(alias)}.${escapeIdentifier(columnName)}`;
+
+const PLAIN_COLUMN_EXPRESSION = /^"?(\w+)"?\."?(\w+)"?$/;
+
+const renderProjectedColumn = ({
+  state,
+  alias,
+  columnName,
+}: {
+  state: Pick<
+    SelectStatementState,
+    'unreadableColumnConditions' | 'groupByExpressions'
+  >;
+  alias: string;
+  columnName: string;
+}): string => {
+  const quotedColumn = quoteColumn(alias, columnName);
+  const unreadableConditions =
+    state.unreadableColumnConditions[alias]?.[columnName];
+
+  if (!isDefined(unreadableConditions)) {
+    return quotedColumn;
+  }
+
+  if (state.groupByExpressions.length > 0) {
+    return `(${renderUnreadableColumn({ quotedColumn, unreadableConditions })})`;
+  }
+
+  return renderUnreadableColumn({ quotedColumn, unreadableConditions });
+};
 
 export const normaliseColumnExpression = (
   expression: string,
@@ -114,7 +176,7 @@ const quoteQualifiedAliasReferencesInSegment = (
     (quotedSegment, alias) =>
       quotedSegment.replace(
         new RegExp(
-          `(?<![\\w".:])${alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.(\\w+)`,
+          `(?<![\\w".:])${escapeRegularExpression(alias)}\\.(\\w+)`,
           'g',
         ),
         (_, columnName) => quoteColumn(alias, columnName),
@@ -134,6 +196,20 @@ export const quoteQualifiedAliasReferences = (
         : quoteQualifiedAliasReferencesInSegment(segment, aliases),
     )
     .join('');
+
+const replaceUnreadableColumnsInExpression = ({
+  expression,
+  aliases,
+  unreadableColumnReplacements,
+}: {
+  expression: string;
+  aliases: string[];
+  unreadableColumnReplacements: UnreadableColumnReplacements | undefined;
+}): string =>
+  replaceUnreadableColumnReferences({
+    expression: quoteQualifiedAliasReferences(expression, aliases),
+    unreadableColumnReplacements,
+  });
 
 export const collectStatementAliases = (
   state: SelectStatementState,
@@ -242,7 +318,7 @@ export const buildProjection = (
 
   const expressions = mainAliasColumnNames.map(
     (columnName) =>
-      `${quoteColumn(state.alias, columnName)} AS ${escapeIdentifier(
+      `${renderProjectedColumn({ state, alias: state.alias, columnName })} AS ${escapeIdentifier(
         buildColumnResultAlias(state.alias, columnName),
       )}`,
   );
@@ -259,7 +335,11 @@ export const buildProjection = (
 
     projectedMainColumnNames.add(columnSelection.columnName);
     expressions.push(
-      `${quoteColumn(state.alias, columnSelection.columnName)} AS ${escapeIdentifier(
+      `${renderProjectedColumn({
+        state,
+        alias: state.alias,
+        columnName: columnSelection.columnName,
+      })} AS ${escapeIdentifier(
         buildColumnResultAlias(state.alias, columnSelection.columnName),
       )}`,
     );
@@ -267,49 +347,200 @@ export const buildProjection = (
 
   for (const joinedProjection of collectJoinedColumnProjections(state)) {
     expressions.push(
-      `${quoteColumn(
-        joinedProjection.joinAlias,
-        joinedProjection.columnName,
-      )} AS ${escapeIdentifier(joinedProjection.resultAlias)}`,
+      `${renderProjectedColumn({
+        state,
+        alias: joinedProjection.joinAlias,
+        columnName: joinedProjection.columnName,
+      })} AS ${escapeIdentifier(joinedProjection.resultAlias)}`,
     );
   }
 
   const aliases = collectStatementAliases(state);
+  const unreadableColumnReplacements = buildUnreadableColumnReplacements(
+    state.unreadableColumnConditions,
+  );
 
   for (const extraSelect of state.extraSelectClauses) {
-    expressions.push(
-      `${quoteQualifiedAliasReferences(
-        extraSelect.expression,
-        aliases,
-      )} AS ${escapeIdentifier(extraSelect.alias)}`,
-    );
+    const plainColumn = extraSelect.expression.match(PLAIN_COLUMN_EXPRESSION);
+    const expression = isDefined(plainColumn)
+      ? renderProjectedColumn({
+          state,
+          alias: plainColumn[1],
+          columnName: plainColumn[2],
+        })
+      : replaceUnreadableColumnsInExpression({
+          expression: extraSelect.expression,
+          aliases,
+          unreadableColumnReplacements,
+        });
+
+    expressions.push(`${expression} AS ${escapeIdentifier(extraSelect.alias)}`);
   }
 
   return { expressions, mainAliasColumnNames };
 };
 
-export const renderUserWhereExpression = (
-  whereClauses: WhereClause[],
-): string =>
+const renderWhereClause = ({
+  whereClause,
+  renderCondition,
+  shouldReadUnreadableColumnsAsNull,
+}: {
+  whereClause: WhereClause;
+  renderCondition: RenderWhereCondition;
+  shouldReadUnreadableColumnsAsNull: boolean;
+}): string => {
+  const shouldReadClauseUnreadableColumnsAsNull =
+    shouldReadUnreadableColumnsAsNull ||
+    (whereClause.shouldReadUnreadableColumnsAsNull ?? false);
+
+  if ('sql' in whereClause) {
+    return renderCondition({
+      condition: whereClause.sql,
+      shouldReadUnreadableColumnsAsNull:
+        shouldReadClauseUnreadableColumnsAsNull,
+    });
+  }
+
+  const groupExpression = renderUserWhereExpression({
+    whereClauses: whereClause.clauses,
+    renderCondition,
+    shouldReadUnreadableColumnsAsNull: shouldReadClauseUnreadableColumnsAsNull,
+  });
+
+  return whereClause.isNegated
+    ? `NOT (${groupExpression})`
+    : `(${groupExpression})`;
+};
+
+const renderUserWhereExpression = ({
+  whereClauses,
+  renderCondition = ({ condition }) => condition,
+  shouldReadUnreadableColumnsAsNull = false,
+}: {
+  whereClauses: WhereClause[];
+  renderCondition?: RenderWhereCondition;
+  shouldReadUnreadableColumnsAsNull?: boolean;
+}): string =>
   whereClauses
-    .map((clause, index) =>
-      index === 0
-        ? clause.sql
-        : `${clause.operator.toUpperCase()} ${clause.sql}`,
+    .filter(
+      (whereClause) => 'sql' in whereClause || whereClause.clauses.length > 0,
     )
+    .map((whereClause, index) => {
+      const renderedClause = renderWhereClause({
+        whereClause,
+        renderCondition,
+        shouldReadUnreadableColumnsAsNull,
+      });
+
+      return index === 0
+        ? renderedClause
+        : `${whereClause.operator.toUpperCase()} ${renderedClause}`;
+    })
     .join(' ');
 
-const renderExistsFilter = (
-  existsFilterClause: ExistsFilterClause,
-  includeDeleted: boolean,
-): string => {
+const renderReadableWhereCondition = ({
+  condition,
+  shouldReadUnreadableColumnsAsNull,
+  aliases,
+  unreadableColumnReplacements,
+  unreadableColumnConditions,
+}: {
+  condition: string;
+  shouldReadUnreadableColumnsAsNull: boolean;
+  aliases: string[];
+  unreadableColumnReplacements: UnreadableColumnReplacements | undefined;
+  unreadableColumnConditions: UnreadableColumnConditions;
+}): string => {
+  const quotedCondition = quoteQualifiedAliasReferences(condition, aliases);
+  const conditionWithReplacements = replaceUnreadableColumnReferences({
+    expression: quotedCondition,
+    unreadableColumnReplacements,
+  });
+
+  if (shouldReadUnreadableColumnsAsNull) {
+    return conditionWithReplacements;
+  }
+
+  return renderUnreadableAwareCondition({
+    condition: conditionWithReplacements,
+    unreadableConditions: findUnreadableColumnConditions({
+      expressions: [quotedCondition],
+      unreadableColumnConditions,
+      aliases,
+    }),
+  });
+};
+
+// Row access conditions stay outside the user expression so an OR in it can
+// never bypass them
+export const renderWhereExpressionWithRowAccess = ({
+  whereClauses,
+  rowAccessConditions,
+  renderCondition,
+}: {
+  whereClauses: WhereClause[];
+  rowAccessConditions: string[];
+  renderCondition?: RenderWhereCondition;
+}): string => {
+  const userExpression = renderUserWhereExpression({
+    whereClauses,
+    renderCondition,
+  });
+
+  if (rowAccessConditions.length === 0) {
+    return userExpression;
+  }
+
+  const rowAccessExpression = rowAccessConditions
+    .map((rowAccessCondition) => `(${rowAccessCondition})`)
+    .join(' AND ');
+
+  return userExpression.length > 0
+    ? `(${userExpression}) AND ${rowAccessExpression}`
+    : rowAccessExpression;
+};
+
+const renderExistsFilter = ({
+  existsFilterClause,
+  includeDeleted,
+  unreadableColumnConditions,
+  unreadableColumnReplacements,
+}: {
+  existsFilterClause: Pick<
+    ExistsFilterClause,
+    | 'alias'
+    | 'targetTableShape'
+    | 'correlationCondition'
+    | 'additionalOnConditions'
+    | 'conditionClauses'
+  >;
+  includeDeleted: boolean;
+  unreadableColumnConditions: UnreadableColumnConditions;
+  unreadableColumnReplacements: UnreadableColumnReplacements | undefined;
+}): string => {
   const conditions = [
     existsFilterClause.correlationCondition,
     ...existsFilterClause.additionalOnConditions,
   ];
 
-  if (existsFilterClause.conditionSql.length > 0) {
-    conditions.push(existsFilterClause.conditionSql);
+  const conditionExpression = renderUserWhereExpression({
+    whereClauses: existsFilterClause.conditionClauses,
+    renderCondition: ({ condition, shouldReadUnreadableColumnsAsNull }) =>
+      renderReadableWhereCondition({
+        condition,
+        shouldReadUnreadableColumnsAsNull,
+        aliases: [existsFilterClause.alias],
+        unreadableColumnReplacements,
+        unreadableColumnConditions,
+      }),
+  });
+
+  if (conditionExpression.length > 0) {
+    conditions.push(
+      existsFilterClause.conditionClauses.length > 1
+        ? `(${conditionExpression})`
+        : conditionExpression,
+    );
   }
 
   if (
@@ -334,18 +565,30 @@ export const substituteExistsFilterTokens = ({
   expression,
   existsFilterClauses,
   includeDeleted,
+  unreadableColumnConditions = {},
 }: {
   expression: string;
   existsFilterClauses: ExistsFilterClause[];
   includeDeleted: boolean;
-}): string =>
-  existsFilterClauses.reduce(
+  unreadableColumnConditions?: UnreadableColumnConditions;
+}): string => {
+  const unreadableColumnReplacements = buildUnreadableColumnReplacements(
+    unreadableColumnConditions,
+  );
+
+  return existsFilterClauses.reduce(
     (substituted, existsFilterClause) =>
-      substituted
-        .split(existsFilterClause.token)
-        .join(renderExistsFilter(existsFilterClause, includeDeleted)),
+      substituted.split(existsFilterClause.token).join(
+        renderExistsFilter({
+          existsFilterClause,
+          includeDeleted,
+          unreadableColumnConditions,
+          unreadableColumnReplacements,
+        }),
+      ),
     expression,
   );
+};
 
 export const buildWhereExpression = (
   state: SelectStatementState,
@@ -357,18 +600,45 @@ export const buildWhereExpression = (
     substituteExistsFilters?: boolean;
   } = {},
 ): string => {
-  const renderedWhereClauses = quoteQualifiedAliasReferences(
-    renderUserWhereExpression(state.whereClauses),
-    collectStatementAliases(state),
+  const aliases = collectStatementAliases(state);
+  const unreadableColumnReplacements = buildUnreadableColumnReplacements(
+    state.unreadableColumnConditions,
+  );
+  const renderedWhereExpression = quoteQualifiedAliasReferences(
+    renderWhereExpressionWithRowAccess({
+      whereClauses: state.whereClauses,
+      renderCondition: ({ condition, shouldReadUnreadableColumnsAsNull }) =>
+        renderReadableWhereCondition({
+          condition,
+          shouldReadUnreadableColumnsAsNull,
+          aliases,
+          unreadableColumnReplacements,
+          unreadableColumnConditions: state.unreadableColumnConditions,
+        }),
+      rowAccessConditions: [
+        ...state.rowAccessConditions,
+        renderReadableCondition(
+          findUnreadableColumnConditions({
+            expressions: state.groupByExpressions.map((expression) =>
+              quoteQualifiedAliasReferences(expression, aliases),
+            ),
+            unreadableColumnConditions: state.unreadableColumnConditions,
+            aliases,
+          }),
+        ),
+      ].filter(isDefined),
+    }),
+    aliases,
   );
 
-  const userExpression = substituteExistsFilters
+  const filterExpression = substituteExistsFilters
     ? substituteExistsFilterTokens({
-        expression: renderedWhereClauses,
+        expression: renderedWhereExpression,
         existsFilterClauses: state.existsFilterClauses,
         includeDeleted: state.includeDeleted,
+        unreadableColumnConditions: state.unreadableColumnConditions,
       })
-    : renderedWhereClauses;
+    : renderedWhereExpression;
 
   const shouldAddSoftDeletePredicate =
     includeSoftDeletePredicate &&
@@ -376,16 +646,16 @@ export const buildWhereExpression = (
     state.tableShape.hasDeletedAtColumn;
 
   if (!shouldAddSoftDeletePredicate) {
-    return userExpression;
+    return filterExpression;
   }
 
   const softDeletePredicate = `${quoteColumn(state.alias, 'deletedAt')} IS NULL`;
 
-  if (userExpression.length === 0) {
+  if (filterExpression.length === 0) {
     return softDeletePredicate;
   }
 
-  return `(${userExpression}) AND ${softDeletePredicate}`;
+  return `(${filterExpression}) AND ${softDeletePredicate}`;
 };
 
 export const buildFromClause = (state: SelectStatementState): string =>
@@ -477,12 +747,36 @@ export const buildJoinClause = (state: SelectStatementState): string =>
     })
     .join(' ');
 
+const replaceUnreadableColumnsInStatementExpressions = ({
+  state,
+  expressions,
+}: {
+  state: SelectStatementState;
+  expressions: string[];
+}): string[] => {
+  const aliases = collectStatementAliases(state);
+  const unreadableColumnReplacements = buildUnreadableColumnReplacements(
+    state.unreadableColumnConditions,
+  );
+
+  return expressions.map((expression) =>
+    replaceUnreadableColumnsInExpression({
+      expression,
+      aliases,
+      unreadableColumnReplacements,
+    }),
+  );
+};
+
 export const buildGroupByClause = (state: SelectStatementState): string => {
   if (state.groupByExpressions.length === 0) {
     return '';
   }
 
-  return `GROUP BY ${state.groupByExpressions.join(', ')}`;
+  return `GROUP BY ${replaceUnreadableColumnsInStatementExpressions({
+    state,
+    expressions: state.groupByExpressions,
+  }).join(', ')}`;
 };
 
 export const buildOrderByClause = (state: SelectStatementState): string => {
@@ -490,14 +784,16 @@ export const buildOrderByClause = (state: SelectStatementState): string => {
     return '';
   }
 
-  const aliases = collectStatementAliases(state);
+  const expressionsWithReplacements =
+    replaceUnreadableColumnsInStatementExpressions({
+      state,
+      expressions: state.orderByClauses.map(({ expression }) => expression),
+    });
 
   return `ORDER BY ${state.orderByClauses
     .map(
-      (orderByClause) =>
-        `${quoteQualifiedAliasReferences(orderByClause.expression, aliases)} ${
-          orderByClause.direction
-        }${isDefined(orderByClause.nulls) ? ` ${orderByClause.nulls}` : ''}`,
+      (orderByClause, index) =>
+        `${expressionsWithReplacements[index]} ${orderByClause.direction}${isDefined(orderByClause.nulls) ? ` ${orderByClause.nulls}` : ''}`,
     )
     .join(', ')}`;
 };
@@ -526,11 +822,10 @@ const buildDistinctOnClause = (state: SelectStatementState): string => {
     return '';
   }
 
-  const aliases = collectStatementAliases(state);
-
-  return `DISTINCT ON (${state.distinctOnExpressions
-    .map((expression) => quoteQualifiedAliasReferences(expression, aliases))
-    .join(', ')}) `;
+  return `DISTINCT ON (${replaceUnreadableColumnsInStatementExpressions({
+    state,
+    expressions: state.distinctOnExpressions,
+  }).join(', ')}) `;
 };
 
 export const buildSelectStatement = (state: SelectStatementState): string => {
@@ -545,6 +840,9 @@ export const buildSelectStatement = (state: SelectStatementState): string => {
     buildOrderByClause(state),
     isDefined(state.limitValue) ? `LIMIT :${LIMIT_PARAMETER_NAME}` : '',
     isDefined(state.offsetValue) ? `OFFSET :${OFFSET_PARAMETER_NAME}` : '',
+    state.isLockedForUpdate
+      ? `FOR UPDATE OF ${escapeIdentifier(state.alias)}`
+      : '',
   ]
     .filter((part) => part.length > 0)
     .join(' ');
@@ -610,42 +908,46 @@ const buildRelationValue = (leaves: RelationColumnLeaf[]): unknown => {
   return relationValue;
 };
 
-export const mapRowToEntity = <T extends ObjectLiteral>(
-  row: Record<string, unknown>,
+export const createRowToEntityMapper = <TRecord extends ObjectLiteral>(
   columnNameByResultAlias: Record<string, string>,
-): T => {
-  const entity: Record<string, unknown> = {};
-  const relationLeavesByProperty = new Map<string, RelationColumnLeaf[]>();
+): ((row: Record<string, unknown>) => TRecord) => {
+  const columns = Object.entries(columnNameByResultAlias).map(
+    ([resultAlias, propertyPath]) => {
+      const [propertyName, ...remainingSegments] = propertyPath.split('.');
 
-  for (const [resultAlias, propertyPath] of Object.entries(
-    columnNameByResultAlias,
-  )) {
-    if (!(resultAlias in row)) {
-      continue;
+      return { resultAlias, propertyName, remainingSegments };
+    },
+  );
+
+  return (row) => {
+    const entity: Record<string, unknown> = {};
+    const relationLeavesByProperty = new Map<string, RelationColumnLeaf[]>();
+
+    for (const { resultAlias, propertyName, remainingSegments } of columns) {
+      if (!(resultAlias in row)) {
+        continue;
+      }
+
+      if (remainingSegments.length === 0) {
+        entity[propertyName] = row[resultAlias];
+        continue;
+      }
+
+      const relationLeaves = relationLeavesByProperty.get(propertyName) ?? [];
+
+      relationLeaves.push({
+        propertySegments: remainingSegments,
+        value: row[resultAlias],
+      });
+      relationLeavesByProperty.set(propertyName, relationLeaves);
     }
 
-    const propertySegments = propertyPath.split('.');
-
-    if (propertySegments.length === 1) {
-      entity[propertyPath] = row[resultAlias];
-      continue;
+    for (const [relationProperty, relationLeaves] of relationLeavesByProperty) {
+      entity[relationProperty] = buildRelationValue(relationLeaves);
     }
 
-    const [relationProperty, ...remainingSegments] = propertySegments;
-    const relationLeaves = relationLeavesByProperty.get(relationProperty) ?? [];
-
-    relationLeaves.push({
-      propertySegments: remainingSegments,
-      value: row[resultAlias],
-    });
-    relationLeavesByProperty.set(relationProperty, relationLeaves);
-  }
-
-  for (const [relationProperty, relationLeaves] of relationLeavesByProperty) {
-    entity[relationProperty] = buildRelationValue(relationLeaves);
-  }
-
-  return entity as T;
+    return entity as TRecord;
+  };
 };
 
 export const buildColumnNameByResultAlias = (

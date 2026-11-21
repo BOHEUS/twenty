@@ -1,7 +1,7 @@
 import type { WorkflowRunStepStatus } from '@/workflow/types/Workflow';
 import { getWorkflowDiagramColors } from '@/workflow/workflow-diagram/utils/getWorkflowDiagramColors';
 import { styled } from '@linaria/react';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const TARGET_HANDLE_SPACING = 32;
 
@@ -48,7 +48,9 @@ const StyledNodeContainer = styled.div<{
     }};
 
     border-color: ${({ runStatus, selected, isConnectable }) => {
-      if (isConnectable === true) return themeCssVariables.color.blue;
+      if (isConnectable === true) {
+        return themeCssVariables.color.blue;
+      }
       const colors = getWorkflowDiagramColors({ runStatus });
       return selected
         ? colors.selected.borderColor

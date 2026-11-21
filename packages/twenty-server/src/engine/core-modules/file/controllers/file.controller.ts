@@ -28,21 +28,18 @@ import {
   FileExceptionCode,
 } from 'src/engine/core-modules/file/file.exception';
 import { FileApiExceptionFilter } from 'src/engine/core-modules/file/filters/file-api-exception.filter';
-import {
-  FileByIdGuard,
-  SupportedFileFolder,
-} from 'src/engine/core-modules/file/guards/file-by-id.guard';
+import { FileByIdGuard } from 'src/engine/core-modules/file/guards/file-by-id.guard';
 import { PUBLIC_ASSET_CACHE_CONTROL } from 'src/engine/core-modules/file/interfaces/file-folder.interface';
 import { FileService } from 'src/engine/core-modules/file/services/file.service';
-import { setFileResponseHeaders } from 'src/engine/core-modules/file/utils/set-file-response-headers.utils';
+import { SupportedFileFolder } from 'src/engine/core-modules/file/types/supported-file-folder.type';
+import { setFileResponseHeaders } from 'src/engine/core-modules/file/utils/set-file-response-headers.util';
 import { RecordExportWorkspaceService } from 'src/engine/core-modules/record-export/services/record-export.workspace-service';
 import { CustomPermissionGuard } from 'src/engine/guards/custom-permission.guard';
 import { JwtAuthGuard } from 'src/engine/guards/jwt-auth.guard';
 import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
 import { PublicEndpointGuard } from 'src/engine/guards/public-endpoint.guard';
-import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
-import { PermissionsRestApiExceptionFilter } from 'src/engine/metadata-modules/permissions/utils/permissions-rest-api-exception.filter';
+import { PermissionsRestApiExceptionFilter } from 'src/engine/permissions/utils/permissions-rest-api-exception.filter';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
 // workspaceId is bound onto the request by FileByIdGuard.
 type FileByIdRequest = Request & { workspaceId: string };
@@ -58,10 +55,7 @@ export class FileController {
     private readonly serverFileStorageService: ServerFileStorageService,
   ) {}
 
-  // Serves application registration assets (logo, gallery images) by their
-  // public folder path. These are instance-global marketplace resources, also
-  // displayed on the public OAuth authorize page, hence no auth token, unlike
-  // the workspace-scoped /file/:folder/:id.
+  // Instance-global marketplace assets, also shown on the public OAuth authorize page, hence no auth.
   @Get(
     `${ApiPath.Files}/application-registrations/:applicationRegistrationId/*path`,
   )
@@ -201,8 +195,20 @@ export class FileController {
   @Get(`${ApiPath.File}/${FileFolder.RecordExport}/:id`)
   @UseGuards(
     JwtAuthGuard,
-    WorkspaceAuthGuard,
-    UserAuthGuard,
+    AccessPolicyGuard({
+      authPrincipals: {
+        userSession: {
+          standard: true,
+          impersonated: true,
+          playground: true,
+          workspaceAgnostic: false,
+        },
+        apiKey: true,
+        oauthClient: { withUser: true, withoutUser: false },
+        application: { withUser: true, withoutUser: false },
+      },
+      requiredPermissionFlags: [],
+    }),
     CustomPermissionGuard,
   )
   @UseFilters(PermissionsRestApiExceptionFilter)

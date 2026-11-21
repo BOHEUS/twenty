@@ -15,6 +15,8 @@ export const fromFlatCommandMenuItemToCommandMenuItemDto = (
     id: effectiveFlatCommandMenuItem.id,
     workflowVersionId:
       effectiveFlatCommandMenuItem.workflowVersionId ?? undefined,
+    coreWorkflowVersionId:
+      effectiveFlatCommandMenuItem.coreWorkflowVersionId ?? undefined,
     frontComponentId:
       effectiveFlatCommandMenuItem.frontComponentId ?? undefined,
     engineComponentKey: effectiveFlatCommandMenuItem.engineComponentKey,
@@ -37,6 +39,8 @@ export const fromFlatCommandMenuItemToCommandMenuItemDto = (
       effectiveFlatCommandMenuItem.conditionalPinnedExpression ?? undefined,
     availabilityObjectMetadataId:
       effectiveFlatCommandMenuItem.availabilityObjectMetadataId ?? undefined,
+    availabilityCoreObjectName:
+      effectiveFlatCommandMenuItem.availabilityCoreObjectName ?? null,
     navigationTargetObjectMetadataId:
       effectiveFlatCommandMenuItem.navigationTargetObjectMetadataId ??
       undefined,

@@ -1,24 +1,19 @@
+import { useDebouncedSetAndPersistViewName } from '@/object-record/object-options-dropdown/hooks/useDebouncedSetAndPersistViewName';
+import { useObjectOptionsDropdown } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsDropdown';
 import { useUpdateObjectViewOptions } from '@/object-record/object-options-dropdown/hooks/useUpdateObjectViewOptions';
 import { IconPicker } from '@/ui/input/components/IconPicker';
 import { TextInput } from '@/ui/input/components/TextInput';
 import { DropdownMenuItemsContainer } from '@/ui/layout/dropdown/components/DropdownMenuItemsContainer';
-import { useHotkeysOnFocusedElement } from '@/ui/utilities/hotkey/hooks/useHotkeysOnFocusedElement';
 import { useAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useAtomComponentState';
-import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
 import { type View } from '@/views/types/View';
-import { useObjectOptionsDropdown } from '@/object-record/object-options-dropdown/hooks/useObjectOptionsDropdown';
-import { useUpdateViewFromCurrentState } from '@/views/view-picker/hooks/useUpdateViewFromCurrentState';
 import { viewPickerIsDirtyComponentState } from '@/views/view-picker/states/viewPickerIsDirtyComponentState';
-import { viewPickerIsPersistingComponentState } from '@/views/view-picker/states/viewPickerIsPersistingComponentState';
 import { viewPickerSelectedIconComponentState } from '@/views/view-picker/states/viewPickerSelectedIconComponentState';
 import { styled } from '@linaria/react';
-import { useContext, useEffect, useRef, useState } from 'react';
-import { Key } from 'ts-key-enum';
-import { useIcons } from 'twenty-ui/icon';
-import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/surfaces';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
-import { useDebouncedCallback } from 'use-debounce';
+import { useEffect, useRef, useState } from 'react';
+import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
+import { useIcons } from 'twenty-ui/icon/provider';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
 
 const StyledDropdownMenuIconAndNameContainer = styled.div`
   align-items: center;
@@ -54,54 +49,35 @@ const StyledMainText = styled.div`
 `;
 
 type ObjectOptionsDropdownMenuViewNameProps = {
-  currentView: View;
+  currentView: Pick<View, 'name' | 'icon' | 'key'>;
 };
 
 export const ObjectOptionsDropdownMenuViewName = ({
   currentView,
 }: ObjectOptionsDropdownMenuViewNameProps) => {
-  const { theme } = useContext(ThemeContext);
+  const theme = useTheme();
   const [viewPickerSelectedIcon, setViewPickerSelectedIcon] =
     useAtomComponentState(viewPickerSelectedIconComponentState);
 
-  const viewPickerIsPersisting = useAtomComponentStateValue(
-    viewPickerIsPersistingComponentState,
-  );
   const setViewPickerIsDirty = useSetAtomComponentState(
     viewPickerIsDirtyComponentState,
   );
 
-  const { setAndPersistViewName, setAndPersistViewIcon } =
-    useUpdateObjectViewOptions();
+  const { setAndPersistViewIcon } = useUpdateObjectViewOptions();
 
-  const { updateViewFromCurrentState } = useUpdateViewFromCurrentState();
   const [viewName, setViewName] = useState(currentView?.name);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const { dropdownId } = useObjectOptionsDropdown();
-
-  useHotkeysOnFocusedElement({
-    keys: [Key.Enter],
-    callback: async () => {
-      if (viewPickerIsPersisting) {
-        return;
-      }
-
-      await updateViewFromCurrentState();
-    },
+  const { debouncedSetAndPersistViewName } = useDebouncedSetAndPersistViewName({
     focusId: dropdownId,
-    dependencies: [viewPickerIsPersisting, updateViewFromCurrentState],
   });
 
   const handleIconChange = ({ iconKey }: { iconKey: string }) => {
     setViewPickerIsDirty(true);
     setViewPickerSelectedIcon(iconKey);
-    setAndPersistViewIcon(iconKey, currentView);
+    setAndPersistViewIcon(iconKey);
   };
-
-  const handleViewNameChange = useDebouncedCallback((value: string) => {
-    setAndPersistViewName(value, currentView);
-  }, 500);
 
   useEffect(() => {
     setViewPickerSelectedIcon(currentView.icon);
@@ -139,7 +115,7 @@ export const ObjectOptionsDropdownMenuViewName = ({
               value={viewName}
               onChange={(value) => {
                 setViewName(value);
-                handleViewNameChange(value);
+                debouncedSetAndPersistViewName(value);
               }}
               autoGrow={false}
               sizeVariant="sm"

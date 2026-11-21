@@ -17,6 +17,14 @@ const buildStep = (step: Partial<WorkflowAction> & { id: string }) =>
     ...step,
   }) as WorkflowAction;
 
+const BASE_SETTINGS = {
+  outputSchema: {},
+  errorHandlingOptions: {
+    continueOnFailure: { value: false },
+    retryOnFailure: { value: 0 },
+  },
+};
+
 const TRIGGER = {
   name: 'Manual Trigger',
   type: WorkflowTriggerType.MANUAL,
@@ -51,6 +59,7 @@ describe('remapDuplicatedStepDestinations', () => {
       id: 'source-if-else',
       type: WorkflowActionType.IF_ELSE,
       settings: {
+        ...BASE_SETTINGS,
         input: {
           stepFilterGroups: [],
           stepFilters: [],
@@ -64,7 +73,7 @@ describe('remapDuplicatedStepDestinations', () => {
           ],
         },
       },
-    } as unknown as Partial<WorkflowAction> & { id: string });
+    });
 
     const { steps } = remapDuplicatedStepDestinations({
       trigger: TRIGGER,
@@ -89,14 +98,12 @@ describe('remapDuplicatedStepDestinations', () => {
       ]),
     });
 
-    const branches = (
-      steps[0] as unknown as {
-        settings: { input: { branches: { nextStepIds: string[] }[] } };
-      }
-    ).settings.input.branches;
-
-    expect(branches[0].nextStepIds).toEqual(['cloned-then']);
-    expect(branches[1].nextStepIds).toEqual(['cloned-otherwise']);
+    expect(steps[0].settings.input).toMatchObject({
+      branches: [
+        { nextStepIds: ['cloned-then'] },
+        { nextStepIds: ['cloned-otherwise'] },
+      ],
+    });
   });
 
   it('remaps the initial loop steps of an iterator', () => {
@@ -104,9 +111,10 @@ describe('remapDuplicatedStepDestinations', () => {
       id: 'source-iterator',
       type: WorkflowActionType.ITERATOR,
       settings: {
+        ...BASE_SETTINGS,
         input: { items: [], initialLoopStepIds: ['source-loop-start'] },
       },
-    } as unknown as Partial<WorkflowAction> & { id: string });
+    });
 
     const { steps } = remapDuplicatedStepDestinations({
       trigger: TRIGGER,
@@ -122,12 +130,81 @@ describe('remapDuplicatedStepDestinations', () => {
       ]),
     });
 
-    const initialLoopStepIds = (
-      steps[0] as unknown as {
-        settings: { input: { initialLoopStepIds: string[] } };
-      }
-    ).settings.input.initialLoopStepIds;
+    expect(steps[0].settings.input).toMatchObject({
+      initialLoopStepIds: ['cloned-loop-start'],
+    });
+  });
 
-    expect(initialLoopStepIds).toEqual(['cloned-loop-start']);
+  it('remaps loop back-edges and variable references to cloned steps', () => {
+    const sourceFind = buildStep({
+      id: 'source-find',
+      type: WorkflowActionType.FIND_RECORDS,
+      nextStepIds: ['source-iterator'],
+    });
+    const sourceIterator = buildStep({
+      id: 'source-iterator',
+      type: WorkflowActionType.ITERATOR,
+      settings: {
+        ...BASE_SETTINGS,
+        input: {
+          items: '{{source-find.all}}',
+          initialLoopStepIds: ['source-loop'],
+        },
+      },
+    });
+    const sourceLoop = buildStep({
+      id: 'source-loop',
+      name: 'Log {{source-iterator.currentItem.id}}',
+      type: WorkflowActionType.CODE,
+      nextStepIds: ['source-iterator'],
+      settings: {
+        ...BASE_SETTINGS,
+        input: {
+          logicFunctionInput: {
+            companyId: '{{source-iterator.currentItem.id}}',
+            triggerId: '{{trigger.recordId}}',
+          },
+        },
+      },
+    });
+
+    const { steps } = remapDuplicatedStepDestinations({
+      trigger: { ...TRIGGER, nextStepIds: ['source-find'] },
+      sourceToClonedPairs: [
+        {
+          source: sourceFind,
+          duplicated: { ...sourceFind, id: 'cloned-find', nextStepIds: [] },
+        },
+        {
+          source: sourceIterator,
+          duplicated: { ...sourceIterator, id: 'cloned-iterator' },
+        },
+        {
+          source: sourceLoop,
+          duplicated: { ...sourceLoop, id: 'cloned-loop', nextStepIds: [] },
+        },
+      ],
+      clonedStepIdBySourceStepId: new Map([
+        ['source-find', 'cloned-find'],
+        ['source-iterator', 'cloned-iterator'],
+        ['source-loop', 'cloned-loop'],
+      ]),
+    });
+
+    const [find, iterator, loop] = steps;
+
+    expect(find.nextStepIds).toEqual(['cloned-iterator']);
+    expect(iterator.settings.input).toEqual({
+      items: '{{cloned-find.all}}',
+      initialLoopStepIds: ['cloned-loop'],
+    });
+    expect(loop.name).toBe('Log {{source-iterator.currentItem.id}}');
+    expect(loop.nextStepIds).toEqual(['cloned-iterator']);
+    expect(loop.settings.input).toEqual({
+      logicFunctionInput: {
+        companyId: '{{cloned-iterator.currentItem.id}}',
+        triggerId: '{{trigger.recordId}}',
+      },
+    });
   });
 });

@@ -2,8 +2,8 @@ import { type ReactNode } from 'react';
 
 import { runComponentConformance } from '@test-utilities/conformance/runComponentConformance';
 
+import styles from '../../internal/tab/Tab.module.scss';
 import { Tabs } from '../Tabs';
-import styles from '../Tabs.module.scss';
 
 const RootWrapper = ({ children }: { children: ReactNode }) => (
   <Tabs.Root defaultValue="overview">{children}</Tabs.Root>
@@ -13,6 +13,13 @@ const ListWrapper = ({ children }: { children: ReactNode }) => (
   <RootWrapper>
     <Tabs.List aria-label="Details">{children}</Tabs.List>
   </RootWrapper>
+);
+
+const IndicatorWrapper = ({ children }: { children: ReactNode }) => (
+  <ListWrapper>
+    <Tabs.Tab value="overview">Overview</Tabs.Tab>
+    {children}
+  </ListWrapper>
 );
 
 runComponentConformance({
@@ -34,7 +41,11 @@ runComponentConformance({
 
 runComponentConformance({
   name: 'Tabs.Tab',
-  element: <Tabs.Tab value="overview">Overview</Tabs.Tab>,
+  element: (
+    <Tabs.Tab value="overview" size="compact">
+      Overview
+    </Tabs.Tab>
+  ),
   refInstanceOf: HTMLButtonElement,
   ownClassName: styles.tab,
   renderPropTagName: 'button',
@@ -48,4 +59,13 @@ runComponentConformance({
   ownClassName: styles.panel,
   renderPropTagName: 'div',
   wrapper: RootWrapper,
+});
+
+runComponentConformance({
+  name: 'Tabs.Indicator',
+  element: <Tabs.Indicator />,
+  refInstanceOf: HTMLSpanElement,
+  ownClassName: styles.indicator,
+  renderPropTagName: 'span',
+  wrapper: IndicatorWrapper,
 });

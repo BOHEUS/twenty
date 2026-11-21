@@ -10,9 +10,14 @@ import { searchRecordStoreFamilyState } from '@/object-record/record-picker/mult
 import { SingleRecordPickerComponentInstanceContext } from '@/object-record/record-picker/single-record-picker/states/contexts/SingleRecordPickerComponentInstanceContext';
 import { singleRecordPickerSearchableObjectMetadataItemsComponentState } from '@/object-record/record-picker/single-record-picker/states/singleRecordPickerSearchableObjectMetadataItemsComponentState';
 import { type RecordPickerPickableMorphItem } from '@/object-record/record-picker/types/RecordPickerPickableMorphItem';
-import { getObjectPermissionsFromMapByObjectMetadataId } from '@/settings/roles/role-permissions/objects-permissions/utils/getObjectPermissionsFromMapByObjectMetadataId';
+import { getObjectPermissionsForObject } from '@/object-metadata/utils/getObjectPermissionsForObject';
 import { useAvailableComponentInstanceIdOrThrow } from '@/ui/utilities/state/component-state/hooks/useAvailableComponentInstanceIdOrThrow';
-import { CustomError, isDefined } from 'twenty-shared/utils';
+import {
+  canAccessThroughAllRecordsOrRlsPermission,
+  CustomError,
+  isDefined,
+} from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 
 export const useSingleRecordPickerPerformSearch = ({
   selectedIds,
@@ -51,12 +56,13 @@ export const useSingleRecordPickerPerformSearch = ({
         return false;
       }
 
-      return (
-        getObjectPermissionsFromMapByObjectMetadataId({
+      return canAccessThroughAllRecordsOrRlsPermission({
+        objectRecordsPermissions: getObjectPermissionsForObject(
           objectPermissionsByObjectMetadataId,
-          objectMetadataId: objectMetadataItem.id,
-        }).canReadObjectRecords === true
-      );
+          objectMetadataItem.id,
+        ),
+        operationType: 'read',
+      });
     },
   );
 
@@ -146,8 +152,9 @@ export const useSingleRecordPickerPerformSearch = ({
 
       if (!isDefined(objectMetadataItem)) {
         throw new CustomError(
-          'Object metadata item not found for object name singular: ' +
-            record.objectNameSingular,
+          doNotTranslate(
+            'Object metadata item not found for object name singular: ',
+          ) + record.objectNameSingular,
           'OBJECT_METADATA_ITEM_NOT_FOUND',
         );
       }

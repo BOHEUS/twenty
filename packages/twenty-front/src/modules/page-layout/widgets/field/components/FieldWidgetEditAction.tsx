@@ -4,10 +4,12 @@ import { FieldContext } from '@/object-record/record-field/ui/contexts/FieldCont
 import { useInlineCell } from '@/object-record/record-inline-cell/hooks/useInlineCell';
 import { useOpenFieldWidgetFieldInputEditMode } from '@/page-layout/widgets/field/hooks/useOpenFieldWidgetFieldInputEditMode';
 import { WidgetCardHeaderHoverReveal } from '@/page-layout/widgets/widget-card/components/WidgetCardHeaderHoverReveal';
+import { LightIconButton } from 'twenty-ui/components/input';
 import { IconPencil } from 'twenty-ui/icon';
-import { LightIconButton } from 'twenty-ui/primitives/input';
+import { useLingui } from '@lingui/react/macro';
 
 export const FieldWidgetEditAction = () => {
+  const { t } = useLingui();
   const { recordId, fieldDefinition } = useContext(FieldContext);
   const { openInlineCell } = useInlineCell();
   const { openFieldInput } = useOpenFieldWidgetFieldInputEditMode();
@@ -23,10 +25,12 @@ export const FieldWidgetEditAction = () => {
   return (
     <WidgetCardHeaderHoverReveal>
       <LightIconButton
-        Icon={IconPencil}
-        accent="secondary"
+        emphasis="standard"
         onClick={handleClick}
-      />
+        aria-label={t`Edit field`}
+      >
+        <IconPencil />
+      </LightIconButton>
     </WidgetCardHeaderHoverReveal>
   );
 };

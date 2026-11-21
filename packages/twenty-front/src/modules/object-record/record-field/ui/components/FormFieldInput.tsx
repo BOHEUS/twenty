@@ -1,3 +1,4 @@
+import { isString } from '@sniptt/guards';
 import { isDefined } from 'twenty-shared/utils';
 import { FormAddressFieldInput } from '@/object-record/record-field/ui/form-types/components/FormAddressFieldInput';
 import { FormArrayFieldInput } from '@/object-record/record-field/ui/form-types/components/FormArrayFieldInput';
@@ -23,14 +24,16 @@ import { FormRichTextFieldInput } from '@/object-record/record-field/ui/form-typ
 import { FormSelectFieldInput } from '@/object-record/record-field/ui/form-types/components/FormSelectFieldInput';
 import { FormTextFieldInput } from '@/object-record/record-field/ui/form-types/components/FormTextFieldInput';
 import { FormUuidFieldInput } from '@/object-record/record-field/ui/form-types/components/FormUuidFieldInput';
-import { type VariablePickerComponent } from '@/object-record/record-field/ui/form-types/types/VariablePickerComponent';
+import { type FormFieldInputSettings } from '@/object-record/record-field/ui/form-types/types/FormFieldInputSettings';
+import { type FormFieldInputSubFieldPlaceholders } from '@/object-record/record-field/ui/form-types/types/FormFieldInputSubFieldPlaceholders';
+import { type VariablePickerComponent } from '@/ui/input/types/VariablePickerComponent';
 import { type FieldDefinition } from '@/object-record/record-field/ui/types/FieldDefinition';
+import { filterSelectableFieldOptions } from '@/object-record/record-field/ui/utils/filterSelectableFieldOptions';
 import {
   type FieldAddressValue,
   type FieldArrayValue,
   type FieldEmailsValue,
   type FieldFullNameValue,
-  type FieldLinksValue,
   type FieldMetadata,
   type FieldMultiSelectValue,
   type FieldPhonesValue,
@@ -38,6 +41,7 @@ import {
   type FieldRelationValue,
   type FieldRichTextValue,
   type FormFieldCurrencyValue,
+  type FormFieldLinksValue,
 } from '@/object-record/record-field/ui/types/FieldMetadata';
 import { isFieldAddress } from '@/object-record/record-field/ui/types/guards/isFieldAddress';
 import { isFieldArray } from '@/object-record/record-field/ui/types/guards/isFieldArray';
@@ -70,9 +74,11 @@ type FormFieldInputProps = {
   VariablePicker?: VariablePickerComponent;
   readonly?: boolean;
   placeholder?: string;
+  subFieldPlaceholders?: FormFieldInputSubFieldPlaceholders;
   error?: string;
   onError?: (error: string | undefined) => void;
   timeZone?: string;
+  settings?: FormFieldInputSettings;
 };
 
 export const FormFieldInput = ({
@@ -83,9 +89,11 @@ export const FormFieldInput = ({
   VariablePicker,
   readonly,
   placeholder,
+  subFieldPlaceholders,
   error,
   onError,
   timeZone,
+  settings,
 }: FormFieldInputProps) => {
   return isFieldNumber(field) || field.type === FieldMetadataType.NUMERIC ? (
     <FormNumberFieldInput
@@ -121,7 +129,10 @@ export const FormFieldInput = ({
       defaultValue={defaultValue as string | undefined}
       onChange={onChange}
       VariablePicker={VariablePicker}
-      options={field.metadata?.options}
+      options={filterSelectableFieldOptions({
+        options: field.metadata.options,
+        selectedValues: isString(defaultValue) ? [defaultValue] : [],
+      })}
       readonly={readonly}
       isNullable={field.metadata.isNullable}
     />
@@ -132,6 +143,7 @@ export const FormFieldInput = ({
       onChange={onChange}
       VariablePicker={VariablePicker}
       readonly={readonly}
+      subFieldPlaceholders={subFieldPlaceholders}
     />
   ) : isFieldAddress(field) ? (
     <FormAddressFieldInput
@@ -140,14 +152,17 @@ export const FormFieldInput = ({
       onChange={onChange}
       VariablePicker={VariablePicker}
       readonly={readonly}
+      subFieldPlaceholders={subFieldPlaceholders}
     />
   ) : isFieldLinks(field) ? (
     <FormLinksFieldInput
       label={field.label}
-      defaultValue={defaultValue as FieldLinksValue | undefined}
+      defaultValue={defaultValue as FormFieldLinksValue | undefined}
       onChange={onChange}
       VariablePicker={VariablePicker}
       readonly={readonly}
+      subFieldPlaceholders={subFieldPlaceholders}
+      maxNumberOfValues={field.metadata.settings?.maxNumberOfValues}
     />
   ) : isFieldEmails(field) ? (
     <FormEmailsFieldInput
@@ -156,6 +171,7 @@ export const FormFieldInput = ({
       onChange={onChange}
       VariablePicker={VariablePicker}
       readonly={readonly}
+      subFieldPlaceholders={subFieldPlaceholders}
     />
   ) : isFieldFiles(field) ? (
     <FormFilesFieldInput
@@ -173,6 +189,7 @@ export const FormFieldInput = ({
       onChange={onChange}
       VariablePicker={VariablePicker}
       readonly={readonly}
+      subFieldPlaceholders={subFieldPlaceholders}
     />
   ) : isFieldDate(field) ? (
     <FormDateFieldInput
@@ -198,7 +215,12 @@ export const FormFieldInput = ({
       defaultValue={defaultValue as FieldMultiSelectValue | string | undefined}
       onChange={onChange}
       VariablePicker={VariablePicker}
-      options={field.metadata?.options}
+      options={filterSelectableFieldOptions({
+        options: field.metadata.options,
+        selectedValues: Array.isArray(defaultValue)
+          ? defaultValue.filter(isString)
+          : [],
+      })}
       readonly={readonly}
       placeholder={placeholder}
     />
@@ -222,11 +244,17 @@ export const FormFieldInput = ({
     />
   ) : isFieldCurrency(field) ? (
     <FormCurrencyFieldInput
+      amountUnit={
+        settings?.type === FieldMetadataType.CURRENCY
+          ? settings.amountUnit
+          : undefined
+      }
       label={field.label}
       defaultValue={defaultValue as FormFieldCurrencyValue | null}
       onChange={onChange}
       VariablePicker={VariablePicker}
       readonly={readonly}
+      subFieldPlaceholders={subFieldPlaceholders}
     />
   ) : isFieldRichText(field) ? (
     isDefined(VariablePicker) ? (

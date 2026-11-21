@@ -4,7 +4,6 @@ import { isDefined } from 'twenty-shared/utils';
 import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
 import { type Workflow, type WorkflowVersion } from '@/workflow/types/Workflow';
 import {
-  CoreWorkflowVersionStatus,
   GetCoreWorkflowDocument,
   GetCoreWorkflowVersionsDocument,
 } from '~/generated/graphql';
@@ -20,24 +19,21 @@ type CoreWorkflowShowPageWorkflow = Pick<
 >;
 
 export const useCoreWorkflowForShowPage = ({
-  workspaceWorkflowId,
-  skip,
+  coreWorkflowId,
 }: {
-  workspaceWorkflowId: string | undefined;
-  skip: boolean;
+  coreWorkflowId: string | undefined;
 }): {
   coreWorkflow: CoreWorkflowShowPageWorkflow | undefined;
   versions: CoreWorkflowShowPageVersion[];
-  draftVersionIdFromServer: string | undefined;
 } => {
   const apolloCoreClient = useApolloCoreClient();
 
-  const shouldSkip = skip || !isDefined(workspaceWorkflowId);
+  const shouldSkip = !isDefined(coreWorkflowId);
 
   const { data: coreWorkflowData } = useQuery(GetCoreWorkflowDocument, {
     client: apolloCoreClient,
     fetchPolicy: 'cache-and-network',
-    variables: { workspaceWorkflowId: workspaceWorkflowId ?? '' },
+    variables: { coreWorkflowId: coreWorkflowId ?? '' },
     skip: shouldSkip,
   });
 
@@ -46,42 +42,32 @@ export const useCoreWorkflowForShowPage = ({
     {
       client: apolloCoreClient,
       fetchPolicy: 'cache-and-network',
-      variables: { workspaceWorkflowId: workspaceWorkflowId ?? '' },
+      variables: { coreWorkflowId: coreWorkflowId ?? '' },
       skip: shouldSkip,
     },
   );
 
   const coreWorkflow = coreWorkflowData?.coreWorkflow;
 
-  const versions = (
-    coreWorkflowVersionsData?.coreWorkflowVersions ?? []
-  ).flatMap((coreWorkflowVersion) =>
-    isDefined(coreWorkflowVersion.workspaceWorkflowVersionId)
-      ? [
-          {
-            id: coreWorkflowVersion.workspaceWorkflowVersionId,
-            name: coreWorkflowVersion.label,
-            status: coreWorkflowVersion.status,
-            createdAt: coreWorkflowVersion.createdAt,
-          },
-        ]
-      : [],
+  const versions = (coreWorkflowVersionsData?.coreWorkflowVersions ?? []).map(
+    (version) => ({
+      id: version.id,
+      name: version.label,
+      status: version.status,
+      createdAt: version.createdAt,
+    }),
   );
-
-  const draftVersionIdFromServer = versions.find(
-    (version) => version.status === CoreWorkflowVersionStatus.DRAFT,
-  )?.id;
 
   return {
     coreWorkflow: isDefined(coreWorkflow)
       ? {
-          id: coreWorkflow.workspaceWorkflowId,
+          id: coreWorkflow.id,
           name: coreWorkflow.name ?? '',
           statuses: coreWorkflow.statuses,
-          lastPublishedVersionId: coreWorkflow.lastPublishedVersionId,
+          lastPublishedVersionId:
+            coreWorkflow.lastPublishedCoreWorkflowVersionId,
         }
       : undefined,
     versions,
-    draftVersionIdFromServer,
   };
 };

@@ -1,5 +1,5 @@
-import { type SettingsBillingPlanCell } from '@/settings/billing/types/settingsBillingPlanCell.type';
-import { type SettingsBillingPlanInterval } from '@/settings/billing/types/settingsBillingPlanComparison.type';
+import { type SettingsBillingPlanCell } from '@/settings/billing/types/SettingsBillingPlanCell';
+import { type SettingsBillingPlanInterval } from '@/settings/billing/types/SettingsBillingPlanComparison';
 import { type BillingPlanKey } from '~/generated-metadata/graphql';
 
 type GetBillingPlanCellParams = {
@@ -27,7 +27,6 @@ export const getBillingPlanCell = ({
     return { kind: 'scheduled' };
   }
 
-  const isPlanSwitchScheduled = upcomingPlanKey !== currentPlanKey;
   const isIntervalSwitchScheduled = upcomingInterval !== currentInterval;
 
   if (planKey === upcomingPlanKey) {
@@ -39,21 +38,8 @@ export const getBillingPlanCell = ({
     };
   }
 
-  if (interval === upcomingInterval) {
-    return {
-      kind: 'change',
-      change: isPlanSwitchScheduled
-        ? { type: 'CANCEL_PLAN_SWITCH' }
-        : { type: 'SWITCH_PLAN', targetPlanKey: planKey },
-    };
-  }
-
-  if (isPlanSwitchScheduled) {
+  if (planKey === currentPlanKey) {
     return { kind: 'change', change: { type: 'CANCEL_PLAN_SWITCH' } };
-  }
-
-  if (isIntervalSwitchScheduled) {
-    return { kind: 'change', change: { type: 'CANCEL_INTERVAL_SWITCH' } };
   }
 
   return {

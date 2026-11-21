@@ -3,7 +3,7 @@ import { WorkflowEditActionCode } from '@/workflow/workflow-steps/workflow-actio
 import { type Meta, type StoryObj } from '@storybook/react-vite';
 import { HttpResponse, graphql } from 'msw';
 import { fn } from 'storybook/test';
-import { ComponentDecorator, RouterDecorator } from 'twenty-ui/testing';
+import { ComponentDecorator } from 'twenty-ui/testing';
 import { ARGOS_CAPTURE_DISABLED } from '~/testing/constants/ArgosCaptureDisabled';
 import { ObjectMetadataItemsDecorator } from '~/testing/decorators/ObjectMetadataItemsDecorator';
 import { ToastDecorator } from '~/testing/decorators/ToastDecorator';
@@ -12,6 +12,7 @@ import { WorkflowStepDecorator } from '~/testing/decorators/WorkflowStepDecorato
 import { WorkspaceDecorator } from '~/testing/decorators/WorkspaceDecorator';
 import { graphqlMocks } from '~/testing/graphqlMocks';
 import { getWorkflowNodeIdMock } from '~/testing/mock-data/workflow';
+import { MemoryRouterDecorator } from '~/testing/decorators/MemoryRouterDecorator';
 
 const DEFAULT_ACTION: WorkflowCodeAction = {
   id: getWorkflowNodeIdMock(),
@@ -20,8 +21,8 @@ const DEFAULT_ACTION: WorkflowCodeAction = {
   valid: false,
   settings: {
     input: {
-      logicFunctionId: '',
-      logicFunctionInput: {},
+      code: 'export const main = async (params: { a: string }) => ({ a: params.a });',
+      logicFunctionInput: { a: null },
     },
     outputSchema: {},
     errorHandlingOptions: {
@@ -42,7 +43,7 @@ const CONFIGURED_ACTION: WorkflowCodeAction = {
   valid: true,
   settings: {
     input: {
-      logicFunctionId: 'test-function-id',
+      code: 'export const main = async (params: { name: string; email: string; score: number }) => ({ result: params.name });',
       logicFunctionInput: {
         name: 'John Doe',
         email: 'john@example.com',
@@ -82,40 +83,10 @@ const meta: Meta<typeof WorkflowEditActionCode> = {
     msw: {
       handlers: [
         ...graphqlMocks.handlers,
-        graphql.query('GetManyLogicFunctions', () => {
+        graphql.query('WorkflowCodeStepAvailablePackages', () => {
           return HttpResponse.json({
             data: {
-              findManyLogicFunctions: [
-                {
-                  id: 'test-function-id',
-                  name: 'Test Function',
-                  description: 'A test logic function',
-                  runtime: 'nodejs22.x',
-                  createdAt: '2024-01-01T00:00:00.000Z',
-                  updatedAt: '2024-01-01T00:00:00.000Z',
-                },
-              ],
-            },
-          });
-        }),
-        graphql.query('GetOneLogicFunction', () => {
-          return HttpResponse.json({
-            data: {
-              findOneLogicFunction: {
-                id: 'test-function-id',
-                name: 'Test Function',
-                description: 'A test logic function',
-                runtime: 'nodejs22.x',
-                createdAt: '2024-01-01T00:00:00.000Z',
-                updatedAt: '2024-01-01T00:00:00.000Z',
-              },
-            },
-          });
-        }),
-        graphql.query('FindManyAvailablePackages', () => {
-          return HttpResponse.json({
-            data: {
-              getAvailablePackages: ['axios', 'lodash', 'moment'],
+              workflowCodeStepAvailablePackages: { axios: '1.0.0' },
             },
           });
         }),
@@ -131,7 +102,7 @@ const meta: Meta<typeof WorkflowEditActionCode> = {
     ComponentDecorator,
     ObjectMetadataItemsDecorator,
     ToastDecorator,
-    RouterDecorator,
+    MemoryRouterDecorator,
     WorkspaceDecorator,
   ],
 };

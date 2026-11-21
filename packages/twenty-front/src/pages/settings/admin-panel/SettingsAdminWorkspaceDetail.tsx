@@ -1,5 +1,3 @@
-import { TabListRoot } from '@/ui/layout/tab-list/components/TabListRoot';
-import { Tabs } from 'twenty-ui/primitives/navigation';
 import { currentUserState } from '@/auth/states/currentUserState';
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { billingState } from '@/client-config/states/billingState';
@@ -23,6 +21,7 @@ import {
 } from '@/settings/components/SettingsTableListSection';
 import { SettingsPageLayout } from '@/settings/components/layout/SettingsPageLayout';
 import { SettingsTabBar } from '@/settings/components/layout/SettingsTabBar';
+import { TabListRoot } from '@/ui/layout/tab-list/components/TabListRoot';
 import { activeTabIdComponentState } from '@/ui/layout/tab-list/states/activeTabIdComponentState';
 import { Table } from '@/ui/layout/table/components/Table';
 import { TableBody } from '@/ui/layout/table/components/TableBody';
@@ -32,14 +31,16 @@ import { TableRow } from '@/ui/layout/table/components/TableRow';
 import { DEFAULT_WORKSPACE_LOGO } from '@/ui/navigation/navigation-drawer/constants/DefaultWorkspaceLogo';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
+import { getAdminWorkspaceLabel } from '@/settings/admin-panel/utils/getAdminWorkspaceLabel';
+import { getWorkspaceAvatarColorSeed } from '@/workspace/utils/getWorkspaceAvatarColorSeed';
 import { useMutation, useQuery } from '@apollo/client/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useParams } from 'react-router-dom';
 import { SettingsPath } from 'twenty-shared/types';
 import { getSettingsPath, isDefined } from 'twenty-shared/utils';
-import { Section } from 'twenty-ui/components';
+import { useToast } from 'twenty-ui/components/feedback';
+import { Section } from 'twenty-ui/components/layout';
 import {
   IconCreditCard,
   IconEyeShare,
@@ -48,14 +49,12 @@ import {
   IconSettings2,
   IconUsers,
 } from 'twenty-ui/icon';
-import { Avatar } from 'twenty-ui/primitives/data-display';
+import { Avatar, Status } from 'twenty-ui/primitives/data-display';
 import { Button, Switch } from 'twenty-ui/primitives/input';
-import {
-  Card,
-  OverflowingTextWithTooltip,
-} from 'twenty-ui/primitives/surfaces';
-import { Text } from 'twenty-ui/primitives/typography';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { Tabs } from 'twenty-ui/primitives/navigation';
+import { Card } from 'twenty-ui/primitives/surfaces';
+import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
+import { themeCssVariables } from 'twenty-ui/theme';
 import {
   GetUpgradeStatusDocument,
   UpdateWorkspaceFeatureFlagDocument,
@@ -64,13 +63,9 @@ import {
   type WorkspaceLookupAdminPanelQuery,
 } from '~/generated-admin/graphql';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
+import { useLingui } from '@lingui/react/macro';
 
-import { useToast } from 'twenty-ui/primitives/feedback';
-
-const StyledFeatureFlagName = styled(Text)`
-  color: ${themeCssVariables.font.color.primary};
-  font-size: ${themeCssVariables.font.size.md};
-  font-weight: ${themeCssVariables.font.weight.regular};
+const StyledFeatureFlagName = styled(OverflowingTextWithTooltip)`
   min-width: 0;
 `;
 
@@ -84,12 +79,8 @@ const WORKSPACE_DETAIL_TAB_IDS = {
   CHATS: 'chats',
 };
 
-const StyledTabPanel = styled.div`
-  height: 100%;
-  min-height: 0;
-`;
-
 export const SettingsAdminWorkspaceDetail = () => {
+  const { t } = useLingui();
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const apolloAdminClient = useApolloAdminClient();
 
@@ -153,7 +144,9 @@ export const SettingsAdminWorkspaceDetail = () => {
     featureFlag: FeatureFlagKey,
     value: boolean,
   ) => {
-    if (!workspaceId) return;
+    if (!workspaceId) {
+      return;
+    }
 
     const previousValue = workspace?.featureFlags?.find(
       (flag) => flag.key === featureFlag,
@@ -171,8 +164,8 @@ export const SettingsAdminWorkspaceDetail = () => {
           updateFeatureFlagState(workspaceId, featureFlag, previousValue);
         }
         enqueueToast({
-          variant: 'error',
-          children: `Failed to update feature flag. ${error.message}`,
+          status: 'error',
+          children: t`Failed to update feature flag. ${error.message}`,
         });
       },
     });
@@ -222,7 +215,10 @@ export const SettingsAdminWorkspaceDetail = () => {
       : []),
   ];
 
-  const workspaceName = workspace?.name || workspaceId || '';
+  const workspaceName = getAdminWorkspaceLabel({
+    id: workspaceId ?? '',
+    name: workspace?.name,
+  });
   const workspaceLogo = isNonEmptyString(workspace?.logo)
     ? workspace.logo
     : DEFAULT_WORKSPACE_LOGO;
@@ -264,15 +260,16 @@ export const SettingsAdminWorkspaceDetail = () => {
       label: t`Name`,
       overflow: 'hidden',
       Cell: ({ item }) => (
-        <StyledFeatureFlagName>
-          <OverflowingTextWithTooltip
-            text={<>{item.label}</>}
-            tooltipContent={item.id}
-            tooltipPlace={'top'}
-            alwaysShowTooltip
-            isFocusable
-          />
-        </StyledFeatureFlagName>
+        <StyledFeatureFlagName
+          size="md"
+          weight="regular"
+          color="primary"
+          text={<>{item.label}</>}
+          tooltipContent={item.id}
+          tooltipPlace="top"
+          alwaysShowTooltip
+          isFocusable
+        />
       ),
     },
     {
@@ -313,8 +310,8 @@ export const SettingsAdminWorkspaceDetail = () => {
         icon={
           <Avatar
             src={getAbsoluteImageUrl(workspaceLogo)}
-            name={workspaceName}
-            colorSeed={workspace?.id}
+            name={workspace?.name ?? ''}
+            colorSeed={getWorkspaceAvatarColorSeed(workspace?.name)}
             size="md"
           />
         }
@@ -340,7 +337,7 @@ export const SettingsAdminWorkspaceDetail = () => {
           />
         }
       >
-        <Tabs.Panel value={effectiveTabId} render={<StyledTabPanel />}>
+        <Tabs.Panel value={effectiveTabId}>
           <SettingsPageContainer>
             {effectiveTabId === WORKSPACE_DETAIL_TAB_IDS.INFO && workspace && (
               <SettingsAdminWorkspaceContent
@@ -368,20 +365,23 @@ export const SettingsAdminWorkspaceDetail = () => {
                   />
                   <Table>
                     <TableBody>
-                      <TableRow gridTemplateColumns="1fr 2fr 100px">
+                      <TableRow gridTemplateColumns="1fr 2fr 80px 100px">
                         <TableHeader>{t`Name`}</TableHeader>
                         <TableHeader>{t`Email`}</TableHeader>
+                        <TableHeader>{t`Admin`}</TableHeader>
                         <TableHeader align="right">{t`Actions`}</TableHeader>
                       </TableRow>
                       {workspace.users?.map((user) => {
                         const userId = user.id;
 
-                        if (!isDefined(userId)) return null;
+                        if (!isDefined(userId)) {
+                          return null;
+                        }
 
                         return (
                           <TableRow
                             key={userId}
-                            gridTemplateColumns="1fr 2fr 100px"
+                            gridTemplateColumns="1fr 2fr 80px 100px"
                             to={getSettingsPath(
                               SettingsPath.AdminPanelUserDetail,
                               {
@@ -412,6 +412,13 @@ export const SettingsAdminWorkspaceDetail = () => {
                               />
                             </TableCell>
                             <TableCell>{user.email}</TableCell>
+                            <TableCell>
+                              {user.isAdmin ? (
+                                <Status color="green">{t`Yes`}</Status>
+                              ) : (
+                                <Status color="gray">{t`No`}</Status>
+                              )}
+                            </TableCell>
                             <TableCell align="right">
                               {workspace.allowImpersonation &&
                                 isDefined(currentUser?.id) &&
@@ -457,7 +464,7 @@ export const SettingsAdminWorkspaceDetail = () => {
                 {isLoadingThreads ? (
                   <SettingsSectionSkeletonLoader />
                 ) : threads.length === 0 ? (
-                  <Card rounded>
+                  <Card.Root>
                     <TableRow gridTemplateColumns="1fr">
                       <TableCell
                         color={themeCssVariables.font.color.tertiary}
@@ -466,7 +473,7 @@ export const SettingsAdminWorkspaceDetail = () => {
                         {t`No chat threads found.`}
                       </TableCell>
                     </TableRow>
-                  </Card>
+                  </Card.Root>
                 ) : (
                   <Table>
                     <TableRow gridTemplateColumns="1fr 120px 120px">

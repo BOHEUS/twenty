@@ -1,9 +1,8 @@
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
-import { Section } from 'twenty-ui/components';
+import { Section } from 'twenty-ui/components/layout';
 import { IconFolder } from 'twenty-ui/icon';
-import { useContext } from 'react';
-import { ThemeContext, themeCssVariables } from 'twenty-ui/theme-constants';
+import { useTheme, themeCssVariables } from 'twenty-ui/theme';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledEmptyState = styled.div`
   align-items: center;
@@ -16,7 +15,8 @@ const StyledEmptyState = styled.div`
 `;
 
 export const SettingsMessageFoldersEmptyStateCard = () => {
-  const { theme } = useContext(ThemeContext);
+  const { t } = useLingui();
+  const theme = useTheme();
 
   return (
     <Section.Root>

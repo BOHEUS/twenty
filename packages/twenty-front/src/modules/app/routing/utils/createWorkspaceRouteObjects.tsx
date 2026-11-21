@@ -1,19 +1,44 @@
 import { lazy } from 'react';
-import { Navigate } from 'react-router-dom';
-import { AppPath, SettingsPath } from 'twenty-shared/types';
-import { getSettingsPath } from 'twenty-shared/utils';
+import { AppPath } from 'twenty-shared/types';
+import { getAppPath } from 'twenty-shared/utils';
 
 import { LazyRoute } from '@/app/components/LazyRoute';
+import { NavigatePreservingSearchAndHash } from '@/app/routing/components/NavigatePreservingSearchAndHash';
 import {
   createSettingsRouteObjects,
   SettingsRouteOutlet,
 } from '@/app/components/SettingsRoutes';
 import { type WorkspaceRouteObject } from '@/app/routing/types/WorkspaceRouteObject';
+import { StandardObjectNamePlural } from '@/object-metadata/types/StandardObjectNamePlural';
 import { RecordIndexSkeletonLoader } from '@/object-record/record-index/components/RecordIndexSkeletonLoader';
+
+const GettingStartedPage = lazy(() =>
+  import('~/pages/getting-started/GettingStartedPage').then((module) => ({
+    default: module.GettingStartedPage,
+  })),
+);
+
+const AgentCoreIndexPage = lazy(() =>
+  import('~/pages/object-core/AgentCoreIndexPage').then((module) => ({
+    default: module.AgentCoreIndexPage,
+  })),
+);
+
+const AgentCoreShowPage = lazy(() =>
+  import('~/pages/object-core/AgentCoreShowPage').then((module) => ({
+    default: module.AgentCoreShowPage,
+  })),
+);
 
 const WorkflowCoreIndexPage = lazy(() =>
   import('~/pages/object-core/WorkflowCoreIndexPage').then((module) => ({
     default: module.WorkflowCoreIndexPage,
+  })),
+);
+
+const WorkflowCoreShowPage = lazy(() =>
+  import('~/pages/object-core/WorkflowCoreShowPage').then((module) => ({
+    default: module.WorkflowCoreShowPage,
   })),
 );
 
@@ -35,9 +60,15 @@ const StandalonePageLayoutPage = lazy(() =>
   })),
 );
 
-const AiChatPage = lazy(() =>
-  import('~/pages/ai-chat/AiChatPage').then((module) => ({
-    default: module.AiChatPage,
+const LegacyAiChatPage = lazy(() =>
+  import('~/pages/legacy-ai-chat/LegacyAiChatPage').then((module) => ({
+    default: module.LegacyAiChatPage,
+  })),
+);
+
+const InboxPage = lazy(() =>
+  import('~/pages/inbox/InboxPage').then((module) => ({
+    default: module.InboxPage,
   })),
 );
 
@@ -55,7 +86,6 @@ const NotFound = lazy(() =>
 
 type CreateWorkspaceRouteObjectsArgs = {
   isAdminPageEnabled?: boolean;
-  isWorkflowCoreIndexPageEnabled?: boolean;
 };
 
 const MAIN_AND_SIDE_PANEL = ['main', 'side-panel'] as const;
@@ -63,29 +93,71 @@ const SETTINGS_ROOT_PATH = AppPath.SettingsCatchAll.replace('/*', '');
 
 export const createWorkspaceRouteObjects = ({
   isAdminPageEnabled,
-  isWorkflowCoreIndexPageEnabled,
 }: CreateWorkspaceRouteObjectsArgs): WorkspaceRouteObject[] => {
   const settingsRouteObjects = createSettingsRouteObjects({
     isAdminPageEnabled,
   });
 
   return [
-    ...(isWorkflowCoreIndexPageEnabled
-      ? [
-          {
-            path: AppPath.WorkflowCoreIndexPage,
-            element: (
-              <LazyRoute>
-                <WorkflowCoreIndexPage />
-              </LazyRoute>
-            ),
-            handle: {
-              workspaceSurfaces: MAIN_AND_SIDE_PANEL,
-              isLocationExpandableFromSidePanel: true,
-            },
-          } satisfies WorkspaceRouteObject,
-        ]
-      : []),
+    {
+      path: AppPath.GettingStarted,
+      element: (
+        <LazyRoute>
+          <GettingStartedPage />
+        </LazyRoute>
+      ),
+    },
+    {
+      path: AppPath.WorkflowIndexPage,
+      element: (
+        <LazyRoute fallback={<RecordIndexSkeletonLoader />}>
+          <WorkflowCoreIndexPage />
+        </LazyRoute>
+      ),
+      handle: {
+        workspaceSurfaces: MAIN_AND_SIDE_PANEL,
+        isLocationExpandableFromSidePanel: true,
+      },
+    },
+    {
+      path: getAppPath(AppPath.RecordIndexPage, {
+        objectNamePlural: StandardObjectNamePlural.Workflow,
+      }),
+      element: (
+        <NavigatePreservingSearchAndHash
+          to={getAppPath(AppPath.WorkflowIndexPage)}
+        />
+      ),
+      handle: { workspaceSurfaces: MAIN_AND_SIDE_PANEL },
+    },
+    {
+      path: AppPath.WorkflowCoreShowPage,
+      element: (
+        <LazyRoute>
+          <WorkflowCoreShowPage />
+        </LazyRoute>
+      ),
+      handle: {
+        workspaceSurfaces: MAIN_AND_SIDE_PANEL,
+        isLocationExpandableFromSidePanel: true,
+      },
+    },
+    {
+      path: AppPath.AgentIndexPage,
+      element: (
+        <LazyRoute fallback={<RecordIndexSkeletonLoader />}>
+          <AgentCoreIndexPage />
+        </LazyRoute>
+      ),
+    },
+    {
+      path: AppPath.AgentShowPage,
+      element: (
+        <LazyRoute>
+          <AgentCoreShowPage />
+        </LazyRoute>
+      ),
+    },
     {
       path: AppPath.Index,
       element: <RecordIndexSkeletonLoader />,
@@ -123,7 +195,15 @@ export const createWorkspaceRouteObjects = ({
       path: AppPath.AiChat,
       element: (
         <LazyRoute>
-          <AiChatPage />
+          <LegacyAiChatPage />
+        </LazyRoute>
+      ),
+    },
+    {
+      path: AppPath.AiChatInbox,
+      element: (
+        <LazyRoute>
+          <InboxPage />
         </LazyRoute>
       ),
     },
@@ -142,7 +222,7 @@ export const createWorkspaceRouteObjects = ({
     },
     {
       path: AppPath.Dpa,
-      element: <Navigate to={getSettingsPath(SettingsPath.LegalDpa)} replace />,
+      element: null,
     },
     {
       path: AppPath.NotFoundWildcard,

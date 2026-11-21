@@ -11,7 +11,7 @@ import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomState
 import { IconCheck, IconPencil, IconX } from 'twenty-ui/icon';
 import { Tooltip } from 'twenty-ui/primitives/surfaces';
 import { Button, ButtonGroup } from 'twenty-ui/primitives/input';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 const StyledContainer = styled.div`
   display: flex;
@@ -28,10 +28,6 @@ const StyledFieldRow = styled.div`
 const StyledActionWrapper = styled.div`
   align-items: stretch;
   display: flex;
-
-  & > button + button {
-    border-left: none;
-  }
 `;
 
 const StyledActionButtonContainer = styled.div`

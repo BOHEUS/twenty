@@ -25,6 +25,7 @@ const identity: SlackUserIdentity = {
 };
 
 const client = {} as CoreApiClient;
+const SLACK_CONNECTION_ID = 'connection-1';
 const slackClient = {} as WebClient;
 
 const RESOLUTION_BASE = {
@@ -44,35 +45,21 @@ describe('resolveSlackAccessDecision', () => {
     vi.clearAllMocks();
   });
 
-  it('should allow everyone when the workspace is open', async () => {
-    expect(
-      await resolveSlackAccessDecision({
-        accessMode: 'ANYONE',
-        client,
-        slackClient,
-        identity: undefined,
-        runAsWorkspaceMemberId: undefined,
-      }),
-    ).toEqual({ status: 'ALLOWED' });
-
-    expect(resolveSlackIdentitiesMock).not.toHaveBeenCalled();
-  });
-
   it('should allow a request already running as a workspace member without resolving again', async () => {
     expect(
       await resolveSlackAccessDecision({
-        accessMode: 'ONLY_LINKED_MEMBERS',
         client,
         slackClient,
+        slackConnectionId: SLACK_CONNECTION_ID,
         identity,
         runAsWorkspaceMemberId: 'member-id',
       }),
-    ).toEqual({ status: 'ALLOWED' });
+    ).toEqual({ status: 'ALLOWED', runAsWorkspaceMemberId: 'member-id' });
 
     expect(resolveSlackIdentitiesMock).not.toHaveBeenCalled();
   });
 
-  it('should allow a linked member whose request is not eligible for impersonation', async () => {
+  it('should decline a confirmed member whose request could not be attributed to them', async () => {
     mockResolution({
       ...RESOLUTION_BASE,
       outcome: 'confirmedMember',
@@ -82,13 +69,13 @@ describe('resolveSlackAccessDecision', () => {
 
     expect(
       await resolveSlackAccessDecision({
-        accessMode: 'ONLY_LINKED_MEMBERS',
         client,
         slackClient,
+        slackConnectionId: SLACK_CONNECTION_ID,
         identity,
         runAsWorkspaceMemberId: undefined,
       }),
-    ).toEqual({ status: 'ALLOWED' });
+    ).toEqual({ status: 'DENIED', reason: 'REQUEST_NOT_ATTRIBUTABLE' });
   });
 
   it('should deny an account every lookup agreed is not a member', async () => {
@@ -96,13 +83,13 @@ describe('resolveSlackAccessDecision', () => {
 
     expect(
       await resolveSlackAccessDecision({
-        accessMode: 'ONLY_LINKED_MEMBERS',
         client,
         slackClient,
+        slackConnectionId: SLACK_CONNECTION_ID,
         identity,
         runAsWorkspaceMemberId: undefined,
       }),
-    ).toEqual({ status: 'DENIED' });
+    ).toEqual({ status: 'DENIED', reason: 'NOT_A_MEMBER' });
   });
 
   it('should not deny when membership could not be established', async () => {
@@ -110,9 +97,9 @@ describe('resolveSlackAccessDecision', () => {
 
     expect(
       await resolveSlackAccessDecision({
-        accessMode: 'ONLY_LINKED_MEMBERS',
         client,
         slackClient,
+        slackConnectionId: SLACK_CONNECTION_ID,
         identity,
         runAsWorkspaceMemberId: undefined,
       }),
@@ -128,9 +115,9 @@ describe('resolveSlackAccessDecision', () => {
 
     expect(
       await resolveSlackAccessDecision({
-        accessMode: 'ONLY_LINKED_MEMBERS',
         client,
         slackClient,
+        slackConnectionId: SLACK_CONNECTION_ID,
         identity,
         runAsWorkspaceMemberId: undefined,
       }),
@@ -144,9 +131,9 @@ describe('resolveSlackAccessDecision', () => {
 
     expect(
       await resolveSlackAccessDecision({
-        accessMode: 'ONLY_LINKED_MEMBERS',
         client,
         slackClient,
+        slackConnectionId: SLACK_CONNECTION_ID,
         identity,
         runAsWorkspaceMemberId: undefined,
       }),
@@ -158,9 +145,9 @@ describe('resolveSlackAccessDecision', () => {
 
     expect(
       await resolveSlackAccessDecision({
-        accessMode: 'ONLY_LINKED_MEMBERS',
         client,
         slackClient,
+        slackConnectionId: SLACK_CONNECTION_ID,
         identity,
         runAsWorkspaceMemberId: undefined,
       }),
@@ -170,9 +157,9 @@ describe('resolveSlackAccessDecision', () => {
   it('should not deny without a Slack client or an identity to look up', async () => {
     expect(
       await resolveSlackAccessDecision({
-        accessMode: 'ONLY_LINKED_MEMBERS',
         client,
         slackClient: undefined,
+        slackConnectionId: SLACK_CONNECTION_ID,
         identity,
         runAsWorkspaceMemberId: undefined,
       }),
@@ -180,9 +167,9 @@ describe('resolveSlackAccessDecision', () => {
 
     expect(
       await resolveSlackAccessDecision({
-        accessMode: 'ONLY_LINKED_MEMBERS',
         client,
         slackClient,
+        slackConnectionId: SLACK_CONNECTION_ID,
         identity: undefined,
         runAsWorkspaceMemberId: undefined,
       }),

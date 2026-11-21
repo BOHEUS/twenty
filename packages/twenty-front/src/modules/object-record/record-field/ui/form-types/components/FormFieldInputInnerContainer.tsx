@@ -1,10 +1,13 @@
 import { type FormFieldInputVariant } from '@/ui/input/types/FormFieldInputVariant';
 import { usePushFocusItemToFocusStack } from '@/ui/utilities/focus/hooks/usePushFocusItemToFocusStack';
 import { useRemoveFocusItemFromFocusStackById } from '@/ui/utilities/focus/hooks/useRemoveFocusItemFromFocusStackById';
+import { useRemoveFocusItemFromFocusStackOnUnmount } from '@/ui/utilities/focus/hooks/useRemoveFocusItemFromFocusStackOnUnmount';
 import { FocusComponentType } from '@/ui/utilities/focus/types/FocusComponentType';
+import { isFormFieldFocusShownForElement } from '@/object-record/record-field/ui/form-types/utils/isFormFieldFocusShownForElement';
+import { getFormFieldBorderColor } from '@/ui/input/utils/getFormFieldBorderColor';
 import { styled } from '@linaria/react';
-import { forwardRef, type HTMLAttributes, type Ref } from 'react';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { forwardRef, type HTMLAttributes, type Ref, useState } from 'react';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 type FormFieldInputInnerContainerProps = {
   hasRightElement: boolean;
@@ -12,12 +15,18 @@ type FormFieldInputInnerContainerProps = {
   multiline?: boolean;
   readonly?: boolean;
   preventFocusStackUpdate?: boolean;
+  enableGlobalEscapeHotkeysConflictingWithKeyboard?: boolean;
   formFieldInputInstanceId: string;
   variant?: FormFieldInputVariant;
+  isFocused?: boolean;
+  shouldHighlightOnTriggerFocus?: boolean;
 };
 
 const StyledFormFieldInputInnerContainer = styled.div<
-  Omit<FormFieldInputInnerContainerProps, 'formFieldInputInstanceId'> & {
+  Omit<
+    FormFieldInputInnerContainerProps,
+    'formFieldInputInstanceId' | 'shouldHighlightOnTriggerFocus'
+  > & {
     $variant: FormFieldInputVariant;
   }
 >`
@@ -38,11 +47,17 @@ const StyledFormFieldInputInnerContainer = styled.div<
       : multiline || !hasRightElement
         ? themeCssVariables.border.radius.md
         : '0'};
-  border-right: ${({ multiline, hasRightElement, $variant }) =>
+  border-color: ${({ isFocused, hasRightElement, $variant }) =>
+    getFormFieldBorderColor({ isFocused, hasRightElement, variant: $variant })};
+  border-right: ${({ multiline, isFocused, hasRightElement, $variant }) =>
     $variant === 'transparent'
       ? 'none'
       : multiline || !hasRightElement
-        ? `1px solid ${themeCssVariables.border.color.medium}`
+        ? `1px solid ${getFormFieldBorderColor({
+            isFocused,
+            hasRightElement,
+            variant: $variant,
+          })}`
         : 'none'};
   border-top-left-radius: ${({ $variant }) =>
     $variant === 'transparent' ? '0' : themeCssVariables.border.radius.md};
@@ -87,18 +102,34 @@ export const FormFieldInputInnerContainer = forwardRef(
       multiline,
       readonly,
       preventFocusStackUpdate = false,
+      enableGlobalEscapeHotkeysConflictingWithKeyboard = true,
       onClick,
       formFieldInputInstanceId,
       variant = 'default',
+      isFocused = false,
+      shouldHighlightOnTriggerFocus = false,
     }: HTMLAttributes<HTMLDivElement> & FormFieldInputInnerContainerProps,
     ref: Ref<HTMLDivElement>,
   ) => {
+    const [hasFocusedElement, setHasFocusedElement] = useState(false);
+
     const { pushFocusItemToFocusStack } = usePushFocusItemToFocusStack();
     const { removeFocusItemFromFocusStackById } =
       useRemoveFocusItemFromFocusStackById();
 
+    useRemoveFocusItemFromFocusStackOnUnmount({
+      focusId: formFieldInputInstanceId,
+      isEnabled: !preventFocusStackUpdate,
+    });
+
     const handleFocus = (e: React.FocusEvent<HTMLDivElement>) => {
       onFocus?.(e);
+      setHasFocusedElement(
+        isFormFieldFocusShownForElement({
+          element: e.target,
+          shouldHighlightOnTriggerFocus,
+        }),
+      );
 
       if (!preventFocusStackUpdate) {
         pushFocusItemToFocusStack({
@@ -109,6 +140,7 @@ export const FormFieldInputInnerContainer = forwardRef(
           },
           globalHotkeysConfig: {
             enableGlobalHotkeysConflictingWithKeyboard: false,
+            enableGlobalEscapeHotkeysConflictingWithKeyboard,
           },
         });
       }
@@ -116,6 +148,7 @@ export const FormFieldInputInnerContainer = forwardRef(
 
     const handleBlur = (e: React.FocusEvent<HTMLDivElement>) => {
       onBlur?.(e);
+      setHasFocusedElement(false);
 
       if (!preventFocusStackUpdate) {
         removeFocusItemFromFocusStackById({
@@ -133,6 +166,7 @@ export const FormFieldInputInnerContainer = forwardRef(
         multiline={multiline}
         readonly={readonly}
         $variant={variant}
+        isFocused={isFocused || hasFocusedElement}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onClick={onClick}

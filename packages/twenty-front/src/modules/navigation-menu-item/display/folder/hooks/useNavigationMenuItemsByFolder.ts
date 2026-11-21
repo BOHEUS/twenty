@@ -8,6 +8,7 @@ import { viewsSelector } from '@/views/states/selectors/viewsSelector';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 
 import { useNavigationMenuItemsData } from '@/navigation-menu-item/display/hooks/useNavigationMenuItemsData';
+import { useLingui } from '@lingui/react/macro';
 
 type NavigationMenuItemFolder = {
   id: string;
@@ -23,6 +24,7 @@ type NavigationMenuItemFolderEntry = Pick<
 >;
 
 export const useNavigationMenuItemsByFolder = () => {
+  const { t } = useLingui();
   const views = useAtomStateValue(viewsSelector);
   const objectMetadataItems = useNavigationObjectMetadataItems();
 
@@ -44,7 +46,7 @@ export const useNavigationMenuItemsByFolder = () => {
         if (isNavigationMenuItemFolder(item)) {
           const folderEntry: NavigationMenuItemFolderEntry = {
             id: item.id,
-            folderName: item.name || 'Folder',
+            folderName: item.name || t`Folder`,
             icon: item.icon ?? undefined,
             color: item.color ?? undefined,
           };
@@ -53,12 +55,12 @@ export const useNavigationMenuItemsByFolder = () => {
           } else {
             acc.workspaceFolders.push(folderEntry);
           }
-        } else if (isDefined(item.folderId)) {
-          const existingItems = acc.itemsByFolderId.get(item.folderId);
+        } else if (isDefined(item.parentId)) {
+          const existingItems = acc.itemsByFolderId.get(item.parentId);
           if (isDefined(existingItems)) {
             existingItems.push(item);
           } else {
-            acc.itemsByFolderId.set(item.folderId, [item]);
+            acc.itemsByFolderId.set(item.parentId, [item]);
           }
         }
 

@@ -15,11 +15,24 @@ import { AuthUser } from 'src/engine/decorators/auth/auth-user.decorator';
 import { AuthUserWorkspaceId } from 'src/engine/decorators/auth/auth-user-workspace-id.decorator';
 import { AuthWorkspace } from 'src/engine/decorators/auth/auth-workspace.decorator';
 import { AllowSuspendedWorkspace } from 'src/engine/decorators/auth/allow-suspended-workspace.decorator';
-import { NoPermissionGuard } from 'src/engine/guards/no-permission.guard';
-import { UserAuthGuard } from 'src/engine/guards/user-auth.guard';
-import { WorkspaceAuthGuard } from 'src/engine/guards/workspace-auth.guard';
+import { AccessPolicyGuard } from 'src/engine/guards/access-policy.guard';
 
-@UseGuards(WorkspaceAuthGuard, UserAuthGuard)
+@UseGuards(
+  AccessPolicyGuard({
+    authPrincipals: {
+      userSession: {
+        standard: true,
+        impersonated: true,
+        playground: true,
+        workspaceAgnostic: false,
+      },
+      apiKey: false,
+      oauthClient: false,
+      application: false,
+    },
+    requiredPermissionFlags: [],
+  }),
+)
 @UsePipes(ResolverValidationPipe)
 @UseFilters(PreventNestToAutoLogGraphqlErrorsFilter)
 @MetadataResolver()
@@ -31,7 +44,6 @@ export class OnboardingResolver {
   ) {}
 
   @Query(() => [InviteSuggestionDTO])
-  @UseGuards(NoPermissionGuard)
   async getInviteSuggestions(
     @AuthUser() user: AuthContextUser,
     @AuthWorkspace() workspace: WorkspaceEntity,
@@ -45,7 +57,6 @@ export class OnboardingResolver {
   }
 
   @Mutation(() => OnboardingStepSuccessDTO)
-  @UseGuards(NoPermissionGuard)
   async skipSyncEmailOnboardingStep(
     @AuthUser() user: AuthContextUser,
     @AuthWorkspace() workspace: WorkspaceEntity,
@@ -62,7 +73,6 @@ export class OnboardingResolver {
   }
 
   @Mutation(() => OnboardingStepSuccessDTO)
-  @UseGuards(NoPermissionGuard)
   async completeBookCallOnboardingStep(
     @AuthUser() user: AuthContextUser,
     @AuthWorkspace() workspace: WorkspaceEntity,
@@ -81,28 +91,7 @@ export class OnboardingResolver {
     return { success: true };
   }
 
-  @Mutation(() => OnboardingStepSuccessDTO)
-  @UseGuards(NoPermissionGuard)
-  async triggerInstallAppsOnboardingStep(
-    @AuthUser() user: AuthContextUser,
-    @AuthWorkspace() workspace: WorkspaceEntity,
-    @Args({ name: 'universalIdentifiers', type: () => [String] })
-    universalIdentifiers: string[],
-    @Args({ name: 'isAutoSkipped', type: () => Boolean, defaultValue: false })
-    isAutoSkipped: boolean,
-  ): Promise<OnboardingStepSuccessDTO> {
-    await this.onboardingService.triggerInstallAppsOnboardingStep({
-      userId: user.id,
-      workspaceId: workspace.id,
-      universalIdentifiers,
-      isAutoSkipped,
-    });
-
-    return { success: true };
-  }
-
   @Mutation(() => OnboardingStepNavigationDTO)
-  @UseGuards(NoPermissionGuard)
   async goBackToPreviousOnboardingStep(
     @AuthUser() user: AuthContextUser,
     @AuthWorkspace() workspace: WorkspaceEntity,

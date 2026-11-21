@@ -7,17 +7,15 @@ import { isNonEmptyString } from '@sniptt/guards';
 import { useState } from 'react';
 import { enqueueSnackbar, useColorScheme } from 'twenty-sdk/front-component';
 import { isDefined } from 'twenty-sdk/utils';
-import { Callout } from 'twenty-ui/feedback';
-import { Button } from 'twenty-ui/input';
-import { Section } from 'twenty-ui/layout';
-import { ThemeProvider, themeCssVariables } from 'twenty-ui/theme-constants';
-import { H2Title } from 'twenty-ui/typography';
+import { Callout } from 'twenty-ui/components/feedback';
+import { Button } from 'twenty-ui/primitives/input';
+import { Section } from 'twenty-ui/components/layout';
+import { ThemeProvider, themeCssVariables } from 'twenty-ui/theme';
 
-import { SlackAccessModeSection } from 'src/front-components/components/SlackAccessModeSection';
 import { SlackUserLinkForm } from 'src/front-components/components/SlackUserLinkForm';
 import { SlackUserLinksList } from 'src/front-components/components/SlackUserLinksList';
+import { SlackUserLinksSettingsSkeleton } from 'src/front-components/components/SlackUserLinksSettingsSkeleton';
 import { UnlinkedSlackUsersList } from 'src/front-components/components/UnlinkedSlackUsersList';
-import { SLACK_CONNECTION_HEALTH_CALLOUTS } from 'src/front-components/constants/slack-connection-health-callouts.constant';
 import { useCanManageSlackUserLinks } from 'src/front-components/hooks/use-can-manage-slack-user-links';
 import { useMatchSlackUserLinks } from 'src/front-components/hooks/use-match-slack-user-links';
 import { useSlackConnectionStatus } from 'src/front-components/hooks/use-slack-connection-status';
@@ -26,6 +24,7 @@ import { useResendSlackUserLinkConsent } from 'src/front-components/hooks/use-re
 import { useSlackUserLinks } from 'src/front-components/hooks/use-slack-user-links';
 import { useUnlinkedSlackUsers } from 'src/front-components/hooks/use-unlinked-slack-users';
 import { type SlackUserLinkRecord } from 'src/front-components/types/slack-user-link-record.type';
+import { SLACK_CONNECTION_HEALTH } from 'src/logic-functions/constants/slack-connection-health';
 
 const StyledContainer = styled.div`
   box-sizing: border-box;
@@ -74,10 +73,12 @@ const SlackUserLinksSettingsContent = () => {
     connectionHealth,
     hasRosterMatchFailed,
     isConnectionStatusLoading,
+    hasConnectionStatusFailed,
   } = useSlackConnectionStatus();
   const {
     slackUserLinks,
     isSlackUserLinksLoading,
+    hasLoadedSlackUserLinks,
     errorMessage,
     hasMoreSlackUserLinks,
     refetchSlackUserLinks,
@@ -88,9 +89,10 @@ const SlackUserLinksSettingsContent = () => {
     unlinkedSlackUsers,
     hasMoreUnlinkedSlackUsers,
     isUnlinkedSlackUsersLoading,
+    hasLoadedUnlinkedSlackUsers,
     unlinkedErrorMessage,
     refetchUnlinkedSlackUsers,
-  } = useUnlinkedSlackUsers({ isEnabled: canManage && isSlackConnected });
+  } = useUnlinkedSlackUsers({ isEnabled: canManage });
   const { matchSlackUserLinks, isMatching } = useMatchSlackUserLinks();
   const [matchSummary, setMatchSummary] = useState<string | undefined>(
     undefined,
@@ -171,28 +173,37 @@ const SlackUserLinksSettingsContent = () => {
     }
   };
 
-  if (isConnectionStatusLoading || !isSlackConnected) {
-    return null;
+  const isConnectionBroken =
+    isDefined(connectionHealth) &&
+    connectionHealth !== SLACK_CONNECTION_HEALTH.OK;
+
+  if (isConnectionStatusLoading || isPermissionLoading) {
+    return <SlackUserLinksSettingsSkeleton />;
   }
 
-  const connectionHealthCallout = isDefined(connectionHealth)
-    ? SLACK_CONNECTION_HEALTH_CALLOUTS[connectionHealth]
-    : undefined;
-
-  if (isDefined(connectionHealthCallout)) {
+  if (hasConnectionStatusFailed) {
     return (
-      <StyledContainer>
-        <Callout
-          variant="error"
-          title={connectionHealthCallout.title}
-          description={connectionHealthCallout.description}
-        />
-      </StyledContainer>
+      <StyledCenteredState>
+        Could not check the Slack connection. Reload the page to try again.
+      </StyledCenteredState>
     );
   }
 
-  if (isPermissionLoading) {
-    return <StyledCenteredState>Loading Slack user links…</StyledCenteredState>;
+  if (!isSlackConnected) {
+    return (
+      <StyledCenteredState>
+        Slack is not connected yet. Add a connection from the General tab to
+        manage Slack user links.
+      </StyledCenteredState>
+    );
+  }
+
+  if (isConnectionBroken) {
+    return null;
+  }
+
+  if (!hasLoadedSlackUserLinks || (canManage && !hasLoadedUnlinkedSlackUsers)) {
+    return <SlackUserLinksSettingsSkeleton />;
   }
 
   const shouldWarnAboutRosterMatch =
@@ -202,24 +213,23 @@ const SlackUserLinksSettingsContent = () => {
     <StyledContainer>
       {!canManage && (
         <Callout
-          variant="warning"
+          status="warning"
           title="You need the roles permission"
           description="Only members with the roles permission can create or change Slack user links. You can review the existing links below."
         />
       )}
       {shouldWarnAboutRosterMatch && (
         <Callout
-          variant="warning"
+          status="warning"
           title="Email auto-link did not finish"
           description="The last automatic email match failed before linking everyone. Press Auto-link by email below to run it again."
         />
       )}
-      <SlackAccessModeSection canManage={canManage} />
       {canManage && (
-        <Section>
-          <H2Title
+        <Section.Root>
+          <Section.Header
             title="Unlinked Slack users"
-            description="These Slack users talk to the assistant with its default role. Pick a workspace member on a row to link them in place, or auto-link everyone whose Slack email matches a workspace member."
+            description="Only Slack users linked to a workspace member can use the assistant. Pick a workspace member on a row to link them in place, or auto-link everyone whose Slack email matches a workspace member."
           />
           {isUnlinkedSlackUsersLoading && unlinkedSlackUsers.length === 0 ? (
             <StyledCenteredState>
@@ -240,17 +250,18 @@ const SlackUserLinksSettingsContent = () => {
             )}
             <Button
               type="button"
-              title={isMatching ? 'Auto-linking…' : 'Auto-link by email'}
-              size="small"
-              variant="secondary"
+              size="sm"
+              variant="outline"
               disabled={isMatching}
               onClick={handleMatchByEmail}
-            />
+            >
+              {isMatching ? 'Auto-linking…' : 'Auto-link by email'}
+            </Button>
           </StyledMatchAction>
-        </Section>
+        </Section.Root>
       )}
-      <Section>
-        <H2Title
+      <Section.Root>
+        <Section.Header
           title="Slack user links"
           description="Each link maps a Slack account to the workspace member whose permissions the assistant borrows."
         />
@@ -270,7 +281,7 @@ const SlackUserLinksSettingsContent = () => {
             resendingLinkId={resendingLinkId}
           />
         )}
-      </Section>
+      </Section.Root>
       {canManage &&
         (isManualFormOpen ? (
           <SlackUserLinkForm
@@ -281,11 +292,12 @@ const SlackUserLinksSettingsContent = () => {
           <StyledDisclosure>
             <Button
               type="button"
-              title="Link someone not listed above"
-              size="small"
-              variant="secondary"
+              size="sm"
+              variant="outline"
               onClick={() => setIsManualFormOpen(true)}
-            />
+            >
+              Link someone not listed above
+            </Button>
           </StyledDisclosure>
         ))}
     </StyledContainer>

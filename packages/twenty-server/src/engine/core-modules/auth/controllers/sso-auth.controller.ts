@@ -11,16 +11,19 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
+import { msg } from '@lingui/core/macro';
 import { generateServiceProviderMetadata } from '@node-saml/node-saml';
+import { isNonEmptyString } from '@sniptt/guards';
 import { Response } from 'express';
 import {
   ApiPath,
   AppPath,
   ConnectedAccountProvider,
 } from 'twenty-shared/types';
-import { assertIsDefinedOrThrow } from 'twenty-shared/utils';
+import { assertIsDefinedOrThrow, isDefined } from 'twenty-shared/utils';
 import { Repository } from 'typeorm';
 
+import { AppTokenEntity } from 'src/engine/core-modules/app-token/app-token.entity';
 import {
   AuthException,
   AuthExceptionCode,
@@ -90,7 +93,6 @@ export class SsoAuthController {
     NoPermissionGuard,
   )
   async oidcAuth() {
-    // As this method is protected by OIDC Auth guard, it will trigger OIDC SSO flow
     return;
   }
 
@@ -102,7 +104,6 @@ export class SsoAuthController {
     NoPermissionGuard,
   )
   async samlAuth() {
-    // As this method is protected by SAML Auth guard, it will trigger SAML SSO flow
     return;
   }
 
@@ -113,7 +114,10 @@ export class SsoAuthController {
     PublicEndpointGuard,
     NoPermissionGuard,
   )
-  async oidcAuthCallback(@Req() req: OidcRequest, @Res() res: Response) {
+  async oidcAuthCallback(
+    @Req() req: OidcRequest,
+    @Res() res: Pick<Response, 'redirect'>,
+  ) {
     return await this.authCallback(req, res);
   }
 
@@ -124,7 +128,10 @@ export class SsoAuthController {
     PublicEndpointGuard,
     NoPermissionGuard,
   )
-  async samlAuthCallback(@Req() req: SamlRequest, @Res() res: Response) {
+  async samlAuthCallback(
+    @Req() req: SamlRequest,
+    @Res() res: Pick<Response, 'redirect'>,
+  ) {
     try {
       return await this.authCallback(req, res);
     } catch (err) {
@@ -135,7 +142,10 @@ export class SsoAuthController {
     }
   }
 
-  private async authCallback(req: OidcRequest | SamlRequest, res: Response) {
+  private async authCallback(
+    req: OidcRequest | SamlRequest,
+    res: Pick<Response, 'redirect'>,
+  ) {
     const workspaceIdentityProvider =
       await this.workspaceSsoIdentityProviderRepository.findOne({
         where: { id: req.user.identityProviderId },
@@ -190,11 +200,11 @@ export class SsoAuthController {
           ? ConnectedAccountProvider.SAML
           : ConnectedAccountProvider.OIDC;
 
-      const { loginToken } = await this.generateLoginToken(
-        req.user,
+      const { loginToken } = await this.signInUpAndIssueLoginToken({
+        payload: req.user,
         currentWorkspace,
-        { oidcTokenClaims, connectedAccountProvider },
-      );
+        ssoContext: { oidcTokenClaims, connectedAccountProvider },
+      });
 
       return res.redirect(
         this.authService.computeRedirectURI({
@@ -216,34 +226,85 @@ export class SsoAuthController {
     }
   }
 
-  private async generateLoginToken(
-    payload: { email: string; workspaceInviteHash?: string },
-    currentWorkspace: WorkspaceEntity,
+  private async signInUpAndIssueLoginToken({
+    payload: { workspacePersonalInviteToken, ...payload },
+    currentWorkspace,
+    ssoContext,
+  }: {
+    payload: Pick<
+      SamlRequest['user'],
+      'email' | 'workspaceInviteHash' | 'workspacePersonalInviteToken'
+    >;
+    currentWorkspace: WorkspaceEntity;
     ssoContext?: {
       oidcTokenClaims?: Record<string, unknown>;
       connectedAccountProvider: ConnectedAccountProvider;
-    },
-  ) {
-    const invitation = payload.email
-      ? await this.authService.findInvitationForSignInUp({
-          currentWorkspace,
-          email: payload.email,
-        })
-      : undefined;
-
+    };
+  }) {
     const existingUser = await this.userService.findUserByEmail(payload.email);
 
     const { userData } = this.authService.formatUserDataPayload(
-      payload,
+      { ...payload, isEmailAlreadyVerified: true },
       existingUser,
     );
 
-    await this.authService.checkAccessForSignIn({
-      userData,
-      invitation,
-      workspaceInviteHash: payload.workspaceInviteHash,
-      workspace: currentWorkspace,
-    });
+    let invitation: AppTokenEntity | undefined;
+
+    if (isDefined(existingUser)) {
+      invitation = isNonEmptyString(workspacePersonalInviteToken)
+        ? await this.authService.findInvitationForSignInUp({
+            currentWorkspace,
+            workspacePersonalInviteToken,
+            email: payload.email,
+          })
+        : undefined;
+
+      if (
+        isDefined(invitation) &&
+        (existingUser.canAccessFullAdminPanel || existingUser.canImpersonate)
+      ) {
+        throw new AuthException(
+          'Accounts with admin panel or impersonation access cannot join a workspace through SSO. Accept the invitation with another sign-in method.',
+          AuthExceptionCode.FORBIDDEN_EXCEPTION,
+          {
+            userFriendlyMessage: msg`Accounts with admin panel or impersonation access cannot join a workspace through SSO. Accept the invitation with another sign-in method.`,
+          },
+        );
+      }
+
+      if (
+        isDefined(invitation) &&
+        isNonEmptyString(existingUser.passwordHash) &&
+        !existingUser.isEmailVerified
+      ) {
+        throw new AuthException(
+          'An unverified account already exists for this email. Verify its email or reset its password before accepting the invitation through SSO.',
+          AuthExceptionCode.FORBIDDEN_EXCEPTION,
+          {
+            userFriendlyMessage: msg`An unverified account already exists for this email. Verify its email or reset its password before accepting the invitation through SSO.`,
+          },
+        );
+      }
+
+      if (!isDefined(invitation)) {
+        await this.userService.hasUserAccessToWorkspaceOrThrow(
+          existingUser.id,
+          currentWorkspace.id,
+        );
+      }
+    } else {
+      invitation = await this.authService.findInvitationForSignInUp({
+        currentWorkspace,
+        email: payload.email,
+      });
+
+      await this.authService.checkAccessForSignIn({
+        userData,
+        invitation,
+        workspaceInviteHash: payload.workspaceInviteHash,
+        workspace: currentWorkspace,
+      });
+    }
 
     const { workspace, user } = await this.authService.signInUp({
       userData,
@@ -253,6 +314,10 @@ export class SsoAuthController {
         provider: AuthProviderEnum.SSO,
       },
     });
+
+    if (!user.isEmailVerified && !isNonEmptyString(user.passwordHash)) {
+      await this.userService.markEmailAsVerified(user.id);
+    }
 
     if (ssoContext) {
       await this.authService.createSsoConnectedAccountIfFeatureFlagIsOn({

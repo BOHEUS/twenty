@@ -1,18 +1,15 @@
+import { UserWorkspaceModule } from 'src/engine/core-modules/user-workspace/user-workspace.module';
 import { Global, Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { ProcessNestedRelationsHelper } from 'src/engine/api/common/common-nested-relations-processor/process-nested-relations.helper';
-import { CommonSelectFieldsHelper } from 'src/engine/api/common/common-select-fields/common-select-fields-helper';
+import { CommonSelectFieldsBuilder } from 'src/engine/api/common/common-select-fields/common-select-fields-builder';
 import { CacheLockModule } from 'src/engine/core-modules/cache-lock/cache-lock.module';
-import { CacheStorageModule } from 'src/engine/core-modules/cache-storage/cache-storage.module';
-import { I18nModule } from 'src/engine/core-modules/i18n/i18n.module';
 import { MetricsModule } from 'src/engine/core-modules/metrics/metrics.module';
-import { RedisClientModule } from 'src/engine/core-modules/redis-client/redis-client.module';
-import { WorkspaceEntity } from 'src/engine/core-modules/workspace/workspace.entity';
 import { ApplicationTranslationCatalogModule } from 'src/engine/metadata-modules/application-translation-catalog/application-translation-catalog.module';
 import { WorkspaceManyOrAllFlatEntityMapsCacheModule } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.module';
 import { NavigationMenuItemModule } from 'src/engine/metadata-modules/navigation-menu-item/navigation-menu-item.module';
-import { RecordShareModule } from 'src/engine/core-modules/record-share/record-share.module';
+import { PermissionsModule } from 'src/engine/permissions/permissions.module';
+import { RecordShareModule } from 'src/engine/permissions/record-share/record-share.module';
 import { EventStreamResolver } from 'src/engine/subscriptions/event-stream.resolver';
 import { EventStreamService } from 'src/engine/subscriptions/event-stream.service';
 import { MetadataEventEmitter } from 'src/engine/subscriptions/metadata-event/metadata-event-emitter';
@@ -28,17 +25,15 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
 @Global()
 @Module({
   imports: [
-    RedisClientModule,
-    CacheStorageModule,
     CacheLockModule,
     MetricsModule,
-    TypeOrmModule.forFeature([WorkspaceEntity]),
     WorkspaceCacheModule,
     WorkspaceManyOrAllFlatEntityMapsCacheModule,
     NavigationMenuItemModule,
-    I18nModule,
     ApplicationTranslationCatalogModule,
+    PermissionsModule,
     RecordShareModule,
+    UserWorkspaceModule,
   ],
   providers: [
     SubscriptionService,
@@ -52,7 +47,7 @@ import { WorkspaceCacheModule } from 'src/engine/workspace-cache/workspace-cache
     WorkspaceEventBroadcaster,
     QueueJobEventListener,
     ProcessNestedRelationsHelper,
-    CommonSelectFieldsHelper,
+    CommonSelectFieldsBuilder,
   ],
   exports: [
     SubscriptionService,
