@@ -1,15 +1,19 @@
-import { i18n } from '@lingui/core';
 import { t } from '@lingui/core/macro';
-import { isNonEmptyString, isObject } from '@sniptt/guards';
-import { ATTACH_CONVERSATION_TO_RECORD_TOOL_NAME } from 'twenty-shared/ai';
-import { isDefined } from 'twenty-shared/utils';
+import { isNonEmptyString } from '@sniptt/guards';
+import {
+  ATTACH_CONVERSATION_TO_RECORD_TOOL_NAME,
+  ATTACH_CONVERSATION_TO_RECORDS_TOOL_NAME,
+  REACT_TO_MESSAGE_TOOL_NAME,
+} from 'twenty-shared/ai';
 import { z } from 'zod';
 
 import { type ToolDisplayContext } from '@/ai/types/ToolDisplayContext';
 import { type ToolInput } from '@/ai/types/ToolInput';
+import { buildAttachConversationToRecordsStatusMessage } from '@/ai/utils/tool-display/buildAttachConversationToRecordsStatusMessage';
 import { buildNamedItemsStatusMessage } from '@/ai/utils/tool-display/buildNamedItemsStatusMessage';
 import { buildToolStatusMessageByCategory } from '@/ai/utils/tool-display/buildToolStatusMessageByCategory';
 import { extractSearchQuery } from '@/ai/utils/tool-display/extractSearchQuery';
+import { hasToolOutputFailed } from '@/ai/utils/tool-display/hasToolOutputFailed';
 import { pickStatusLabel } from '@/ai/utils/tool-display/pickStatusLabel';
 import { unwrapToolInput } from '@/ai/utils/tool-display/unwrapToolInput';
 
@@ -19,9 +23,7 @@ const ModelGeneratedLabelSchema = z.object({
 });
 const LearnToolsSchema = z.object({ toolNames: z.array(z.string()) });
 const LoadSkillsSchema = z.object({ skillNames: z.array(z.string()) });
-const AttachConversationToRecordSchema = z.object({
-  objectNameSingular: z.string(),
-});
+const ReactToMessageSchema = z.object({ emoji: z.string() });
 
 export const getToolDisplayMessage = ({
   input,
@@ -131,37 +133,25 @@ const buildToolDisplayMessage = ({
         loadingLabel: t`Running code`,
       });
     }
-    case ATTACH_CONVERSATION_TO_RECORD_TOOL_NAME: {
-      const parsed = AttachConversationToRecordSchema.safeParse(input);
-      const objectMetadataItem = parsed.success
-        ? displayContext.objectMetadataItems.find(
-            (metadataItem) =>
-              metadataItem.nameSingular === parsed.data.objectNameSingular,
-          )
-        : undefined;
-      const hasFailed =
-        isObject(output) && 'success' in output && output.success === false;
-
-      if (isDefined(objectMetadataItem)) {
-        const objectLabel = objectMetadataItem.labelSingular.toLocaleLowerCase(
-          i18n.locale,
-        );
-
-        return pickStatusLabel({
-          isFinished,
-          completedLabel: hasFailed
-            ? t`Could not attach this conversation to the ${objectLabel}`
-            : t`Attached this conversation to the ${objectLabel}`,
-          loadingLabel: t`Attaching this conversation to the ${objectLabel}`,
-        });
-      }
+    case ATTACH_CONVERSATION_TO_RECORD_TOOL_NAME:
+    case ATTACH_CONVERSATION_TO_RECORDS_TOOL_NAME:
+      return buildAttachConversationToRecordsStatusMessage({
+        input,
+        isFinished,
+        displayContext,
+        output,
+      });
+    case REACT_TO_MESSAGE_TOOL_NAME: {
+      const parsed = ReactToMessageSchema.safeParse(input);
+      const emoji = parsed.success ? parsed.data.emoji : '';
+      const hasFailed = hasToolOutputFailed(output);
 
       return pickStatusLabel({
         isFinished,
         completedLabel: hasFailed
-          ? t`Could not attach this conversation to a record`
-          : t`Attached this conversation to a record`,
-        loadingLabel: t`Attaching this conversation to a record`,
+          ? t`Could not react with ${emoji}`
+          : t`Reacted with ${emoji}`,
+        loadingLabel: t`Reacting with ${emoji}`,
       });
     }
     default:

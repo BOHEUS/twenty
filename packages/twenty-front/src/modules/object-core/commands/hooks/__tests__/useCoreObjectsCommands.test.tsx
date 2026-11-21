@@ -1,11 +1,12 @@
+import { MockedProvider } from '@apollo/client/testing/react';
 import { i18n } from '@lingui/core';
 import { I18nProvider } from '@lingui/react';
 import { SOURCE_LOCALE } from 'twenty-shared/translations';
+import { ContextStorePageType } from 'twenty-shared/types';
 import { messages } from '~/locales/generated/en';
 import { act, renderHook } from '@testing-library/react';
 import { Provider as JotaiProvider } from 'jotai';
 import { MemoryRouter } from 'react-router-dom';
-import { CoreObjectNameSingular } from 'twenty-shared/types';
 
 import { EMPTY_COMMAND_MENU_CONTEXT_API } from '@/command-menu-item/constants/EmptyCommandMenuContextApi';
 import { CommandMenuContext } from '@/command-menu-item/contexts/CommandMenuContext';
@@ -18,39 +19,37 @@ import { jotaiStore } from '@/ui/utilities/state/jotai/jotaiStore';
 i18n.load({ [SOURCE_LOCALE]: messages });
 i18n.activate(SOURCE_LOCALE);
 
-const mockIsCoreEnabled = jest.fn();
 const mockHasPermission = jest.fn();
 
-jest.mock('@/workspace/hooks/useIsFeatureEnabled', () => ({
-  useIsFeatureEnabled: () => mockIsCoreEnabled(),
-}));
 jest.mock('@/settings/roles/hooks/useHasPermissionFlag', () => ({
   useHasPermissionFlag: () => mockHasPermission(),
 }));
 
+let mockCommandMenuContextApi = {
+  ...EMPTY_COMMAND_MENU_CONTEXT_API,
+  coreObjectName: 'workflow' as const,
+};
+
 const Wrapper = ({ children }: { children: React.ReactNode }) => (
-  <JotaiProvider store={jotaiStore}>
-    <I18nProvider i18n={i18n}>
-      <MemoryRouter initialEntries={['/command-menu']}>
-        <CommandMenuContext.Provider
-          value={{
-            displayType: 'listItem',
-            containerType: CommandMenuItemContainerType.CommandMenuList,
-            isInPreviewMode: false,
-            commandMenuItems: [],
-            commandMenuContextApi: {
-              ...EMPTY_COMMAND_MENU_CONTEXT_API,
-              objectMetadataItem: {
-                nameSingular: CoreObjectNameSingular.Workflow,
-              },
-            },
-          }}
-        >
-          {children}
-        </CommandMenuContext.Provider>
-      </MemoryRouter>
-    </I18nProvider>
-  </JotaiProvider>
+  <MockedProvider mocks={[]}>
+    <JotaiProvider store={jotaiStore}>
+      <I18nProvider i18n={i18n}>
+        <MemoryRouter initialEntries={['/command-menu']}>
+          <CommandMenuContext.Provider
+            value={{
+              displayType: 'listItem',
+              containerType: CommandMenuItemContainerType.CommandMenuList,
+              isInPreviewMode: false,
+              commandMenuItems: [],
+              commandMenuContextApi: mockCommandMenuContextApi,
+            }}
+          >
+            {children}
+          </CommandMenuContext.Provider>
+        </MemoryRouter>
+      </I18nProvider>
+    </JotaiProvider>
+  </MockedProvider>
 );
 
 const renderCommands = () => {
@@ -66,7 +65,10 @@ const renderCommands = () => {
 
 describe('useCoreObjectsCommands', () => {
   beforeEach(() => {
-    mockIsCoreEnabled.mockReturnValue(true);
+    mockCommandMenuContextApi = {
+      ...EMPTY_COMMAND_MENU_CONTEXT_API,
+      coreObjectName: 'workflow',
+    };
     mockHasPermission.mockReturnValue(true);
     jotaiStore.set(coreWorkflowsFilterSettingsState.atom, {});
   });
@@ -84,17 +86,24 @@ describe('useCoreObjectsCommands', () => {
     });
   });
 
+  it('targets the open workflow on the workflow page', () => {
+    mockCommandMenuContextApi = {
+      ...mockCommandMenuContextApi,
+      pageType: ContextStorePageType.Record,
+      selectedRecords: [{ id: 'open-workflow-id' }],
+    };
+
+    const { result } = renderCommands();
+
+    expect(result.current.shouldDisplayCoreWorkflowsDeleteCommand).toBe(true);
+    expect(result.current.selectedCoreWorkflowIds).toEqual([
+      'open-workflow-id',
+    ]);
+  });
+
   it('does not expose core deletion without the workflow permission', () => {
     mockHasPermission.mockReturnValue(false);
     const { result } = renderCommands();
     expect(result.current.shouldDisplayCoreWorkflowsDeleteCommand).toBe(false);
-  });
-
-  it('keeps core commands hidden with the flag off', () => {
-    mockIsCoreEnabled.mockReturnValue(false);
-    const { result } = renderCommands();
-    expect(result.current.coreObjectCommandIds).toEqual([]);
-    expect(result.current.coreSelectionCommandIds).toEqual([]);
-    expect(result.current.coreSelectionSectionContext).toBeUndefined();
   });
 });

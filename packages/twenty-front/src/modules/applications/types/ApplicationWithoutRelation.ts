@@ -10,4 +10,6 @@ export type ApplicationWithoutRelation = Pick<
   | 'universalIdentifier'
   | 'applicationRegistrationId'
   | 'applicationRegistration'
+  | 'requestedRoleId'
+  | 'grantRoleId'
 >;

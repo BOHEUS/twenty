@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { defineFrontComponent } from 'twenty-sdk/define';
+import { Dropdown } from 'twenty-ui/components/navigation';
 import { Button } from 'twenty-ui/primitives/input';
-import { Menu } from 'twenty-ui/primitives/surfaces';
 import { Text } from 'twenty-ui/primitives/typography';
 
 import { TwentyUiGalleryCard } from '@/__stories__/shared/front-components/twenty-ui-gallery-card';
@@ -19,17 +19,20 @@ const PortalsExample = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isOversizedOpen, setIsOversizedOpen] = useState(false);
   const [actionCount, setActionCount] = useState(0);
+  const [portalWheelCount, setPortalWheelCount] = useState(0);
 
   return (
     <TwentyUiGalleryCard title="Portals">
-      <Menu.Root>
-        <Menu.Trigger>Open menu</Menu.Trigger>
-        <Menu.Popup>
+      <Dropdown.Root type="menu">
+        <Dropdown.Trigger render={<Button>Open menu</Button>} />
+        <Dropdown.Content>
           {MENU_ITEM_LABELS.map((menuItemLabel) => (
-            <Menu.Item key={menuItemLabel}>{menuItemLabel}</Menu.Item>
+            <Dropdown.ActionItem key={menuItemLabel}>
+              {menuItemLabel}
+            </Dropdown.ActionItem>
           ))}
-        </Menu.Popup>
-      </Menu.Root>
+        </Dropdown.Content>
+      </Dropdown.Root>
       <Button onClick={() => setIsOpen(!isOpen)}>Toggle popup</Button>
       <Button onClick={() => setIsOversizedOpen(!isOversizedOpen)}>
         Fill portal area
@@ -37,9 +40,15 @@ const PortalsExample = () => {
       <Text role="status" aria-label="Portal actions">
         Portal actions: {actionCount}
       </Text>
+      <Text role="status" aria-label="Portal wheel events">
+        Portal wheel events: {portalWheelCount}
+      </Text>
       {isOpen &&
         createPortal(
-          <div style={{ position: 'absolute', top: '100%', left: 0 }}>
+          <div
+            style={{ position: 'absolute', top: '100%', left: 0 }}
+            onWheel={() => setPortalWheelCount((count) => count + 1)}
+          >
             <Button onClick={() => setActionCount(actionCount + 1)}>
               Portal action
             </Button>

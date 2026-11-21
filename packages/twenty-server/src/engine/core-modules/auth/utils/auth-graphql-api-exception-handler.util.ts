@@ -19,6 +19,7 @@ export const authGraphqlApiExceptionHandler = (exception: AuthException) => {
     case AuthExceptionCode.INVALID_INPUT:
       throw new UserInputError(exception);
     case AuthExceptionCode.FORBIDDEN_EXCEPTION:
+    case AuthExceptionCode.IDENTITY_ASSERTION_REQUIRED:
     case AuthExceptionCode.WORKSPACE_SUSPENDED:
     case AuthExceptionCode.INSUFFICIENT_SCOPES:
     case AuthExceptionCode.OAUTH_ACCESS_DENIED:
@@ -49,6 +50,7 @@ export const authGraphqlApiExceptionHandler = (exception: AuthException) => {
         userFriendlyMessage: exception.userFriendlyMessage,
       });
     case AuthExceptionCode.UNAUTHENTICATED:
+    case AuthExceptionCode.SESSION_SUPERSEDED:
     case AuthExceptionCode.APPLICATION_REFRESH_TOKEN_INVALID_OR_EXPIRED:
       throw new AuthenticationError(exception.message, {
         userFriendlyMessage: msg`You must be authenticated to perform this action.`,

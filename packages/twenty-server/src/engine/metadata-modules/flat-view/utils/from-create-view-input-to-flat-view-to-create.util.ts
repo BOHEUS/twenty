@@ -24,12 +24,14 @@ export const fromCreateViewInputToFlatViewToCreate = ({
   createdByUserWorkspaceId,
   flatApplication,
   flatFieldMetadataMaps,
+  flatFieldMetadataOptionMaps,
   flatObjectMetadataMaps,
 }: {
   createViewInput: CreateViewInput;
   createdByUserWorkspaceId?: string;
   flatApplication: FlatApplication;
   flatFieldMetadataMaps: AllFlatEntityMaps['flatFieldMetadataMaps'];
+  flatFieldMetadataOptionMaps: AllFlatEntityMaps['flatFieldMetadataOptionMaps'];
   flatObjectMetadataMaps: AllFlatEntityMaps['flatObjectMetadataMaps'];
 }): {
   flatViewToCreate: UniversalFlatView & { id: string };
@@ -75,7 +77,6 @@ export const fromCreateViewInputToFlatViewToCreate = ({
     createdAt,
     updatedAt: createdAt,
     deletedAt: null,
-    isCustom: true,
     anyFieldFilterValue: createViewInput.anyFieldFilterValue ?? null,
     calendarFieldMetadataUniversalIdentifier,
     calendarEndFieldMetadataUniversalIdentifier,
@@ -83,6 +84,8 @@ export const fromCreateViewInputToFlatViewToCreate = ({
     icon: createViewInput.icon,
     isCompact: createViewInput.isCompact ?? false,
     shouldHideEmptyGroups: createViewInput.shouldHideEmptyGroups ?? false,
+    shouldDisplayGroupsAsTabs:
+      createViewInput.shouldDisplayGroupsAsTabs ?? false,
     kanbanColumnWidth: createViewInput.kanbanColumnWidth ?? null,
     groupLoadLimit:
       createViewInput.groupLoadLimit ?? DEFAULT_VIEW_GROUP_LOAD_LIMIT,
@@ -116,6 +119,7 @@ export const fromCreateViewInputToFlatViewToCreate = ({
       flatViewToCreateUniversalIdentifier: flatViewToCreate.universalIdentifier,
       mainGroupByFieldMetadataId,
       flatFieldMetadataMaps,
+      flatFieldMetadataOptionMaps,
     });
   }
 

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { FieldMetadataType, RelationType } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
+import { isDefined, isMorphRelationHead } from 'twenty-shared/utils';
 import { type QueryRunner } from 'typeorm';
 import { v4 } from 'uuid';
 
@@ -29,6 +29,7 @@ import {
   WorkspaceMigrationActionRunnerContext,
   type WorkspaceMigrationActionRunnerArgs,
 } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/types/workspace-migration-action-runner-args.type';
+import { applyFieldMetadataOptionRowsToCreatedFlatFieldMetadata } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/utils/apply-field-metadata-option-rows-to-created-flat-field-metadata.util';
 import { generateColumnDefinitions } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/utils/generate-column-definitions.util';
 import { getWorkspaceSchemaContextForMigration } from 'src/engine/workspace-manager/workspace-migration/workspace-migration-runner/utils/get-workspace-schema-context-for-migration.util';
 import {
@@ -177,7 +178,14 @@ export class CreateFieldActionHandlerService extends WorkspaceMigrationRunnerAct
         ...createdFlatFieldMetadatas,
       ];
 
-      for (const flatFieldMetadata of createdFlatFieldMetadatas) {
+      for (const createdFlatFieldMetadata of createdFlatFieldMetadatas) {
+        const flatFieldMetadata =
+          applyFieldMetadataOptionRowsToCreatedFlatFieldMetadata({
+            flatFieldMetadata: createdFlatFieldMetadata,
+            fieldMetadataOptionEnumChanges:
+              context.fieldMetadataOptionEnumChanges,
+          });
+
         await this.executeSingleFieldMetadataWorkspaceSchema({
           flatFieldMetadata,
           isForeignKeyValidationDeferred:
@@ -197,7 +205,7 @@ export class CreateFieldActionHandlerService extends WorkspaceMigrationRunnerAct
     }
   }
 
-  override getDeferredAction(
+  override getDeferredOperation(
     context: WorkspaceMigrationActionRunnerContext<FlatCreateFieldAction>,
   ) {
     return getDeferredForeignKeyValidation(context);
@@ -230,6 +238,10 @@ export class CreateFieldActionHandlerService extends WorkspaceMigrationRunnerAct
     tableName: string;
     workspaceId: string;
   }): Promise<void> {
+    if (isMorphRelationHead(flatFieldMetadata)) {
+      return;
+    }
+
     const enumOperations = collectEnumOperationsForField({
       flatFieldMetadata,
       tableName,

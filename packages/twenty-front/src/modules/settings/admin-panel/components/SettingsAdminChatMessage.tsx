@@ -1,4 +1,3 @@
-import { t } from '@lingui/core/macro';
 import { styled } from '@linaria/react';
 
 import { themeCssVariables } from 'twenty-ui/theme';
@@ -8,6 +7,7 @@ import { SettingsAdminChatMessagePartRenderer } from '@/settings/admin-panel/com
 import { type AdminChatThreadMessage } from '@/settings/admin-panel/types/AdminChatThreadMessage';
 import { isRenderableAdminChatMessagePart } from '@/settings/admin-panel/utils/isRenderableAdminChatMessagePart';
 import { AgentMessageRole } from '~/generated-admin/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsAdminChatMessageProps = {
   message: AdminChatThreadMessage;
@@ -36,10 +36,9 @@ const StyledTimestamp = styled.span`
 export const SettingsAdminChatMessage = ({
   message,
 }: SettingsAdminChatMessageProps) => {
+  const { t } = useLingui();
   const isUser = message.role === AgentMessageRole.USER;
-  // hidden user messages are contexts the 2.46 upgrade has not turned into system messages yet
-  const isContext =
-    message.role === AgentMessageRole.SYSTEM || message.isHidden;
+  const isContext = message.role === AgentMessageRole.SYSTEM;
 
   const renderableParts = message.parts
     .filter(isRenderableAdminChatMessagePart)

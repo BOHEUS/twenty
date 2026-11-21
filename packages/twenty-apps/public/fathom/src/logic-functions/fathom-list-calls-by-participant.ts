@@ -11,6 +11,7 @@ import { FATHOM_LIST_CALLS_BY_PARTICIPANT_UNIVERSAL_IDENTIFIER } from 'src/const
 import { type FathomCallSummary } from 'src/logic-functions/types/fathom-call-summary.type';
 import { createFathomClient } from 'src/logic-functions/utils/create-fathom-client.util';
 import { doesFathomMeetingIncludeInvitee } from 'src/logic-functions/utils/does-fathom-meeting-include-invitee.util';
+import { getConnectionAccessTokenOrThrow } from 'src/logic-functions/utils/get-connection-access-token-or-throw.util';
 import { listFathomConnectionsForRequest } from 'src/logic-functions/utils/list-fathom-connections-for-request.util';
 import { listFathomMeetings } from 'src/logic-functions/utils/list-fathom-meetings.util';
 import { mapFathomMeetingToCallSummary } from 'src/logic-functions/utils/map-fathom-meeting-to-call-summary.util';
@@ -40,7 +41,12 @@ const fathomListCallsByParticipantInputSchema: InputJsonSchema = {
 };
 
 type FathomListCallsByParticipantResult =
-  | { success: true; count: number; calls: FathomCallSummary[] }
+  | {
+      success: true;
+      count: number;
+      calls: FathomCallSummary[];
+      isTruncated: boolean;
+    }
   | { success: false; error: string };
 
 const clampLimit = (limit: unknown): number =>
@@ -78,15 +84,20 @@ export const fathomListCallsByParticipantHandler = async (
       normalizedInviteeEmail: participantEmail,
     });
   const matchingMeetingsByRecordingId = new Map<number, Meeting>();
+  const listings: Awaited<ReturnType<typeof listFathomMeetings>>[] = [];
 
   for (const connection of connections) {
-    const meetings = await listFathomMeetings({
-      fathomClient: createFathomClient(connection.accessToken),
+    const listing = await listFathomMeetings({
+      fathomClient: createFathomClient(
+        getConnectionAccessTokenOrThrow(connection),
+      ),
       stopWhen: (listedMeetings) =>
         listedMeetings.filter(hasParticipant).length >= limit,
     });
 
-    for (const meeting of meetings.filter(hasParticipant)) {
+    listings.push(listing);
+
+    for (const meeting of listing.meetings.filter(hasParticipant)) {
       matchingMeetingsByRecordingId.set(meeting.recordingId, meeting);
     }
   }
@@ -100,7 +111,12 @@ export const fathomListCallsByParticipantHandler = async (
     .slice(0, limit)
     .map(mapFathomMeetingToCallSummary);
 
-  return { success: true, count: calls.length, calls };
+  return {
+    success: true,
+    count: calls.length,
+    calls,
+    isTruncated: listings.some(({ isTruncated }) => isTruncated),
+  };
 };
 
 export default defineLogicFunction({
@@ -125,6 +141,7 @@ export default defineLogicFunction({
           success: { type: 'boolean' },
           error: { type: 'string' },
           count: { type: 'number' },
+          isTruncated: { type: 'boolean' },
           calls: {
             type: 'array',
             items: {

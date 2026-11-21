@@ -4,12 +4,15 @@ export interface MessageQueueJob<T = any> {
   name: string;
   data: T;
   retryLimit: number;
+  // Failed attempts before the current one, as BullMQ counts them.
+  attemptsMade: number;
   updateData(data: T): Promise<void>;
   updateProgress(progress: number | object): Promise<void>;
   abortSignal?: AbortSignal;
 }
 
 export interface MessageQueueJobContext {
+  jobId: string;
   abortSignal?: AbortSignal;
 }
 
@@ -21,6 +24,7 @@ export interface MessageQueueJobRetryContext<
   T = MessageQueueJobData,
 > extends MessageQueueJobContext {
   retryLimit: number;
+  attemptsMade: number;
   updateData(data: T): Promise<void>;
 }
 

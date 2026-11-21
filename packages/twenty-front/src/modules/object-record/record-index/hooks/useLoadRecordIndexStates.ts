@@ -7,6 +7,7 @@ import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/Enriche
 import { formatFieldMetadataItemAsColumnDefinition } from '@/object-metadata/utils/formatFieldMetadataItemAsColumnDefinition';
 import { isHiddenSystemField } from '@/object-metadata/utils/isHiddenSystemField';
 import { currentRecordFieldsComponentState } from '@/object-record/record-field/states/currentRecordFieldsComponentState';
+import { isRecordFieldSupportedByViewType } from '@/object-record/record-field/utils/isRecordFieldSupportedByViewType';
 import { type FieldMetadata } from '@/object-record/record-field/ui/types/FieldMetadata';
 import { currentRecordFilterGroupsComponentState } from '@/object-record/record-filter-group/states/currentRecordFilterGroupsComponentState';
 import { anyFieldFilterValueComponentState } from '@/object-record/record-filter/states/anyFieldFilterValueComponentState';
@@ -24,6 +25,7 @@ import { recordIndexGroupAggregateFieldMetadataItemComponentState } from '@/obje
 import { recordIndexGroupAggregateOperationComponentState } from '@/object-record/record-index/states/recordIndexGroupAggregateOperationComponentState';
 import { recordIndexGroupLoadLimitComponentState } from '@/object-record/record-index/states/recordIndexGroupLoadLimitComponentState';
 import { recordIndexKanbanColumnWidthComponentState } from '@/object-record/record-index/states/recordIndexKanbanColumnWidthComponentState';
+import { recordIndexShouldDisplayGroupsAsTabsComponentState } from '@/object-record/record-index/states/recordIndexShouldDisplayGroupsAsTabsComponentState';
 import { recordIndexShouldHideEmptyRecordGroupsComponentState } from '@/object-record/record-index/states/recordIndexShouldHideEmptyRecordGroupsComponentState';
 import { recordIndexViewTypeState } from '@/object-record/record-index/states/recordIndexViewTypeState';
 import { viewFieldAggregateOperationState } from '@/object-record/record-table/record-table-footer/states/viewFieldAggregateOperationState';
@@ -45,9 +47,8 @@ import { mapViewFiltersToFilters } from '@/views/utils/mapViewFiltersToFilters';
 import { atom, useStore } from 'jotai';
 import { useCallback } from 'react';
 import { DEFAULT_VIEW_GROUP_LOAD_LIMIT } from 'twenty-shared/constants';
-import { isDefined } from 'twenty-shared/utils';
+import { fastDeepEqual, isDefined } from 'twenty-shared/utils';
 import { ViewCalendarLayout } from '~/generated-metadata/graphql';
-import { isDeeplyEqual } from '~/utils/isDeeplyEqual';
 
 export const useLoadRecordIndexStates = () => {
   const store = useStore();
@@ -77,6 +78,11 @@ export const useLoadRecordIndexStates = () => {
       recordIndexShouldHideEmptyRecordGroupsComponentState,
     );
 
+  const recordIndexShouldDisplayGroupsAsTabsAtom =
+    useAtomComponentStateCallbackState(
+      recordIndexShouldDisplayGroupsAsTabsComponentState,
+    );
+
   const recordIndexKanbanColumnWidthAtom = useAtomComponentStateCallbackState(
     recordIndexKanbanColumnWidthComponentState,
   );
@@ -96,7 +102,7 @@ export const useLoadRecordIndexStates = () => {
 
   const syncRecordIndexViewFields = useCallback(
     (
-      view: Pick<View, 'id' | 'viewFields'>,
+      view: Pick<View, 'id' | 'type' | 'viewFields'>,
       objectMetadataItem: EnrichedObjectMetadataItem,
       options?: { skipGlobalIndexStates?: boolean; recordIndexId?: string },
     ) => {
@@ -151,7 +157,12 @@ export const useLoadRecordIndexStates = () => {
 
       const recordFields = view.viewFields
         .map(mapViewFieldToRecordField)
-        .filter(isDefined);
+        .filter((recordField) =>
+          isRecordFieldSupportedByViewType({
+            recordField,
+            viewType: view.type,
+          }),
+        );
 
       const recordIndexId =
         options?.recordIndexId ??
@@ -181,7 +192,7 @@ export const useLoadRecordIndexStates = () => {
         atom(null, (get, batchSet) => {
           const existingFieldDefs = get(recordIndexFieldDefinitionsAtom);
 
-          if (!isDeeplyEqual(existingFieldDefs, newFieldDefinitions)) {
+          if (!fastDeepEqual(existingFieldDefs, newFieldDefinitions)) {
             batchSet(recordIndexFieldDefinitionsAtom, newFieldDefinitions);
           }
 
@@ -217,7 +228,7 @@ export const useLoadRecordIndexStates = () => {
 
           const existingRecordFields = get(currentRecordFieldsAtom);
 
-          if (!isDeeplyEqual(existingRecordFields, recordFields)) {
+          if (!fastDeepEqual(existingRecordFields, recordFields)) {
             batchSet(currentRecordFieldsAtom, recordFields);
           }
 
@@ -358,6 +369,11 @@ export const useLoadRecordIndexStates = () => {
           );
 
           batchSet(
+            recordIndexShouldDisplayGroupsAsTabsAtom,
+            view.shouldDisplayGroupsAsTabs ?? false,
+          );
+
+          batchSet(
             recordIndexKanbanColumnWidthAtom,
             clampRecordBoardColumnWidth(
               view.kanbanColumnWidth ?? RECORD_BOARD_COLUMN_WIDTH,
@@ -409,6 +425,7 @@ export const useLoadRecordIndexStates = () => {
       recordIndexGroupAggregateOperationAtom,
       recordIndexGroupAggregateFieldMetadataItemAtom,
       recordIndexShouldHideEmptyRecordGroupsAtom,
+      recordIndexShouldDisplayGroupsAsTabsAtom,
       recordIndexKanbanColumnWidthAtom,
       recordIndexGroupLoadLimitAtom,
       getFieldMetadataItemByIdOrThrow,

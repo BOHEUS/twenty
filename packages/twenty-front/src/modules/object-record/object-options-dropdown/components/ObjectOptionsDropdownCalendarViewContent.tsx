@@ -12,7 +12,6 @@ import { selectedItemIdComponentState } from '@/ui/layout/selectable-list/states
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { useSetAtomComponentState } from '@/ui/utilities/state/jotai/hooks/useSetAtomComponentState';
 import { useUpdateCurrentView } from '@/views/hooks/useUpdateCurrentView';
-import { t } from '@lingui/core/macro';
 import {
   IconCalendarEvent,
   IconCalendarMonth,
@@ -20,12 +19,14 @@ import {
   IconChevronLeft,
   IconTimelineEvent,
 } from 'twenty-ui/icon';
-import { Pill } from 'twenty-ui/primitives/data-display';
+import { Badge } from 'twenty-ui/primitives/data-display';
 import { ViewCalendarLayout } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 const RECORD_CALENDAR_TIMELINE_VIEW_ID = 'record-calendar-timeline-view';
 
 export const ObjectOptionsDropdownCalendarViewContent = () => {
+  const { t } = useLingui();
   const { resetContent, dropdownId } = useObjectOptionsDropdown();
   const recordIndexCalendarLayout = useAtomComponentStateValue(
     recordIndexCalendarLayoutComponentState,
@@ -136,7 +137,7 @@ export const ObjectOptionsDropdownCalendarViewContent = () => {
               aria-selected={false}
               selected={false}
               indicator="check"
-              description={<Pill label={t`Soon`} />}
+              description={<Badge>{t`Soon`}</Badge>}
               descriptionPlacement={'end'}
               startIcon={<SelectOptionIcon Icon={IconTimelineEvent} />}
             >{t`Timeline`}</ListItemButton>

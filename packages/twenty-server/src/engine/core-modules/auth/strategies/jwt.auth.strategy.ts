@@ -4,7 +4,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 
 import { msg } from '@lingui/core/macro';
 import { type SecretOrKeyProvider, Strategy } from 'passport-jwt';
+import { ApplicationAuthorizationService } from 'src/engine/core-modules/application/application-authorization/services/application-authorization.service';
 import { CoreEntityCacheService } from 'src/engine/core-entity-cache/services/core-entity-cache.service';
+import { isApiKeyExpired } from 'src/engine/core-modules/api-key/utils/is-api-key-expired.util';
 import {
   AuthException,
   AuthExceptionCode,
@@ -41,6 +43,7 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
     private readonly userWorkspaceRepository: Repository<UserWorkspaceEntity>,
     private readonly workspaceCacheService: WorkspaceCacheService,
     private readonly coreEntityCacheService: CoreEntityCacheService,
+    private readonly applicationAuthorizationService: ApplicationAuthorizationService,
     private readonly impersonationAuthorizationService: ImpersonationAuthorizationService,
     @InjectRepository(WorkspaceEntity)
     private readonly workspaceRepository: Repository<WorkspaceEntity>,
@@ -94,7 +97,7 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
       );
     }
 
-    if (new Date(apiKey.expiresAt) < new Date()) {
+    if (isApiKeyExpired(apiKey)) {
       throw new AuthException(
         'This API Key is expired',
         AuthExceptionCode.FORBIDDEN_EXCEPTION,
@@ -207,6 +210,7 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     return {
       ...context,
+      workspaceMemberId,
       workspaceMember,
     };
   }
@@ -311,6 +315,7 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
     return {
       impersonatorUserWorkspaceId: payload.impersonatorUserWorkspaceId,
       impersonatedUserWorkspaceId: payload.impersonatedUserWorkspaceId,
+      level: authorizationResult.level,
     };
   }
 
@@ -355,7 +360,22 @@ export class JwtAuthStrategy extends PassportStrategy(Strategy, 'jwt') {
       );
     }
 
+    if (
+      !(await this.applicationAuthorizationService.isAccessTokenAuthorized(
+        payload,
+      ))
+    ) {
+      throw new AuthException(
+        'Application authorization was revoked',
+        AuthExceptionCode.UNAUTHENTICATED,
+      );
+    }
+
     const context: RawAuthContext = { application, workspace };
+
+    if (isDefined(payload.agentId)) {
+      context.agentId = payload.agentId;
+    }
 
     if (payload.userId && payload.userWorkspaceId) {
       const userContext = await this.resolveUserContext({

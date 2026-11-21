@@ -10,6 +10,8 @@ export const CURRENT_BILLING_SUBSCRIPTION_FRAGMENT = gql`
     metadata
     currentPeriodEnd
     cancelAt
+    collectionMethod
+    hasUserCredits
     phases {
       ...BillingSubscriptionSchedulePhaseFragment
     }
@@ -27,7 +29,6 @@ export const CURRENT_BILLING_SUBSCRIPTION_FRAGMENT = gql`
         metadata {
           productKey
           planKey
-          priceUsageBased
           isLegacy
         }
       }

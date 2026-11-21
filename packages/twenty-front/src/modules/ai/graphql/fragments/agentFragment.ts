@@ -7,12 +7,14 @@ export const AGENT_FRAGMENT = gql`
     label
     description
     icon
+    avatarColor
+    avatarShape
     prompt
     modelId
     responseFormat
     roleId
-    isCustom
     isSystem
+    isActive
     modelConfiguration
     triggers
     applicationId

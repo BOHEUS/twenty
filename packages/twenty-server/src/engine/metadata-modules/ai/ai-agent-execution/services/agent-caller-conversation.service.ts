@@ -11,9 +11,7 @@ import { type ProposedToolCallAnswer } from 'src/engine/metadata-modules/ai/ai-a
 import { findMissingRequiredToolArguments } from 'src/engine/metadata-modules/ai/ai-agent-execution/pausing-tools/utils/find-missing-required-tool-arguments.util';
 import { readProposedToolCallAnswer } from 'src/engine/metadata-modules/ai/ai-agent-execution/pausing-tools/utils/read-proposed-tool-call-answer.util';
 import { resolveProposedToolCall } from 'src/engine/metadata-modules/ai/ai-agent-execution/pausing-tools/utils/resolve-proposed-tool-call.util';
-import { AgentRunCallerHandlerRegistryService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-run-caller-handler-registry.service';
 import { AgentRunSuspensionService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-run-suspension.service';
-import { type AgentRunCaller } from 'src/engine/metadata-modules/ai/ai-agent-execution/types/agent-run-caller.type';
 import { type AgentRunConversation } from 'src/engine/metadata-modules/ai/ai-agent-execution/types/agent-run-conversation.type';
 import { AgentInboxService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-inbox.service';
 import { type AgentInboxSender } from 'src/engine/metadata-modules/ai/ai-chat/types/agent-inbox-sender.type';
@@ -22,7 +20,6 @@ import {
   AiException,
   AiExceptionCode,
 } from 'src/engine/metadata-modules/ai/ai.exception';
-import { getRoleIdsFromRolePermissionConfig } from 'src/engine/twenty-orm/utils/get-role-ids-from-role-permission-config.util';
 
 const MAX_ASK_ATTEMPTS = 10;
 
@@ -33,7 +30,8 @@ const isThreadNotFoundError = (error: unknown) =>
 type AgentCallerAwaitedToolCall = {
   toolName: string;
   arguments: Record<string, unknown>;
-  caller: AgentRunCaller;
+  // the caller's own permissions, the ones the call is resolved and run with
+  permissions: Pick<ToolContext, 'authContext' | 'application'>;
   // called before the call is posted, so its answer always finds the caller waiting
   waitOnAnswer: (postedCall: {
     threadId: string;
@@ -49,7 +47,6 @@ export class AgentCallerConversationService {
   constructor(
     private readonly agentInboxService: AgentInboxService,
     private readonly agentRunSuspensionService: AgentRunSuspensionService,
-    private readonly callerHandlerRegistry: AgentRunCallerHandlerRegistryService,
     private readonly toolRegistryService: ToolRegistryService,
   ) {}
 
@@ -125,11 +122,12 @@ export class AgentCallerConversationService {
     const isKeyedConversationUnavailable =
       !isDefined(keyedConversation) ||
       isDefined(keyedConversation.thread.deletedAt) ||
-      isDefined(keyedConversation.thread.pendingQuestionMessageId) ||
-      (await this.agentRunSuspensionService.isConversationWaiting({
-        workspaceId,
-        threadId: keyedConversation.thread.id,
-      }));
+      (
+        await this.agentRunSuspensionService.findConversationWait({
+          workspaceId,
+          thread: keyedConversation.thread,
+        })
+      ).isWaiting;
     const { thread, isCreated } = isKeyedConversationUnavailable
       ? await openThreadUnderKey(fallbackThreadKey)
       : keyedConversation;
@@ -258,25 +256,21 @@ export class AgentCallerConversationService {
     );
   }
 
-  // resolved with the caller's permissions, the ones it acts with itself
   private async buildPendingToolCall({
     workspaceId,
-    awaitedToolCall: { toolName, arguments: toolArguments, caller },
+    awaitedToolCall: {
+      toolName,
+      arguments: toolArguments,
+      permissions: { authContext, application },
+    },
     summary,
   }: {
     workspaceId: string;
     awaitedToolCall: AgentCallerAwaitedToolCall;
     summary: string;
   }) {
-    const { authContext, rolePermissionConfig, application } =
-      await this.callerHandlerRegistry
-        .getHandlerOrThrow(caller.type)
-        .buildExecutionContext({ workspaceId, caller });
-
     const toolContext = {
       workspaceId,
-      roleId: getRoleIdsFromRolePermissionConfig(rolePermissionConfig)[0] ?? '',
-      rolePermissionConfig,
       authContext,
       application,
     } satisfies ToolContext;

@@ -5,7 +5,6 @@ import { isMicrosoftCalendarEnabledState } from '@/client-config/states/isMicros
 import { isMicrosoftMessagingEnabledState } from '@/client-config/states/isMicrosoftMessagingEnabledState';
 import { useTriggerApisOAuth } from '@/settings/accounts/hooks/useTriggerApiOAuth';
 import { SettingsCard } from '@/settings/components/SettingsCard';
-import { UndecoratedLink } from '@/ui/navigation/link/components/UndecoratedLink/UndecoratedLink';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
@@ -64,14 +63,13 @@ export const SettingsAccountsListEmptyStateCard = () => {
       )}
 
       {isImapSmtpCaldavEnabled && (
-        <UndecoratedLink
-          to={getSettingsPath(SettingsPath.NewImapSmtpCaldavConnection)}
-        >
-          <SettingsCard
-            Icon={<IconAt size={theme.icon.size.md} />}
-            title={t`Connect via IMAP/SMTP`}
-          />
-        </UndecoratedLink>
+        <SettingsCard
+          to={getSettingsPath(
+            SettingsPath.AppPreferencesNewImapSmtpCaldavConnection,
+          )}
+          Icon={<IconAt size={theme.icon.size.md} />}
+          title={t`Connect via IMAP/SMTP`}
+        />
       )}
     </StyledCardsContainer>
   );

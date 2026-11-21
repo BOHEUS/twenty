@@ -1,18 +1,16 @@
-import { FEATURE_FLAGS } from 'src/constants/feature-flags';
-import { CHAT_ENABLED_APPLICATION_VARIABLE_KEY } from 'src/features/chat/constants/chat-enabled-application-variable-key';
+import { isDefined } from 'twenty-sdk/utils';
+
 import { type TeamsActivitiesDispatchPayload } from 'src/features/chat/logic-functions/types/teams-activities-dispatch-payload.type';
 import { type TeamsActivitiesEnqueueResult } from 'src/features/chat/logic-functions/types/teams-activities-enqueue-result.type';
 import { enqueueTeamsAssistantRequestRecord } from 'src/features/chat/logic-functions/utils/enqueue-teams-assistant-request-record';
+import { isTeamsChatEnabled } from 'src/features/chat/logic-functions/utils/is-teams-chat-enabled';
 import { parseTeamsAssistantRequest } from 'src/features/chat/logic-functions/utils/parse-teams-assistant-request';
-import { isFeatureEnabled } from 'src/utils/is-feature-enabled';
+import { replyToEmptyTeamsAssistantRequest } from 'src/features/chat/logic-functions/utils/reply-to-empty-teams-assistant-request';
 
 export const enqueueTeamsAssistantRequest = async (
   payload: TeamsActivitiesDispatchPayload,
 ): Promise<TeamsActivitiesEnqueueResult> => {
-  const isChatEnabled = isFeatureEnabled({
-    isAvailable: FEATURE_FLAGS.IS_CHAT_ASSISTANT_ENABLED,
-    settingValue: process.env[CHAT_ENABLED_APPLICATION_VARIABLE_KEY],
-  });
+  const isChatEnabled = isTeamsChatEnabled();
 
   if (!isChatEnabled) {
     return { ok: true, skipped: 'Chat is disabled' };
@@ -21,7 +19,9 @@ export const enqueueTeamsAssistantRequest = async (
   const parsed = parseTeamsAssistantRequest(payload);
 
   if (parsed.request === null) {
-    return { ok: true, skipped: parsed.skipReason };
+    return isDefined(parsed.emptyRequest)
+      ? await replyToEmptyTeamsAssistantRequest(parsed.emptyRequest)
+      : { ok: true, skipped: parsed.skipReason };
   }
 
   return await enqueueTeamsAssistantRequestRecord(parsed.request);

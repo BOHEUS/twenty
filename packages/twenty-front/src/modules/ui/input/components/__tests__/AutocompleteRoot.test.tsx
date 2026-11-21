@@ -27,6 +27,7 @@ type AutocompleteExampleProps = {
   label?: string;
   items?: string[];
   openOnValueChange?: boolean;
+  openOnInputClick?: boolean;
   onItemHighlightedByUser?: (item: string | undefined) => void;
 };
 
@@ -35,6 +36,7 @@ const AutocompleteExample = ({
   label = 'City',
   items = OPTIONS,
   openOnValueChange,
+  openOnInputClick,
   onItemHighlightedByUser,
 }: AutocompleteExampleProps) => {
   const [value, setValue] = useState('');
@@ -46,6 +48,7 @@ const AutocompleteExample = ({
       items={items}
       value={value}
       openOnValueChange={openOnValueChange}
+      openOnInputClick={openOnInputClick}
       onValueChange={setValue}
       onItemHighlightedByUser={onItemHighlightedByUser}
     >
@@ -66,6 +69,54 @@ const AutocompleteExample = ({
 };
 
 describe('AutocompleteRoot', () => {
+  it('dismisses a picker before activating the outside target on a later click', async () => {
+    const user = userEvent.setup();
+    const store = createStore();
+    const onOutsideClick = jest.fn();
+
+    render(
+      <JotaiProvider store={store}>
+        <AutocompleteExample />
+        <button onClick={onOutsideClick}>Outside action</button>
+      </JotaiProvider>,
+    );
+
+    const outsideButton = screen.getByRole('button', {
+      name: 'Outside action',
+    });
+    await user.type(screen.getByRole('combobox'), 'Pa');
+    await user.click(outsideButton);
+
+    await waitFor(() =>
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument(),
+    );
+    expect(onOutsideClick).not.toHaveBeenCalled();
+    expect(store.get(focusStackState.atom)).toEqual([]);
+
+    await user.click(outsideButton);
+
+    expect(onOutsideClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows an outside target to activate after keyboard dismissal', async () => {
+    const user = userEvent.setup();
+    const store = createStore();
+    const onOutsideClick = jest.fn();
+
+    render(
+      <JotaiProvider store={store}>
+        <AutocompleteExample />
+        <button onClick={onOutsideClick}>Outside action</button>
+      </JotaiProvider>,
+    );
+
+    await user.type(screen.getByRole('combobox'), 'Pa');
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: 'Outside action' }));
+
+    expect(onOutsideClick).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps input focus while navigating and restores the focus stack on Escape', async () => {
     const user = userEvent.setup();
     const store = createStore();
@@ -147,6 +198,28 @@ describe('AutocompleteRoot', () => {
       componentType: FocusComponentType.DROPDOWN,
       componentInstanceId: DROPDOWN_ID,
     });
+  });
+
+  it('opens on input click and stays open when the input is cleared when openOnInputClick is set', async () => {
+    const user = userEvent.setup();
+    const store = createStore();
+
+    render(
+      <JotaiProvider store={store}>
+        <AutocompleteExample openOnInputClick />
+      </JotaiProvider>,
+    );
+
+    const input = screen.getByRole('combobox');
+    await user.click(input);
+
+    expect(screen.getByRole('listbox')).toBeVisible();
+
+    await user.type(input, 'Pa');
+    await user.clear(input);
+
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getAllByRole('option')).toHaveLength(2);
   });
 
   it('does not open an empty list from the arrow keys', async () => {

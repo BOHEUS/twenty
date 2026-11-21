@@ -1,24 +1,30 @@
 import { Injectable } from '@nestjs/common';
 
-import { type AskQuestionItem } from 'twenty-shared/ai';
-import { type ActorMetadata, FieldActorSource } from 'twenty-shared/types';
+import {
+  AUTO_SELECT_WORKSPACE_DEFAULT_MODEL_ID,
+  type AskQuestionItem,
+} from 'twenty-shared/ai';
+import { FieldActorSource } from 'twenty-shared/types';
+import { assertIsDefinedOrThrow } from 'twenty-shared/utils';
 import { StepStatus, WorkflowActionType } from 'twenty-shared/workflow';
 import { v5 } from 'uuid';
 
+import { UserWorkspaceAuthContextService } from 'src/engine/core-modules/user-workspace/services/user-workspace-auth-context.service';
 import {
   WorkflowVersionEntity,
   WorkflowVersionStatus,
 } from 'src/engine/core-modules/workflow/entities/workflow-version.entity';
 import { WorkflowEntity } from 'src/engine/core-modules/workflow/entities/workflow.entity';
-import { WorkflowStatus } from 'src/engine/core-modules/workflow/enums/workflow-status.enum';
 import { AgentRunConversationService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-run-conversation.service';
 import { AgentRunSuspensionService } from 'src/engine/metadata-modules/ai/ai-agent-execution/services/agent-run-suspension.service';
+import { AgentChatThreadService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-thread.service';
+import { AgentMessageRole } from 'src/engine/metadata-modules/ai/ai-history/enums/agent-message-role.enum';
+import { AgentConversationWriterService } from 'src/engine/metadata-modules/ai/ai-history/services/agent-conversation-writer.service';
+import { AgentService } from 'src/engine/metadata-modules/ai/ai-agent/agent.service';
 import {
   AiException,
   AiExceptionCode,
 } from 'src/engine/metadata-modules/ai/ai.exception';
-import { buildSystemAuthContext } from 'src/engine/twenty-orm/utils/build-system-auth-context.util';
-import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
 import { InjectWorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/inject-workspace-scoped-repository.decorator';
 import { WorkspaceScopedRepository } from 'src/engine/twenty-orm/workspace-scoped-repository/workspace-scoped-repository';
 import { WORKSPACE_MEMBER_DATA_SEED_IDS } from 'src/engine/workspace-manager/dev-seeder/data/constants/workspace-member-data-seeds.constant';
@@ -27,8 +33,6 @@ import { proposeEmailCall } from 'src/engine/workspace-manager/dev-seeder/data/u
 import { type SeededEmail } from 'src/engine/workspace-manager/dev-seeder/data/utils/seeded-email.type';
 import { type SeededToolCall } from 'src/engine/workspace-manager/dev-seeder/data/utils/seeded-tool-call.type';
 import { WorkflowRunStatus } from 'src/modules/workflow/common/standard-objects/workflow-run.workspace-entity';
-import { type WorkflowVersionWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow-version.workspace-entity';
-import { type WorkflowWorkspaceEntity } from 'src/modules/workflow/common/standard-objects/workflow.workspace-entity';
 import { buildWorkflowStepCaller } from 'src/modules/workflow/workflow-executor/utils/build-workflow-step-caller.util';
 import { buildWorkflowAgentRunSpec } from 'src/modules/workflow/workflow-executor/workflow-actions/ai-agent/utils/build-workflow-agent-run-spec.util';
 import { WorkflowAgentConversationWorkspaceService } from 'src/modules/workflow/workflow-executor/workflow-actions/ai-agent/services/workflow-agent-conversation.workspace-service';
@@ -37,6 +41,7 @@ import {
   type WorkflowAiAgentAction,
 } from 'src/modules/workflow/workflow-executor/workflow-actions/types/workflow-action.type';
 import { WorkflowRunWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run/workflow-run.workspace-service';
+import { mapAiStepsToUIMessageParts } from 'src/engine/metadata-modules/ai/ai-history/utils/map-ai-steps-to-ui-message-parts.util';
 import {
   type WorkflowManualTrigger,
   WorkflowTriggerType,
@@ -47,13 +52,6 @@ const WORKFLOW_PENDING_INPUT_SEED_NAMESPACE =
 
 const seedId = (name: string, workspaceId: string) =>
   v5(`${name}:${workspaceId}`, WORKFLOW_PENDING_INPUT_SEED_NAMESPACE);
-
-const SYSTEM_ACTOR: ActorMetadata = {
-  source: FieldActorSource.SYSTEM,
-  workspaceMemberId: null,
-  name: 'System',
-  context: {},
-};
 
 const INITIATORS = {
   TIM: {
@@ -101,13 +99,12 @@ const QUALIFICATION_QUESTIONS: AskQuestionItem[] = [
 const RENEWAL_REMINDER_EMAIL: SeededEmail = {
   to: 'procurement@stripe.com',
   subject: 'Your Twenty renewal on October 31',
-  body: '<p>Hi Stripe team,</p><p>Your Twenty subscription renews on October 31 for another year at the same price. If you want to add seats or change plans before then, just reply to this email.</p><p>Best,<br>Phil</p>',
+  html: '<p>Hi Stripe team,</p><p>Your Twenty subscription renews on October 31 for another year at the same price. If you want to add seats or change plans before then, just reply to this email.</p><p>Best,<br>Phil</p>',
 };
 
 type AgentWorkflowToSeed = {
   key: string;
   name: string;
-  position: number;
   icon: string;
   stepKey: string;
   stepName: string;
@@ -123,7 +120,6 @@ const AGENT_WORKFLOWS_TO_SEED: AgentWorkflowToSeed[] = [
   {
     key: 'qualifyInboundLead',
     name: 'Qualify inbound lead',
-    position: 3,
     icon: 'IconUserCheck',
     stepKey: 'agentStep',
     stepName: 'Qualify the lead',
@@ -139,7 +135,6 @@ const AGENT_WORKFLOWS_TO_SEED: AgentWorkflowToSeed[] = [
   {
     key: 'draftRenewalReminder',
     name: 'Draft renewal reminder',
-    position: 4,
     icon: 'IconMail',
     stepKey: 'renewalAgentStep',
     stepName: 'Draft the reminder',
@@ -160,8 +155,6 @@ const ERROR_HANDLING_OPTIONS = {
 };
 
 type SeededWorkflow = {
-  workspaceWorkflowId: string;
-  workspaceWorkflowVersionId: string;
   coreWorkflowId: string;
   coreWorkflowVersionId: string;
   name: string;
@@ -176,11 +169,14 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
     private readonly workflowAgentConversationService: WorkflowAgentConversationWorkspaceService,
     private readonly agentRunConversationService: AgentRunConversationService,
     private readonly agentRunSuspensionService: AgentRunSuspensionService,
-    private readonly workspaceOrmManager: WorkspaceOrmManager,
+    private readonly conversationWriterService: AgentConversationWriterService,
+    private readonly threadService: AgentChatThreadService,
+    private readonly agentService: AgentService,
     @InjectWorkspaceScopedRepository(WorkflowEntity)
     private readonly coreWorkflowRepository: WorkspaceScopedRepository<WorkflowEntity>,
     @InjectWorkspaceScopedRepository(WorkflowVersionEntity)
     private readonly coreWorkflowVersionRepository: WorkspaceScopedRepository<WorkflowVersionEntity>,
+    private readonly userWorkspaceAuthContextService: UserWorkspaceAuthContextService,
   ) {}
 
   async seed({
@@ -190,14 +186,30 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
     workspaceId: string;
     applicationId: string;
   }): Promise<void> {
+    const agent = await this.agentService.createOneAgent({
+      input: {
+        label: 'Workflow Assistant',
+        icon: 'IconLego',
+        description: 'Runs the seeded workflows that wait for a person.',
+        prompt:
+          'You are a helpful AI assistant. Complete the task based on the workflow context.',
+        modelId: AUTO_SELECT_WORKSPACE_DEFAULT_MODEL_ID,
+        responseFormat: { type: 'text' },
+      },
+      workspaceId,
+      userWorkspaceId: undefined,
+    });
+
     for (const agentWorkflow of AGENT_WORKFLOWS_TO_SEED) {
+      const stepId = seedId(agentWorkflow.stepKey, workspaceId);
       const step: WorkflowAiAgentAction = {
-        id: seedId(agentWorkflow.stepKey, workspaceId),
+        id: stepId,
         name: agentWorkflow.stepName,
         type: WorkflowActionType.AI_AGENT,
         valid: true,
         settings: {
           input: {
+            agentId: agent.id,
             prompt: agentWorkflow.stepPrompt,
             humanInputInstructions: agentWorkflow.humanInputInstructions,
           },
@@ -211,7 +223,6 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
         applicationId,
         key: agentWorkflow.key,
         name: agentWorkflow.name,
-        position: agentWorkflow.position,
         icon: agentWorkflow.icon,
         step,
       });
@@ -275,12 +286,18 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
             throw error;
           });
 
-          const turnId = await this.agentRunConversationService.openTurn({
+          const { userWorkspaceId } =
+            await this.userWorkspaceAuthContextService.resolveWorkspaceMember({
+              workspaceId,
+              workspaceMemberId:
+                INITIATORS[agentWorkflow.initiator].workspaceMemberId,
+            });
+
+          const openedTurn = await this.agentRunConversationService.openTurn({
             workspaceId,
             threadId,
-            title: workflow.step.name,
-            agentId: null,
-            senderUserWorkspaceId: null,
+            agentId: agent.id,
+            senderUserWorkspaceId: userWorkspaceId,
             senderApplicationId: null,
             messages: [{ role: 'user', content: agentWorkflow.runPrompt }],
             createdBy:
@@ -289,6 +306,10 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
                 workflowRunId,
               }),
           });
+
+          assertIsDefinedOrThrow(openedTurn);
+
+          const { turnId } = openedTurn;
 
           await this.agentRunSuspensionService.suspend({
             workspaceId,
@@ -301,23 +322,28 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
               }),
               runSpec: buildWorkflowAgentRunSpec({
                 step,
-                isApplicationBound: false,
+                applicationId,
               }),
               summary: null,
               continuationCount: 0,
             },
           });
 
-          await this.agentRunConversationService.closeTurn({
+          await this.conversationWriterService.insertMessage({
             workspaceId,
             threadId,
             turnId,
-            title: workflow.step.name,
-            agentId: null,
-            execution: {
-              isPaused: true,
-              steps: [{ content }],
-            },
+            role: AgentMessageRole.ASSISTANT,
+            agentId: agent.id,
+            senderUserWorkspaceId: null,
+            isAwaitingAnswer: true,
+            parts: mapAiStepsToUIMessageParts([{ content }]),
+          });
+
+          await this.threadService.recordThreadActivity({
+            workspaceId,
+            threadId,
+            text: workflow.step.name,
           });
         },
       });
@@ -341,8 +367,6 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
       workflowRunId,
       coreWorkflowId: workflow.coreWorkflowId,
       coreWorkflowVersionId: workflow.coreWorkflowVersionId,
-      workspaceWorkflowId: workflow.workspaceWorkflowId,
-      workspaceWorkflowVersionId: workflow.workspaceWorkflowVersionId,
       workflowName: workflow.name,
       trigger: workflow.trigger,
       steps: [workflow.step],
@@ -351,7 +375,7 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
         ...INITIATORS[initiator],
         context: {},
       },
-      status: WorkflowRunStatus.NOT_STARTED,
+      status: WorkflowRunStatus.ENQUEUED,
       triggerPayload: {},
       workspaceId,
     });
@@ -376,7 +400,6 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
     applicationId,
     key,
     name,
-    position,
     icon,
     step,
   }: {
@@ -384,15 +407,9 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
     applicationId: string;
     key: string;
     name: string;
-    position: number;
     icon: string;
     step: WorkflowAction;
   }): Promise<SeededWorkflow> {
-    const workspaceWorkflowId = seedId(`workflow:${key}`, workspaceId);
-    const workspaceWorkflowVersionId = seedId(
-      `workflowVersion:${key}`,
-      workspaceId,
-    );
     const coreWorkflowId = seedId(`coreWorkflow:${key}`, workspaceId);
     const coreWorkflowVersionId = seedId(
       `coreWorkflowVersion:${key}`,
@@ -410,42 +427,6 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
       nextStepIds: [step.id],
     };
 
-    await this.workspaceOrmManager.executeInWorkspaceContext(async () => {
-      await this.workspaceOrmManager
-        .getRepository<WorkflowWorkspaceEntity>(
-          'workflow',
-          { shouldBypassPermissionChecks: true },
-          { shouldSkipEventEmission: true },
-        )
-        .insert({
-          id: workspaceWorkflowId,
-          name,
-          lastPublishedVersionId: workspaceWorkflowVersionId,
-          statuses: [WorkflowStatus.ACTIVE],
-          position,
-          createdBy: SYSTEM_ACTOR,
-          updatedBy: SYSTEM_ACTOR,
-          coreWorkflowId,
-        });
-
-      await this.workspaceOrmManager
-        .getRepository<WorkflowVersionWorkspaceEntity>(
-          'workflowVersion',
-          { shouldBypassPermissionChecks: true },
-          { shouldSkipEventEmission: true },
-        )
-        .insert({
-          id: workspaceWorkflowVersionId,
-          name: 'v1',
-          trigger,
-          steps: [step],
-          status: WorkflowVersionStatus.ACTIVE,
-          position: 1,
-          workflowId: workspaceWorkflowId,
-          coreWorkflowVersionId,
-        });
-    }, buildSystemAuthContext(workspaceId));
-
     await this.coreWorkflowRepository.insert(workspaceId, {
       id: coreWorkflowId,
       universalIdentifier: seedId(
@@ -454,8 +435,6 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
       ),
       applicationId,
       name,
-      lastPublishedVersionId: workspaceWorkflowVersionId,
-      workspaceWorkflowId,
       lastPublishedCoreWorkflowVersionId: coreWorkflowVersionId,
     });
 
@@ -469,14 +448,10 @@ export class DevSeederWorkflowPendingInputWorkspaceService {
       triggers: [trigger],
       steps: [step],
       status: WorkflowVersionStatus.ACTIVE,
-      workflowId: workspaceWorkflowId,
       coreWorkflowId,
-      workspaceWorkflowVersionId,
     });
 
     return {
-      workspaceWorkflowId,
-      workspaceWorkflowVersionId,
       coreWorkflowId,
       coreWorkflowVersionId,
       name,

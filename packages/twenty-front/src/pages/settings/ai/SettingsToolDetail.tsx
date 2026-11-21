@@ -1,3 +1,4 @@
+import { useGetToolIndex } from '@/ai/hooks/useGetToolIndex';
 import { SkeletonLine } from '@/ui/feedback/skeleton/components/SkeletonLine';
 import { currentWorkspaceState } from '@/auth/states/currentWorkspaceState';
 import { useGetOneLogicFunction } from '@/logic-functions/hooks/useGetOneLogicFunction';
@@ -10,7 +11,6 @@ import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDi
 import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { useQuery } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { useState } from 'react';
 
 import { useNavigate, useParams } from 'react-router-dom';
@@ -21,16 +21,15 @@ import { Section } from 'twenty-ui/components/layout';
 import { IconTrash } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { useDebouncedCallback } from 'use-debounce';
-import {
-  GetToolIndexDocument,
-  GetToolInputSchemaDocument,
-} from '~/generated-metadata/graphql';
+import { GetToolInputSchemaDocument } from '~/generated-metadata/graphql';
 import { SettingsToolIcon } from '~/pages/settings/ai/components/SettingsToolIcon';
 import { SettingsToolParameterTable } from '@/settings/ai/components/SettingsToolParameterTable';
+import { useLingui } from '@lingui/react/macro';
 
 const DELETE_TOOL_MODAL_ID = 'delete-tool-modal';
 
 export const SettingsToolDetail = () => {
+  const { t } = useLingui();
   const { toolIdentifier } = useParams();
   const navigate = useNavigate();
   const { enqueueToast } = useToast();
@@ -52,14 +51,11 @@ export const SettingsToolDetail = () => {
       skip: !isCustomTool,
     });
 
-  const { data: toolIndexData, loading: toolIndexLoading } = useQuery(
-    GetToolIndexDocument,
-    { skip: isCustomTool },
-  );
+  const { toolIndex, loading: toolIndexLoading } = useGetToolIndex({
+    skip: isCustomTool,
+  });
 
-  const systemTool = toolIndexData?.getToolIndex.find(
-    (entry) => entry.name === toolIdentifier,
-  );
+  const systemTool = toolIndex.find((entry) => entry.name === toolIdentifier);
 
   const { data: schemaData, loading: schemaLoading } = useQuery(
     GetToolInputSchemaDocument,
@@ -106,7 +102,9 @@ export const SettingsToolDetail = () => {
     : undefined;
 
   const debouncedSaveName = useDebouncedCallback(async (value: string) => {
-    if (!isCustomTool || !isDefined(logicFunction)) return;
+    if (!isCustomTool || !isDefined(logicFunction)) {
+      return;
+    }
 
     const result = await updateLogicFunction({
       input: {
@@ -127,7 +125,9 @@ export const SettingsToolDetail = () => {
 
   const debouncedSaveDescription = useDebouncedCallback(
     async (value: string) => {
-      if (!isCustomTool || !isDefined(logicFunction)) return;
+      if (!isCustomTool || !isDefined(logicFunction)) {
+        return;
+      }
 
       const result = await updateLogicFunction({
         input: {
@@ -149,7 +149,9 @@ export const SettingsToolDetail = () => {
   };
 
   const handleDelete = async () => {
-    if (!isCustomTool || !isDefined(logicFunction)) return;
+    if (!isCustomTool || !isDefined(logicFunction)) {
+      return;
+    }
 
     setIsDeleting(true);
 
@@ -158,10 +160,10 @@ export const SettingsToolDetail = () => {
     });
 
     if (result.status === 'successful') {
-      enqueueToast({ variant: 'success', children: t`Tool deleted` });
+      enqueueToast({ status: 'success', children: t`Tool deleted` });
       navigate(getSettingsPath(SettingsPath.AI, undefined, undefined, 'tools'));
     } else {
-      enqueueToast({ variant: 'error', children: t`Failed to delete tool` });
+      enqueueToast({ status: 'error', children: t`Failed to delete tool` });
     }
 
     setIsDeleting(false);

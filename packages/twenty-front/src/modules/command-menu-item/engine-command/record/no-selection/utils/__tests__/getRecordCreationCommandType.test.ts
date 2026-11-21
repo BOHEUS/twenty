@@ -3,51 +3,19 @@ import { getRecordCreationCommandType } from '@/command-menu-item/engine-command
 
 it.each([
   {
-    objectNameSingular: 'company',
     creationTargetObjectMetadataId: 'company-id',
-    isWorkflowCoreIndexPageEnabled: false,
     expected: 'global',
   },
   {
-    objectNameSingular: 'task',
     creationTargetObjectMetadataId: 'task-id',
-    isWorkflowCoreIndexPageEnabled: true,
     expected: 'global',
   },
   {
-    objectNameSingular: 'company',
     creationTargetObjectMetadataId: null,
-    isWorkflowCoreIndexPageEnabled: true,
     expected: 'index',
   },
   {
-    objectNameSingular: 'task',
     creationTargetObjectMetadataId: undefined,
-    isWorkflowCoreIndexPageEnabled: false,
-    expected: 'index',
-  },
-  {
-    objectNameSingular: 'workflow',
-    creationTargetObjectMetadataId: 'workflow-id',
-    isWorkflowCoreIndexPageEnabled: true,
-    expected: 'workflow',
-  },
-  {
-    objectNameSingular: 'workflow',
-    creationTargetObjectMetadataId: null,
-    isWorkflowCoreIndexPageEnabled: true,
-    expected: 'workflow',
-  },
-  {
-    objectNameSingular: 'workflow',
-    creationTargetObjectMetadataId: 'workflow-id',
-    isWorkflowCoreIndexPageEnabled: false,
-    expected: 'global',
-  },
-  {
-    objectNameSingular: 'workflow',
-    creationTargetObjectMetadataId: null,
-    isWorkflowCoreIndexPageEnabled: false,
     expected: 'index',
   },
 ])('dispatches record creation to $expected: %j', ({ expected, ...params }) => {
@@ -76,9 +44,7 @@ it.each([
   ({ expected, ...context }) => {
     expect(
       getRecordCreationCommandType({
-        objectNameSingular: 'company',
         creationTargetObjectMetadataId: 'company-id',
-        isWorkflowCoreIndexPageEnabled: false,
         ...context,
       }),
     ).toBe(expected);
@@ -88,12 +54,10 @@ it.each([
 it('uses global creation for the current object in a trash view', () => {
   expect(
     getRecordCreationCommandType({
-      objectNameSingular: 'company',
       contextObjectMetadataId: 'company-id',
       creationTargetObjectMetadataId: 'company-id',
       recordIndexId: 'company-index',
       hasAnySoftDeleteFilterOnView: true,
-      isWorkflowCoreIndexPageEnabled: false,
     }),
   ).toBe('global');
 });

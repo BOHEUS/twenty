@@ -15,6 +15,7 @@ import { useLingui } from '@lingui/react/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import { useEffect, useRef, useState } from 'react';
 import { Key } from 'ts-key-enum';
+import { WORKSPACE_DISPLAY_NAME_MAX_LENGTH } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
 import { LightIconButton, MainButton } from 'twenty-ui/components/input';
 import { IconTrash, IconUpload } from 'twenty-ui/icon';
@@ -61,11 +62,6 @@ const StyledLogoRow = styled.div`
   align-items: center;
   display: flex;
   gap: ${themeCssVariables.spacing[2]};
-`;
-
-const StyledLogoAvatar = styled(Avatar)`
-  height: ${themeCssVariables.spacing[8]};
-  width: ${themeCssVariables.spacing[8]};
 `;
 
 const StyledLogoButtons = styled.div`
@@ -251,12 +247,13 @@ export const SignInUpWorkspaceCreationForm = () => {
       <StyledFormSection>
         <OnboardingStepAnimatedItem index={2}>
           <StyledLogoRow>
-            <StyledLogoAvatar
+            <Avatar
               src={logoPreviewUrl}
               name={isNonEmptyString(workspaceName) ? workspaceName : '?'}
               colorSeed={getWorkspaceAvatarColorSeed(workspaceName)}
               shape="square"
               size="xl"
+              variant="outline"
               render={
                 <button
                   type="button"
@@ -303,6 +300,7 @@ export const SignInUpWorkspaceCreationForm = () => {
             placeholder={t`Apple`}
             onChange={handleWorkspaceNameChange}
             onKeyDown={handleKeyDown}
+            maxLength={WORKSPACE_DISPLAY_NAME_MAX_LENGTH}
             fullWidth
           />
         </OnboardingStepAnimatedItem>

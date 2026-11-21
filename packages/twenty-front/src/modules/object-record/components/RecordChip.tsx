@@ -8,7 +8,7 @@ import { AvatarOrIcon } from '@/ui/field/display/components/internal/AvatarOrIco
 import { LinkChip } from '@/ui/navigation/link/components/LinkChip/LinkChip';
 import { type TriggerEventType } from '@/ui/navigation/types/TriggerEventType';
 import { type MouseEvent } from 'react';
-import { CoreObjectNameSingular, OpenRecordIn } from 'twenty-shared/types';
+import { StandardObjectNameSingular, OpenRecordIn } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { Chip, type ChipSize } from 'twenty-ui/primitives/data-display';
 import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
@@ -16,7 +16,6 @@ import { getAbsoluteImageUrl } from '~/utils/image/getAbsoluteImageUrl';
 type RecordChipProps = {
   objectNameSingular: string;
   record: ObjectRecord;
-  className?: string;
   variant?: 'soft' | 'ghost';
   forceDisableClick?: boolean;
   isBold?: boolean;
@@ -32,7 +31,6 @@ type RecordChipProps = {
 export const RecordChip = ({
   objectNameSingular,
   record,
-  className,
   variant,
   isBold = false,
   maxWidth,
@@ -70,15 +68,14 @@ export const RecordChip = ({
 
   if (
     forceDisableClick ||
-    objectNameSingular === CoreObjectNameSingular.WorkspaceMember
+    objectNameSingular === StandardObjectNameSingular.WorkspaceMember
   ) {
     return (
       <Chip
         weight={isBold ? 'medium' : 'regular'}
         size={size}
         maxWidth={maxWidth}
-        className={className}
-        variant="ghost"
+        variant="plain"
         startElement={
           isIconHidden ? null : (
             <AvatarOrIcon
@@ -89,7 +86,6 @@ export const RecordChip = ({
             />
           )
         }
-        style={{ paddingInlineStart: 0 }}
       >
         {isLabelHidden ? undefined : content}
       </Chip>
@@ -112,10 +108,8 @@ export const RecordChip = ({
           />
         )
       }
-      className={className}
-      variant={variant ?? 'soft'}
+      variant={variant === 'ghost' ? 'plain' : (variant ?? 'soft')}
       clickable={variant !== 'ghost'}
-      style={variant === 'ghost' ? { paddingInlineStart: 0 } : undefined}
       to={to ?? getLinkToShowPage(objectNameSingular, record)}
       onClick={handleCustomClick}
       triggerEvent={triggerEvent}

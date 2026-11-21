@@ -3,30 +3,20 @@ import { CalendarEventLocationInput } from '@/activities/calendar/components/Cal
 import { type useCalendarEventComposer } from '@/activities/calendar/hooks/useCalendarEventComposer';
 import { ComposerFieldRow } from '@/activities/components/ComposerFieldRow';
 import { ComposerHeader } from '@/activities/components/ComposerHeader';
-import { StyledComposerTextInput } from '@/activities/components/ComposerTextInput';
 import { EmailRecipientsFieldInput } from '@/activities/emails/recipients/components/EmailRecipientsFieldInput';
-import { useEmailRecipientsDragAndDrop } from '@/activities/emails/recipients/hooks/useEmailRecipientsDragAndDrop';
+import { EmailRecipientsProvider } from '@/activities/emails/recipients/components/EmailRecipientsProvider';
 import { type EmailComposerContextRecord } from '@/activities/emails/recipients/types/EmailComposerContextRecord';
-import { type EmailRecipientDragData } from '@/activities/emails/recipients/types/EmailRecipientDragData';
-import { getEmailRecipientKey } from '@/activities/emails/recipients/utils/getEmailRecipientKey';
-import { type EmailRecipientsByFieldId } from '@/activities/emails/recipients/utils/moveEmailRecipientsBetweenFields';
 import { FormDateFieldInput } from '@/object-record/record-field/ui/form-types/components/FormDateFieldInput';
 import { FormDateTimeFieldInput } from '@/object-record/record-field/ui/form-types/components/FormDateTimeFieldInput';
 import { AVAILABLE_TIMEZONE_OPTIONS } from '@/localization/constants/AvailableTimezoneOptions';
 import { Select } from '@/ui/input/components/Select';
 import { TextArea } from '@/ui/input/components/TextArea';
-import { DND_KIT_PROVIDER_PLUGINS_WITHOUT_DROP_ANIMATION } from '@/ui/utilities/drag-and-drop/constants/DndKitProviderPluginsWithoutDropAnimation';
-import { DND_KIT_SENSORS } from '@/ui/utilities/drag-and-drop/constants/DndKitSensors';
-import { DragDropItemDndContext } from '@/ui/utilities/drag-and-drop/context/DragDropItemDndContext';
-import { DragDropProvider } from '@dnd-kit/react';
 import { styled } from '@linaria/react';
-import { t } from '@lingui/core/macro';
 import { isDefined } from 'twenty-shared/utils';
 import { Callout } from 'twenty-ui/components/feedback';
-import { Switch } from 'twenty-ui/primitives/input';
+import { Input, Switch } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
-
-const COMPOSER_LABEL_MIN_WIDTH = '80px';
+import { useLingui } from '@lingui/react/macro';
 
 const StyledFieldsContainer = styled.div`
   display: flex;
@@ -62,25 +52,7 @@ export const CalendarEventComposerFields = ({
   onAddAccount,
   onReauthorize,
 }: CalendarEventComposerFieldsProps) => {
-  const recipientsByFieldId: EmailRecipientsByFieldId = {
-    to: composerState.attendees,
-    cc: [],
-    bcc: [],
-  };
-
-  const { contextValues, draggedRecipients, handlers } =
-    useEmailRecipientsDragAndDrop({
-      recipientsByFieldId,
-      onRecipientsByFieldIdChange: ({ to }) => composerState.setAttendees(to),
-    });
-
-  const allRecipientKeys = composerState.attendees.map(({ address }) =>
-    getEmailRecipientKey(address),
-  );
-
-  const draggedSourceIndices =
-    draggedRecipients?.fieldId === 'to' ? draggedRecipients.indices : null;
-
+  const { t } = useLingui();
   const hasNotices =
     composerState.accountOptions.length === 0 ||
     composerState.missingScopes.length > 0 ||
@@ -89,216 +61,178 @@ export const CalendarEventComposerFields = ({
 
   return (
     <StyledFieldsContainer>
-      <DragDropItemDndContext.Provider value={contextValues}>
-        <DragDropProvider<EmailRecipientDragData>
-          sensors={DND_KIT_SENSORS}
-          plugins={DND_KIT_PROVIDER_PLUGINS_WITHOUT_DROP_ANIMATION}
-          onDragStart={handlers.onDragStart}
-          onDragMove={handlers.onDragMove}
-          onDragEnd={handlers.onDragEnd}
-        >
-          <ComposerHeader>
-            <ComposerFieldRow
-              label={t`Calendar`}
-              labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-            >
-              <Select
-                dropdownId="calendar-event-composer-account"
-                fullWidth
-                variant="transparent"
-                value={composerState.connectedAccountId}
-                options={composerState.accountOptions}
-                onChange={composerState.setConnectedAccountId}
-              />
-            </ComposerFieldRow>
-            <ComposerFieldRow
+      <ComposerHeader>
+        <ComposerFieldRow label={t`Calendar`}>
+          <Select
+            dropdownId="calendar-event-composer-account"
+            fullWidth
+            variant="transparent"
+            value={composerState.connectedAccountId}
+            options={composerState.accountOptions}
+            onChange={composerState.setConnectedAccountId}
+          />
+        </ComposerFieldRow>
+        <ComposerFieldRow label={t`Guests`}>
+          <EmailRecipientsProvider
+            recipientsByFieldId={{
+              to: composerState.attendees,
+              cc: [],
+              bcc: [],
+            }}
+            onChange={(update) =>
+              composerState.setAttendees(
+                (attendees) => update({ to: attendees, cc: [], bcc: [] }).to,
+              )
+            }
+          >
+            <EmailRecipientsFieldInput
+              fieldId="to"
               label={t`Guests`}
-              labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-            >
-              <EmailRecipientsFieldInput
-                fieldId="to"
-                draggedSourceIndices={draggedSourceIndices}
-                label={t`Guests`}
-                recipients={composerState.attendees}
-                onChange={composerState.setAttendees}
-                onSubmit={composerState.handleCreate}
-                excludedSuggestionKeys={allRecipientKeys}
-                contextRecord={contextRecord}
-              />
-            </ComposerFieldRow>
-            {composerState.canPickTargets && (
-              <ComposerFieldRow
-                label={t`Relations`}
-                labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-              >
-                <CalendarEventComposerTargetsInput
-                  targets={composerState.targets}
-                  onTargetChange={composerState.handleTargetChange}
-                />
-              </ComposerFieldRow>
-            )}
-            <ComposerFieldRow
-              label={t`Title`}
-              labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-            >
-              <StyledComposerTextInput
-                type="text"
-                aria-label={t`Title`}
-                placeholder={t`Add an event title`}
-                onChange={(event) => composerState.setTitle(event.target.value)}
-              />
-            </ComposerFieldRow>
-            <ComposerFieldRow
-              label={t`Location`}
-              labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-            >
-              <CalendarEventLocationInput
-                ariaLabel={t`Location`}
-                placeholder={t`Add a location`}
-                value={composerState.location}
-                onChange={composerState.setLocation}
-              />
-            </ComposerFieldRow>
-            <ComposerFieldRow
-              label={t`All day`}
-              labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-              onClick={() =>
-                composerState.handleIsFullDayChange(!composerState.isFullDay)
-              }
-              trailing={
-                <Switch
-                  aria-label={t`All day`}
-                  size="sm"
-                  checked={composerState.isFullDay}
-                  onCheckedChange={composerState.handleIsFullDayChange}
-                />
-              }
-            >
-              <StyledRowDescription>
-                {t`Create an all-day event`}
-              </StyledRowDescription>
-            </ComposerFieldRow>
-            {composerState.isFullDay ? (
-              <>
-                <ComposerFieldRow
-                  label={t`Starts`}
-                  labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-                >
-                  <FormDateFieldInput
-                    variant="transparent"
-                    defaultValue={composerState.dates.startsAt}
-                    onChange={composerState.handleStartsAtChange}
-                  />
-                </ComposerFieldRow>
-                <ComposerFieldRow
-                  label={t`Ends`}
-                  labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-                >
-                  <FormDateFieldInput
-                    key={composerState.dates.endsAt}
-                    variant="transparent"
-                    defaultValue={composerState.dates.endsAt}
-                    onChange={composerState.setEndsAt}
-                  />
-                </ComposerFieldRow>
-              </>
-            ) : (
-              <>
-                <ComposerFieldRow
-                  label={t`Starts`}
-                  labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-                >
-                  <FormDateTimeFieldInput
-                    key={`starts-at-${composerState.timeZone}`}
-                    variant="transparent"
-                    defaultValue={composerState.dates.startsAt}
-                    onChange={composerState.handleStartsAtChange}
-                    timeZone={composerState.timeZone}
-                  />
-                </ComposerFieldRow>
-                <ComposerFieldRow
-                  label={t`Ends`}
-                  labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-                >
-                  <FormDateTimeFieldInput
-                    key={`ends-at-${composerState.dates.endsAt}-${composerState.timeZone}`}
-                    variant="transparent"
-                    defaultValue={composerState.dates.endsAt}
-                    onChange={composerState.setEndsAt}
-                    timeZone={composerState.timeZone}
-                  />
-                </ComposerFieldRow>
-              </>
-            )}
-            <ComposerFieldRow
-              label={t`Time zone`}
-              labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-            >
-              <Select
-                dropdownId="calendar-event-composer-time-zone"
-                fullWidth
+              onSubmit={composerState.handleCreate}
+              contextRecord={contextRecord}
+            />
+          </EmailRecipientsProvider>
+        </ComposerFieldRow>
+        {composerState.canPickTargets && (
+          <ComposerFieldRow label={t`Relations`}>
+            <CalendarEventComposerTargetsInput
+              targets={composerState.targets}
+              onTargetChange={composerState.handleTargetChange}
+            />
+          </ComposerFieldRow>
+        )}
+        <ComposerFieldRow label={t`Title`}>
+          <Input
+            variant="plain"
+            type="text"
+            aria-label={t`Title`}
+            placeholder={t`Add an event title`}
+            onChange={(event) => composerState.setTitle(event.target.value)}
+          />
+        </ComposerFieldRow>
+        <ComposerFieldRow label={t`Location`}>
+          <CalendarEventLocationInput
+            ariaLabel={t`Location`}
+            placeholder={t`Add a location`}
+            value={composerState.location}
+            onChange={composerState.setLocation}
+          />
+        </ComposerFieldRow>
+        <ComposerFieldRow
+          label={t`All day`}
+          onClick={() =>
+            composerState.handleIsFullDayChange(!composerState.isFullDay)
+          }
+          trailing={
+            <Switch
+              aria-label={t`All day`}
+              size="sm"
+              checked={composerState.isFullDay}
+              onCheckedChange={composerState.handleIsFullDayChange}
+            />
+          }
+        >
+          <StyledRowDescription>
+            {t`Create an all-day event`}
+          </StyledRowDescription>
+        </ComposerFieldRow>
+        {composerState.isFullDay ? (
+          <>
+            <ComposerFieldRow label={t`Starts`}>
+              <FormDateFieldInput
                 variant="transparent"
-                withSearchInput
-                value={composerState.timeZone}
-                options={AVAILABLE_TIMEZONE_OPTIONS}
-                onChange={composerState.setTimeZone}
+                defaultValue={composerState.dates.startsAt}
+                onChange={composerState.handleStartsAtChange}
               />
             </ComposerFieldRow>
-            <ComposerFieldRow
-              label={t`Invitations`}
-              labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-              onClick={() =>
-                composerState.setSendInvitations(!composerState.sendInvitations)
-              }
-              trailing={
-                <Switch
-                  aria-label={t`Send invitations`}
-                  size="sm"
-                  checked={composerState.sendInvitations}
-                  onCheckedChange={composerState.setSendInvitations}
-                />
-              }
-            >
-              <StyledRowDescription>
-                {t`Email guests an invitation`}
-              </StyledRowDescription>
-            </ComposerFieldRow>
-            <ComposerFieldRow
-              label={t`Video call`}
-              labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-              onClick={() =>
-                composerState.setAddConferencing(!composerState.addConferencing)
-              }
-              trailing={
-                <Switch
-                  aria-label={t`Video conferencing`}
-                  size="sm"
-                  checked={composerState.addConferencing}
-                  onCheckedChange={composerState.setAddConferencing}
-                />
-              }
-            >
-              <StyledRowDescription>
-                {t`Add a meeting link`}
-              </StyledRowDescription>
-            </ComposerFieldRow>
-            <ComposerFieldRow
-              label={t`Description`}
-              labelMinWidth={COMPOSER_LABEL_MIN_WIDTH}
-            >
-              <TextArea
-                textAreaId="calendar-event-composer-description"
+            <ComposerFieldRow label={t`Ends`}>
+              <FormDateFieldInput
+                key={composerState.dates.endsAt}
                 variant="transparent"
-                minRows={1}
-                maxRows={8}
-                value={composerState.description}
-                placeholder={t`Add details for guests`}
-                onChange={composerState.setDescription}
+                defaultValue={composerState.dates.endsAt}
+                onChange={composerState.setEndsAt}
               />
             </ComposerFieldRow>
-          </ComposerHeader>
-        </DragDropProvider>
-      </DragDropItemDndContext.Provider>
+          </>
+        ) : (
+          <>
+            <ComposerFieldRow label={t`Starts`}>
+              <FormDateTimeFieldInput
+                key={`starts-at-${composerState.timeZone}`}
+                variant="transparent"
+                defaultValue={composerState.dates.startsAt}
+                onChange={composerState.handleStartsAtChange}
+                timeZone={composerState.timeZone}
+              />
+            </ComposerFieldRow>
+            <ComposerFieldRow label={t`Ends`}>
+              <FormDateTimeFieldInput
+                key={`ends-at-${composerState.dates.endsAt}-${composerState.timeZone}`}
+                variant="transparent"
+                defaultValue={composerState.dates.endsAt}
+                onChange={composerState.setEndsAt}
+                timeZone={composerState.timeZone}
+              />
+            </ComposerFieldRow>
+          </>
+        )}
+        <ComposerFieldRow label={t`Time zone`}>
+          <Select
+            dropdownId="calendar-event-composer-time-zone"
+            fullWidth
+            variant="transparent"
+            withSearchInput
+            value={composerState.timeZone}
+            options={AVAILABLE_TIMEZONE_OPTIONS}
+            onChange={composerState.setTimeZone}
+          />
+        </ComposerFieldRow>
+        <ComposerFieldRow
+          label={t`Invitations`}
+          onClick={() =>
+            composerState.setSendInvitations(!composerState.sendInvitations)
+          }
+          trailing={
+            <Switch
+              aria-label={t`Send invitations`}
+              size="sm"
+              checked={composerState.sendInvitations}
+              onCheckedChange={composerState.setSendInvitations}
+            />
+          }
+        >
+          <StyledRowDescription>
+            {t`Email guests an invitation`}
+          </StyledRowDescription>
+        </ComposerFieldRow>
+        <ComposerFieldRow
+          label={t`Video call`}
+          onClick={() =>
+            composerState.setAddConferencing(!composerState.addConferencing)
+          }
+          trailing={
+            <Switch
+              aria-label={t`Video conferencing`}
+              size="sm"
+              checked={composerState.addConferencing}
+              onCheckedChange={composerState.setAddConferencing}
+            />
+          }
+        >
+          <StyledRowDescription>{t`Add a meeting link`}</StyledRowDescription>
+        </ComposerFieldRow>
+        <ComposerFieldRow label={t`Description`} hasDivider={false}>
+          <TextArea
+            textAreaId="calendar-event-composer-description"
+            variant="transparent"
+            minRows={1}
+            maxRows={8}
+            value={composerState.description}
+            placeholder={t`Add details for guests`}
+            onChange={composerState.setDescription}
+          />
+        </ComposerFieldRow>
+      </ComposerHeader>
 
       {hasNotices && (
         <StyledNoticesContainer>
@@ -309,7 +243,7 @@ export const CalendarEventComposerFields = ({
               description={
                 isDefined(onAddAccount)
                   ? t`Connect Google, Microsoft or CalDAV and enable calendar sync before creating an event.`
-                  : t`Ask a workspace admin for the Sync Account permission to connect a calendar account.`
+                  : t`Ask a workspace admin for the User Apps permission to connect a calendar account.`
               }
               action={
                 isDefined(onAddAccount) ? (
@@ -328,7 +262,7 @@ export const CalendarEventComposerFields = ({
               description={
                 isDefined(onReauthorize)
                   ? t`Reconnect this account to grant permission to create calendar events.`
-                  : t`Ask a workspace admin for the Sync Account permission to reconnect this account.`
+                  : t`Ask a workspace admin for the User Apps permission to reconnect this account.`
               }
               action={
                 isDefined(onReauthorize) ? (

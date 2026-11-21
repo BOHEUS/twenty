@@ -1,12 +1,11 @@
 import { type ApolloCache } from '@apollo/client/cache';
-import gql from 'graphql-tag';
 
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
-import { mapObjectMetadataToGraphQLQuery } from '@/object-metadata/utils/mapObjectMetadataToGraphQLQuery';
+import { generateRecordCacheFragment } from '@/object-record/cache/utils/generateRecordCacheFragment';
 import { getRecordNodeFromRecord } from '@/object-record/cache/utils/getRecordNodeFromRecord';
 import {
+  type ObjectRecordsPermissions,
   type RecordGqlFields,
-  type ObjectPermissions,
 } from 'twenty-shared/types';
 import { type RecordGqlNode } from '@/object-record/graphql/types/RecordGqlNode';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
@@ -25,28 +24,19 @@ export const updateRecordFromCache = <T extends ObjectRecord>({
   cache: ApolloCache;
   recordGqlFields: RecordGqlFields;
   record: T;
-  objectPermissionsByObjectMetadataId: Record<
-    string,
-    ObjectPermissions & { objectMetadataId: string }
-  >;
+  objectPermissionsByObjectMetadataId: Record<string, ObjectRecordsPermissions>;
 }) => {
   if (!isDefined(objectMetadataItem)) {
     return null;
   }
 
-  const capitalizedObjectName = capitalize(objectMetadataItem.nameSingular);
-
-  const cacheWriteFragment = gql`
-      fragment ${capitalizedObjectName}Fragment on ${capitalizedObjectName} ${mapObjectMetadataToGraphQLQuery(
-        {
-          objectMetadataItems,
-          objectMetadataItem,
-          computeReferences: true,
-          recordGqlFields,
-          objectPermissionsByObjectMetadataId,
-        },
-      )}
-    `;
+  const cacheWriteFragment = generateRecordCacheFragment({
+    objectMetadataItems,
+    objectMetadataItem,
+    computeReferences: true,
+    recordGqlFields,
+    objectPermissionsByObjectMetadataId,
+  });
 
   const cachedRecordId = cache.identify({
     __typename: capitalize(objectMetadataItem.nameSingular),

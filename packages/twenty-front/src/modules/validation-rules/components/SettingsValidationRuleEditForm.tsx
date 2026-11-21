@@ -1,24 +1,24 @@
 import { styled } from '@linaria/react';
 import { useLingui } from '@lingui/react/macro';
 import { useState } from 'react';
+import { isDefined } from 'twenty-shared/utils';
 import { useToast } from 'twenty-ui/components/feedback';
 import { Section } from 'twenty-ui/components/layout';
 import { IconArchive, IconArchiveOff, IconTrash } from 'twenty-ui/icon';
 import { Button } from 'twenty-ui/primitives/input';
 import { themeCssVariables } from 'twenty-ui/theme';
 
-import { useObjectMetadataItems } from '@/object-metadata/hooks/useObjectMetadataItems';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
 import { ConfirmationDialog } from '@/ui/layout/dialog/components/ConfirmationDialog';
 import { useDialog } from '@/ui/layout/dialog/hooks/useDialog';
 import { SettingsValidationRuleForm } from '@/validation-rules/components/SettingsValidationRuleForm';
 import { SettingsValidationRulePageLayout } from '@/validation-rules/components/SettingsValidationRulePageLayout';
 import { useNavigateToObjectValidationRules } from '@/validation-rules/hooks/useNavigateToObjectValidationRules';
+import { useValidationRuleFields } from '@/validation-rules/hooks/useValidationRuleFields';
 import { useValidationRuleMutations } from '@/validation-rules/hooks/useValidationRuleMutations';
 import { type ValidationRule } from '@/validation-rules/types/ValidationRule';
 import { type ValidationRuleFormValues } from '@/validation-rules/types/ValidationRuleFormValues';
-import { buildValidationRuleEditorFields } from '@/validation-rules/utils/buildValidationRuleEditorFields';
-import { buildValidationRuleFieldDescriptors } from '@/validation-rules/utils/buildValidationRuleFieldDescriptors';
+import { getValidationRuleFormEdits } from '@/validation-rules/utils/getValidationRuleFormEdits';
 import { getValidationRuleFormValues } from '@/validation-rules/utils/getValidationRuleFormValues';
 import { getValidationRuleSaveErrorMessage } from '@/validation-rules/utils/getValidationRuleSaveErrorMessage';
 import { isValidationRuleFormSubmittable } from '@/validation-rules/utils/isValidationRuleFormSubmittable';
@@ -42,36 +42,61 @@ export const SettingsValidationRuleEditForm = ({
   const { t } = useLingui();
   const { enqueueToast } = useToast();
   const { openDialog, closeDialog } = useDialog();
-  const { objectMetadataItems } = useObjectMetadataItems();
+  const { fields, editorFields } = useValidationRuleFields({
+    objectMetadataItem,
+  });
   const navigateToObjectValidationRules = useNavigateToObjectValidationRules({
     objectNamePlural: objectMetadataItem.namePlural,
   });
   const { updateValidationRule, deleteValidationRule, isSaving, isDeleting } =
     useValidationRuleMutations({ objectMetadataId: objectMetadataItem.id });
 
-  const [values, setValues] = useState<ValidationRuleFormValues>(() =>
-    getValidationRuleFormValues(validationRule),
-  );
+  const [editedValues, setEditedValues] = useState<
+    Partial<ValidationRuleFormValues>
+  >({});
+  const [formKey, setFormKey] = useState(validationRule.expression);
 
-  const fields = buildValidationRuleFieldDescriptors({
-    objectMetadataItem,
-    objectMetadataItems,
-  });
-  const editorFields = buildValidationRuleEditorFields({
-    objectMetadataItem,
-    objectMetadataItems,
-  });
+  const serverFormValues = getValidationRuleFormValues(validationRule);
+  const values: ValidationRuleFormValues = {
+    ...serverFormValues,
+    ...editedValues,
+  };
+
+  if (
+    !isDefined(editedValues.expression) &&
+    formKey !== validationRule.expression
+  ) {
+    setFormKey(validationRule.expression);
+  }
+
+  const handleChange = (nextValues: ValidationRuleFormValues) =>
+    setEditedValues(
+      getValidationRuleFormEdits({
+        formValues: nextValues,
+        serverFormValues,
+      }),
+    );
 
   const handleSave = async () => {
     try {
       await updateValidationRule({
-        variables: { input: { id: validationRule.id, update: values } },
+        variables: {
+          input: {
+            id: validationRule.id,
+            update: { ...values, isActive: true },
+          },
+        },
       });
-      enqueueToast({ variant: 'success', children: t`Rule updated.` });
+      enqueueToast({
+        status: 'success',
+        children: validationRule.isActive
+          ? t`Rule updated.`
+          : t`Rule activated.`,
+      });
       navigateToObjectValidationRules();
     } catch (error) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children:
           getValidationRuleSaveErrorMessage(error) ??
           t`Failed to update the rule.`,
@@ -87,13 +112,13 @@ export const SettingsValidationRuleEditForm = ({
         variables: { input: { id: validationRule.id, update: { isActive } } },
       });
       enqueueToast({
-        variant: 'success',
+        status: 'success',
         children: isActive ? t`Rule enabled.` : t`Rule disabled.`,
       });
       navigateToObjectValidationRules();
     } catch (error) {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children:
           getValidationRuleSaveErrorMessage(error) ??
           t`Failed to update the rule.`,
@@ -104,11 +129,11 @@ export const SettingsValidationRuleEditForm = ({
   const handleDelete = async () => {
     try {
       await deleteValidationRule({ variables: { id: validationRule.id } });
-      enqueueToast({ variant: 'success', children: t`Rule deleted.` });
+      enqueueToast({ status: 'success', children: t`Rule deleted.` });
       navigateToObjectValidationRules();
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to delete the rule.`,
       });
     } finally {
@@ -121,17 +146,19 @@ export const SettingsValidationRuleEditForm = ({
       objectMetadataItem={objectMetadataItem}
       breadcrumbLabel={validationRule.name}
       stepLabel={t`Edit rule`}
+      saveLabel={validationRule.isActive ? t`Save` : t`Activate`}
       isSaveDisabled={
         isSaving || !isValidationRuleFormSubmittable({ values, fields })
       }
       onSave={handleSave}
     >
       <SettingsValidationRuleForm
+        key={formKey}
         objectMetadataItem={objectMetadataItem}
         fields={fields}
         editorFields={editorFields}
         values={values}
-        onChange={setValues}
+        onChange={handleChange}
       />
       <Section.Root>
         <Section.Header

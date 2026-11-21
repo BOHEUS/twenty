@@ -1,9 +1,9 @@
-import { type I18n } from '@lingui/core';
 import { isNonEmptyString } from '@sniptt/guards';
 import { type APP_LOCALES, SOURCE_LOCALE } from 'twenty-shared/translations';
 import { isDefined } from 'twenty-shared/utils';
 
 import { translateStandardLabel } from 'src/engine/core-modules/i18n/utils/translate-standard-label.util';
+import { type MessageIdTranslator } from 'src/engine/metadata-modules/overrides/types/message-id-translator.type';
 import {
   readOverrideTranslation,
   resolveEffectiveEntityProperty,
@@ -29,7 +29,7 @@ const frozenResolveObjectOverride = (
   objectMetadata: AnyOverrides,
   labelKey: 'color' | 'labelPlural' | 'labelSingular' | 'description' | 'icon',
   locale: Locale,
-  i18nInstance: I18n,
+  i18nInstance: MessageIdTranslator,
   isStandardApp: boolean,
   applicationCatalog?: Record<string, string>,
 ): string => {
@@ -49,7 +49,16 @@ const frozenResolveObjectOverride = (
   }
 
   if (!isStandardApp && !isDefined(applicationCatalog)) {
-    return objectMetadata[labelKey] ?? '';
+    return labelKey !== 'icon' &&
+      labelKey !== 'color' &&
+      !isDefined(objectMetadata.overrides?.[labelKey])
+      ? translateStandardLabel({
+          sourceValue: objectMetadata[labelKey] ?? '',
+          context: `objectMetadata.${labelKey}`,
+          applicationCatalog,
+          i18nInstance,
+        })
+      : (objectMetadata[labelKey] ?? '');
   }
 
   if (
@@ -68,7 +77,6 @@ const frozenResolveObjectOverride = (
   return translateStandardLabel({
     sourceValue: objectMetadata[labelKey] ?? '',
     context: `objectMetadata.${labelKey}`,
-    isStandardApp,
     applicationCatalog,
     i18nInstance,
   });
@@ -78,7 +86,7 @@ const frozenResolveFieldOverride = (
   fieldMetadata: AnyOverrides,
   labelKey: 'label' | 'description' | 'icon',
   locale: Locale,
-  i18nInstance: I18n,
+  i18nInstance: MessageIdTranslator,
   isStandardApp: boolean,
   applicationCatalog?: Record<string, string>,
 ): string => {
@@ -94,7 +102,15 @@ const frozenResolveFieldOverride = (
   }
 
   if (!isStandardApp && !isDefined(applicationCatalog)) {
-    return fieldMetadata[labelKey] ?? '';
+    return labelKey !== 'icon' &&
+      !isDefined(fieldMetadata.overrides?.[labelKey])
+      ? translateStandardLabel({
+          sourceValue: fieldMetadata[labelKey] ?? '',
+          context: `fieldMetadata.${labelKey}`,
+          applicationCatalog,
+          i18nInstance,
+        })
+      : (fieldMetadata[labelKey] ?? '');
   }
 
   if (labelKey === 'icon' && isDefined(fieldMetadata.overrides?.icon)) {
@@ -108,7 +124,6 @@ const frozenResolveFieldOverride = (
   return translateStandardLabel({
     sourceValue: fieldMetadata[labelKey] ?? '',
     context: `fieldMetadata.${labelKey}`,
-    isStandardApp,
     applicationCatalog,
     i18nInstance,
   });
@@ -125,9 +140,9 @@ const frozenResolveFlat = (flatEntity: AnyOverrides): AnyOverrides => {
   };
 };
 
-const mockI18n = {
+const mockI18n: MessageIdTranslator = {
   _: (id: string) => `translated:${id}`,
-} as unknown as I18n;
+};
 
 const LOCALES: Locale[] = [undefined, SOURCE_LOCALE, 'fr-FR'];
 const BOOLS = [true, false];
@@ -316,8 +331,8 @@ const frozenResolveBespokeProperty = (
   overrides: AnyOverrides,
   property: string,
   metadataLabelContext: string,
-  isStandardApp: boolean,
-  i18nInstance: I18n,
+  _isStandardApp: boolean,
+  i18nInstance: MessageIdTranslator,
   applicationCatalog?: Record<string, string>,
 ): string => {
   if (isDefined(overrides?.[property])) {
@@ -327,7 +342,6 @@ const frozenResolveBespokeProperty = (
   return translateStandardLabel({
     sourceValue: baseValue,
     context: metadataLabelContext,
-    isStandardApp,
     applicationCatalog,
     i18nInstance,
   });

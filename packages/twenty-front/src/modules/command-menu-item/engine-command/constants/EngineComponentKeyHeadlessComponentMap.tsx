@@ -1,6 +1,6 @@
 import { HeadlessFrontComponentRendererEngineCommand } from '@/command-menu-item/engine-command/components/HeadlessFrontComponentRendererEngineCommand';
 import { HeadlessNavigateEngineCommand } from '@/command-menu-item/engine-command/components/HeadlessNavigateEngineCommand';
-import { HeadlessOpenAiChatHistoryTabEngineCommand } from '@/command-menu-item/engine-command/components/HeadlessOpenAiChatHistoryTabEngineCommand';
+import { NewAiChatCommand } from '@/command-menu-item/engine-command/global/components/NewAiChatCommand';
 import { HeadlessOpenSidePanelPageEngineCommand } from '@/command-menu-item/engine-command/components/HeadlessOpenSidePanelPageEngineCommand';
 import { NavigationEngineCommand } from '@/command-menu-item/engine-command/components/NavigationEngineCommand';
 import { ComposeCampaignCommand } from '@/command-menu-item/engine-command/global/components/ComposeCampaignCommand';
@@ -9,11 +9,14 @@ import { CancelMessageCampaignSingleRecordCommand } from '@/command-menu-item/en
 import { DuplicateMessageCampaignSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/message-campaign/components/DuplicateMessageCampaignSingleRecordCommand';
 import { SendMessageCampaignTestSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/message-campaign/components/SendMessageCampaignTestSingleRecordCommand';
 import { OpenEmailBlockSettingsSingleRecordCommand } from '@/command-menu-item/engine-command/record/components/OpenEmailBlockSettingsSingleRecordCommand';
+import { OpenEmailPageStyleSingleRecordCommand } from '@/command-menu-item/engine-command/record/components/OpenEmailPageStyleSingleRecordCommand';
 import { ComposeEmailCommand } from '@/command-menu-item/engine-command/global/components/ComposeEmailCommand';
 import { EditLayoutCommand } from '@/command-menu-item/engine-command/global/components/EditLayoutCommand';
 import { DeleteRecordsCommand } from '@/command-menu-item/engine-command/record/components/DeleteRecordsCommand';
 import { DestroyRecordsCommand } from '@/command-menu-item/engine-command/record/components/DestroyRecordsCommand';
 import { ExportRecordsCommand } from '@/command-menu-item/engine-command/record/components/ExportRecordsCommand';
+import { AddRecordsToMessageListCommand } from '@/command-menu-item/engine-command/record/components/AddRecordsToMessageListCommand';
+import { AddViewToMessageListNoSelectionRecordCommand } from '@/command-menu-item/engine-command/record/no-selection/components/AddViewToMessageListNoSelectionRecordCommand';
 import { RestoreRecordsCommand } from '@/command-menu-item/engine-command/record/components/RestoreRecordsCommand';
 import { TriggerWorkflowVersionEngineCommand } from '@/command-menu-item/engine-command/record/components/TriggerWorkflowVersionEngineCommand';
 import { MergeMultipleRecordsCommand } from '@/command-menu-item/engine-command/record/multiple-records/components/MergeMultipleRecordsCommand';
@@ -24,7 +27,7 @@ import { HideDeletedRecordsNoSelectionRecordCommand } from '@/command-menu-item/
 import { ImportRecordsNoSelectionRecordCommand } from '@/command-menu-item/engine-command/record/no-selection/components/ImportRecordsNoSelectionRecordCommand';
 import { SeeDeletedRecordsNoSelectionRecordCommand } from '@/command-menu-item/engine-command/record/no-selection/components/SeeDeletedRecordsNoSelectionRecordCommand';
 import { AddToFavoritesCommand } from '@/command-menu-item/engine-command/record/components/AddToFavoritesCommand';
-import { ExportNoteSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/components/ExportNoteSingleRecordCommand';
+import { MergeWithRecordSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/components/MergeWithRecordSingleRecordCommand';
 import { NavigateToNextRecordSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/components/NavigateToNextRecordSingleRecordCommand';
 import { NavigateToPreviousRecordSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/components/NavigateToPreviousRecordSingleRecordCommand';
 import { RemoveFromFavoritesCommand } from '@/command-menu-item/engine-command/record/components/RemoveFromFavoritesCommand';
@@ -34,10 +37,8 @@ import { DuplicateMessageListSingleRecordCommand } from '@/command-menu-item/eng
 import { EditDashboardSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/dashboard/components/EditDashboardSingleRecordCommand';
 import { SaveDashboardSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/dashboard/components/SaveDashboardSingleRecordCommand';
 import { ReplyToEmailThreadCommand } from '@/command-menu-item/engine-command/record/single-record/message-thread/components/ReplyToEmailThreadCommand';
-import { AgentChatThreadInboxCommand } from '@/command-menu-item/engine-command/record/components/AgentChatThreadInboxCommand';
-import { NewAiChatSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/agent-chat-thread/components/NewAiChatSingleRecordCommand';
+import { InboxThreadInboxCommand } from '@/command-menu-item/engine-command/record/components/InboxThreadInboxCommand';
 import { ShareRecordCommand } from '@/command-menu-item/engine-command/record/components/ShareRecordCommand';
-import { SeeVersionWorkflowRunSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/workflow-runs/components/SeeVersionWorkflowRunSingleRecordCommand';
 import { SeeWorkflowWorkflowRunSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/workflow-runs/components/SeeWorkflowWorkflowRunSingleRecordCommand';
 import { RetryWorkflowRunSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/workflow-runs/components/RetryWorkflowRunSingleRecordCommand';
 import { StopWorkflowRunSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/workflow-runs/components/StopWorkflowRunSingleRecordCommand';
@@ -56,10 +57,10 @@ import { SeeRunsWorkflowSingleRecordCommand } from '@/command-menu-item/engine-c
 import { SeeVersionsWorkflowSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/workflow/components/SeeVersionsWorkflowSingleRecordCommand';
 import { TestWorkflowSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/workflow/components/TestWorkflowSingleRecordCommand';
 import { TidyUpWorkflowSingleRecordCommand } from '@/command-menu-item/engine-command/record/single-record/workflow/components/TidyUpWorkflowSingleRecordCommand';
-import { CoreObjectNamePlural } from '@/object-metadata/types/CoreObjectNamePlural';
+import { StandardObjectNamePlural } from '@/object-metadata/types/StandardObjectNamePlural';
 import { msg } from '@lingui/core/macro';
 import { AppPath, SettingsPath, SidePanelPages } from 'twenty-shared/types';
-import { IconSearch, IconSparkles } from 'twenty-ui/icon';
+import { IconMessage, IconSearch, IconSparkles } from 'twenty-ui/icon';
 import {
   AgentChatInboxAction,
   EngineComponentKey,
@@ -76,11 +77,18 @@ export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Record<
   [EngineComponentKey.ADD_TO_FAVORITES]: <AddToFavoritesCommand />,
   [EngineComponentKey.REMOVE_FROM_FAVORITES]: <RemoveFromFavoritesCommand />,
   [EngineComponentKey.MERGE_MULTIPLE_RECORDS]: <MergeMultipleRecordsCommand />,
+  [EngineComponentKey.MERGE_WITH_RECORD]: (
+    <MergeWithRecordSingleRecordCommand />
+  ),
   [EngineComponentKey.DUPLICATE_DASHBOARD]: (
     <DuplicateDashboardSingleRecordCommand />
   ),
   [EngineComponentKey.DUPLICATE_MESSAGE_LIST]: (
     <DuplicateMessageListSingleRecordCommand />
+  ),
+  [EngineComponentKey.ADD_TO_MESSAGE_LIST]: <AddRecordsToMessageListCommand />,
+  [EngineComponentKey.ADD_VIEW_TO_MESSAGE_LIST]: (
+    <AddViewToMessageListNoSelectionRecordCommand />
   ),
   [EngineComponentKey.DUPLICATE_WORKFLOW]: (
     <DuplicateWorkflowSingleRecordCommand />
@@ -117,7 +125,6 @@ export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Record<
   [EngineComponentKey.NAVIGATE_TO_PREVIOUS_RECORD]: (
     <NavigateToPreviousRecordSingleRecordCommand />
   ),
-  [EngineComponentKey.EXPORT_NOTE_TO_PDF]: <ExportNoteSingleRecordCommand />,
   [EngineComponentKey.EXPORT_RECORDS]: <ExportRecordsCommand />,
   [EngineComponentKey.UPDATE_MULTIPLE_RECORDS]: (
     <UpdateMultipleRecordsCommand />
@@ -147,26 +154,26 @@ export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Record<
   [EngineComponentKey.GO_TO_PEOPLE]: (
     <HeadlessNavigateEngineCommand
       to={AppPath.RecordIndexPage}
-      params={{ objectNamePlural: CoreObjectNamePlural.Person }}
+      params={{ objectNamePlural: StandardObjectNamePlural.Person }}
     />
   ),
   [EngineComponentKey.GO_TO_COMPANIES]: (
     <HeadlessNavigateEngineCommand
       to={AppPath.RecordIndexPage}
-      params={{ objectNamePlural: CoreObjectNamePlural.Company }}
+      params={{ objectNamePlural: StandardObjectNamePlural.Company }}
     />
   ),
   [EngineComponentKey.GO_TO_DASHBOARDS]: (
     <HeadlessNavigateEngineCommand
       to={AppPath.RecordIndexPage}
-      params={{ objectNamePlural: CoreObjectNamePlural.Dashboard }}
+      params={{ objectNamePlural: StandardObjectNamePlural.Dashboard }}
     />
   ),
   [EngineComponentKey.GO_TO_OPPORTUNITIES]: (
     <HeadlessNavigateEngineCommand
       to={AppPath.RecordIndexPage}
       params={{
-        objectNamePlural: CoreObjectNamePlural.Opportunity,
+        objectNamePlural: StandardObjectNamePlural.Opportunity,
       }}
     />
   ),
@@ -181,25 +188,22 @@ export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Record<
   [EngineComponentKey.GO_TO_TASKS]: (
     <HeadlessNavigateEngineCommand
       to={AppPath.RecordIndexPage}
-      params={{ objectNamePlural: CoreObjectNamePlural.Task }}
+      params={{ objectNamePlural: StandardObjectNamePlural.Task }}
     />
   ),
   [EngineComponentKey.GO_TO_NOTES]: (
     <HeadlessNavigateEngineCommand
       to={AppPath.RecordIndexPage}
-      params={{ objectNamePlural: CoreObjectNamePlural.Note }}
+      params={{ objectNamePlural: StandardObjectNamePlural.Note }}
     />
   ),
   [EngineComponentKey.GO_TO_WORKFLOWS]: (
-    <HeadlessNavigateEngineCommand
-      to={AppPath.RecordIndexPage}
-      params={{ objectNamePlural: CoreObjectNamePlural.Workflow }}
-    />
+    <HeadlessNavigateEngineCommand to={AppPath.WorkflowIndexPage} />
   ),
   [EngineComponentKey.GO_TO_RUNS]: (
     <HeadlessNavigateEngineCommand
       to={AppPath.RecordIndexPage}
-      params={{ objectNamePlural: CoreObjectNamePlural.WorkflowRun }}
+      params={{ objectNamePlural: StandardObjectNamePlural.WorkflowRun }}
     />
   ),
   [EngineComponentKey.SEARCH_RECORDS]: (
@@ -225,7 +229,12 @@ export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Record<
     />
   ),
   [EngineComponentKey.VIEW_PREVIOUS_AI_CHATS]: (
-    <HeadlessOpenAiChatHistoryTabEngineCommand />
+    <HeadlessOpenSidePanelPageEngineCommand
+      page={SidePanelPages.SearchAiChats}
+      pageTitle={msg`Open chat`}
+      pageIcon={IconMessage}
+      shouldResetSearchState
+    />
   ),
   [EngineComponentKey.SEE_ACTIVE_VERSION_WORKFLOW]: (
     <SeeActiveVersionWorkflowSingleRecordCommand />
@@ -238,9 +247,6 @@ export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Record<
   ),
   [EngineComponentKey.ADD_NODE_WORKFLOW]: (
     <AddNodeWorkflowSingleRecordCommand />
-  ),
-  [EngineComponentKey.SEE_VERSION_WORKFLOW_RUN]: (
-    <SeeVersionWorkflowRunSingleRecordCommand />
   ),
   [EngineComponentKey.SEE_WORKFLOW_WORKFLOW_RUN]: (
     <SeeWorkflowWorkflowRunSingleRecordCommand />
@@ -261,31 +267,31 @@ export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Record<
     <HeadlessFrontComponentRendererEngineCommand />
   ),
   [EngineComponentKey.REPLY_TO_EMAIL_THREAD]: <ReplyToEmailThreadCommand />,
-  [EngineComponentKey.NEW_AI_CHAT]: <NewAiChatSingleRecordCommand />,
+  [EngineComponentKey.NEW_AI_CHAT]: <NewAiChatCommand />,
   [EngineComponentKey.SHARE_RECORD]: <ShareRecordCommand />,
   [EngineComponentKey.MARK_AI_CHAT_AS_READ]: (
-    <AgentChatThreadInboxCommand action={AgentChatInboxAction.READ} />
+    <InboxThreadInboxCommand action={AgentChatInboxAction.READ} />
   ),
   [EngineComponentKey.MARK_AI_CHAT_AS_UNREAD]: (
-    <AgentChatThreadInboxCommand action={AgentChatInboxAction.UNREAD} />
+    <InboxThreadInboxCommand action={AgentChatInboxAction.UNREAD} />
   ),
   [EngineComponentKey.MARK_AI_CHAT_AS_DONE]: (
-    <AgentChatThreadInboxCommand action={AgentChatInboxAction.ARCHIVE} />
+    <InboxThreadInboxCommand action={AgentChatInboxAction.ARCHIVE} />
   ),
   [EngineComponentKey.REOPEN_AI_CHAT]: (
-    <AgentChatThreadInboxCommand action={AgentChatInboxAction.MOVE_TO_INBOX} />
+    <InboxThreadInboxCommand action={AgentChatInboxAction.MOVE_TO_INBOX} />
   ),
   [EngineComponentKey.SNOOZE_AI_CHAT]: (
-    <AgentChatThreadInboxCommand action={AgentChatInboxAction.SNOOZE} />
+    <InboxThreadInboxCommand action={AgentChatInboxAction.SNOOZE} />
   ),
   [EngineComponentKey.SUBSCRIBE_TO_AI_CHAT]: (
-    <AgentChatThreadInboxCommand action={AgentChatInboxAction.SUBSCRIBE} />
+    <InboxThreadInboxCommand action={AgentChatInboxAction.SUBSCRIBE} />
   ),
   [EngineComponentKey.UNSUBSCRIBE_FROM_AI_CHAT]: (
-    <AgentChatThreadInboxCommand action={AgentChatInboxAction.UNSUBSCRIBE} />
+    <InboxThreadInboxCommand action={AgentChatInboxAction.UNSUBSCRIBE} />
   ),
   [EngineComponentKey.ASSIGN_AI_CHAT]: (
-    <AgentChatThreadInboxCommand action="assign" />
+    <InboxThreadInboxCommand action="assign" />
   ),
   [EngineComponentKey.COMPOSE_EMAIL]: <ComposeEmailCommand />,
   [EngineComponentKey.COMPOSE_CAMPAIGN]: <ComposeCampaignCommand />,
@@ -303,6 +309,9 @@ export const ENGINE_COMPONENT_KEY_COMPONENT_MAP: Record<
   ),
   [EngineComponentKey.EMAIL_BLOCK_SETTINGS]: (
     <OpenEmailBlockSettingsSingleRecordCommand />
+  ),
+  [EngineComponentKey.EMAIL_PAGE_STYLE]: (
+    <OpenEmailPageStyleSingleRecordCommand />
   ),
 
   // Deprecated keys kept for backward compatibility until migration runs

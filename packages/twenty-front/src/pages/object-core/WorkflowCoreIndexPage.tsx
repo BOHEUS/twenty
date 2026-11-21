@@ -1,4 +1,3 @@
-import { t } from '@lingui/core/macro';
 import { AppPath } from 'twenty-shared/types';
 import { getAppPath, isDefined } from 'twenty-shared/utils';
 import { IconSettingsAutomation } from 'twenty-ui/icon';
@@ -13,11 +12,14 @@ import { CoreObjectTable } from '@/object-core/components/CoreObjectTable';
 import { CoreObjectTableAddNewRow } from '@/object-core/components/CoreObjectTableAddNewRow';
 import { useCoreWorkflowsSelection } from '@/object-core/workflows/hooks/useCoreWorkflowsSelection';
 import { useListenToCoreWorkflowEvents } from '@/object-core/workflows/hooks/useListenToCoreWorkflowEvents';
+import { useListenToCoreWorkflowRunEvents } from '@/object-core/workflows/hooks/useListenToCoreWorkflowRunEvents';
 import { useCreateCoreWorkflow } from '@/object-core/workflows/hooks/useCreateCoreWorkflow';
 import { coreWorkflowsFilterSettingsState } from '@/object-core/workflows/states/coreWorkflowsFilterSettingsState';
-import { isUsableCoreWorkflowFilterRule } from '@/object-core/workflows/utils/isUsableCoreWorkflowFilterRule';
+import { hasAppliedCoreObjectFilters } from '@/object-core/filters/utils/hasAppliedCoreObjectFilters';
+import { CORE_WORKFLOW_FILTER_FIELDS } from '@/object-core/workflows/constants/CoreWorkflowFilterFields';
+import { CORE_WORKFLOWS_DEFAULT_FILTER_SETTINGS } from '@/object-core/workflows/constants/CoreWorkflowsDefaultFilterSettings';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { CoreWorkflowsFilterBar } from '@/object-core/workflows/components/CoreWorkflowsFilterBar';
+import { CoreWorkflowsFilterButton } from '@/object-core/workflows/components/CoreWorkflowsFilterButton';
 import { CoreWorkflowsSelectionToContextStoreEffect } from '@/object-core/workflows/components/CoreWorkflowsSelectionToContextStoreEffect';
 import { WORKFLOW_CORE_TABLE_COLUMNS } from '@/object-core/workflows/constants/WorkflowCoreTableColumns';
 import {
@@ -25,21 +27,26 @@ import {
   CORE_WORKFLOWS_TABLE_ID,
   useCoreWorkflows,
 } from '@/object-core/workflows/hooks/useCoreWorkflows';
-import { type CoreWorkflow } from '@/object-core/workflows/types/CoreWorkflow';
+import { type CoreWorkflowTableRow } from '@/object-core/workflows/types/CoreWorkflowTableRow';
+import { buildCoreWorkflowTableRows } from '@/object-core/workflows/utils/buildCoreWorkflowTableRows';
+import { CoreWorkflowsPermissionGate } from '@/object-core/workflows/components/CoreWorkflowsPermissionGate';
 import { SidePanelToggleButton } from '@/side-panel/components/SidePanelToggleButton';
 import { ColoredIcon } from '@/ui/icon/components/ColoredIcon';
 import { useWorkspaceSurfaceScopedComponentInstanceId } from '@/ui/layout/hooks/useWorkspaceSurfaceScopedComponentInstanceId';
+import { useLingui } from '@lingui/react/macro';
 
-const getCoreWorkflowLink = (workflow: CoreWorkflow) =>
+const getCoreWorkflowLink = (workflow: Pick<CoreWorkflowTableRow, 'id'>) =>
   getAppPath(AppPath.WorkflowCoreShowPage, { coreWorkflowId: workflow.id });
 
-export const WorkflowCoreIndexPage = () => {
+const WorkflowCoreIndexContent = () => {
+  const { t } = useLingui();
   const tableId = useWorkspaceSurfaceScopedComponentInstanceId(
     CORE_WORKFLOWS_TABLE_ID,
   );
 
   const {
     coreWorkflows,
+    runSummaryByCoreWorkflowId,
     hasNextPage,
     loading,
     isInitialLoading,
@@ -61,14 +68,26 @@ export const WorkflowCoreIndexPage = () => {
   } = useCoreWorkflowsSelection({ coreWorkflows });
 
   useListenToCoreWorkflowEvents({ refetch: refetchLoadedCoreWorkflows });
+  useListenToCoreWorkflowRunEvents({
+    coreWorkflowIds: coreWorkflows.map(({ id }) => id),
+    queryId: `core-workflows-run-events-${tableId}`,
+    onRunsChanged: refetchLoadedCoreWorkflows,
+  });
+
+  const coreWorkflowTableRows = buildCoreWorkflowTableRows({
+    coreWorkflows: displayedCoreWorkflows,
+    runSummaryByCoreWorkflowId,
+  });
 
   const coreWorkflowsFilterSettings = useAtomStateValue(
     coreWorkflowsFilterSettingsState,
   );
 
-  const hasAppliedFilters = (
-    coreWorkflowsFilterSettings.stepFilters ?? []
-  ).some(isUsableCoreWorkflowFilterRule);
+  const hasAppliedFilters = hasAppliedCoreObjectFilters({
+    filterSettings: coreWorkflowsFilterSettings,
+    defaultFilterSettings: CORE_WORKFLOWS_DEFAULT_FILTER_SETTINGS,
+    filterFields: CORE_WORKFLOW_FILTER_FIELDS,
+  });
 
   const hasError = isDefined(error);
 
@@ -97,7 +116,7 @@ export const WorkflowCoreIndexPage = () => {
               <PinnedCommandMenuItemButtons />
             </CommandMenuContextProvider>
           </CommandMenuComponentInstanceContext.Provider>
-          <CoreWorkflowsFilterBar />
+          <CoreWorkflowsFilterButton isFilterActive={hasAppliedFilters} />
           <SidePanelToggleButton />
         </>
       }
@@ -125,7 +144,7 @@ export const WorkflowCoreIndexPage = () => {
       <CoreObjectTable
         tableId={tableId}
         columns={WORKFLOW_CORE_TABLE_COLUMNS}
-        items={displayedCoreWorkflows}
+        items={coreWorkflowTableRows}
         getItemKey={(workflow) => workflow.id}
         getItemLink={getCoreWorkflowLink}
         initialSort={CORE_WORKFLOWS_INITIAL_SORT}
@@ -140,8 +159,15 @@ export const WorkflowCoreIndexPage = () => {
           label={t`New Workflow`}
           onClick={createCoreWorkflow}
           disabled={isCreatingCoreWorkflow}
+          hasCheckboxColumn
         />
       )}
     </CoreObjectIndexPageLayout>
   );
 };
+
+export const WorkflowCoreIndexPage = () => (
+  <CoreWorkflowsPermissionGate>
+    <WorkflowCoreIndexContent />
+  </CoreWorkflowsPermissionGate>
+);
