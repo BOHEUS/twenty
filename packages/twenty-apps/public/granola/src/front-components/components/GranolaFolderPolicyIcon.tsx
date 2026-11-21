@@ -1,5 +1,5 @@
 import styled from '@emotion/styled';
-import { themeCssVariables } from 'twenty-ui/theme-constants';
+import { themeCssVariables } from 'twenty-ui/theme';
 
 import { type GranolaFolderPolicy } from 'src/front-components/types/granola-folder-policy.type';
 
@@ -70,13 +70,16 @@ export const GranolaFolderPolicyIcon = ({
   policy,
 }: GranolaFolderPolicyIconProps) => {
   const isSelectedFolders = policy === 'SELECTED_FOLDERS';
+  const isEveryFolderDisabled = policy === 'NO_FOLDERS';
 
   return (
     <StyledCardMedia>
       <StyledCardMediaContent>
         {ROW_IS_DISABLED_WHEN_SELECTING.map(
           (isDisabledWhenSelecting, index) => {
-            const isDisabled = isSelectedFolders && isDisabledWhenSelecting;
+            const isDisabled =
+              isEveryFolderDisabled ||
+              (isSelectedFolders && isDisabledWhenSelecting);
 
             return (
               <StyledFolderRow key={index}>

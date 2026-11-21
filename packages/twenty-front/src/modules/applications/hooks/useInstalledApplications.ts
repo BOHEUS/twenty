@@ -28,6 +28,8 @@ export const useInstalledApplications = (): ApplicationWithoutRelation[] => {
       ...application,
       logoUrl: queriedApplication?.logoUrl,
       applicationRegistration: queriedApplication?.applicationRegistration,
+      requestedRoleId: queriedApplication?.requestedRoleId,
+      grantRoleId: queriedApplication?.grantRoleId,
     };
   });
 };

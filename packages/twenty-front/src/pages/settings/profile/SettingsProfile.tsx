@@ -6,11 +6,11 @@ import { DeleteAccount } from '@/settings/profile/components/DeleteAccount';
 import { EmailField } from '@/settings/profile/components/EmailField';
 import { NameFields } from '@/settings/profile/components/NameFields';
 import { SetOrChangePassword } from '@/settings/profile/components/SetOrChangePassword';
+import { SettingsProfileConnectedAppsSection } from '@/settings/profile/connected-apps/components/SettingsProfileConnectedAppsSection';
 import { SettingsProfileDevicesSection } from '@/settings/profile/devices/components/SettingsProfileDevicesSection';
 import { useCanChangePassword } from '@/settings/profile/hooks/useCanChangePassword';
 import { useCurrentUserWorkspaceTwoFactorAuthentication } from '@/settings/two-factor-authentication/hooks/useCurrentUserWorkspaceTwoFactorAuthentication';
 import { WorkspaceMemberPictureUploader } from '@/settings/workspace-member/components/WorkspaceMemberPictureUploader';
-import { UndecoratedLink } from '@/ui/navigation/link/components/UndecoratedLink/UndecoratedLink';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
 import { Trans, useLingui } from '@lingui/react/macro';
 import { SettingsPath } from 'twenty-shared/types';
@@ -73,24 +73,21 @@ export const SettingsProfile = () => {
             title={t`Two Factor Authentication`}
             description={t`Enhances security by requiring a code along with your password`}
           />
-          <UndecoratedLink
+          <SettingsCard
             to={getSettingsPath(
               SettingsPath.TwoFactorAuthenticationStrategyConfig,
               { twoFactorAuthenticationStrategy: 'TOTP' },
             )}
-          >
-            <SettingsCard
-              title={t`Authenticator App`}
-              Icon={<IconShield />}
-              Status={
-                has2FAMethod ? (
-                  <Status color="turquoise">{t`Active`}</Status>
-                ) : (
-                  <Status color="gray">{t`Deactivated`}</Status>
-                )
-              }
-            />
-          </UndecoratedLink>
+            title={t`Authenticator App`}
+            Icon={<IconShield />}
+            Status={
+              has2FAMethod ? (
+                <Status color="turquoise">{t`Active`}</Status>
+              ) : (
+                <Status color="gray">{t`Deactivated`}</Status>
+              )
+            }
+          />
         </Section.Root>
         {canChangePassword && (
           <Section.Root>
@@ -98,6 +95,7 @@ export const SettingsProfile = () => {
           </Section.Root>
         )}
         <SettingsProfileDevicesSection />
+        <SettingsProfileConnectedAppsSection />
         <Section.Root>
           <DeleteAccount />
         </Section.Root>

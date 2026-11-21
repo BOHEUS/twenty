@@ -32,12 +32,14 @@ export const logicFunctionGraphQLApiExceptionHandler = (error: any) => {
       case LogicFunctionExceptionCode.LOGIC_FUNCTION_INVALID_SEED_PROJECT:
       case LogicFunctionExceptionCode.LOGIC_FUNCTION_PLATFORM_EXECUTION_ERROR:
       case LogicFunctionExceptionCode.LOGIC_FUNCTION_LAYER_BUILD_FAILED:
+      case LogicFunctionExceptionCode.LOGIC_FUNCTION_RATE_LIMITED:
         throw error;
       case LogicFunctionExceptionCode.LOGIC_FUNCTION_COMPILATION_FAILED:
       case LogicFunctionExceptionCode.LOGIC_FUNCTION_DEPENDENCIES_SIZE_EXCEEDED:
       case LogicFunctionExceptionCode.INVALID_LOGIC_FUNCTION_INPUT:
         throw new UserInputError(error);
       case LogicFunctionExceptionCode.LOGIC_FUNCTION_DISABLED:
+      case LogicFunctionExceptionCode.LOGIC_FUNCTION_WORKSPACE_SUSPENDED:
       case LogicFunctionExceptionCode.LOGIC_FUNCTION_PREBUILT_BUNDLE_NOT_INSTALLED:
         throw new ForbiddenError(error);
       default: {

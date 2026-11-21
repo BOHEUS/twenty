@@ -1,7 +1,10 @@
 import { isArray, isNull, isString } from '@sniptt/guards';
 import { isPlainObject } from 'twenty-shared/utils';
+
 import { isSameUniversalIdentifier } from '@/app/is-same-universal-identifier';
+import { parsePullFiles } from '@/app/pull/parse-pull-files';
 import { isExportedManifest } from '@/app/pull/is-exported-manifest';
+import { toPullManifest } from '@/app/pull/to-pull-manifest';
 import {
   type AppExport,
   type AppExportCoverageEntry,
@@ -49,14 +52,7 @@ export const parseAppExport = ({
     });
   }
 
-  if (applicationExport.files.length > 0) {
-    throw new CliError({
-      code: 'TOOLING_UNSUPPORTED',
-      message:
-        'The application export contains source or dependency files that this CLI cannot reconcile. No local files were changed.',
-      hint: 'Use a CLI version that supports this export format.',
-    });
-  }
+  const manifest = toPullManifest(applicationExport.manifest);
 
   return {
     application: {
@@ -66,6 +62,10 @@ export const parseAppExport = ({
     },
     manifest: applicationExport.manifest,
     coverage: applicationExport.coverage,
-    files: [],
+    files: parsePullFiles({
+      value: applicationExport.files,
+      logicFunctions: manifest.logicFunctions ?? [],
+      frontComponents: manifest.frontComponents ?? [],
+    }),
   };
 };

@@ -5,6 +5,7 @@ import { CliError } from '@/output/cli-error';
 import { type ResolvedTarget } from '@/target/types/resolved-target.type';
 import { REQUEST_TIMEOUT_MILLISECONDS } from '@/transport/constants/request-timeout-milliseconds.constant';
 import { RESPONSE_BYTE_LIMIT } from '@/transport/constants/response-byte-limit.constant';
+import { createRequestHeaders } from '@/transport/create-request-headers';
 import {
   createRedirectError,
   toTransportError,
@@ -14,8 +15,10 @@ import { GRAPHQL_ENDPOINT_PATHS } from '@/transport/graphql/constants/graphql-en
 import { createGraphqlError } from '@/transport/graphql/create-graphql-error';
 import { parseGraphqlResponse } from '@/transport/graphql/parse-graphql-response';
 import { readEventStream } from '@/transport/graphql/read-event-stream';
+import { readGraphqlStreamError } from '@/transport/graphql/read-graphql-stream-error';
 import { readBoundedBody } from '@/transport/read-bounded-body';
 import { resolveRequestUrl } from '@/transport/resolve-request-url';
+import { sendWithProxyHeaderRenewal } from '@/transport/send-with-proxy-header-renewal';
 
 const invalidStream = (message: string) =>
   new CliError({ code: 'INVALID_RESPONSE', message });
@@ -26,6 +29,7 @@ export const subscribeGraphql = async ({
   query,
   variables,
   onConnected,
+  interruptionHint = 'Run the command again to reconnect.',
   onData,
 }: {
   target: ResolvedTarget;
@@ -33,7 +37,8 @@ export const subscribeGraphql = async ({
   query: string;
   variables: Record<string, unknown>;
   onConnected: () => Promise<void>;
-  onData: (data: unknown) => Promise<void>;
+  onData: (data: unknown) => Promise<void | false>;
+  interruptionHint?: string;
 }) => {
   const url = resolveRequestUrl({
     apiUrl: target.apiUrl,
@@ -50,28 +55,41 @@ export const subscribeGraphql = async ({
   );
 
   try {
-    const response = await fetchWithProxy(
-      url,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${target.bearerToken}`,
-          'Content-Type': 'application/json',
-          Accept: 'text/event-stream',
-        },
-        body: JSON.stringify({ query, variables }),
-        redirect: 'manual',
-        signal: requestSignal,
-      },
-      REQUEST_TIMEOUT_MILLISECONDS,
-    );
+    const response = await sendWithProxyHeaderRenewal({
+      proxyHeaders: target.proxyHeaders,
+      requestUrl: url,
+      canReplay: true,
+      signal: requestSignal,
+      send: (proxyHeaderValues) =>
+        fetchWithProxy(
+          url,
+          {
+            method: 'POST',
+            headers: createRequestHeaders({
+              initHeaders: {
+                'Content-Type': 'application/json',
+                Accept: 'text/event-stream',
+              },
+              bearerToken: target.bearerToken,
+              proxyHeaderValues,
+            }),
+            body: JSON.stringify({ query, variables }),
+            redirect: 'manual',
+            signal: requestSignal,
+          },
+          REQUEST_TIMEOUT_MILLISECONDS,
+        ),
+    });
 
     if (response.status >= 300 && response.status < 400) {
       await response.body?.cancel();
-      throw createRedirectError(response, url);
+      throw createRedirectError({
+        response,
+        url,
+        proxyHeaders: target.proxyHeaders,
+      });
     }
     if (
-      !response.ok ||
       response.headers
         .get('content-type')
         ?.split(';')[0]
@@ -91,8 +109,15 @@ export const subscribeGraphql = async ({
       });
       throw invalidStream('The server did not return a GraphQL event stream.');
     }
+    if (!response.ok) {
+      throw await readGraphqlStreamError({
+        response,
+        target,
+        signal: requestSignal,
+      });
+    }
     if (!isDefined(response.body)) {
-      throw invalidStream('The server returned an empty log stream.');
+      throw invalidStream('The server returned an empty GraphQL event stream.');
     }
     clearTimeout(timer);
     await onConnected();
@@ -113,11 +138,11 @@ export const subscribeGraphql = async ({
       try {
         payload = JSON.parse(message.data);
       } catch {
-        throw invalidStream('The log stream contains invalid JSON.');
+        throw invalidStream('The GraphQL event stream contains invalid JSON.');
       }
       if (!isPlainObject(payload)) {
         throw invalidStream(
-          'The log stream contains an invalid GraphQL result.',
+          'The GraphQL event stream contains an invalid GraphQL result.',
         );
       }
       if (isArray(payload.errors) && payload.errors.length > 0) {
@@ -130,15 +155,19 @@ export const subscribeGraphql = async ({
         });
       }
       if (!('data' in payload)) {
-        throw invalidStream('The log stream contains no GraphQL data.');
+        throw invalidStream(
+          'The GraphQL event stream contains no GraphQL data.',
+        );
       }
-      await onData(payload.data);
+      if ((await onData(payload.data)) === false) {
+        return;
+      }
     }
 
     throw new CliError({
       code: 'NETWORK_ERROR',
-      message: 'The log stream ended without a completion event.',
-      hint: 'Restart twenty app logs to resume watching. Logs produced while disconnected cannot be replayed.',
+      message: 'The GraphQL event stream ended without a completion event.',
+      hint: interruptionHint,
     });
   } catch (error) {
     throw toTransportError({

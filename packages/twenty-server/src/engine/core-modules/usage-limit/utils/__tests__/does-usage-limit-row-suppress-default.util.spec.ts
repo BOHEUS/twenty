@@ -1,4 +1,3 @@
-import { type StockLimitDefaultDefinition } from 'src/engine/core-modules/usage-limit/types/stock-limit-default-definition.type';
 import {
   buildUsageLimitScope,
   type UsageLimitScope,
@@ -8,18 +7,20 @@ import { UsageOperationType } from 'src/engine/core-modules/usage/enums/usage-op
 import { UsageResourceType } from 'src/engine/core-modules/usage/enums/usage-resource-type.enum';
 import { UsageUnit } from 'src/engine/core-modules/usage/enums/usage-unit.enum';
 
+type SuppressibleDefault = Parameters<
+  typeof doesUsageLimitRowSuppressDefault
+>[0]['usageLimitDefault'];
+
 const buildDefault = (
-  overrides: Partial<StockLimitDefaultDefinition> = {},
-): StockLimitDefaultDefinition => ({
+  overrides: Partial<SuppressibleDefault> = {},
+): SuppressibleDefault => ({
   resourceType: UsageResourceType.STORAGE,
-  operationType: UsageOperationType.STORAGE_FILE,
+  operationTypes: [UsageOperationType.STORAGE_FILE],
   limitKind: 'stock',
   spenderType: 'workspace',
   spenderId: '',
   unit: UsageUnit.BYTE,
   periodUnit: 'lifetime',
-  periodCount: 1,
-  limitValueConfigVariable: 'WORKSPACE_STORAGE_LIMIT_BYTES',
   isOverridable: true,
   ...overrides,
 });
@@ -99,11 +100,37 @@ describe('doesUsageLimitRowSuppressDefault', () => {
     ).toBe(false);
   });
 
+  it('suppresses a default over several operations from an ALL row', () => {
+    expect(
+      doesUsageLimitRowSuppressDefault({
+        scope: buildScope({
+          resourceType: UsageResourceType.AI,
+          operationType: UsageOperationType.ALL,
+          spenderType: 'userWorkspace',
+          limitKind: 'quota',
+          periodUnit: 'week',
+          unit: UsageUnit.USER_CREDIT,
+        }),
+        usageLimitDefault: buildDefault({
+          resourceType: UsageResourceType.AI,
+          operationTypes: [
+            UsageOperationType.AI_CHAT_TOKEN,
+            UsageOperationType.WEB_SEARCH,
+          ],
+          spenderType: 'userWorkspace',
+          limitKind: 'quota',
+          periodUnit: 'week',
+          unit: UsageUnit.USER_CREDIT,
+        }),
+      }),
+    ).toBe(true);
+  });
+
   it('ignores the period count, which a speed window can change', () => {
     expect(
       doesUsageLimitRowSuppressDefault({
         scope: buildScope({ periodCount: 60 }),
-        usageLimitDefault: buildDefault({ periodCount: 1 }),
+        usageLimitDefault: buildDefault(),
       }),
     ).toBe(true);
   });

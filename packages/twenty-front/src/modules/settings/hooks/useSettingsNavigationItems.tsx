@@ -7,43 +7,35 @@ import { billingState } from '@/client-config/states/billingState';
 import { supportChatState } from '@/client-config/states/supportChatState';
 import { permissionFlagMapSelector } from '@/settings/roles/states/permissionFlagMapSelector';
 import { getDocumentationUrl } from '@/support/utils/getDocumentationUrl';
-import { useIsFeatureEnabled } from '@/workspace/hooks/useIsFeatureEnabled';
 import { type NavigationDrawerItemModifier } from '@/ui/navigation/navigation-drawer/types/NavigationDrawerItemModifier';
 import { type NavigationDrawerItemIndentationLevel } from '@/ui/navigation/navigation-drawer/types/NavigationDrawerItemIndentationLevel';
 import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomStateValue';
-import { t } from '@lingui/core/macro';
 import { isNonEmptyString } from '@sniptt/guards';
 import {
   IconAppWindow,
   IconApps,
-  IconAt,
-  IconCalendarEvent,
+  IconCode,
   IconColorSwatch,
   type IconComponent,
   IconCreditCard,
   IconDoorEnter,
   IconHelpCircle,
   IconHierarchy,
-  IconMail,
   IconMessage,
   IconMessageCircle,
-  IconPlug,
   IconServer,
   IconSettings2,
   IconSparkles,
   IconUserCircle,
   IconUsers,
 } from 'twenty-ui/icon';
-import {
-  FeatureFlagKey,
-  PermissionFlagType,
-} from '~/generated-metadata/graphql';
+import { PermissionFlagType } from '~/generated-metadata/graphql';
 import { openUrlInNewTab } from '~/utils/openUrlInNewTab';
+import { useLingui } from '@lingui/react/macro';
 
 export type SettingsNavigationSection = {
   label: string;
   items: SettingsNavigationItem[];
-  isAdvanced?: boolean;
 };
 
 export type SettingsNavigationItem = {
@@ -55,11 +47,11 @@ export type SettingsNavigationItem = {
   matchSubPages?: boolean;
   isHidden?: boolean;
   subItems?: SettingsNavigationItem[];
-  isAdvanced?: boolean;
   modifier?: NavigationDrawerItemModifier;
 };
 
 const useSettingsNavigationItems = (): SettingsNavigationSection[] => {
+  const { t } = useLingui();
   const billing = useAtomStateValue(billingState);
   const { signOut } = useAuth();
   const supportChat = useAtomStateValue(supportChatState);
@@ -75,9 +67,6 @@ const useSettingsNavigationItems = (): SettingsNavigationSection[] => {
     isNonEmptyString(supportChat.supportFrontChatId);
 
   const permissionFlagMap = useAtomStateValue(permissionFlagMapSelector);
-  const isAppPreferencesEnabled = useIsFeatureEnabled(
-    FeatureFlagKey.IS_APP_PREFERENCES_ENABLED,
-  );
 
   return [
     {
@@ -94,30 +83,10 @@ const useSettingsNavigationItems = (): SettingsNavigationSection[] => {
           Icon: IconColorSwatch,
         },
         {
-          label: isAppPreferencesEnabled ? t`App preferences` : t`Accounts`,
-          path: SettingsPath.Accounts,
-          Icon: isAppPreferencesEnabled ? IconApps : IconAt,
+          label: t`Apps preferences`,
+          path: SettingsPath.AppPreferences,
+          Icon: IconApps,
           isHidden: !permissionFlagMap[PermissionFlagType.CONNECTED_ACCOUNTS],
-          subItems: isAppPreferencesEnabled
-            ? undefined
-            : [
-                {
-                  label: t`Emails`,
-                  path: SettingsPath.AccountsEmails,
-                  Icon: IconMail,
-                  isHidden:
-                    !permissionFlagMap[PermissionFlagType.CONNECTED_ACCOUNTS],
-                  indentationLevel: 2,
-                },
-                {
-                  label: t`Calendars`,
-                  path: SettingsPath.AccountsCalendars,
-                  Icon: IconCalendarEvent,
-                  isHidden:
-                    !permissionFlagMap[PermissionFlagType.CONNECTED_ACCOUNTS],
-                  indentationLevel: 2,
-                },
-              ],
         },
       ],
     },
@@ -157,9 +126,9 @@ const useSettingsNavigationItems = (): SettingsNavigationSection[] => {
             !permissionFlagMap[PermissionFlagType.WORKSPACE],
         },
         {
-          label: t`MCP & APIs`,
-          path: SettingsPath.ApiWebhooks,
-          Icon: IconPlug,
+          label: t`Developers`,
+          path: SettingsPath.Developers,
+          Icon: IconCode,
           isHidden:
             !permissionFlagMap[PermissionFlagType.API_KEYS_AND_WEBHOOKS],
         },

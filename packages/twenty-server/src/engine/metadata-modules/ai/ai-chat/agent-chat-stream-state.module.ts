@@ -1,22 +1,40 @@
-import { AgentChatStreamRecoveryService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-stream-recovery.service';
-import { AgentHistoryModule } from 'src/engine/metadata-modules/ai/ai-history/ai-history.module';
-import { MetricsModule } from 'src/engine/core-modules/metrics/metrics.module';
 import { Module } from '@nestjs/common';
 
+import { MetricsModule } from 'src/engine/core-modules/metrics/metrics.module';
+import { PendingWakeUpModule } from 'src/engine/core-modules/pending-wake-up/pending-wake-up.module';
+import { AgentChatThreadModule } from 'src/engine/metadata-modules/ai/ai-chat/agent-chat-thread.module';
+import { AgentChatCancelSubscriberService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-cancel-subscriber.service';
 import { AgentChatEventPublisherService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-event-publisher.service';
 import { AgentChatStreamHeartbeatService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-stream-heartbeat.service';
+import { AgentChatStreamRecoveryService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-stream-recovery.service';
+import { AgentChatWaitingRunService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-chat-waiting-run.service';
+import { AgentRunStopService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-run-stop.service';
+import { AgentTurnStreamService } from 'src/engine/metadata-modules/ai/ai-chat/services/agent-turn-stream.service';
+import { AgentHistoryModule } from 'src/engine/metadata-modules/ai/ai-history/ai-history.module';
 
 @Module({
-  imports: [AgentHistoryModule, MetricsModule],
+  imports: [
+    AgentChatThreadModule,
+    AgentHistoryModule,
+    MetricsModule,
+    PendingWakeUpModule,
+  ],
   providers: [
-    AgentChatStreamRecoveryService,
+    AgentChatCancelSubscriberService,
     AgentChatEventPublisherService,
     AgentChatStreamHeartbeatService,
+    AgentChatStreamRecoveryService,
+    AgentChatWaitingRunService,
+    AgentRunStopService,
+    AgentTurnStreamService,
   ],
   exports: [
-    AgentChatStreamRecoveryService,
     AgentChatEventPublisherService,
     AgentChatStreamHeartbeatService,
+    AgentChatStreamRecoveryService,
+    AgentChatWaitingRunService,
+    AgentRunStopService,
+    AgentTurnStreamService,
   ],
 })
 export class AgentChatStreamStateModule {}

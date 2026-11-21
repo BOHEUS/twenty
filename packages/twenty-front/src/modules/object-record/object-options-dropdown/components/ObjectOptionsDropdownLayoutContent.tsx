@@ -27,6 +27,7 @@ import { useGetAvailableFieldsToGroupRecordsBy } from '@/views/view-picker/hooks
 import { useLingui } from '@lingui/react/macro';
 import { useCallback } from 'react';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { SettingsRow } from 'twenty-ui/components/settings';
 import { OverflowingTextWithTooltip } from 'twenty-ui/primitives/typography';
 import {
@@ -52,7 +53,9 @@ export const ObjectOptionsDropdownLayoutContent = () => {
 
   const setAndPersistIsCompactModeActive = useCallback(
     (isCompactModeActive: boolean, view: GraphQLView | undefined) => {
-      if (!view) return;
+      if (!view) {
+        return;
+      }
       updateCurrentView({
         isCompact: isCompactModeActive,
       });
@@ -109,6 +112,8 @@ export const ObjectOptionsDropdownLayoutContent = () => {
   };
 
   const isDefaultView = currentView?.key === 'INDEX';
+  const hasViewTypeSettings =
+    currentView?.type !== ViewType.TABLE && currentView?.type !== ViewType.LIST;
   const nbsp = '\u00A0';
 
   const selectableItemIdArray = [
@@ -116,13 +121,13 @@ export const ObjectOptionsDropdownLayoutContent = () => {
     ViewType.LIST,
     ...(!isDefaultView ? [ViewType.CALENDAR] : []),
     ...(isDefaultView ? [] : [ViewType.KANBAN]),
-    ...(currentView?.type === ViewType.KANBAN ? ['Group'] : []),
+    ...(currentView?.type === ViewType.KANBAN ? [doNotTranslate('Group')] : []),
     ...(currentView?.type === ViewType.CALENDAR
       ? ['CalendarView', 'CalendarDateField']
       : []),
-    ...(currentView?.type !== ViewType.TABLE &&
-    currentView?.type !== ViewType.LIST
-      ? ['Compact view']
+    ...(hasViewTypeSettings
+      ? // Selectable list ids must match their stable item ids.
+        [doNotTranslate('Compact view')]
       : []),
   ];
 
@@ -256,69 +261,70 @@ export const ObjectOptionsDropdownLayoutContent = () => {
               </ListItemButton>
             </SelectableListItem>
           </DropdownMenuItemsContainer>
-          <DropdownMenuSeparator />
-          <DropdownMenuItemsContainer scrollable={false}>
-            {currentView?.type === ViewType.CALENDAR && (
-              <>
-                <SelectableListItem
-                  itemId="CalendarDateField"
-                  onEnter={() => onContentChange('calendarFields')}
-                >
-                  <ListItemButton
-                    focused={selectedItemId === 'CalendarDateField'}
-                    onClick={() => onContentChange('calendarFields')}
-                    startIcon={<IconCalendar />}
-                    description={calendarFieldMetadata?.label}
-                    descriptionPlacement="end"
-                    hasSubmenu
-                  >{t`Date field`}</ListItemButton>
-                </SelectableListItem>
-                <SelectableListItem
-                  itemId="CalendarView"
-                  onEnter={() => onContentChange('calendarView')}
-                >
-                  <ListItemButton
-                    focused={selectedItemId === 'CalendarView'}
-                    onClick={() => onContentChange('calendarView')}
-                    startIcon={<IconCalendarWeek />}
-                    description={
-                      recordIndexCalendarLayout === ViewCalendarLayout.MONTH
-                        ? t`Month`
-                        : recordIndexCalendarLayout === ViewCalendarLayout.WEEK
-                          ? t`Week`
-                          : t`Day`
-                    }
-                    descriptionPlacement="end"
-                    hasSubmenu
-                  >{t`Calendar view`}</ListItemButton>
-                </SelectableListItem>
-              </>
-            )}
-            {currentView?.type === ViewType.KANBAN && (
-              <SelectableListItem
-                itemId="Group"
-                onEnter={() => {
-                  isDefined(recordIndexGroupFieldMetadataItem)
-                    ? onContentChange('recordGroups')
-                    : onContentChange('recordGroupFields');
-                }}
-              >
-                <ListItemButton
-                  focused={selectedItemId === 'Group'}
-                  onClick={() =>
-                    isDefined(recordIndexGroupFieldMetadataItem)
-                      ? onContentChange('recordGroups')
-                      : onContentChange('recordGroupFields')
-                  }
-                  startIcon={<IconLayoutList />}
-                  description={recordIndexGroupFieldMetadataItem?.label}
-                  descriptionPlacement="end"
-                  hasSubmenu
-                >{t`Group`}</ListItemButton>
-              </SelectableListItem>
-            )}
-            {currentView?.type !== ViewType.TABLE &&
-              currentView?.type !== ViewType.LIST && (
+          {hasViewTypeSettings && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItemsContainer scrollable={false}>
+                {currentView?.type === ViewType.CALENDAR && (
+                  <>
+                    <SelectableListItem
+                      itemId="CalendarDateField"
+                      onEnter={() => onContentChange('calendarFields')}
+                    >
+                      <ListItemButton
+                        focused={selectedItemId === 'CalendarDateField'}
+                        onClick={() => onContentChange('calendarFields')}
+                        startIcon={<IconCalendar />}
+                        description={calendarFieldMetadata?.label}
+                        descriptionPlacement="end"
+                        hasSubmenu
+                      >{t`Date field`}</ListItemButton>
+                    </SelectableListItem>
+                    <SelectableListItem
+                      itemId="CalendarView"
+                      onEnter={() => onContentChange('calendarView')}
+                    >
+                      <ListItemButton
+                        focused={selectedItemId === 'CalendarView'}
+                        onClick={() => onContentChange('calendarView')}
+                        startIcon={<IconCalendarWeek />}
+                        description={
+                          recordIndexCalendarLayout === ViewCalendarLayout.MONTH
+                            ? t`Month`
+                            : recordIndexCalendarLayout ===
+                                ViewCalendarLayout.WEEK
+                              ? t`Week`
+                              : t`Day`
+                        }
+                        descriptionPlacement="end"
+                        hasSubmenu
+                      >{t`Calendar view`}</ListItemButton>
+                    </SelectableListItem>
+                  </>
+                )}
+                {currentView?.type === ViewType.KANBAN && (
+                  <SelectableListItem
+                    itemId="Group"
+                    onEnter={() => {
+                      isDefined(recordIndexGroupFieldMetadataItem)
+                        ? onContentChange('recordGroups')
+                        : onContentChange('recordGroupFields');
+                    }}
+                  >
+                    <ListItemButton
+                      focused={selectedItemId === 'Group'}
+                      onClick={() =>
+                        isDefined(recordIndexGroupFieldMetadataItem)
+                          ? onContentChange('recordGroups')
+                          : onContentChange('recordGroupFields')
+                      }
+                      startIcon={<IconLayoutList />}
+                      description={recordIndexGroupFieldMetadataItem?.label}
+                      descriptionPlacement="end"
+                      hasSubmenu
+                    >{t`Group`}</ListItemButton>
+                  </SelectableListItem>
+                )}
                 <SelectableListItem
                   itemId="Compact view"
                   onEnter={() => {
@@ -340,8 +346,9 @@ export const ObjectOptionsDropdownLayoutContent = () => {
                     checked={isCompactModeActive}
                   >{t`Compact view`}</SettingsRow>
                 </SelectableListItem>
-              )}
-          </DropdownMenuItemsContainer>
+              </DropdownMenuItemsContainer>
+            </>
+          )}
         </SelectableList>
       )}
     </LegacyDropdownContent>

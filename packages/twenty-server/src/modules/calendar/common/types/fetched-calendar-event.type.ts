@@ -15,12 +15,15 @@ export type FetchedCalendarEvent = {
   location: string;
   isFullDay: boolean;
   isCanceled: boolean;
+  isPrivate: boolean;
   conferenceLinkLabel: string;
   conferenceLinkUrl: string;
   externalCreatedAt: string;
   externalUpdatedAt: string;
   conferenceSolution: string;
   recurringEventExternalId?: string;
+  organizerHandle: string;
+  resourceHandles: string[];
   participants: FetchedCalendarEventParticipant[];
   status: string;
 };

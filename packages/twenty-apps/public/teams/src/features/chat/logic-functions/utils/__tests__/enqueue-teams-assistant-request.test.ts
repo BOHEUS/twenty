@@ -4,15 +4,18 @@ import { CHAT_ENABLED_APPLICATION_VARIABLE_KEY } from 'src/features/chat/constan
 import { type TeamsActivitiesDispatchPayload } from 'src/features/chat/logic-functions/types/teams-activities-dispatch-payload.type';
 import { enqueueTeamsAssistantRequest } from 'src/features/chat/logic-functions/utils/enqueue-teams-assistant-request';
 
-const { featureFlags, enqueueTeamsAssistantRequestRecordMock } = vi.hoisted(
-  () => ({
-    featureFlags: { IS_CHAT_ASSISTANT_ENABLED: true },
-    enqueueTeamsAssistantRequestRecordMock: vi.fn(),
-  }),
-);
+const {
+  releaseFlags,
+  enqueueTeamsAssistantRequestRecordMock,
+  replyToEmptyRequestMock,
+} = vi.hoisted(() => ({
+  releaseFlags: { IS_CHAT_ASSISTANT_RELEASED: true },
+  enqueueTeamsAssistantRequestRecordMock: vi.fn(),
+  replyToEmptyRequestMock: vi.fn(),
+}));
 
-vi.mock('src/constants/feature-flags', () => ({
-  FEATURE_FLAGS: featureFlags,
+vi.mock('src/constants/release-flags', () => ({
+  RELEASE_FLAGS: releaseFlags,
 }));
 
 vi.mock(
@@ -20,6 +23,11 @@ vi.mock(
   () => ({
     enqueueTeamsAssistantRequestRecord: enqueueTeamsAssistantRequestRecordMock,
   }),
+);
+
+vi.mock(
+  'src/features/chat/logic-functions/utils/reply-to-empty-teams-assistant-request',
+  () => ({ replyToEmptyTeamsAssistantRequest: replyToEmptyRequestMock }),
 );
 
 const PAYLOAD: TeamsActivitiesDispatchPayload = {
@@ -41,12 +49,43 @@ const PAYLOAD: TeamsActivitiesDispatchPayload = {
 describe('enqueueTeamsAssistantRequest', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    featureFlags.IS_CHAT_ASSISTANT_ENABLED = true;
+    releaseFlags.IS_CHAT_ASSISTANT_RELEASED = true;
     process.env[CHAT_ENABLED_APPLICATION_VARIABLE_KEY] = 'true';
     enqueueTeamsAssistantRequestRecordMock.mockResolvedValue({
       ok: true,
       request: { id: 'request-1' },
     });
+  });
+
+  it('should answer a bare mention with a hint instead of recording it', async () => {
+    replyToEmptyRequestMock.mockResolvedValue({ ok: true });
+
+    const result = await enqueueTeamsAssistantRequest({
+      ...PAYLOAD,
+      activity: {
+        ...PAYLOAD.activity,
+        text: '<at>Twenty</at>',
+        entities: [
+          {
+            type: 'mention',
+            text: '<at>Twenty</at>',
+            mentioned: { id: '28:bot-app-id' },
+          },
+        ],
+        conversation: {
+          id: '19:channel@thread.tacv2;messageid=1699999999999',
+          conversationType: 'channel',
+        },
+      },
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(replyToEmptyRequestMock).toHaveBeenCalledExactlyOnceWith({
+      teamsActivityId: '1700000000000',
+      teamsConversationId: '19:channel@thread.tacv2;messageid=1699999999999',
+      teamsServiceUrl: PAYLOAD.serviceUrl,
+    });
+    expect(enqueueTeamsAssistantRequestRecordMock).not.toHaveBeenCalled();
   });
 
   it('should record a message when chat is enabled', async () => {
@@ -73,7 +112,7 @@ describe('enqueueTeamsAssistantRequest', () => {
   });
 
   it('should skip while the chat feature is unavailable', async () => {
-    featureFlags.IS_CHAT_ASSISTANT_ENABLED = false;
+    releaseFlags.IS_CHAT_ASSISTANT_RELEASED = false;
 
     expect(await enqueueTeamsAssistantRequest(PAYLOAD)).toEqual({
       ok: true,

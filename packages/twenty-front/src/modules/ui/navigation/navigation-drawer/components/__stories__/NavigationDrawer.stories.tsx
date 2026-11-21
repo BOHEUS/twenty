@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { expect, within } from 'storybook/test';
 
 import { currentWorkspaceMemberState } from '@/auth/states/currentWorkspaceMemberState';
-import { AdvancedSettingsSwitch } from '@/ui/input/components/AdvancedSettingsSwitch';
+import { LogsSwitch } from '@/navigation/components/LogsSwitch';
 import { jotaiStore } from '@/ui/utilities/state/jotai/jotaiStore';
 import { setTestObjectMetadataItemsInMetadataStore } from '~/testing/utils/setTestObjectMetadataItemsInMetadataStore';
 import { useSetAtomState } from '@/ui/utilities/state/jotai/hooks/useSetAtomState';
@@ -142,18 +142,28 @@ export const Settings: Story = {
           <NavigationDrawerItemGroup>
             <NavigationDrawerItem
               label="Accounts"
-              to={getSettingsPath(SettingsPath.Accounts)}
+              to={getSettingsPath(SettingsPath.AppPreferences)}
               Icon={IconAt}
             />
             <NavigationDrawerSubItem
               label="Emails"
-              to={getSettingsPath(SettingsPath.AccountsEmails)}
+              to={getSettingsPath(
+                SettingsPath.AppPreferences,
+                undefined,
+                undefined,
+                'emails',
+              )}
               Icon={IconMail}
               subItemState="intermediate-before-selected"
             />
             <NavigationDrawerSubItem
               label="Calendar"
-              to={getSettingsPath(SettingsPath.AccountsCalendars)}
+              to={getSettingsPath(
+                SettingsPath.AppPreferences,
+                undefined,
+                undefined,
+                'calendar',
+              )}
               Icon={IconCalendarEvent}
               subItemState="last-selected"
             />
@@ -184,11 +194,7 @@ export const Settings: Story = {
         </NavigationDrawerSection>
 
         <NavigationDrawerFixedContent>
-          <AdvancedSettingsSwitch
-            isAdvancedModeEnabled={false}
-            setIsAdvancedModeEnabled={() => {}}
-            label="Advanced:"
-          />
+          <LogsSwitch isEnabled={false} onEnabledChange={() => {}} />
         </NavigationDrawerFixedContent>
       </>
     ),

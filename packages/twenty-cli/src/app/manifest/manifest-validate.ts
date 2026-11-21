@@ -17,15 +17,18 @@ import {
   type PageLayoutWidgetUniversalConfiguration,
   RelationType,
 } from 'twenty-shared/types';
-import { isDefined } from 'twenty-shared/utils';
+import { isDefined, isNonEmptyArray } from 'twenty-shared/utils';
 import {
   getDuplicateValues,
   type ManifestField,
   isRelationFieldManifest,
 } from '@/app/manifest/utils/manifest-validation-helpers';
+import { getFrontComponentWidgetAvailabilityWarnings } from '@/app/manifest/utils/get-front-component-widget-availability-warnings';
 import { getPageLayoutDeprecationWarnings } from '@/app/manifest/utils/get-page-layout-deprecation-warnings';
 import { getUnresolvedLabelIdentifierWarnings } from '@/app/manifest/utils/get-unresolved-label-identifier-warnings';
+import { validateSettingsMenuItemSlugs } from '@/app/manifest/utils/validate-settings-menu-item-slugs';
 import { validateTimelineActivityTypes } from '@/app/manifest/utils/validate-timeline-activity-types';
+import { validateValidationRules } from '@/app/manifest/utils/validate-validation-rules';
 
 const VALID_RELATION_TYPES: string[] = [
   RelationType.MANY_TO_ONE,
@@ -65,9 +68,19 @@ const findUniversalIdentifiers = (obj: object): string[] => {
       key === 'preInstallLogicFunction' ||
       key === 'uninstallLogicFunction' ||
       key === 'healthCheckLogicFunction' ||
+      key === 'identifyAccountLogicFunction' ||
+      key === 'authorizeLogicFunction' ||
+      key === 'callbackLogicFunction' ||
       key === 'onConnectLogicFunction' ||
       key === 'onDisconnectLogicFunction' ||
-      key === 'settingsFrontComponent'
+      key === 'sendMessageLogicFunction' ||
+      key === 'markThreadAsReadLogicFunction' ||
+      key === 'connectionProvider' ||
+      key === 'settingsFrontComponent' ||
+      key === 'input' ||
+      key === 'expectedBody' ||
+      key === 'outputSchema' ||
+      key === 'expectedOutputSchema'
     ) {
       continue;
     }
@@ -251,9 +264,14 @@ const invalidUniversalIdentifierVersions = (
 
 export const manifestValidate = (manifest: Manifest) => {
   const errors: string[] = [];
+  const pageLayoutWidgets = collectPageLayoutWidgets(manifest);
   const warnings = [
     ...getPageLayoutDeprecationWarnings(manifest),
     ...getUnresolvedLabelIdentifierWarnings(manifest),
+    ...getFrontComponentWidgetAvailabilityWarnings({
+      manifest,
+      pageLayoutWidgets,
+    }),
   ];
 
   const universalIdentifiers = findUniversalIdentifiers(manifest);
@@ -272,6 +290,19 @@ export const manifestValidate = (manifest: Manifest) => {
   if (invalidUniversalIdentifiers.length > 0) {
     errors.push(
       `Invalid universal identifiers: ${invalidUniversalIdentifiers.join(', ')}`,
+    );
+  }
+
+  const hasConnectedAccountPrice = (
+    manifest.application.billing?.prices ?? []
+  ).some(({ per }) => per === 'CONNECTED_ACCOUNT');
+
+  if (
+    hasConnectedAccountPrice &&
+    !isNonEmptyArray(manifest.connectionProviders)
+  ) {
+    errors.push(
+      'A billing price per CONNECTED_ACCOUNT needs a connection provider: without one no account is ever connected and the price is never billed.',
     );
   }
 
@@ -313,9 +344,12 @@ export const manifestValidate = (manifest: Manifest) => {
 
   errors.push(...validatePageLayoutTabs(manifest));
 
-  errors.push(...validateGraphWidgets(collectPageLayoutWidgets(manifest)));
+  errors.push(...validateGraphWidgets(pageLayoutWidgets));
 
   errors.push(...validateTimelineActivityTypes(manifest));
+
+  errors.push(...validateValidationRules(manifest));
+  errors.push(...validateSettingsMenuItemSlugs(manifest));
 
   return { errors, warnings, isValid: errors.length === 0 };
 };

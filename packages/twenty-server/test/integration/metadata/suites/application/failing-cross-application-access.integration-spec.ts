@@ -5,6 +5,7 @@ import { findApplicationRegistrationStats } from 'test/integration/metadata/suit
 import { findApplicationRegistrationTarballUrl } from 'test/integration/metadata/suites/application-registration/utils/find-application-registration-tarball-url.util';
 import { findManyApplicationRegistrations } from 'test/integration/metadata/suites/application-registration/utils/find-many-application-registrations.util';
 import { findOneApplicationRegistration } from 'test/integration/metadata/suites/application-registration/utils/find-one-application-registration.util';
+import { deleteOneAgent } from 'test/integration/metadata/suites/agent/utils/delete-one-agent.util';
 import { findAgents } from 'test/integration/metadata/suites/agent/utils/find-agents.util';
 import { findOneAgent } from 'test/integration/metadata/suites/agent/utils/find-one-agent.util';
 import { updateOneAgent } from 'test/integration/metadata/suites/agent/utils/update-one-agent.util';
@@ -22,7 +23,6 @@ import { triggerUninstallApplication } from 'test/integration/metadata/suites/ap
 import { triggerUpgradeApplication } from 'test/integration/metadata/suites/application/utils/trigger-upgrade-application.util';
 import { uninstallApplication } from 'test/integration/metadata/suites/application/utils/uninstall-application.util';
 import { updateApplication } from 'test/integration/metadata/suites/application/utils/update-application.util';
-import { upgradeApplication } from 'test/integration/metadata/suites/application/utils/upgrade-application.util';
 import { uploadApplicationFile } from 'test/integration/metadata/suites/application/utils/upload-application-file.util';
 import {
   type ApplicationWithResources,
@@ -37,8 +37,12 @@ import { findManyLogicFunctions } from 'test/integration/metadata/suites/logic-f
 import { findOneLogicFunction } from 'test/integration/metadata/suites/logic-function/utils/find-one-logic-function.util';
 import { getLogicFunctionSourceCode } from 'test/integration/metadata/suites/logic-function/utils/get-logic-function-source-code.util';
 import { updateLogicFunctionSource } from 'test/integration/metadata/suites/logic-function/utils/update-logic-function-source.util';
+import { activateSkill } from 'test/integration/metadata/suites/skill/utils/activate-skill.util';
+import { deactivateSkill } from 'test/integration/metadata/suites/skill/utils/deactivate-skill.util';
+import { deleteSkill } from 'test/integration/metadata/suites/skill/utils/delete-skill.util';
 import { findSkill } from 'test/integration/metadata/suites/skill/utils/find-skill.util';
 import { findSkills } from 'test/integration/metadata/suites/skill/utils/find-skills.util';
+import { updateSkill } from 'test/integration/metadata/suites/skill/utils/update-skill.util';
 import { expectOneNotInternalServerErrorSnapshot } from 'test/integration/graphql/utils/expect-one-not-internal-server-error-snapshot.util';
 import { generateAppleAdminApplicationTokenPair } from 'test/integration/utils/generate-apple-admin-application-token-pair.util';
 import { generateApplicationTokenPair } from 'test/integration/utils/generate-application-token-pair.util';
@@ -264,10 +268,65 @@ const singleTargetEndpointTestCases: EachTestingContext<EndpointTestContext>[] =
       },
     },
     {
+      title: 'deleteOneAgent',
+      context: {
+        requestOtherApplication: ({ otherApplication, token }) =>
+          deleteOneAgent({
+            input: { id: otherApplication.agentId },
+            token,
+            expectToFail: true,
+          }),
+      },
+    },
+    {
       title: 'skill',
       context: {
         requestOtherApplication: ({ otherApplication, token }) =>
           findSkill({
+            input: { id: otherApplication.skillId },
+            token,
+            expectToFail: true,
+          }),
+      },
+    },
+    {
+      title: 'updateSkill',
+      context: {
+        requestOtherApplication: ({ otherApplication, token }) =>
+          updateSkill({
+            input: { id: otherApplication.skillId, label: 'Renamed skill' },
+            token,
+            expectToFail: true,
+          }),
+      },
+    },
+    {
+      title: 'deleteSkill',
+      context: {
+        requestOtherApplication: ({ otherApplication, token }) =>
+          deleteSkill({
+            input: { id: otherApplication.skillId },
+            token,
+            expectToFail: true,
+          }),
+      },
+    },
+    {
+      title: 'activateSkill',
+      context: {
+        requestOtherApplication: ({ otherApplication, token }) =>
+          activateSkill({
+            input: { id: otherApplication.skillId },
+            token,
+            expectToFail: true,
+          }),
+      },
+    },
+    {
+      title: 'deactivateSkill',
+      context: {
+        requestOtherApplication: ({ otherApplication, token }) =>
+          deactivateSkill({
             input: { id: otherApplication.skillId },
             token,
             expectToFail: true,
@@ -428,20 +487,6 @@ const singleTargetEndpointTestCases: EachTestingContext<EndpointTestContext>[] =
         requestOtherApplication: ({ otherApplication, token }) =>
           updateApplication({
             input: { id: otherApplication.id, autoUpgrade: false },
-            token,
-            expectToFail: true,
-          }),
-      },
-    },
-    {
-      title: 'upgradeApplication',
-      context: {
-        requestOtherApplication: ({ otherApplication, token }) =>
-          upgradeApplication({
-            input: {
-              appRegistrationId: otherApplication.applicationRegistrationId,
-              targetVersion: '1.0.0',
-            },
             token,
             expectToFail: true,
           }),

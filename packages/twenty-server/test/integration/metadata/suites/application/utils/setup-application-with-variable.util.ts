@@ -1,10 +1,11 @@
+import { TEST_APPLICATION_PACKAGE_JSON_CHECKSUM } from 'test/integration/metadata/suites/application/constants/test-application-package-json.constant';
 import { buildBaseManifest } from 'test/integration/metadata/suites/application/utils/build-base-manifest.util';
 import { findOneApplication } from 'test/integration/metadata/suites/application/utils/find-one-application.util';
 import { setupApplicationForSync } from 'test/integration/metadata/suites/application/utils/setup-application-for-sync.util';
 import { syncApplication } from 'test/integration/metadata/suites/application/utils/sync-application.util';
 import {
   type ApplicationVariableScope,
-  type ObjectPermissionManifest,
+  type LegacyObjectPermissionManifest,
 } from 'twenty-shared/application';
 import { SystemPermissionFlag } from 'twenty-shared/constants';
 import { isDefined } from 'twenty-shared/utils';
@@ -12,20 +13,23 @@ import { v4 as uuidv4 } from 'uuid';
 
 export type ApplicationWithVariable = {
   id: string;
-  defaultRoleId: string;
+  requestedRoleId: string;
   universalIdentifier: string;
   variableKey: string;
 };
 
-// Application settings components need APPLICATIONS by default; tests can
-// override the permissions to exercise narrower access.
 export const setupApplicationWithVariable = async ({
   name,
   variableKey,
   variableScope,
   isSecret = false,
   value = variableScope === 'USER' ? undefined : 'initial',
-  permissionFlagUniversalIdentifiers = [SystemPermissionFlag.APPLICATIONS],
+  permissionFlagUniversalIdentifiers = variableScope === 'USER'
+    ? [
+        SystemPermissionFlag.APPLICATIONS,
+        SystemPermissionFlag.CONNECTED_ACCOUNTS,
+      ]
+    : [SystemPermissionFlag.APPLICATIONS],
   objectPermissions = [],
 }: {
   name: string;
@@ -36,7 +40,7 @@ export const setupApplicationWithVariable = async ({
   permissionFlagUniversalIdentifiers?: string[];
   // An application-owned role can only be granted object permissions through
   // its own manifest; upserting them afterwards is refused.
-  objectPermissions?: ObjectPermissionManifest[];
+  objectPermissions?: LegacyObjectPermissionManifest[];
 }): Promise<ApplicationWithVariable> => {
   const applicationUniversalIdentifier = uuidv4();
   const roleUniversalIdentifier = uuidv4();
@@ -66,7 +70,7 @@ export const setupApplicationWithVariable = async ({
               ...(isSecret || !isDefined(value) ? {} : { value }),
             },
           },
-          packageJsonChecksum: null,
+          packageJsonChecksum: TEST_APPLICATION_PACKAGE_JSON_CHECKSUM,
           yarnLockChecksum: null,
         },
         roles: [
@@ -88,20 +92,20 @@ export const setupApplicationWithVariable = async ({
     input: { universalIdentifier: applicationUniversalIdentifier },
     gqlFields: `
       id
-      defaultRoleId
+      requestedRoleId
     `,
     expectToFail: false,
   });
 
-  const { id, defaultRoleId } = data.findOneApplication;
+  const { id, requestedRoleId } = data.findOneApplication;
 
-  if (defaultRoleId === undefined) {
+  if (requestedRoleId === undefined) {
     throw new Error(`Application ${name} synced without its declared role`);
   }
 
   return {
     id,
-    defaultRoleId,
+    requestedRoleId,
     universalIdentifier: applicationUniversalIdentifier,
     variableKey,
   };

@@ -1,7 +1,6 @@
 import { DropdownRoot } from '@/ui/layout/dropdown/components/DropdownRoot';
 import { DropdownContent } from '@/ui/layout/dropdown/components/DropdownContent';
 import { useMutation } from '@apollo/client/react';
-import { t } from '@lingui/core/macro';
 import { useToast } from 'twenty-ui/components/feedback';
 import { LightIconButton } from 'twenty-ui/components/input';
 import { Dropdown } from 'twenty-ui/components/navigation';
@@ -10,6 +9,7 @@ import {
   CurrentUserSessionsDocument,
   RevokeUserSessionDocument,
 } from '~/generated-metadata/graphql';
+import { useLingui } from '@lingui/react/macro';
 
 type SettingsDeviceSessionRowDropdownMenuProps = {
   userSessionId: string;
@@ -18,6 +18,7 @@ type SettingsDeviceSessionRowDropdownMenuProps = {
 export const SettingsDeviceSessionRowDropdownMenu = ({
   userSessionId,
 }: SettingsDeviceSessionRowDropdownMenuProps) => {
+  const { t } = useLingui();
   const dropdownId = `settings-device-session-row-${userSessionId}`;
   const { enqueueToast } = useToast();
 
@@ -28,10 +29,10 @@ export const SettingsDeviceSessionRowDropdownMenu = ({
   const handleRevokeSession = async () => {
     try {
       await revokeUserSession({ variables: { userSessionId } });
-      enqueueToast({ variant: 'success', children: t`Device logged out` });
+      enqueueToast({ status: 'success', children: t`Device logged out` });
     } catch {
       enqueueToast({
-        variant: 'error',
+        status: 'error',
         children: t`Failed to log out this device`,
       });
     }

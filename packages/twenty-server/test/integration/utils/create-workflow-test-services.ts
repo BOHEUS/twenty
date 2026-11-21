@@ -4,7 +4,6 @@ import { type DataSource } from 'typeorm';
 import { WorkspaceService } from 'src/engine/core-modules/workspace/services/workspace.service';
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
 import { UserWorkspaceService } from 'src/engine/core-modules/user-workspace/user-workspace.service';
-import { FeatureFlagService } from 'src/engine/core-modules/feature-flag/services/feature-flag.service';
 import { type INestApplication } from '@nestjs/common';
 
 import { BillingUsageService } from 'src/engine/core-modules/billing/services/billing-usage.service';
@@ -14,7 +13,6 @@ import { BackfillWorkflowExecutionCoreIdsCommand } from 'src/database/commands/u
 import { WorkflowTriggerJob } from 'src/modules/workflow/workflow-trigger/jobs/workflow-trigger.job';
 import { RunWorkflowJob } from 'src/modules/workflow/workflow-runner/jobs/run-workflow.job';
 import { WorkflowCronTriggerCronJob } from 'src/modules/workflow/workflow-trigger/automated-trigger/crons/jobs/workflow-cron-trigger-cron.job';
-import { WorkflowThrottlingWorkspaceService } from 'src/modules/workflow/workflow-runner/workflow-run-queue/workspace-services/workflow-throttling.workspace-service';
 import { UpgradeAwareRepositoryState } from 'src/engine/twenty-orm/upgrade-aware/upgrade-aware-repository-state';
 
 export const createWorkflowTestServices = (app: INestApplication) => ({
@@ -24,7 +22,6 @@ export const createWorkflowTestServices = (app: INestApplication) => ({
   workspace: app.get(WorkspaceService),
   application: app.get(ApplicationService),
   userWorkspace: app.get(UserWorkspaceService),
-  flags: app.get(FeatureFlagService),
   workspaceCache: app.get(WorkspaceCacheService),
   upgradeState: UpgradeAwareRepositoryState.getInstance(),
   backfill: app.get(BackfillWorkflowExecutionCoreIdsCommand),
@@ -32,5 +29,4 @@ export const createWorkflowTestServices = (app: INestApplication) => ({
   triggerJob: () => app.resolve(WorkflowTriggerJob),
   runJob: () => app.resolve(RunWorkflowJob),
   cron: app.get(WorkflowCronTriggerCronJob),
-  throttling: app.get(WorkflowThrottlingWorkspaceService),
 });

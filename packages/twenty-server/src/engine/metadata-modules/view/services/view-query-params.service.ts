@@ -1,15 +1,13 @@
 import { Injectable } from '@nestjs/common';
 
 import {
-  OrderByDirection,
   RecordFilterGroupLogicalOperator,
   type RecordGqlOperationFilter,
   ViewFilterGroupLogicalOperator,
-  ViewSortDirection,
   ViewType,
 } from 'twenty-shared/types';
 import {
-  computeRecordGqlOperationFilter,
+  convertViewFilterValueToString,
   isDefined,
   type RecordFilter,
   type RecordFilterGroup,
@@ -21,15 +19,10 @@ import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadat
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
 import { DEFAULT_TIMEZONE } from 'src/engine/metadata-modules/view/constants/default-timezone.constant';
-import {
-  generateViewExceptionMessage,
-  ViewException,
-  ViewExceptionCode,
-  ViewExceptionMessageKey,
-} from 'src/engine/metadata-modules/view/exceptions/view.exception';
 import { ViewService } from 'src/engine/metadata-modules/view/services/view.service';
-import { isViewVisibleToUser } from 'src/engine/metadata-modules/view/utils/is-view-visible-to-user.util';
+import { computeViewSortsOrderBy } from 'src/engine/metadata-modules/view/utils/compute-view-sorts-order-by.util';
 import { WorkspaceOrmManager } from 'src/engine/twenty-orm/workspace-orm.manager';
+import { computeRecordGqlOperationFilterFromFlatMaps } from 'src/engine/utils/compute-record-gql-operation-filter-from-flat-maps.util';
 import { type WorkspaceMemberWorkspaceEntity } from 'src/modules/workspace-member/standard-objects/workspace-member.workspace-entity';
 
 export type ViewQueryParams = {
@@ -59,23 +52,12 @@ export class ViewQueryParamsService {
     currentWorkspaceMemberId?: string;
     currentUserWorkspaceId?: string;
   }): Promise<ViewQueryParams> {
-    const view = await this.viewService.findByIdWithRelations(
-      viewId,
-      workspaceId,
-    );
-
-    if (
-      !isDefined(view) ||
-      !isViewVisibleToUser(view, currentUserWorkspaceId)
-    ) {
-      throw new ViewException(
-        generateViewExceptionMessage(
-          ViewExceptionMessageKey.VIEW_NOT_FOUND,
-          viewId,
-        ),
-        ViewExceptionCode.VIEW_NOT_FOUND,
-      );
-    }
+    const view =
+      await this.viewService.findByIdWithRelationsVisibleToUserOrThrow({
+        id: viewId,
+        workspaceId,
+        userWorkspaceId: currentUserWorkspaceId,
+      });
 
     const { flatObjectMetadataMaps, flatFieldMetadataMaps } =
       await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
@@ -101,13 +83,14 @@ export class ViewQueryParamsService {
           flatEntityMaps: flatFieldMetadataMaps,
         });
 
-        if (!field) return null;
+        if (!field) {
+          return null;
+        }
 
         return {
           id: viewFilter.id,
           fieldMetadataId: viewFilter.fieldMetadataId,
-          value: viewFilter.value ?? '',
-          type: field.type,
+          value: convertViewFilterValueToString(viewFilter.value ?? ''),
           recordFilterGroupId: viewFilter.viewFilterGroupId,
           operand: viewFilter.operand,
           subFieldName: viewFilter.subFieldName,
@@ -128,32 +111,18 @@ export class ViewQueryParamsService {
           : RecordFilterGroupLogicalOperator.AND,
     }));
 
-    const filter = computeRecordGqlOperationFilter({
-      fieldMetadataItems: Object.values(
-        flatFieldMetadataMaps.byUniversalIdentifier,
-      ).filter(isDefined),
+    const filter = computeRecordGqlOperationFilterFromFlatMaps({
+      flatFieldMetadataMaps,
+      flatObjectMetadataMaps,
       recordFilters,
       recordFilterGroups,
       filterValueDependencies: { currentWorkspaceMemberId, timeZone },
     });
 
-    const orderBy: ObjectRecordOrderBy = (view.viewSorts ?? [])
-      .map((sort) => {
-        const field = findFlatEntityByIdInFlatEntityMaps({
-          flatEntityId: sort.fieldMetadataId,
-          flatEntityMaps: flatFieldMetadataMaps,
-        });
-
-        if (!field) return null;
-
-        return {
-          [field.name]:
-            sort.direction === ViewSortDirection.DESC
-              ? OrderByDirection.DescNullsLast
-              : OrderByDirection.AscNullsFirst,
-        };
-      })
-      .filter(isDefined);
+    const orderBy = computeViewSortsOrderBy({
+      viewSorts: view.viewSorts ?? [],
+      flatFieldMetadataMaps,
+    });
 
     return {
       objectNameSingular: objectMetadata.nameSingular,
@@ -173,9 +142,8 @@ export class ViewQueryParamsService {
 
     try {
       const workspaceMemberRepository =
-        this.workspaceOrmManager.getRepository<WorkspaceMemberWorkspaceEntity>(
+        this.workspaceOrmManager.getRepositoryWithoutPermissionChecks<WorkspaceMemberWorkspaceEntity>(
           'workspaceMember',
-          { shouldBypassPermissionChecks: true },
         );
 
       const workspaceMember = await workspaceMemberRepository.findOne({

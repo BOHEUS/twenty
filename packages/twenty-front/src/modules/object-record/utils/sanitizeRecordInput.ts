@@ -2,6 +2,7 @@ import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/Enriche
 import { isManyToOneRelationField } from '@/object-metadata/utils/isManyToOneRelationField';
 import { isCompositeFieldType } from '@/object-record/object-filter-dropdown/utils/isCompositeFieldType';
 import { isFieldMorphRelation } from '@/object-record/record-field/ui/types/guards/isFieldMorphRelation';
+import { type FieldFilesValue } from '@/object-record/record-field/ui/types/FieldMetadata';
 import { type ObjectRecord } from '@/object-record/types/ObjectRecord';
 import { isSystemSearchVectorField } from '@/object-record/utils/isSystemSearchVectorField';
 import { removeTypenamesFromCompositeFieldValue } from '@/object-record/utils/removeTypenamesFromCompositeFieldValue';
@@ -10,6 +11,7 @@ import {
   computeRelationGqlFieldJoinColumnName,
   isDefined,
 } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { FieldMetadataType, RelationType } from '~/generated-metadata/graphql';
 
 export const sanitizeRecordInput = ({
@@ -38,7 +40,9 @@ export const sanitizeRecordInput = ({
           );
         const potentialMorphRelationJoinColumnNameFieldMetadataItem =
           objectMetadataItem.fields.find((field) => {
-            if (!isFieldMorphRelation(field)) return false;
+            if (!isFieldMorphRelation(field)) {
+              return false;
+            }
             return field.morphRelations?.some((morphRelation) => {
               const computedFieldName = computeMorphRelationGqlFieldName({
                 fieldName: field.name,
@@ -48,7 +52,10 @@ export const sanitizeRecordInput = ({
                 targetObjectMetadataNamePlural:
                   morphRelation.targetObjectMetadata.namePlural,
               });
-              return computedFieldName === fieldName.replace('Id', '');
+              return (
+                computedFieldName ===
+                fieldName.replace(doNotTranslate('Id'), '')
+              );
             });
           });
 
@@ -86,10 +93,12 @@ export const sanitizeRecordInput = ({
           fieldMetadataItem.type === FieldMetadataType.FILES &&
           Array.isArray(fieldValue)
         ) {
-          const cleanedFiles = fieldValue.map((file: any) => ({
-            fileId: file.fileId,
-            label: file.label,
-          }));
+          const cleanedFiles = fieldValue.map(
+            (file: Pick<FieldFilesValue, 'fileId' | 'label'>) => ({
+              fileId: file.fileId,
+              label: file.label,
+            }),
+          );
           return [fieldName, cleanedFiles];
         }
 

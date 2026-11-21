@@ -2,6 +2,7 @@ import { NavigationMenuItemMenuModeEffect } from '@/navigation-menu-item/edit/ef
 import { type ComponentProps, type ReactElement, type ReactNode } from 'react';
 import { useLingui } from '@lingui/react/macro';
 import { isDefined } from 'twenty-shared/utils';
+import { doNotTranslate } from 'twenty-shared/i18n';
 import { Dropdown, type DropdownType } from 'twenty-ui/components/navigation';
 import { useTheme } from 'twenty-ui/theme';
 
@@ -81,11 +82,11 @@ export const NavigationMenuItemMenu = ({
   const isEditing = mode.type === 'edit';
   const menuAriaLabel = isEditing ? t`Edit link` : t`Menu item actions`;
   const openAddMenu = (target: NavigationMenuItemAddTarget) => {
-    const { folderId } = target;
+    const { parentId } = target;
 
-    if (isDefined(folderId)) {
+    if (isDefined(parentId)) {
       setOpenNavigationMenuItemFolderIds((folderIds) =>
-        folderIds.includes(folderId) ? folderIds : [...folderIds, folderId],
+        folderIds.includes(parentId) ? folderIds : [...folderIds, parentId],
       );
     }
 
@@ -107,7 +108,9 @@ export const NavigationMenuItemMenu = ({
       onInteractOutside={(event) => {
         const isOnRowActions = isDefined(
           event.target?.closest(
-            `[data-navigation-menu-item-id="${dropdownId}"] [data-navigation-actions]`,
+            doNotTranslate(
+              `[data-navigation-menu-item-id="${dropdownId}"] [data-navigation-actions]`,
+            ),
           ),
         );
 
@@ -157,7 +160,7 @@ export const NavigationMenuItemMenu = ({
       >
         {mode.type === 'add' ? (
           <NavigationMenuItemAddDropdownContent
-            folderId={mode.folderId}
+            parentId={mode.parentId}
             position={mode.position}
             section={section}
             dropdownId={dropdownId}
