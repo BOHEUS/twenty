@@ -10,11 +10,13 @@ import { resolveEntityRelationUniversalIdentifiers } from 'src/engine/metadata-m
 
 export const fromCreateViewSortInputToFlatViewSortToCreate = ({
   createViewSortInput: rawCreateViewSortInput,
+  position,
   flatApplication,
   flatFieldMetadataMaps,
   flatViewMaps,
 }: {
   createViewSortInput: CreateViewSortInput;
+  position: number;
   flatApplication: FlatApplication;
 } & Pick<
   AllFlatEntityMaps,
@@ -61,6 +63,7 @@ export const fromCreateViewSortInputToFlatViewSortToCreate = ({
     deletedAt: null,
     universalIdentifier: createViewSortInput.universalIdentifier ?? v4(),
     direction: createViewSortInput.direction ?? ViewSortDirection.ASC,
+    position,
     subFieldName: createViewSortInput.subFieldName ?? null,
     relationTargetFieldMetadataUniversalIdentifier,
     applicationUniversalIdentifier: flatApplication.universalIdentifier,

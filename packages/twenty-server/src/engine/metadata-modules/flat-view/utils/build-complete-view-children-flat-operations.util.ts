@@ -137,13 +137,14 @@ export const buildCompleteViewChildrenFlatOperations = ({
       .filter(isDefined)
       .filter((flatViewSort) => flatViewSort.viewId === viewId);
 
-    const flatViewSortsToCreate = sorts.map((sort) =>
+    const flatViewSortsToCreate = sorts.map((sort, position) =>
       fromCreateViewSortInputToFlatViewSortToCreate({
         createViewSortInput: {
           viewId,
           fieldMetadataId: sort.fieldMetadataId,
           direction: sort.direction,
         },
+        position,
         flatApplication,
         flatFieldMetadataMaps,
         flatViewMaps,

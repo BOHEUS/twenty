@@ -4,11 +4,13 @@ import { type UniversalFlatViewSort } from 'src/engine/workspace-manager/workspa
 
 export const fromViewSortManifestToUniversalFlatViewSort = ({
   viewSortManifest,
+  position,
   viewUniversalIdentifier,
   applicationUniversalIdentifier,
   now,
 }: {
   viewSortManifest: ViewSortManifest;
+  position: number;
   viewUniversalIdentifier: string;
   applicationUniversalIdentifier: string;
   now: string;
@@ -20,6 +22,7 @@ export const fromViewSortManifestToUniversalFlatViewSort = ({
       viewSortManifest.fieldMetadataUniversalIdentifier,
     viewUniversalIdentifier,
     direction: viewSortManifest.direction,
+    position,
     subFieldName: viewSortManifest.subFieldName ?? null,
     relationTargetFieldMetadataUniversalIdentifier:
       viewSortManifest.relationTargetFieldMetadataUniversalIdentifier ?? null,

@@ -26,6 +26,7 @@ const buildFlatViewSort = ({
   viewId: 'view-id',
   viewUniversalIdentifier: 'view',
   direction: ViewSortDirection.ASC,
+  position: 0,
   subFieldName: null,
   relationTargetFieldMetadataId: null,
   relationTargetFieldMetadataUniversalIdentifier,

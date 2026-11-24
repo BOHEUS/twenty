@@ -5,7 +5,7 @@ import { MetadataFlatEntityMapsCacheProvider } from 'src/engine/workspace-cache/
 import { createEmptyFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/constant/create-empty-flat-entity-maps.constant';
 import { type FlatViewMaps } from 'src/engine/metadata-modules/flat-view/types/flat-view-maps.type';
 import { fromViewEntityToFlatView } from 'src/engine/metadata-modules/flat-view/utils/from-view-entity-to-flat-view.util';
-import { sortViewSortsByCreation } from 'src/engine/metadata-modules/flat-view/utils/sort-view-sorts-by-creation.util';
+import { sortViewSortsByPriority } from 'src/engine/metadata-modules/flat-view/utils/sort-view-sorts-by-priority.util';
 import { WorkspaceCache } from 'src/engine/workspace-cache/decorators/workspace-cache.decorator';
 import { type WorkspaceCacheProviderContext } from 'src/engine/workspace-cache/types/workspace-cache-provider-context.type';
 import { createIdToUniversalIdentifierMap } from 'src/engine/workspace-cache/utils/create-id-to-universal-identifier-map.util';
@@ -33,7 +33,7 @@ const FLAT_VIEW_ROWS_REQUIREMENT = {
     groupBy: ['viewId'],
   },
   viewSort: {
-    columns: ['id', 'universalIdentifier', 'createdAt'],
+    columns: ['id', 'universalIdentifier', 'position', 'createdAt'],
     groupBy: ['viewId'],
   },
   viewFieldGroup: {
@@ -90,7 +90,7 @@ export class WorkspaceFlatViewMapCacheService extends MetadataFlatEntityMapsCach
           viewFilters: viewFilters.byViewId.get(viewEntity.id) || [],
           viewGroups: viewGroups.byViewId.get(viewEntity.id) || [],
           viewFilterGroups: viewFilterGroups.byViewId.get(viewEntity.id) || [],
-          viewSorts: sortViewSortsByCreation(
+          viewSorts: sortViewSortsByPriority(
             viewSorts.byViewId.get(viewEntity.id) || [],
           ),
           viewFieldGroups: viewFieldGroups.byViewId.get(viewEntity.id) || [],

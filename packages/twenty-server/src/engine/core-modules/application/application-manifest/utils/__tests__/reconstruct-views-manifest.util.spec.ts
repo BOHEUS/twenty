@@ -317,13 +317,16 @@ const buildFlatViewGroup = ({
 
 const buildFlatViewSort = ({
   viewSortManifest,
+  position = 0,
   viewUniversalIdentifier,
 }: {
   viewSortManifest: ViewSortManifest;
+  position?: number;
   viewUniversalIdentifier: string;
 }): FlatViewSort => ({
   ...fromViewSortManifestToUniversalFlatViewSort({
     viewSortManifest,
+    position,
     viewUniversalIdentifier,
     applicationUniversalIdentifier: APP_UID,
     now: NOW,
@@ -469,6 +472,31 @@ const statusOf = (
   coverage.find((entry) => entry.universalIdentifier === universalIdentifier);
 
 describe('reconstructViewsManifest', () => {
+  it('should list the sorts of a view in priority order', () => {
+    const { views } = reconstructViewsManifest({
+      applicationAllFlatEntityMaps: buildMaps({
+        objects: [petObject],
+        views: [buildFlatView({ viewManifest: ALL_PETS_VIEW_MANIFEST })],
+        viewSorts: [
+          buildFlatViewSort({
+            viewSortManifest: AGE_SORT_MANIFEST,
+            position: 1,
+            viewUniversalIdentifier: ALL_PETS_VIEW_UID,
+          }),
+          buildFlatViewSort({
+            viewSortManifest: NAME_SORT_MANIFEST,
+            position: 0,
+            viewUniversalIdentifier: ALL_PETS_VIEW_UID,
+          }),
+        ],
+      }),
+      allFlatEntityMaps,
+      exportedObjectUniversalIdentifiers: EXPORTED_OBJECT_UNIVERSAL_IDENTIFIERS,
+    });
+
+    expect(views[0].sorts).toEqual([NAME_SORT_MANIFEST, AGE_SORT_MANIFEST]);
+  });
+
   it('should nest the children of an application view and order every collection by universal identifier', () => {
     const { views, viewFields, coverage } = reconstructViewsManifest({
       applicationAllFlatEntityMaps: buildMaps({

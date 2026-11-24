@@ -228,6 +228,9 @@ export const reconstructViewsManifest = ({
 
   for (const flatViewSort of sortFlatEntitiesByUniversalIdentifier(
     applicationAllFlatEntityMaps.flatViewSortMaps,
+  ).sort(
+    (firstFlatViewSort, secondFlatViewSort) =>
+      firstFlatViewSort.position - secondFlatViewSort.position,
   )) {
     if (
       decideViewChild({

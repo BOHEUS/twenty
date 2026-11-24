@@ -284,6 +284,7 @@ describe('handleFieldMetadataDeactivationSideEffects', () => {
       viewId: 'view-id',
       viewUniversalIdentifier: 'view-universal-identifier',
       direction: ViewSortDirection.ASC,
+      position: 0,
       subFieldName: null,
       relationTargetFieldMetadataId: 'target-field-id',
       relationTargetFieldMetadataUniversalIdentifier:

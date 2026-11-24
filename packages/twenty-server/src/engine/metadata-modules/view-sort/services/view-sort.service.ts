@@ -5,11 +5,12 @@ import { isDefined } from 'twenty-shared/utils';
 import { ApplicationService } from 'src/engine/core-modules/application/application.service';
 import { WorkspaceManyOrAllFlatEntityMapsCacheService } from 'src/engine/metadata-modules/flat-entity/services/workspace-many-or-all-flat-entity-maps-cache.service';
 import { findFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps.util';
+import { findManyFlatEntityByIdInFlatEntityMaps } from 'src/engine/metadata-modules/flat-entity/utils/find-many-flat-entity-by-id-in-flat-entity-maps.util';
 import { findFlatEntityByIdInFlatEntityMapsOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-id-in-flat-entity-maps-or-throw.util';
 import { findFlatEntityByUniversalIdentifierOrThrow } from 'src/engine/metadata-modules/flat-entity/utils/find-flat-entity-by-universal-identifier-or-throw.util';
 import { findFlatViewAvailableToUser } from 'src/engine/metadata-modules/flat-view/utils/find-flat-view-available-to-user.util';
 import { findManyFlatViewChildrenAvailableToUser } from 'src/engine/metadata-modules/flat-view/utils/find-many-flat-view-children-available-to-user.util';
-import { sortViewSortsByCreation } from 'src/engine/metadata-modules/flat-view/utils/sort-view-sorts-by-creation.util';
+import { sortViewSortsByPriority } from 'src/engine/metadata-modules/flat-view/utils/sort-view-sorts-by-priority.util';
 import { fromCreateViewSortInputToFlatViewSortToCreate } from 'src/engine/metadata-modules/flat-view-sort/utils/from-create-view-sort-input-to-flat-view-sort-to-create.util';
 import { fromDestroyViewSortInputToFlatViewSortOrThrow } from 'src/engine/metadata-modules/flat-view-sort/utils/from-destroy-view-sort-input-to-flat-view-sort-or-throw.util';
 import { fromUpdateViewSortInputToFlatViewSortToUpdateOrThrow } from 'src/engine/metadata-modules/flat-view-sort/utils/from-update-view-sort-input-to-flat-view-sort-to-update-or-throw.util';
@@ -51,16 +52,34 @@ export class ViewSortService {
         },
       );
 
-    const { flatFieldMetadataMaps, flatViewMaps } =
+    const { flatFieldMetadataMaps, flatViewMaps, flatViewSortMaps } =
       await this.flatEntityMapsCacheService.getOrRecomputeManyOrAllFlatEntityMaps(
         {
           workspaceId,
-          flatMapsKeys: ['flatFieldMetadataMaps', 'flatViewMaps'],
+          flatMapsKeys: [
+            'flatFieldMetadataMaps',
+            'flatViewMaps',
+            'flatViewSortMaps',
+          ],
         },
       );
 
+    const existingFlatViewSorts = findManyFlatEntityByIdInFlatEntityMaps({
+      flatEntityMaps: flatViewSortMaps,
+      flatEntityIds:
+        findFlatEntityByIdInFlatEntityMaps({
+          flatEntityId: createViewSortInput.viewId,
+          flatEntityMaps: flatViewMaps,
+        })?.viewSortIds ?? [],
+    });
+
     const flatViewSortToCreate = fromCreateViewSortInputToFlatViewSortToCreate({
       createViewSortInput,
+      position:
+        Math.max(
+          -1,
+          ...existingFlatViewSorts.map((flatViewSort) => flatViewSort.position),
+        ) + 1,
       flatApplication: workspaceCustomFlatApplication,
       flatFieldMetadataMaps,
       flatViewMaps,
@@ -291,15 +310,15 @@ export class ViewSortService {
         },
       );
 
-    return sortViewSortsByCreation(
+    return sortViewSortsByPriority(
       findManyFlatViewChildrenAvailableToUser({
         flatViewMaps,
         flatViewChildMaps: flatViewSortMaps,
         flatViewChildIdsKey: 'viewSortIds',
         viewId,
         userWorkspaceId,
-      }).map(fromFlatViewSortToViewSortDto),
-    );
+      }),
+    ).map(fromFlatViewSortToViewSortDto);
   }
 
   async findByIdOrThrow({

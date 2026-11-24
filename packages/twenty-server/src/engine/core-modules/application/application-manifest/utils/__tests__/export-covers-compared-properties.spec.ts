@@ -656,13 +656,17 @@ const EXPORTED_KINDS: ExportedKind[] = [
       fromFlatViewSortToViewSortManifest({
         flatViewSort: fromViewSortManifestToUniversalFlatViewSort({
           viewSortManifest: VIEW_SORT_MANIFEST,
+          position: 0,
           ...VIEW_CHILD_CONVERSION_CONTEXT,
         }),
       }),
     ),
     renamedProperties: {},
     workspaceLocalProperties: [],
-    knownGaps: NESTED_VIEW_CHILD_GAPS,
+    knownGaps: {
+      ...NESTED_VIEW_CHILD_GAPS,
+      position: 'written as the index of the sort in its view sorts list',
+    },
   },
   {
     metadataName: 'navigationMenuItem',

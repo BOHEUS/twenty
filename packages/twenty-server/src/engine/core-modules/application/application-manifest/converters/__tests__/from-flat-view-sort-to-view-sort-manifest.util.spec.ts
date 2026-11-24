@@ -24,6 +24,7 @@ const VIEW_SORT_MANIFEST: Required<ViewSortManifest> = {
 const forward = (viewSortManifest: ViewSortManifest) =>
   fromViewSortManifestToUniversalFlatViewSort({
     viewSortManifest,
+    position: 0,
     viewUniversalIdentifier: VIEW_UID,
     applicationUniversalIdentifier: APP_UID,
     now: NOW,
@@ -54,6 +55,7 @@ describe('fromFlatViewSortToViewSortManifest', () => {
       viewUniversalIdentifier: VIEW_UID,
       fieldMetadataUniversalIdentifier: FIELD_UID,
       direction: ViewSortDirection.ASC,
+      position: 0,
       subFieldName: null,
       relationTargetFieldMetadataUniversalIdentifier: null,
       createdAt: NOW,

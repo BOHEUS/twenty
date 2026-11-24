@@ -621,10 +621,13 @@ export class ComputeApplicationManifestAllUniversalFlatEntityMapsService {
         });
       }
 
-      for (const viewSortManifest of viewManifest.sorts ?? []) {
+      for (const [position, viewSortManifest] of (
+        viewManifest.sorts ?? []
+      ).entries()) {
         addUniversalFlatEntityToUniversalFlatEntityMapsThroughMutationOrThrow({
           universalFlatEntity: fromViewSortManifestToUniversalFlatViewSort({
             viewSortManifest,
+            position,
             viewUniversalIdentifier: viewManifest.universalIdentifier,
             applicationUniversalIdentifier,
             now,
