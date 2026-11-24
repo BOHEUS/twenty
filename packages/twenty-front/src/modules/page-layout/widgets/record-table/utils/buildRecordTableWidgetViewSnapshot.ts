@@ -1,6 +1,7 @@
 import { type FlatView } from '@/metadata-store/types/FlatView';
 import { type FlatViewField } from '@/metadata-store/types/FlatViewField';
 import { type EnrichedObjectMetadataItem } from '@/object-metadata/types/EnrichedObjectMetadataItem';
+import { RECORD_TABLE_WIDGET_DEFAULT_VIEW_FIELD_SIZE } from '@/page-layout/widgets/record-table/constants/RecordTableWidgetDefaultViewFieldSize';
 import { type RecordTableWidgetViewSnapshot } from '@/page-layout/widgets/record-table/types/RecordTableWidgetViewSnapshot';
 import { filterFieldsForRecordTableViewCreation } from '@/page-layout/widgets/record-table/utils/filterFieldsForRecordTableViewCreation';
 import { normalizeRecordTableWidgetViewFields } from '@/page-layout/widgets/record-table/utils/normalizeRecordTableWidgetViewFields';
@@ -9,7 +10,6 @@ import { t } from '@lingui/core/macro';
 import { v4 } from 'uuid';
 import { ViewType, ViewVisibility } from '~/generated-metadata/graphql';
 
-const DEFAULT_VIEW_FIELD_SIZE = 180;
 const INITIAL_VISIBLE_FIELDS_COUNT_IN_WIDGET = 6;
 
 export const buildRecordTableWidgetViewSnapshot = (
@@ -49,7 +49,7 @@ export const buildRecordTableWidgetViewSnapshot = (
       viewId: newViewId,
       fieldMetadataId: field.id,
       position: index,
-      size: DEFAULT_VIEW_FIELD_SIZE,
+      size: RECORD_TABLE_WIDGET_DEFAULT_VIEW_FIELD_SIZE,
       isVisible: index < INITIAL_VISIBLE_FIELDS_COUNT_IN_WIDGET,
       isActive: true,
     })),

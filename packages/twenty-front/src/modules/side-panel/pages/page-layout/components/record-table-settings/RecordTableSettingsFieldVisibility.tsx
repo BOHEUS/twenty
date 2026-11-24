@@ -112,7 +112,7 @@ export const RecordTableSettingsFieldVisibility = ({
                           aria-label={t`Hide field`}
                           onClick={() => {
                             toggleRecordTableWidgetFieldVisibility(
-                              fieldItem.viewField.id,
+                              fieldItem.viewField,
                               false,
                             );
                           }}
@@ -148,7 +148,7 @@ export const RecordTableSettingsFieldVisibility = ({
                   aria-label={t`Show field`}
                   onClick={() => {
                     toggleRecordTableWidgetFieldVisibility(
-                      fieldItem.viewField.id,
+                      fieldItem.viewField,
                       true,
                     );
                   }}
