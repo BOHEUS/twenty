@@ -48,7 +48,7 @@ const handler = async ({ campaignId, personId, ...content }: SendCampaignMessage
   // the person may have changed since the campaign was scheduled
   const recipient = resolveWhatsAppCampaignRecipient({
     person,
-    templateCategory: whatsAppTemplate.category,
+    templateCategory: whatsAppTemplate.category ?? null,
     content,
   });
 

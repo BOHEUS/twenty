@@ -8,7 +8,7 @@ export const findMessageByExternalId = async ({
   client: CoreApiClient;
   messageChannelId: string;
   externalId: string;
-}): Promise<{ id: string; text: string | null } | undefined> => {
+}): Promise<{ id: string; text?: string | null } | undefined> => {
   const { messageChannelMessageAssociations } = await client.query({
     messageChannelMessageAssociations: {
       __args: {

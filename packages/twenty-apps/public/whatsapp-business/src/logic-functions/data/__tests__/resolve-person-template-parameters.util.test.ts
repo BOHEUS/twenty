@@ -4,7 +4,6 @@ import { resolvePersonTemplateParameters } from 'src/logic-functions/data/resolv
 const PERSON = {
   name: { firstName: 'Ada', lastName: 'Lovelace' },
   jobTitle: null,
-  city: 'London',
   company: { name: 'Analytical Engines' },
 };
 

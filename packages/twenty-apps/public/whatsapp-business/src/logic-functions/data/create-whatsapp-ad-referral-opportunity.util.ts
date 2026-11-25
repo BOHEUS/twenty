@@ -1,4 +1,5 @@
 import { type CoreApiClient } from 'twenty-client-sdk/core';
+import { isDefined } from 'twenty-sdk/utils';
 import { buildWhatsAppAdReferralOpportunityName } from 'src/logic-functions/data/build-whatsapp-ad-referral-opportunity-name.util';
 
 export const createWhatsAppAdReferralOpportunity = async ({
@@ -30,6 +31,10 @@ export const createWhatsAppAdReferralOpportunity = async ({
       id: true,
     },
   });
+
+  if (!isDefined(createOpportunity)) {
+    throw new Error('WhatsApp ad referral opportunity was not created');
+  }
 
   return createOpportunity.id;
 };

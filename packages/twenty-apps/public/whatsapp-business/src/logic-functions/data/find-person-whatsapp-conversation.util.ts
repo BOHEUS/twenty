@@ -7,7 +7,7 @@ const PARTICIPATIONS_LIMIT = 200;
 
 type AssociationNode = {
   direction: 'INCOMING' | 'OUTGOING';
-  message: { text: string | null; receivedAt: string | null; whatsAppStatus: string | null } | null;
+  message?: { text?: string | null; receivedAt?: string | null; whatsAppStatus?: string | null } | null;
 };
 
 // the person's latest WhatsApp messages across every WhatsApp channel, oldest first

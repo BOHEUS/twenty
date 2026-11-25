@@ -26,7 +26,7 @@ export const findWhatsAppCampaignIdsInThread = async ({
   });
 
   const campaignIds: string[] = (messageChannelMessageAssociations?.edges ?? [])
-    .map(({ node }: { node: { message: { whatsAppCampaignId: string | null } | null } }) => node.message?.whatsAppCampaignId)
+    .map(({ node }: { node: { message?: { whatsAppCampaignId?: string | null } | null } }) => node.message?.whatsAppCampaignId)
     .filter(isNonEmptyString);
 
   return [...new Set(campaignIds)];

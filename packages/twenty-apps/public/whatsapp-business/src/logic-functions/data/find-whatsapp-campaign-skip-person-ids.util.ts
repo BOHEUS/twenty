@@ -11,7 +11,7 @@ export const findWhatsAppCampaignSkipPersonIds = async (campaignId: string): Pro
   });
 
   return new Set(
-    (whatsAppCampaignSkips?.edges ?? []).flatMap(({ node }: { node: { personId: string | null } }) =>
+    (whatsAppCampaignSkips?.edges ?? []).flatMap(({ node }: { node: { personId?: string | null } }) =>
       isNonEmptyString(node.personId) ? [node.personId] : [],
     ),
   );

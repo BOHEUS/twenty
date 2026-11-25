@@ -6,17 +6,17 @@ import { type WhatsAppCampaignRecipient } from 'src/logic-functions/types/whatsa
 
 type CampaignMessageNode = {
   id: string;
-  receivedAt: string | null;
-  whatsAppStatus: string | null;
-  whatsAppStatusError: string | null;
-  messageParticipants: {
+  receivedAt?: string | null;
+  whatsAppStatus?: string | null;
+  whatsAppStatusError?: string | null;
+  messageParticipants?: {
     edges: Array<{
       node: {
-        role: string;
-        handle: string | null;
-        displayName: string | null;
-        personId: string | null;
-        person: { name: { firstName: string | null; lastName: string | null } | null } | null;
+        role?: string;
+        handle?: string | null;
+        displayName?: string | null;
+        personId?: string | null;
+        person?: { name?: { firstName?: string | null; lastName?: string | null } | null } | null;
       };
     }>;
   } | null;
@@ -126,8 +126,10 @@ export const findWhatsAppCampaignRecipients = async ({
   });
   const threadExternalIdByMessageId = new Map<string, string>(
     (campaignAssociations?.edges ?? []).flatMap(
-      ({ node }: { node: { messageId: string; messageThreadExternalId: string | null } }) =>
-        isNonEmptyString(node.messageThreadExternalId) ? [[node.messageId, node.messageThreadExternalId]] : [],
+      ({ node }: { node: { messageId?: string; messageThreadExternalId?: string | null } }) =>
+        isNonEmptyString(node.messageId) && isNonEmptyString(node.messageThreadExternalId)
+          ? [[node.messageId, node.messageThreadExternalId]]
+          : [],
     ),
   );
   const threadExternalIds = [...new Set(threadExternalIdByMessageId.values())];
@@ -146,9 +148,9 @@ export const findWhatsAppCampaignRecipients = async ({
       personId: recipient?.personId ?? null,
       recipientName: isNonEmptyString(personName) ? personName : (recipient?.displayName ?? null),
       recipientHandle: recipient?.handle ?? null,
-      sentAt: message.receivedAt,
-      status: message.whatsAppStatus,
-      statusError: message.whatsAppStatusError,
+      sentAt: message.receivedAt ?? null,
+      status: message.whatsAppStatus ?? null,
+      statusError: message.whatsAppStatusError ?? null,
       hasReplied: threadExternalId !== undefined && repliedThreadExternalIds.has(threadExternalId),
     };
   });

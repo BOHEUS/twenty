@@ -26,9 +26,21 @@ export const findWhatsAppTemplateOrThrow = async (templateId: string): Promise<W
     throw new Error(`WhatsApp template ${templateId} not found`);
   }
 
-  if (!isNonEmptyString(whatsAppTemplate.whatsAppBusinessAccountId)) {
+  const { metaTemplateId, name, whatsAppBusinessAccountId } = whatsAppTemplate;
+
+  if (!isNonEmptyString(whatsAppBusinessAccountId)) {
     throw new Error('Template is not linked to a WhatsApp Business Account, reconnect WhatsApp to resync it');
   }
 
-  return whatsAppTemplate;
+  if (!isNonEmptyString(metaTemplateId) || !isNonEmptyString(name)) {
+    throw new Error(`WhatsApp template ${templateId} is missing its Meta ID or name, reconnect WhatsApp to resync it`);
+  }
+
+  return {
+    id: whatsAppTemplate.id,
+    metaTemplateId,
+    name,
+    parameterFormat: whatsAppTemplate.parameterFormat ?? null,
+    whatsAppBusinessAccountId,
+  };
 };

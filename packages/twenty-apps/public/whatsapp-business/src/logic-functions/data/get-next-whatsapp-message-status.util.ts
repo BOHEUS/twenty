@@ -10,12 +10,12 @@ export const getNextWhatsAppMessageStatus = ({
 }: {
   currentStatus: string | null | undefined;
   reportedStatus: WhatsAppMessageStatus;
-}): string | undefined => {
+}): Uppercase<WhatsAppMessageStatus> | undefined => {
   const currentRank = isNonEmptyString(currentStatus)
     ? WHATSAPP_MESSAGE_STATUSES.findIndex((status) => status === currentStatus.toLowerCase())
     : -1;
 
   return WHATSAPP_MESSAGE_STATUSES.indexOf(reportedStatus) > currentRank
-    ? reportedStatus.toUpperCase()
+    ? (reportedStatus.toUpperCase() as Uppercase<WhatsAppMessageStatus>)
     : undefined;
 };

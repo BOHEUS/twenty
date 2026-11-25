@@ -12,7 +12,6 @@ const PERSON_SELECTION = {
   phones: { primaryPhoneNumber: true, primaryPhoneCallingCode: true },
   name: { firstName: true, lastName: true },
   jobTitle: true,
-  city: true,
   company: { name: true },
 };
 

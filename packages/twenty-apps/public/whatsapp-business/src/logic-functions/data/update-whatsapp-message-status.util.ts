@@ -39,7 +39,7 @@ export const updateWhatsAppMessageStatus = async ({
     },
   });
   const message:
-    | { id: string; text: string | null; whatsAppStatus: string | null; whatsAppCampaignId: string | null }
+    | { id: string; text?: string | null; whatsAppStatus?: string | null; whatsAppCampaignId?: string | null }
     | undefined =
     messageChannelMessageAssociations?.edges[0]?.node.message ?? undefined;
 
@@ -74,5 +74,10 @@ export const updateWhatsAppMessageStatus = async ({
     },
   });
 
-  return { outcome: 'UPDATED', text: message.text, statusError, campaignId: message.whatsAppCampaignId };
+  return {
+    outcome: 'UPDATED',
+    text: message.text ?? null,
+    statusError,
+    campaignId: message.whatsAppCampaignId ?? null,
+  };
 };

@@ -84,7 +84,7 @@ export const launchWhatsAppCampaign = async ({
   const skips: { person: WhatsAppTemplateRecipientPerson; reason: WhatsAppCampaignSkipReason }[] = [];
 
   for (const person of people) {
-    const recipient = resolveWhatsAppCampaignRecipient({ person, templateCategory: whatsAppTemplate.category, content });
+    const recipient = resolveWhatsAppCampaignRecipient({ person, templateCategory: whatsAppTemplate.category ?? null, content });
 
     if ('skipReason' in recipient) {
       skippedCountByReason[recipient.skipReason] += 1;

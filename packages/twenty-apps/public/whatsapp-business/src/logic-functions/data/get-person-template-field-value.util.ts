@@ -6,7 +6,7 @@ export const getPersonTemplateFieldValue = ({
   person,
   personField,
 }: {
-  person: Pick<WhatsAppTemplateRecipientPerson, 'name' | 'jobTitle' | 'city' | 'company'>;
+  person: Pick<WhatsAppTemplateRecipientPerson, 'name' | 'jobTitle' | 'company'>;
   personField: WhatsAppTemplatePersonField;
 }): string | undefined => {
   const value = {
@@ -15,7 +15,6 @@ export const getPersonTemplateFieldValue = ({
     fullName: [person.name?.firstName, person.name?.lastName].filter(isNonEmptyString).join(' '),
     companyName: person.company?.name,
     jobTitle: person.jobTitle,
-    city: person.city,
   }[personField]?.trim();
 
   return isNonEmptyString(value) ? value : undefined;

@@ -12,12 +12,9 @@ export const resolveWhatsAppThreadExternalId = async ({
   groupId?: string;
   customerIdentity: WhatsAppIdentity;
 }): Promise<string | undefined> => {
-  const isKnownByBothIdentifiers =
-    !isNonEmptyString(groupId) &&
-    isNonEmptyString(customerIdentity.whatsAppId) &&
-    isNonEmptyString(customerIdentity.whatsAppUserId);
+  const { whatsAppId, whatsAppUserId } = customerIdentity;
 
-  if (!isKnownByBothIdentifiers) {
+  if (isNonEmptyString(groupId) || !isNonEmptyString(whatsAppId) || !isNonEmptyString(whatsAppUserId)) {
     return selectWhatsAppThreadExternalId({ groupId, customerIdentity, existingThreadExternalIds: [] });
   }
 
@@ -26,7 +23,7 @@ export const resolveWhatsAppThreadExternalId = async ({
       __args: {
         filter: {
           messageChannelId: { eq: messageChannelId },
-          messageThreadExternalId: { in: [customerIdentity.whatsAppId, customerIdentity.whatsAppUserId] },
+          messageThreadExternalId: { in: [whatsAppId, whatsAppUserId] },
         },
         first: 1,
       },
@@ -37,7 +34,7 @@ export const resolveWhatsAppThreadExternalId = async ({
   return selectWhatsAppThreadExternalId({
     customerIdentity,
     existingThreadExternalIds: (messageChannelMessageAssociations?.edges ?? [])
-      .map(({ node }: { node: { messageThreadExternalId: string | null } }) => node.messageThreadExternalId)
+      .map(({ node }: { node: { messageThreadExternalId?: string | null } }) => node.messageThreadExternalId)
       .filter(isNonEmptyString),
   });
 };

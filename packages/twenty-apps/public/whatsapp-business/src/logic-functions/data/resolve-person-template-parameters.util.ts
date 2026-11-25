@@ -10,7 +10,7 @@ export const resolvePersonTemplateParameters = ({
   person,
 }: {
   parameters: PersonalizableTemplateParameter[];
-  person: Pick<WhatsAppTemplateRecipientPerson, 'name' | 'jobTitle' | 'city' | 'company'>;
+  person: Pick<WhatsAppTemplateRecipientPerson, 'name' | 'jobTitle' | 'company'>;
 }): TemplateParameterInput[] | undefined => {
   const resolvedParameters: TemplateParameterInput[] = [];
 

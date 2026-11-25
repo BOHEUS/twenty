@@ -84,7 +84,7 @@ const handler = async ({
     const updatedText =
       messages.type === 'edit'
         ? getEditedMessageText(messages.edit.message)
-        : buildRevokedMessageText({ originalText: originalMessage.text, revokedAt: sentAt });
+        : buildRevokedMessageText({ originalText: originalMessage.text ?? null, revokedAt: sentAt });
     await updateMessage({ client: coreClient, messageId: originalMessage.id, text: updatedText });
     return;
   }

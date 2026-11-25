@@ -11,6 +11,5 @@ export const usePersonFieldLabels = (): Record<WhatsAppTemplatePersonField, stri
     fullName: t('Full name'),
     companyName: t('Company name'),
     jobTitle: t('Job title'),
-    city: t('City'),
   };
 };

@@ -32,5 +32,9 @@ export const createPerson = async ({
     },
   });
 
+  if (!isDefined(createdPerson)) {
+    throw new Error('WhatsApp person was not created');
+  }
+
   return createdPerson.id;
 };

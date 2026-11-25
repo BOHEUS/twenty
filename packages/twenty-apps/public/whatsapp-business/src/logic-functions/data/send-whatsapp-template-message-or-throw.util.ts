@@ -54,10 +54,14 @@ export const sendWhatsAppTemplateMessageOrThrow = async ({
     throw new Error('The recipient stopped WhatsApp marketing messages from this business');
   }
 
-  const { whatsAppBusinessAccountId } = whatsAppTemplate;
+  const { whatsAppBusinessAccountId, name: templateName, language: templateLanguage } = whatsAppTemplate;
 
   if (!isNonEmptyString(whatsAppBusinessAccountId)) {
     throw new Error('Template is not linked to a WhatsApp Business Account, reconnect WhatsApp to resync it');
+  }
+
+  if (!isNonEmptyString(templateName) || !isNonEmptyString(templateLanguage)) {
+    throw new Error('Template is missing its name or language, reconnect WhatsApp to resync it');
   }
 
   const accessToken = await getWhatsAppAccessTokenOrThrow({ whatsAppBusinessAccountId });
@@ -73,8 +77,8 @@ export const sendWhatsAppTemplateMessageOrThrow = async ({
       ...buildWhatsAppRecipient(to),
       type: 'template',
       template: {
-        name: whatsAppTemplate.name,
-        language: { code: whatsAppTemplate.language },
+        name: templateName,
+        language: { code: templateLanguage },
         components: buildTemplateComponents({
           bodyParameters: parameters,
           headerParameters,
@@ -115,7 +119,7 @@ export const sendWhatsAppTemplateMessageOrThrow = async ({
         },
       }),
       messageId,
-      text: isNonEmptyString(renderedText) ? renderedText : whatsAppTemplate.name,
+      text: isNonEmptyString(renderedText) ? renderedText : templateName,
       campaignId,
     });
   } catch (error) {

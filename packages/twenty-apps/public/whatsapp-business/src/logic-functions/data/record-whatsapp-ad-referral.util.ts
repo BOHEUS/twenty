@@ -27,6 +27,10 @@ export const recordWhatsAppAdReferral = async ({
       })
     ).createWhatsAppAdReferral;
 
+  if (!isDefined(referral)) {
+    throw new Error('WhatsApp ad referral was not created');
+  }
+
   if (isDefined(referral.opportunityId) || !(await getAdReferralSettings()).isOpportunityCreated) {
     return;
   }

@@ -9,7 +9,6 @@ const PERSON = {
   phones: null,
   name: { firstName: 'Ada', lastName: 'Lovelace' },
   jobTitle: null,
-  city: null,
   company: null,
 };
 

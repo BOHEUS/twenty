@@ -27,7 +27,7 @@ export const findLatestIncomingWhatsAppMessage = async ({
       edges: { node: { messageExternalId: true, message: { receivedAt: true } } },
     },
   });
-  const node: { messageExternalId: string | null; message: { receivedAt: string | null } | null } | undefined =
+  const node: { messageExternalId?: string | null; message?: { receivedAt?: string | null } | null } | undefined =
     messageChannelMessageAssociations?.edges[0]?.node;
 
   if (!isDefined(node?.messageExternalId) || !isDefined(node.message?.receivedAt)) {
