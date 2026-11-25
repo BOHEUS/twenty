@@ -3,7 +3,7 @@ import { CoreApiClient } from 'twenty-client-sdk/core';
 type WhatsAppWebhookEvent = {
   id: string;
   createdAt: string;
-  fields: string | null;
+  webhookFields: string | null;
   payload: unknown;
   isRead: boolean;
 };
@@ -26,7 +26,7 @@ export const readWhatsAppWebhookEvents = async ({
         orderBy: [{ createdAt: 'AscNullsLast' }],
         first: limit,
       },
-      edges: { node: { id: true, createdAt: true, fields: true, payload: true, isRead: true } },
+      edges: { node: { id: true, createdAt: true, webhookFields: true, payload: true, isRead: true } },
     },
   });
 

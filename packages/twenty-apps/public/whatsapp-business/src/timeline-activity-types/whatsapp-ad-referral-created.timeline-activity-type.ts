@@ -12,7 +12,7 @@ export default defineTimelineActivityType({
   label: 'arrived from a WhatsApp ad',
   icon: 'IconBrandWhatsapp',
   emit: {
-    on: 'created',
+    on: 'linked',
     objectUniversalIdentifier: WHATSAPP_AD_REFERRAL_UNIVERSAL_IDENTIFIER,
     through: {
       relationFieldUniversalIdentifier: WHATSAPP_AD_REFERRAL_FIELD_UNIVERSAL_IDENTIFIERS.person,

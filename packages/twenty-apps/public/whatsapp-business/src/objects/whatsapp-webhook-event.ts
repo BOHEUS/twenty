@@ -12,13 +12,13 @@ export default defineObject({
   labelPlural: 'WhatsApp webhook events',
   description: 'A verified webhook received from WhatsApp, kept as received so it can be read again if processing missed it',
   icon: 'IconWebhook',
-  labelIdentifierFieldMetadataUniversalIdentifier: WHATSAPP_WEBHOOK_EVENT_FIELD_UNIVERSAL_IDENTIFIERS.fields,
+  labelIdentifierFieldMetadataUniversalIdentifier: WHATSAPP_WEBHOOK_EVENT_FIELD_UNIVERSAL_IDENTIFIERS.webhookFields,
   fields: [
     {
-      universalIdentifier: WHATSAPP_WEBHOOK_EVENT_FIELD_UNIVERSAL_IDENTIFIERS.fields,
+      universalIdentifier: WHATSAPP_WEBHOOK_EVENT_FIELD_UNIVERSAL_IDENTIFIERS.webhookFields,
       type: FieldType.TEXT,
-      name: 'fields',
-      label: 'Fields',
+      name: 'webhookFields',
+      label: 'Webhook fields',
       description: 'Webhook fields of the changes in the payload, such as messages or account_alerts',
       icon: 'IconTag',
       isUIEditable: false,

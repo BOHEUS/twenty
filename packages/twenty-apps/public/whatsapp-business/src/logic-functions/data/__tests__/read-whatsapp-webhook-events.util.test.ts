@@ -11,8 +11,8 @@ vi.mock('twenty-client-sdk/core', () => ({
   },
 }));
 
-const UNREAD_EVENT = { id: 'unread', createdAt: '2026-11-25T10:00:00.000Z', fields: 'messages', payload: {}, isRead: false };
-const READ_EVENT = { id: 'read', createdAt: '2026-11-25T09:00:00.000Z', fields: 'statuses', payload: {}, isRead: true };
+const UNREAD_EVENT = { id: 'unread', createdAt: '2026-11-25T10:00:00.000Z', webhookFields: 'messages', payload: {}, isRead: false };
+const READ_EVENT = { id: 'read', createdAt: '2026-11-25T09:00:00.000Z', webhookFields: 'statuses', payload: {}, isRead: true };
 
 const getQueryFilter = () => query.mock.calls[0]?.[0].whatsAppWebhookEvents.__args.filter;
 
