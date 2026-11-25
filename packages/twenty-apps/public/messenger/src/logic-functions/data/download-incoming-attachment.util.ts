@@ -1,3 +1,5 @@
+import { isDefined } from 'twenty-sdk/utils';
+
 import { MESSENGER_ATTACHMENT_DOWNLOAD_TIMEOUT_MS } from 'src/constants/messenger-attachment-download-timeout-ms.constant';
 import { MESSENGER_ATTACHMENT_MAX_SIZE_BYTES } from 'src/constants/messenger-attachment-max-size-bytes.constant';
 
@@ -24,15 +26,24 @@ export const downloadIncomingAttachment = async (
 
   const chunks: Uint8Array[] = [];
   let sizeBytes = 0;
+  const reader = response.body?.getReader();
 
-  for await (const chunk of response.body ?? []) {
-    sizeBytes += chunk.byteLength;
+  while (isDefined(reader)) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    sizeBytes += value.byteLength;
 
     if (sizeBytes > maxSizeBytes) {
+      await reader.cancel();
+
       return undefined;
     }
 
-    chunks.push(chunk);
+    chunks.push(value);
   }
 
   return Buffer.concat(chunks);
