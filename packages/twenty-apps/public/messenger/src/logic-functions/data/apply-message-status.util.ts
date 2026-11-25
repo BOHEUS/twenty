@@ -8,15 +8,6 @@ import { type OutgoingMessage } from 'src/logic-functions/types/outgoing-message
 // receipts only matter for recent messages; older ones were marked by earlier receipts
 const RECENT_OUTGOING_MESSAGES_LIMIT = 50;
 
-type AssociationNode = {
-  messageExternalId: string | null;
-  message: {
-    id: string;
-    receivedAt: string | null;
-    messengerStatus: string | null;
-  } | null;
-};
-
 export const applyMessageStatus = async ({
   client,
   messageChannelId,
@@ -54,16 +45,16 @@ export const applyMessageStatus = async ({
 
   const messages: OutgoingMessage[] = (
     messageChannelMessageAssociations?.edges ?? []
-  ).flatMap(({ node }: { node: AssociationNode }) => {
+  ).flatMap(({ node }) => {
     const { message } = node;
 
     return isDefined(message)
       ? [
           {
             id: message.id,
-            externalId: node.messageExternalId,
-            receivedAt: message.receivedAt,
-            messengerStatus: message.messengerStatus,
+            externalId: node.messageExternalId ?? null,
+            receivedAt: message.receivedAt ?? null,
+            messengerStatus: message.messengerStatus ?? null,
           },
         ]
       : [];

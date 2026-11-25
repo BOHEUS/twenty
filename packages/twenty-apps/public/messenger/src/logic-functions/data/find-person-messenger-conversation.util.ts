@@ -10,7 +10,7 @@ const PARTICIPATIONS_MAX_PAGES = 5;
 
 type AssociationNode = {
   direction: 'INCOMING' | 'OUTGOING';
-  messageChannelId: string;
+  messageChannelId: string | null;
   messageThreadExternalId: string | null;
   message: {
     text: string | null;
@@ -49,7 +49,7 @@ const fetchParticipationsPage = async ({
 
   return {
     messageIds: (messageParticipants?.edges ?? [])
-      .map(({ node }: { node: { messageId: string | null } }) => node.messageId)
+      .map(({ node }) => node.messageId)
       .filter(isNonEmptyString),
     endCursor:
       messageParticipants?.pageInfo?.hasNextPage === true &&
@@ -112,7 +112,18 @@ export const findPersonMessengerConversation = async ({
 
       nodes.push(
         ...(messageChannelMessageAssociations?.edges ?? []).map(
-          ({ node }: { node: AssociationNode }) => node,
+          ({ node }): AssociationNode => ({
+            direction: node.direction,
+            messageChannelId: node.messageChannelId ?? null,
+            messageThreadExternalId: node.messageThreadExternalId ?? null,
+            message: isDefined(node.message)
+              ? {
+                  text: node.message.text ?? null,
+                  receivedAt: node.message.receivedAt ?? null,
+                  messengerStatus: node.message.messengerStatus ?? null,
+                }
+              : null,
+          }),
         ),
       );
     }

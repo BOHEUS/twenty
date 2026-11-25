@@ -71,6 +71,12 @@ export const findOrCreateMessengerPersonId = async ({
         createPerson: { __args: { data: { name } }, id: true },
       });
 
+      if (!isDefined(createPerson)) {
+        throw new Error(
+          `Creating the person of Messenger user ${pageScopedId} returned no record`,
+        );
+      }
+
       await kv.set(personKey, createPerson.id);
 
       return createPerson.id;
