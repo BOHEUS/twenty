@@ -68,6 +68,10 @@ export const findOrCreateLinePersonId = async ({
         createPerson: { __args: { data: { name } }, id: true },
       });
 
+      if (!isDefined(createPerson)) {
+        throw new Error(`Could not create the person of LINE user ${userId}`);
+      }
+
       await kv.set(personKey, createPerson.id);
 
       return createPerson.id;
