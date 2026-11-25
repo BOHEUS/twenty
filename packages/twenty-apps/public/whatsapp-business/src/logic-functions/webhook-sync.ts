@@ -21,6 +21,7 @@ import { sendInboxNotification } from "src/logic-functions/data/send-inbox-notif
 import { updateWhatsAppMarketingPreference } from "src/logic-functions/data/update-whatsapp-marketing-preference.util";
 import { parseWhatsAppTimestamp } from "src/logic-functions/data/parse-whatsapp-timestamp.util";
 import { isSameWhatsAppIdentity } from "src/logic-functions/data/is-same-whatsapp-identity.util";
+import { storeWhatsAppWebhookEvent } from "src/logic-functions/data/store-whatsapp-webhook-event.util";
 
 const enqueueParseMessageJobs = (payloads: ParseMessagePayload[]) =>
   enqueueLogicFunctionJobs({
@@ -53,6 +54,12 @@ const handler = async (
 
   if (body === null || body?.entry === undefined || body.object !== 'whatsapp_business_account') {
     return new Response('', { status: 400 });
+  }
+
+  try {
+    await storeWhatsAppWebhookEvent(body);
+  } catch (error) {
+    console.error('Could not store WhatsApp webhook event', error);
   }
 
   for (const entry of body.entry) {

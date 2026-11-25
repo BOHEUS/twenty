@@ -15,6 +15,7 @@ Brings WhatsApp Business conversations into Twenty and lets agents and workflows
 - AI tools: `create-template`, `edit-template`, `delete-template`, `send-template-message`, and `send-interactive-message` for reply buttons and lists within the 24 hour window.
 - When someone stops or resumes WhatsApp marketing messages, the **WhatsApp marketing opt-out** field on their person record is updated, and marketing templates are no longer sent to them. A marketing send that Meta rejects because of an earlier opt-out also sets it.
 - Account alerts, reviews and phone number quality changes are sent to the same inboxes.
+- Every verified webhook is also stored as a **WhatsApp webhook event**, unread, with its payload as received. The `read-webhook-events` tool returns stored events, oldest first and unread only by default, and marks them as read.
 
 ## Setup
 
