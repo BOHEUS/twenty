@@ -287,14 +287,17 @@ export class AgentStepLoopService {
       ...buildAiTelemetry(telemetry),
       providerOptions,
       experimental_download: downloadFiles,
-      // keys are sorted and the last message carries the cache point, so the prompt prefix stays cacheable
-      prepareStep: async ({ messages: stepMessages }) => {
+      // keys are sorted and the last message carries the cache point, so the prompt prefix stays cacheable;
+      // built from the raw history because the SDK feeds the returned messages into the next step
+      prepareStep: async ({ initialMessages, responseMessages }) => {
         await beforeStep?.();
         stepStartedAt = performance.now();
 
         return {
           messages: injectCacheBreakpoint(
-            await prepareFileParts(stepMessages.map(sortKeysDeeply)),
+            await prepareFileParts(
+              [...initialMessages, ...responseMessages].map(sortKeysDeeply),
+            ),
             modelConfig,
           ),
         };
