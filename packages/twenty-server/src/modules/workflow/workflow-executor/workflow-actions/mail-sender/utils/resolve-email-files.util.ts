@@ -5,6 +5,22 @@ import { type WorkflowAttachment } from 'twenty-shared/workflow';
 
 import { type FileOutput } from 'src/engine/api/common/common-args-processors/data-arg-processor/types/file-item.type';
 
+// Labels usually already hold the full uploaded filename
+const buildFilesFieldItemName = ({ label, extension }: FileOutput): string => {
+  if (!isNonEmptyString(label)) {
+    return '';
+  }
+
+  if (
+    !isNonEmptyString(extension) ||
+    label.toLowerCase().endsWith(extension.toLowerCase())
+  ) {
+    return label;
+  }
+
+  return `${label}${extension}`;
+};
+
 export const resolveEmailFiles = (
   files: unknown,
   context: Record<string, unknown>,
@@ -32,9 +48,7 @@ export const resolveEmailFiles = (
       const name =
         'id' in attachment
           ? attachment.name
-          : [attachment.label, attachment.extension]
-              .filter(isNonEmptyString)
-              .join('');
+          : buildFilesFieldItemName(attachment);
 
       return { id, name: isNonEmptyString(name) ? name : id };
     })

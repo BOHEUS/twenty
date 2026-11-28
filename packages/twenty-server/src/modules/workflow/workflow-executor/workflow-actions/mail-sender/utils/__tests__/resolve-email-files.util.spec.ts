@@ -20,8 +20,8 @@ describe('resolveEmailFiles', () => {
       step: {
         first: {
           files: [
-            { fileId: 'file-1', label: 'Contract', extension: '.pdf' },
-            { fileId: 'file-2', label: 'Proposal', extension: '.pdf' },
+            { fileId: 'file-1', label: 'Contract.pdf', extension: '.pdf' },
+            { fileId: 'file-2', label: 'Proposal.pdf', extension: '.pdf' },
           ],
         },
       },
@@ -35,7 +35,9 @@ describe('resolveEmailFiles', () => {
 
   it('mixes a static upload with a resolved record Files variable', () => {
     const context = {
-      step: { files: [{ fileId: 'file-2', label: 'Deck', extension: '.pdf' }] },
+      step: {
+        files: [{ fileId: 'file-2', label: 'Deck.pdf', extension: '.pdf' }],
+      },
     };
 
     expect(
@@ -46,6 +48,22 @@ describe('resolveEmailFiles', () => {
     ).toEqual([
       { id: 'file-1', name: 'brochure.pdf' },
       { id: 'file-2', name: 'Deck.pdf' },
+    ]);
+  });
+
+  it('appends the extension only when the label does not already end with it', () => {
+    const context = {
+      step: {
+        files: [
+          { fileId: 'file-1', label: 'Contract', extension: '.pdf' },
+          { fileId: 'file-2', label: 'Scan.PDF', extension: '.pdf' },
+        ],
+      },
+    };
+
+    expect(resolveEmailFiles(['{{step.files}}'], context)).toEqual([
+      { id: 'file-1', name: 'Contract.pdf' },
+      { id: 'file-2', name: 'Scan.PDF' },
     ]);
   });
 
